@@ -13,7 +13,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 	"github.com/moneyvessel/kifu/internal/infrastructure/database"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"

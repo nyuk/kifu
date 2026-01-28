@@ -1,34 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { RequireAuth } from './routes/RequireAuth'
+import { GuestOnly } from './routes/GuestOnly'
+import { Shell } from './components/Shell'
+import { Login } from './pages/Login'
+import { Register } from './pages/Register'
+import { Chart } from './pages/Chart'
+import { Bubbles } from './pages/Bubbles'
+import { Settings } from './pages/Settings'
+import { NotFound } from './pages/NotFound'
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Routes>
+      <Route path="/" element={<Navigate to="/chart" replace />} />
+      <Route element={<GuestOnly />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
+      <Route element={<RequireAuth />}>
+        <Route element={<Shell />}>
+          <Route path="/chart" element={<Chart />} />
+          <Route path="/chart/:symbol" element={<Chart />} />
+          <Route path="/bubbles" element={<Bubbles />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
 

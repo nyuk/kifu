@@ -305,17 +305,3 @@ func signRequest(secret string, params url.Values) string {
 	_, _ = h.Write([]byte(params.Encode()))
 	return hex.EncodeToString(h.Sum(nil))
 }
-
-func maskKey(last4 string) string {
-	if last4 == "" {
-		return ""
-	}
-	return "****" + last4
-}
-
-func lastFour(value string) string {
-	if len(value) <= 4 {
-		return value
-	}
-	return value[len(value)-4:]
-}
