@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -13,8 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
+	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 	"github.com/moneyvessel/kifu/internal/infrastructure/database"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"
+	"github.com/moneyvessel/kifu/internal/jobs"
 	"github.com/moneyvessel/kifu/internal/interfaces/http"
 )
 
@@ -38,6 +41,11 @@ func Run() error {
 		return fmt.Errorf("DATABASE_URL environment variable is required")
 	}
 
+	encKey, err := cryptoutil.LoadKeyFromEnv("KIFU_ENC_KEY")
+	if err != nil {
+		return fmt.Errorf("KIFU_ENC_KEY environment variable is required: %w", err)
+	}
+
 	pool, err := database.NewPostgresPool(databaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -47,6 +55,14 @@ func Run() error {
 	userRepo := repositories.NewUserRepository(pool)
 	refreshTokenRepo := repositories.NewRefreshTokenRepository(pool)
 	subscriptionRepo := repositories.NewSubscriptionRepository(pool)
+	exchangeRepo := repositories.NewExchangeCredentialRepository(pool)
+	userSymbolRepo := repositories.NewUserSymbolRepository(pool)
+	bubbleRepo := repositories.NewBubbleRepository(pool)
+	tradeSyncRepo := repositories.NewTradeSyncStateRepository(pool)
+	aiProviderRepo := repositories.NewAIProviderRepository(pool)
+	aiOpinionRepo := repositories.NewAIOpinionRepository(pool)
+	userAIKeyRepo := repositories.NewUserAIKeyRepository(pool)
+	outcomeRepo := repositories.NewOutcomeRepository(pool)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -94,7 +110,16 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, encKey, jwtSecret)
+
+	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
+	go poller.Start(context.Background())
+
+	quotaReset := jobs.NewQuotaResetJob(subscriptionRepo)
+	quotaReset.Start(context.Background())
+
+	outcomes := jobs.NewOutcomeCalculator(outcomeRepo)
+	outcomes.Start(context.Background())
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)
