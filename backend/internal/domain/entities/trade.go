@@ -10,6 +10,7 @@ type Trade struct {
 	ID             uuid.UUID  `json:"id"`
 	UserID         uuid.UUID  `json:"user_id"`
 	BubbleID       *uuid.UUID `json:"bubble_id,omitempty"`
+	Exchange       string     `json:"exchange"`
 	BinanceTradeID int64      `json:"binance_trade_id"`
 	Symbol         string     `json:"symbol"`
 	Side           string     `json:"side"`
