@@ -20,6 +20,15 @@ type KlineItem = {
 
 const intervals = ['1m', '15m', '1h', '4h', '1d']
 
+// Timeframe hierarchy for bubble display
+// Lower timeframe bubbles should be visible on higher timeframe charts
+function shouldShowBubble(bubbleTimeframe: string, chartTimeframe: string): boolean {
+  const hierarchy = ['1m', '15m', '1h', '4h', '1d']
+  const bubbleIndex = hierarchy.indexOf(bubbleTimeframe)
+  const chartIndex = hierarchy.indexOf(chartTimeframe)
+  return bubbleIndex >= 0 && chartIndex >= 0 && bubbleIndex <= chartIndex
+}
+
 export function Chart() {
   const { symbol: symbolParam } = useParams()
   const navigate = useNavigate()
