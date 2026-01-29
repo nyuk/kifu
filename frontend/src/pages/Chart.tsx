@@ -18,6 +18,17 @@ type KlineItem = {
   volume: string
 }
 
+type BubbleItem = {
+  id: string
+  symbol: string
+  timeframe: string
+  candle_time: string
+  price: string
+  bubble_type: string
+  memo?: string | null
+  tags?: string[]
+}
+
 const intervals = ['1m', '15m', '1h', '4h', '1d']
 
 // Timeframe hierarchy for bubble display
@@ -42,6 +53,7 @@ export function Chart() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [bubbles, setBubbles] = useState<BubbleItem[]>([])
 
   useEffect(() => {
     let active = true
@@ -103,6 +115,28 @@ export function Chart() {
       active = false
     }
   }, [selectedSymbol, timeframe])
+
+  useEffect(() => {
+    if (!selectedSymbol) return
+    let active = true
+    const loadBubbles = async () => {
+      try {
+        const response = await api.get('/v1/bubbles', {
+          params: { symbol: selectedSymbol, limit: 200, sort: 'desc' },
+        })
+        if (!active) return
+        setBubbles(response.data?.items || [])
+      } catch {
+        if (!active) return
+        setBubbles([])
+      }
+    }
+
+    loadBubbles()
+    return () => {
+      active = false
+    }
+  }, [selectedSymbol])
 
   const chartData = useMemo(() => {
     return klines
@@ -176,6 +210,33 @@ export function Chart() {
     seriesRef.current.setData(chartData)
     chartRef.current?.timeScale().fitContent()
   }, [chartData])
+
+  useEffect(() => {
+    if (!seriesRef.current || chartData.length === 0) return
+    
+    // Filter bubbles using shouldShowBubble
+    const visibleBubbles = bubbles.filter(bubble => 
+      shouldShowBubble(bubble.timeframe, timeframe)
+    )
+
+    // Convert bubbles to markers
+    const markers = visibleBubbles
+      .map(bubble => {
+        const isBuy = bubble.tags?.includes('buy') || bubble.bubble_type === 'buy'
+        const time = Math.floor(new Date(bubble.candle_time).getTime() / 1000) as UTCTimestamp
+        
+        return {
+          time,
+          position: isBuy ? 'belowBar' : 'aboveBar',
+          color: isBuy ? '#22c55e' : '#ef4444',
+          shape: 'circle',
+          text: bubble.memo || `${bubble.price}`,
+        } as any
+      })
+      .sort((a, b) => a.time - b.time) // Sort by time ascending
+
+    seriesRef.current.setMarkers(markers)
+  }, [chartData, bubbles, timeframe])
 
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
