@@ -33,13 +33,22 @@ type BubbleItem = {
 
 const intervals = ['1m', '15m', '1h', '4h', '1d']
 
-// Timeframe hierarchy for bubble display
-// Lower timeframe bubbles should be visible on higher timeframe charts
-function shouldShowBubble(bubbleTimeframe: string, chartTimeframe: string): boolean {
-  const hierarchy = ['1m', '15m', '1h', '4h', '1d']
-  const bubbleIndex = hierarchy.indexOf(bubbleTimeframe)
-  const chartIndex = hierarchy.indexOf(chartTimeframe)
-  return bubbleIndex >= 0 && chartIndex >= 0 && bubbleIndex <= chartIndex
+// Helper to get timeframe duration in seconds
+function getTimeframeSeconds(tf: string): number {
+  const map: Record<string, number> = {
+    '1m': 60,
+    '15m': 900,
+    '1h': 3600,
+    '4h': 14400,
+    '1d': 86400,
+  }
+  return map[tf] || 3600
+}
+
+// Floor timestamp to candle start time based on timeframe
+function floorToCandle(timestamp: number, timeframe: string): number {
+  const seconds = getTimeframeSeconds(timeframe)
+  return Math.floor(timestamp / seconds) * seconds
 }
 
 export function Chart() {
@@ -57,12 +66,11 @@ export function Chart() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [bubbles, setBubbles] = useState<BubbleItem[]>([])
   const [bubblePositions, setBubblePositions] = useState<Array<{
-    id: string
+    candleTime: number
     x: number
     y: number
-    isBuy: boolean
-    memo: string
-    price: string
+    bubbles: BubbleItem[]
+    avgPrice: number
   }>>([])
   const [clickedCandle, setClickedCandle] = useState<{ time: number; price: number } | null>(null)
 
@@ -261,52 +269,55 @@ export function Chart() {
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
     
-    console.log('=== Bubble Position Debug ===')
+    console.log('=== Bubble Aggregation Debug ===')
     console.log('Current timeframe:', timeframe)
     console.log('Total bubbles:', bubbles.length)
-    console.log('Bubble timeframes:', bubbles.map(b => `${b.symbol}:${b.timeframe}`))
     
-    // Filter bubbles using shouldShowBubble
-    const visibleBubbles = bubbles.filter(bubble => {
-      const shouldShow = shouldShowBubble(bubble.timeframe, timeframe)
-      console.log(`Bubble ${bubble.id} (${bubble.timeframe}): shouldShow=${shouldShow}`)
-      return shouldShow
+    // Group bubbles by candle (all bubbles, regardless of their timeframe)
+    const bubblesByCandle = new Map<number, BubbleItem[]>()
+    
+    bubbles.forEach(bubble => {
+      const bubbleTime = Math.floor(new Date(bubble.candle_time).getTime() / 1000)
+      const candleTime = floorToCandle(bubbleTime, timeframe)
+      
+      if (!bubblesByCandle.has(candleTime)) {
+        bubblesByCandle.set(candleTime, [])
+      }
+      bubblesByCandle.get(candleTime)!.push(bubble)
     })
     
-    console.log('Visible bubbles after filter:', visibleBubbles.length)
-
-    // Calculate bubble positions using chart coordinate APIs
-    const positions = visibleBubbles
-      .map(bubble => {
-        const isBuy = bubble.tags?.includes('buy') || bubble.bubble_type === 'buy'
-        const time = Math.floor(new Date(bubble.candle_time).getTime() / 1000) as UTCTimestamp
-        const price = parseFloat(bubble.price)
-        
-        // Get pixel coordinates from chart
-        const x = chartRef.current?.timeScale().timeToCoordinate(time)
-        const y = seriesRef.current?.priceToCoordinate(price)
-        
-        console.log(`Bubble ${bubble.id}: time=${time}, price=${price}, x=${x}, y=${y}`)
-        
-        // Only include if coordinates are valid
-        if (x === null || x === undefined || y === null || y === undefined) {
-          console.log(`  -> Filtered out (invalid coordinates)`)
-          return null
-        }
-        
-        return {
-          id: bubble.id,
-          x,
-          y,
-          isBuy,
-          memo: bubble.memo || '',
-          price: bubble.price,
-        }
+    console.log(`Grouped into ${bubblesByCandle.size} candles`)
+    
+    // Calculate positions for each candle group
+    const positions: Array<{
+      candleTime: number
+      x: number
+      y: number
+      bubbles: BubbleItem[]
+      avgPrice: number
+    }> = []
+    
+    bubblesByCandle.forEach((candleBubbles, candleTime) => {
+      const x = chartRef.current?.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+      if (x === null || x === undefined) return
+      
+      // Calculate average price for positioning
+      const avgPrice = candleBubbles.reduce((sum, b) => sum + parseFloat(b.price), 0) / candleBubbles.length
+      const y = seriesRef.current?.priceToCoordinate(avgPrice)
+      if (y === null || y === undefined) return
+      
+      console.log(`Candle ${new Date(candleTime * 1000).toISOString()}: ${candleBubbles.length} bubbles, avgPrice=${avgPrice}`)
+      
+      positions.push({
+        candleTime,
+        x,
+        y,
+        bubbles: candleBubbles,
+        avgPrice,
       })
-      .filter((pos): pos is NonNullable<typeof pos> => pos !== null)
-
-    console.log('Final bubble positions:', positions.length)
-    console.log('Positions:', positions)
+    })
+    
+    console.log('Final positions:', positions.length)
     setBubblePositions(positions)
   }, [chartData, bubbles, timeframe])
 
@@ -406,55 +417,92 @@ export function Chart() {
       <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4">
         <div className="relative h-[480px] w-full">
           <div className="h-full w-full" ref={containerRef} />
-          {bubblePositions.map((bubble) => (
-            <div
-              key={bubble.id}
-              className="absolute z-10 group"
-              style={{
-                left: `${bubble.x}px`,
-                top: bubble.isBuy ? `${bubble.y + 20}px` : `${bubble.y - 50}px`,
-                transform: 'translateX(-50%)',
-              }}
-            >
+          {bubblePositions.map((group) => {
+            const count = group.bubbles.length
+            const hasBuy = group.bubbles.some(b => b.tags?.includes('buy') || b.bubble_type === 'buy')
+            const hasSell = group.bubbles.some(b => b.tags?.includes('sell') || b.bubble_type === 'sell')
+            const isMixed = hasBuy && hasSell
+            const isBuy = hasBuy && !hasSell
+            
+            return (
               <div
-                className={`relative rounded-lg px-3 py-2 text-xs font-medium shadow-lg transition-all hover:scale-105 ${
-                  bubble.isBuy
-                    ? 'bg-green-500 text-white'
-                    : 'bg-red-500 text-white'
-                }`}
+                key={group.candleTime}
+                className="absolute z-10 group cursor-pointer"
                 style={{
-                  minWidth: '60px',
-                  maxWidth: '200px',
+                  left: `${group.x}px`,
+                  top: `${group.y - 30}px`,
+                  transform: 'translateX(-50%)',
                 }}
               >
-                <div className="truncate">{bubble.memo || bubble.price}</div>
                 <div
-                  className="absolute"
+                  className={`relative rounded-lg px-3 py-2 text-xs font-semibold shadow-lg transition-all hover:scale-110 ${
+                    isMixed
+                      ? 'bg-yellow-500 text-white'
+                      : isBuy
+                        ? 'bg-green-500 text-white'
+                        : 'bg-red-500 text-white'
+                  }`}
                   style={{
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    ...(bubble.isBuy
-                      ? {
-                          top: '-6px',
-                          borderLeft: '6px solid transparent',
-                          borderRight: '6px solid transparent',
-                          borderBottom: '6px solid rgb(34, 197, 94)',
-                        }
-                      : {
-                          bottom: '-6px',
-                          borderLeft: '6px solid transparent',
-                          borderRight: '6px solid transparent',
-                          borderTop: '6px solid rgb(239, 68, 68)',
-                        }),
+                    minWidth: '50px',
                   }}
-                />
-                <div className="absolute left-0 right-0 top-full mt-2 hidden rounded-lg bg-neutral-900 p-2 text-xs text-neutral-200 shadow-xl group-hover:block">
-                  <div>Price: {bubble.price}</div>
-                  {bubble.memo && <div className="mt-1">Memo: {bubble.memo}</div>}
+                >
+                  {count === 1 ? (
+                    <div className="truncate max-w-[150px]">
+                      {group.bubbles[0].memo || `$${group.bubbles[0].price}`}
+                    </div>
+                  ) : (
+                    <div className="text-center">{count}개 거래</div>
+                  )}
+                  <div
+                    className="absolute"
+                    style={{
+                      left: '50%',
+                      bottom: '-6px',
+                      transform: 'translateX(-50%)',
+                      borderLeft: '6px solid transparent',
+                      borderRight: '6px solid transparent',
+                      borderTop: isMixed
+                        ? '6px solid rgb(234, 179, 8)'
+                        : isBuy
+                          ? '6px solid rgb(34, 197, 94)'
+                          : '6px solid rgb(239, 68, 68)',
+                    }}
+                  />
+                </div>
+                <div className="absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[200px] max-w-[300px] z-20">
+                  <div className="font-semibold mb-2">
+                    {new Date(group.candleTime * 1000).toLocaleString('ko-KR')}
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {group.bubbles.map((b, idx) => (
+                      <div key={b.id} className="border-t border-neutral-700 pt-2 first:border-0 first:pt-0">
+                        <div className="flex items-center justify-between">
+                          <span className={`font-medium ${
+                            b.tags?.includes('buy') || b.bubble_type === 'buy'
+                              ? 'text-green-400'
+                              : 'text-red-400'
+                          }`}>
+                            {b.tags?.includes('buy') || b.bubble_type === 'buy' ? '매수' : '매도'}
+                          </span>
+                          <span className="text-neutral-400">${b.price}</span>
+                        </div>
+                        {b.memo && <div className="mt-1 text-neutral-300">{b.memo}</div>}
+                        {b.tags && b.tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {b.tags.map(tag => (
+                              <span key={tag} className="px-1.5 py-0.5 bg-neutral-800 rounded text-[10px]">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
