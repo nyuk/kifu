@@ -14,6 +14,7 @@ func RegisterRoutes(
 	exchangeRepo repositories.ExchangeCredentialRepository,
 	userSymbolRepo repositories.UserSymbolRepository,
 	bubbleRepo repositories.BubbleRepository,
+	tradeRepo repositories.TradeRepository,
 	aiOpinionRepo repositories.AIOpinionRepository,
 	aiProviderRepo repositories.AIProviderRepository,
 	userAIKeyRepo repositories.UserAIKeyRepository,
@@ -30,6 +31,7 @@ func RegisterRoutes(
 	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, encryptionKey)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
+	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo)
 	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, subscriptionRepo, encryptionKey)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
@@ -74,4 +76,10 @@ func RegisterRoutes(
 	ai := api.Group("/bubbles")
 	ai.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
 	ai.Get("/:id/ai-opinions", aiHandler.ListOpinions)
+
+	trades := api.Group("/trades")
+	trades.Post("/import", tradeHandler.Import)
+	trades.Get("/", tradeHandler.List)
+	trades.Get("/summary", tradeHandler.Summary)
+	trades.Post("/convert-bubbles", tradeHandler.ConvertBubbles)
 }

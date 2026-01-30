@@ -252,7 +252,7 @@ export function Bubbles() {
             </div>
             <span className="text-xs text-neutral-500">{bubbles.length} items</span>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 max-h-[600px] space-y-3 overflow-y-auto pr-2">
             {loadingBubbles && (
               <p className="text-sm text-neutral-500">불러오는 중...</p>
             )}

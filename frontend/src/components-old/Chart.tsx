@@ -91,7 +91,7 @@ export function Chart() {
     const normalizedParam = symbolParam?.toUpperCase() || ''
     const match = symbols.find((item) => item.symbol === normalizedParam)
     const selected = match?.symbol || symbols[0].symbol
-    const defaultInterval = match?.timeframe_default || symbols[0].timeframe_default || '1h'
+    const defaultInterval = match?.timeframe_default || symbols[0].timeframe_default || '1d'
 
     setSelectedSymbol(selected)
     setTimeframe(intervals.includes(defaultInterval) ? defaultInterval : '1h')
@@ -224,10 +224,19 @@ export function Chart() {
   useEffect(() => {
     if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
     
+    console.log('=== Bubble Position Debug ===')
+    console.log('Current timeframe:', timeframe)
+    console.log('Total bubbles:', bubbles.length)
+    console.log('Bubble timeframes:', bubbles.map(b => `${b.symbol}:${b.timeframe}`))
+    
     // Filter bubbles using shouldShowBubble
-    const visibleBubbles = bubbles.filter(bubble => 
-      shouldShowBubble(bubble.timeframe, timeframe)
-    )
+    const visibleBubbles = bubbles.filter(bubble => {
+      const shouldShow = shouldShowBubble(bubble.timeframe, timeframe)
+      console.log(`Bubble ${bubble.id} (${bubble.timeframe}): shouldShow=${shouldShow}`)
+      return shouldShow
+    })
+    
+    console.log('Visible bubbles after filter:', visibleBubbles.length)
 
     // Calculate bubble positions using chart coordinate APIs
     const positions = visibleBubbles
@@ -240,8 +249,11 @@ export function Chart() {
         const x = chartRef.current?.timeScale().timeToCoordinate(time)
         const y = seriesRef.current?.priceToCoordinate(price)
         
+        console.log(`Bubble ${bubble.id}: time=${time}, price=${price}, x=${x}, y=${y}`)
+        
         // Only include if coordinates are valid
         if (x === null || x === undefined || y === null || y === undefined) {
+          console.log(`  -> Filtered out (invalid coordinates)`)
           return null
         }
         
@@ -256,6 +268,8 @@ export function Chart() {
       })
       .filter((pos): pos is NonNullable<typeof pos> => pos !== null)
 
+    console.log('Final bubble positions:', positions.length)
+    console.log('Positions:', positions)
     setBubblePositions(positions)
   }, [chartData, bubbles, timeframe])
 

@@ -7,17 +7,17 @@ import (
 	"os"
 	"strings"
 
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 	"github.com/moneyvessel/kifu/internal/infrastructure/database"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"
-	"github.com/moneyvessel/kifu/internal/jobs"
 	"github.com/moneyvessel/kifu/internal/interfaces/http"
+	"github.com/moneyvessel/kifu/internal/jobs"
 )
 
 func Run() error {
@@ -57,6 +57,7 @@ func Run() error {
 	exchangeRepo := repositories.NewExchangeCredentialRepository(pool)
 	userSymbolRepo := repositories.NewUserSymbolRepository(pool)
 	bubbleRepo := repositories.NewBubbleRepository(pool)
+	tradeRepo := repositories.NewTradeRepository(pool)
 	tradeSyncRepo := repositories.NewTradeSyncStateRepository(pool)
 	aiProviderRepo := repositories.NewAIProviderRepository(pool)
 	aiOpinionRepo := repositories.NewAIOpinionRepository(pool)
@@ -89,9 +90,9 @@ func Run() error {
 		}
 
 		return jwtware.New(jwtware.Config{
-			SigningKey: jwtware.SigningKey{Key: []byte(jwtSecret)},
+			SigningKey:  jwtware.SigningKey{Key: []byte(jwtSecret)},
 			TokenLookup: "header:Authorization",
-			AuthScheme: "Bearer",
+			AuthScheme:  "Bearer",
 			ErrorHandler: func(c *fiber.Ctx, err error) error {
 				return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED"})
 			},
@@ -109,7 +110,7 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, encKey, jwtSecret)
 
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
 	go poller.Start(context.Background())
