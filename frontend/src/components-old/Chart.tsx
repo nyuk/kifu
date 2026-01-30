@@ -64,6 +64,7 @@ export function Chart() {
     memo: string
     price: string
   }>>([])
+  const [clickedCandle, setClickedCandle] = useState<{ time: number; price: number } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -200,6 +201,41 @@ export function Chart() {
     chartRef.current = chart
     seriesRef.current = series
 
+    const clickHandler = (param: any) => {
+      if (!param.point || !param.time) return
+      
+      const price = series.coordinateToPrice(param.point.y)
+      if (price === null) return
+      
+      const clickedTime = param.time as number
+      
+      const getTimeRangeForTimeframe = (tf: string): number => {
+        const ranges: Record<string, number> = {
+          '1m': 60,
+          '15m': 900,
+          '1h': 3600,
+          '4h': 14400,
+          '1d': 86400,
+        }
+        return ranges[tf] || 3600
+      }
+      
+      const existingBubble = bubbles.find(b => {
+        const bubbleTime = Math.floor(new Date(b.candle_time).getTime() / 1000)
+        const timeRange = getTimeRangeForTimeframe(timeframe)
+        return Math.abs(bubbleTime - clickedTime) < timeRange / 2
+      })
+      
+      if (existingBubble) {
+        console.log('Existing bubble clicked:', existingBubble)
+      } else {
+        setClickedCandle({ time: clickedTime, price })
+        setIsModalOpen(true)
+      }
+    }
+    
+    chart.subscribeClick(clickHandler)
+
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries.length) return
       const { width } = entries[0].contentRect
@@ -208,12 +244,13 @@ export function Chart() {
     resizeObserver.observe(containerRef.current)
 
     return () => {
+      chart.unsubscribeClick(clickHandler)
       resizeObserver.disconnect()
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [])
+  }, [bubbles, timeframe])
 
   useEffect(() => {
     if (!seriesRef.current) return
@@ -425,8 +462,11 @@ export function Chart() {
         open={isModalOpen}
         symbol={selectedSymbol}
         defaultTimeframe={timeframe}
-        defaultPrice={latestPrice}
-        onClose={() => setIsModalOpen(false)}
+        defaultPrice={clickedCandle?.price.toString() || latestPrice}
+        onClose={() => {
+          setIsModalOpen(false)
+          setClickedCandle(null)
+        }}
       />
     </div>
   )

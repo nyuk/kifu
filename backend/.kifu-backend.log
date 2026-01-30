@@ -1,0 +1,13 @@
+2026/01/29 00:49:08 Server starting on port 3000
+
+ ┌───────────────────────────────────────────────────┐ 
+ │                   Fiber v2.52.0                   │ 
+ │               http://127.0.0.1:3000               │ 
+ │       (bound on host 0.0.0.0 and port 3000)       │ 
+ │                                                   │ 
+ │ Handlers ............ 43  Processes ........... 1 │ 
+ │ Prefork ....... Disabled  PID ............. 40301 │ 
+ └───────────────────────────────────────────────────┘ 
+
+2026/01/29 09:04:59 quota reset: list subscriptions failed: ERROR: column "created_at" does not exist (SQLSTATE 42703)
+signal: terminated

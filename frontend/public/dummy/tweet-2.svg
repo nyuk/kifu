@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827" />
+      <stop offset="1" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="24" fill="url(#bg)" />
+  <circle cx="80" cy="80" r="32" fill="#f59e0b" />
+  <text x="130" y="78" fill="#f8fafc" font-size="22" font-family="Space Grotesk, sans-serif">
+    @macro_watch
+  </text>
+  <text x="130" y="105" fill="#94a3b8" font-size="14" font-family="Space Grotesk, sans-serif">
+    2026-02-07
+  </text>
+  <text x="60" y="160" fill="#e2e8f0" font-size="18" font-family="Space Grotesk, sans-serif">
+    Risk-off flows rising. Trim leverage.
+  </text>
+  <text x="60" y="190" fill="#e2e8f0" font-size="18" font-family="Space Grotesk, sans-serif">
+    Watch funding spikes on BTCUSDT.
+  </text>
+  <rect x="60" y="230" width="520" height="80" rx="16" fill="#0b1220" stroke="#334155" />
+  <text x="80" y="270" fill="#fcd34d" font-size="16" font-family="Space Grotesk, sans-serif">
+    #macro #riskoff #funding
+  </text>
+</svg>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
+import { useI18n } from '../lib/i18n'
 
 type BubbleCreateModalProps = {
   open: boolean
@@ -22,6 +23,7 @@ export function BubbleCreateModal({
   onClose,
   onCreated,
 }: BubbleCreateModalProps) {
+  const { t } = useI18n()
   const [timeframe, setTimeframe] = useState(defaultTimeframe)
   const [candleTime, setCandleTime] = useState('')
   const [price, setPrice] = useState(defaultPrice || '')

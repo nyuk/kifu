@@ -3,17 +3,20 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
-
-const navItems = [
-  { label: 'Chart', to: '/chart' },
-  { label: 'Bubbles', to: '/bubbles' },
-  { label: 'Settings', to: '/settings' },
-]
+import { useI18n } from '../lib/i18n'
 
 export function Shell({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n()
   const clearTokens = useAuthStore((state) => state.clearTokens)
   const router = useRouter()
   const pathname = usePathname()
+  
+  const navItems = [
+    { label: t.navChart, to: '/chart' },
+    { label: t.navBubbles, to: '/bubbles' },
+    { label: t.navTrades, to: '/trades' },
+    { label: t.navSettings, to: '/settings' },
+  ]
 
   const handleLogout = () => {
     clearTokens()
@@ -26,10 +29,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
-            <h1 className="mt-3 text-2xl font-semibold text-neutral-100">Trading Journal</h1>
-            <p className="mt-2 text-sm text-neutral-400">
-              Focused review loop for futures execution, AI insights, and outcome tracking.
-            </p>
+            <h1 className="mt-3 text-2xl font-semibold text-neutral-100">{t.appTagline}</h1>
           </div>
           <nav className="flex flex-col gap-2">
             {navItems.map((item) => {
@@ -50,14 +50,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
           <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Session</p>
-            <p className="mt-2 text-sm text-neutral-300">You are authenticated.</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.sessionLabel}</p>
+            <p className="mt-2 text-sm text-neutral-300">{t.sessionText}</p>
             <button
               type="button"
               onClick={handleLogout}
               className="mt-3 w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-200 transition hover:border-neutral-500"
             >
-              Log out
+              {t.logout}
             </button>
           </div>
         </aside>
