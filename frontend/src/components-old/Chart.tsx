@@ -56,6 +56,14 @@ export function Chart() {
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [bubbles, setBubbles] = useState<BubbleItem[]>([])
+  const [bubblePositions, setBubblePositions] = useState<Array<{
+    id: string
+    x: number
+    y: number
+    isBuy: boolean
+    memo: string
+    price: string
+  }>>([])
 
   useEffect(() => {
     let active = true
@@ -214,30 +222,41 @@ export function Chart() {
   }, [chartData])
 
   useEffect(() => {
-    if (!seriesRef.current || chartData.length === 0) return
+    if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
     
     // Filter bubbles using shouldShowBubble
     const visibleBubbles = bubbles.filter(bubble => 
       shouldShowBubble(bubble.timeframe, timeframe)
     )
 
-    // Convert bubbles to markers
-    const markers = visibleBubbles
+    // Calculate bubble positions using chart coordinate APIs
+    const positions = visibleBubbles
       .map(bubble => {
         const isBuy = bubble.tags?.includes('buy') || bubble.bubble_type === 'buy'
         const time = Math.floor(new Date(bubble.candle_time).getTime() / 1000) as UTCTimestamp
+        const price = parseFloat(bubble.price)
+        
+        // Get pixel coordinates from chart
+        const x = chartRef.current?.timeScale().timeToCoordinate(time)
+        const y = seriesRef.current?.priceToCoordinate(price)
+        
+        // Only include if coordinates are valid
+        if (x === null || x === undefined || y === null || y === undefined) {
+          return null
+        }
         
         return {
-          time,
-          position: isBuy ? 'belowBar' : 'aboveBar',
-          color: isBuy ? '#22c55e' : '#ef4444',
-          shape: 'circle',
-          text: bubble.memo || `${bubble.price}`,
-        } as any
+          id: bubble.id,
+          x,
+          y,
+          isBuy,
+          memo: bubble.memo || '',
+          price: bubble.price,
+        }
       })
-      .sort((a, b) => a.time - b.time) // Sort by time ascending
+      .filter((pos): pos is NonNullable<typeof pos> => pos !== null)
 
-    seriesRef.current.setMarkers(markers)
+    setBubblePositions(positions)
   }, [chartData, bubbles, timeframe])
 
   const handleSymbolChange = (value: string) => {
@@ -334,7 +353,58 @@ export function Chart() {
       </section>
 
       <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4">
-        <div className="h-[480px] w-full" ref={containerRef} />
+        <div className="relative h-[480px] w-full">
+          <div className="h-full w-full" ref={containerRef} />
+          {bubblePositions.map((bubble) => (
+            <div
+              key={bubble.id}
+              className="absolute z-10 group"
+              style={{
+                left: `${bubble.x}px`,
+                top: bubble.isBuy ? `${bubble.y + 20}px` : `${bubble.y - 50}px`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <div
+                className={`relative rounded-lg px-3 py-2 text-xs font-medium shadow-lg transition-all hover:scale-105 ${
+                  bubble.isBuy
+                    ? 'bg-green-500 text-white'
+                    : 'bg-red-500 text-white'
+                }`}
+                style={{
+                  minWidth: '60px',
+                  maxWidth: '200px',
+                }}
+              >
+                <div className="truncate">{bubble.memo || bubble.price}</div>
+                <div
+                  className="absolute"
+                  style={{
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    ...(bubble.isBuy
+                      ? {
+                          top: '-6px',
+                          borderLeft: '6px solid transparent',
+                          borderRight: '6px solid transparent',
+                          borderBottom: '6px solid rgb(34, 197, 94)',
+                        }
+                      : {
+                          bottom: '-6px',
+                          borderLeft: '6px solid transparent',
+                          borderRight: '6px solid transparent',
+                          borderTop: '6px solid rgb(239, 68, 68)',
+                        }),
+                  }}
+                />
+                <div className="absolute left-0 right-0 top-full mt-2 hidden rounded-lg bg-neutral-900 p-2 text-xs text-neutral-200 shadow-xl group-hover:block">
+                  <div>Price: {bubble.price}</div>
+                  {bubble.memo && <div className="mt-1">Memo: {bubble.memo}</div>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <BubbleCreateModal
