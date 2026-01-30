@@ -1,3 +1,5 @@
+'use client'
+
 import { useAuthStore } from '../stores/auth'
 
 export function Settings() {

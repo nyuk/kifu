@@ -1,13 +1,23 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 
-export function RequireAuth() {
+export function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const location = useLocation()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace(`/login?from=${pathname}`)
+    }
+  }, [isAuthenticated, router, pathname])
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    return null
   }
 
-  return <Outlet />
+  return <>{children}</>
 }

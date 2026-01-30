@@ -1,12 +1,22 @@
-import { Navigate, Outlet } from 'react-router-dom'
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 
-export function GuestOnly() {
+export function GuestOnly({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/chart')
+    }
+  }, [isAuthenticated, router])
 
   if (isAuthenticated) {
-    return <Navigate to="/chart" replace />
+    return null
   }
 
-  return <Outlet />
+  return <>{children}</>
 }

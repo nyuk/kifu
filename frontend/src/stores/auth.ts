@@ -12,6 +12,12 @@ const accessKey = 'kifu_access_token'
 const refreshKey = 'kifu_refresh_token'
 
 const getInitialState = () => {
+  if (typeof window === 'undefined') {
+    return {
+      accessToken: null,
+      refreshToken: null,
+    }
+  }
   const accessToken = localStorage.getItem(accessKey)
   const refreshToken = localStorage.getItem(refreshKey)
   return {

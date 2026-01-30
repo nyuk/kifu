@@ -1,5 +1,7 @@
+'use client'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useRouter, useParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
 import { api } from '../lib/api'
 import { BubbleCreateModal } from '../components/BubbleCreateModal'
@@ -42,7 +44,7 @@ function shouldShowBubble(bubbleTimeframe: string, chartTimeframe: string): bool
 
 export function Chart() {
   const { symbol: symbolParam } = useParams()
-  const navigate = useNavigate()
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
@@ -86,9 +88,9 @@ export function Chart() {
     setSelectedSymbol(selected)
     setTimeframe(intervals.includes(defaultInterval) ? defaultInterval : '1h')
     if (!normalizedParam || !symbolsUpper.includes(normalizedParam)) {
-      navigate(`/chart/${selected}`, { replace: true })
+      router.replace(`/chart/${selected}`)
     }
-  }, [navigate, symbolParam, symbols])
+  }, [router, symbolParam, symbols])
 
   useEffect(() => {
     if (!selectedSymbol) return
@@ -241,7 +243,7 @@ export function Chart() {
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
     setSelectedSymbol(next)
-    navigate(`/chart/${next}`)
+    router.push(`/chart/${next}`)
   }
 
   return (

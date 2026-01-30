@@ -1,4 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 
 const navItems = [
@@ -7,18 +10,19 @@ const navItems = [
   { label: 'Settings', to: '/settings' },
 ]
 
-export function Shell() {
+export function Shell({ children }: { children: React.ReactNode }) {
   const clearTokens = useAuthStore((state) => state.clearTokens)
-  const navigate = useNavigate()
+  const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = () => {
     clearTokens()
-    navigate('/login')
+    router.push('/login')
   }
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 lg:flex-row">
+      <div className="flex min-h-screen flex-col gap-6 px-4 py-6 lg:flex-row">
         <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
@@ -28,21 +32,22 @@ export function Shell() {
             </p>
           </div>
           <nav className="flex flex-col gap-2">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `rounded-lg px-4 py-2 text-sm font-medium transition ${
+            {navItems.map((item) => {
+              const isActive = pathname === item.to || pathname?.startsWith(item.to + '/')
+              return (
+                <Link
+                  key={item.to}
+                  href={item.to}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                     isActive
                       ? 'bg-neutral-200 text-neutral-950'
                       : 'text-neutral-300 hover:bg-neutral-800/80'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
           </nav>
           <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Session</p>
@@ -57,7 +62,7 @@ export function Shell() {
           </div>
         </aside>
         <main className="flex-1">
-          <Outlet />
+          {children}
         </main>
       </div>
     </div>
