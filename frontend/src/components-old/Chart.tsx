@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
 import { api } from '../lib/api'
@@ -67,6 +66,7 @@ export function Chart() {
   const { symbol: symbolParam } = useParams()
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
   const [symbols, setSymbols] = useState<UserSymbolItem[]>([])
@@ -94,9 +94,31 @@ export function Chart() {
     avgPrice: number
   }>>([])
   const [mounted, setMounted] = useState(false)
+  const [overlayRect, setOverlayRect] = useState({ left: 0, top: 0, width: 0, height: 0 })
+  const bubblesRef = useRef<BubbleItem[]>([])
+  const timeframeRef = useRef(timeframe)
   
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    bubblesRef.current = bubbles
+  }, [bubbles])
+
+  useEffect(() => {
+    timeframeRef.current = timeframe
+  }, [timeframe])
+
+  const updateOverlayPosition = useCallback(() => {
+    if (!wrapperRef.current || !chartRef.current) return
+    const rect = wrapperRef.current.getBoundingClientRect()
+    setOverlayRect({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    })
   }, [])
 
   useEffect(() => {
@@ -275,9 +297,9 @@ export function Chart() {
         return ranges[tf] || 3600
       }
       
-      const existingBubble = bubbles.find(b => {
+      const existingBubble = bubblesRef.current.find(b => {
         const bubbleTime = Math.floor(new Date(b.candle_time).getTime() / 1000)
-        const timeRange = getTimeRangeForTimeframe(timeframe)
+        const timeRange = getTimeRangeForTimeframe(timeframeRef.current)
         return Math.abs(bubbleTime - clickedTime) < timeRange / 2
       })
       
@@ -305,142 +327,175 @@ export function Chart() {
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [bubbles, timeframe])
+  }, [])
 
   useEffect(() => {
-    if (!seriesRef.current) return
+    if (!seriesRef.current || !chartRef.current) return
     seriesRef.current.setData(chartData)
-    chartRef.current?.timeScale().fitContent()
-  }, [chartData])
+    chartRef.current.timeScale().fitContent()
+    
+    setTimeout(() => {
+      updateOverlayPosition()
+    }, 100)
+  }, [chartData, updateOverlayPosition])
+
+  const calculateBubblePositions = useCallback(() => {
+    if (!seriesRef.current || !chartRef.current || chartData.length === 0 || bubbles.length === 0) {
+      setBubblePositions([])
+      return
+    }
+    
+    const chart = chartRef.current
+    
+    const bubblesByCandle = new Map<number, BubbleItem[]>()
+    
+    bubbles.forEach(bubble => {
+      const bubbleTime = Math.floor(new Date(bubble.candle_time).getTime() / 1000)
+      const candleTime = floorToCandle(bubbleTime, timeframe)
+      
+      if (!bubblesByCandle.has(candleTime)) {
+        bubblesByCandle.set(candleTime, [])
+      }
+      bubblesByCandle.get(candleTime)!.push(bubble)
+    })
+    
+    const positions: Array<{
+      candleTime: number
+      x: number
+      y: number
+      bubbles: BubbleItem[]
+      avgPrice: number
+    }> = []
+    
+    bubblesByCandle.forEach((candleBubbles, candleTime) => {
+      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+      if (x === null || x === undefined) return
+      
+      const avgPrice = candleBubbles.reduce((sum, b) => sum + parseFloat(b.price), 0) / candleBubbles.length
+      const y = seriesRef.current?.priceToCoordinate(avgPrice)
+      if (y === null || y === undefined) return
+      
+      positions.push({
+        candleTime,
+        x,
+        y,
+        bubbles: candleBubbles,
+        avgPrice,
+      })
+    })
+    setBubblePositions(positions)
+    updateOverlayPosition()
+  }, [chartData, bubbles, timeframe, updateOverlayPosition])
 
   useEffect(() => {
-    if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
+    if (!chartRef.current || chartData.length === 0) return
+    
+    const chart = chartRef.current
+    
+    const handleVisibleRangeChange = () => {
+      calculateBubblePositions()
+    }
+    
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
     
     const timer = setTimeout(() => {
-      console.log('=== Bubble Aggregation Debug ===')
-      console.log('Current timeframe:', timeframe)
-      console.log('Total bubbles:', bubbles.length)
-      
-      const bubblesByCandle = new Map<number, BubbleItem[]>()
-      
-      bubbles.forEach(bubble => {
-        const bubbleTime = Math.floor(new Date(bubble.candle_time).getTime() / 1000)
-        const candleTime = floorToCandle(bubbleTime, timeframe)
-        
-        if (!bubblesByCandle.has(candleTime)) {
-          bubblesByCandle.set(candleTime, [])
-        }
-        bubblesByCandle.get(candleTime)!.push(bubble)
-      })
-      
-      console.log(`Grouped into ${bubblesByCandle.size} candles`)
-      
-      const positions: Array<{
-        candleTime: number
-        x: number
-        y: number
-        bubbles: BubbleItem[]
-        avgPrice: number
-      }> = []
-      
-      // Get chart price scale width to adjust x coordinate
-      const chart = chartRef.current
-      const priceScaleWidth = chart.priceScale('right').width()
-      
-      bubblesByCandle.forEach((candleBubbles, candleTime) => {
-        const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
-        if (x === null || x === undefined) return
-        
-        const avgPrice = candleBubbles.reduce((sum, b) => sum + parseFloat(b.price), 0) / candleBubbles.length
-        const y = seriesRef.current?.priceToCoordinate(avgPrice)
-        if (y === null || y === undefined) return
-        
-        // Adjust x to account for right price scale width
-        const adjustedX = x
-        
-        console.log(`Candle ${new Date(candleTime * 1000).toISOString()}: ${candleBubbles.length} bubbles, avgPrice=${avgPrice}, x=${adjustedX}, y=${y}, priceScaleWidth=${priceScaleWidth}`)
-        
-        positions.push({
-          candleTime,
-          x: adjustedX,
-          y,
-          bubbles: candleBubbles,
-          avgPrice,
-        })
-      })
-      
-      console.log('Final positions:', positions.length)
-      setBubblePositions(positions)
+      calculateBubblePositions()
     }, 500)
     
-    return () => clearTimeout(timer)
-  }, [chartData, bubbles, timeframe])
+    return () => {
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
+      clearTimeout(timer)
+    }
+  }, [calculateBubblePositions, chartData.length])
+
+  const calculateTradePositions = useCallback(() => {
+    if (!seriesRef.current || !chartRef.current || chartData.length === 0 || trades.length === 0) {
+      setTradePositions([])
+      return
+    }
+    
+    const tradesByCandle = new Map<number, TradeItem[]>()
+    
+    trades.forEach(trade => {
+      const tradeTime = Math.floor(new Date(trade.trade_time).getTime() / 1000)
+      const candleTime = floorToCandle(tradeTime, timeframe)
+      
+      if (!tradesByCandle.has(candleTime)) {
+        tradesByCandle.set(candleTime, [])
+      }
+      tradesByCandle.get(candleTime)!.push(trade)
+    })
+    
+    const positions: Array<{
+      candleTime: number
+      x: number
+      y: number
+      trades: TradeItem[]
+      avgPrice: number
+    }> = []
+    
+    const chart = chartRef.current
+    
+    tradesByCandle.forEach((candleTrades, candleTime) => {
+      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+      if (x === null || x === undefined) return
+      
+      const avgPrice = candleTrades.reduce((sum, t) => sum + parseFloat(t.price), 0) / candleTrades.length
+      const y = seriesRef.current?.priceToCoordinate(avgPrice)
+      if (y === null || y === undefined) return
+      
+      positions.push({
+        candleTime,
+        x,
+        y,
+        trades: candleTrades,
+        avgPrice,
+      })
+    })
+    
+    setTradePositions(positions)
+    updateOverlayPosition()
+  }, [chartData, trades, timeframe, updateOverlayPosition])
 
   useEffect(() => {
-    if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
+    if (!chartRef.current || chartData.length === 0) return
     
-    // Delay to ensure chart is fully rendered
+    const chart = chartRef.current
+    
+    const handleVisibleRangeChange = () => {
+      calculateTradePositions()
+    }
+    
+    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
+    
     const timer = setTimeout(() => {
-      console.log('=== Trade Aggregation Debug ===')
-      console.log('Current timeframe:', timeframe)
-      console.log('Total trades:', trades.length)
-      
-      // Group trades by candle (all trades, regardless of their timeframe)
-      const tradesByCandle = new Map<number, TradeItem[]>()
-      
-      trades.forEach(trade => {
-        const tradeTime = Math.floor(new Date(trade.trade_time).getTime() / 1000)
-        const candleTime = floorToCandle(tradeTime, timeframe)
-        
-        if (!tradesByCandle.has(candleTime)) {
-          tradesByCandle.set(candleTime, [])
-        }
-        tradesByCandle.get(candleTime)!.push(trade)
-      })
-      
-      console.log(`Grouped trades into ${tradesByCandle.size} candles`)
-      
-      // Calculate positions for each candle group
-      const positions: Array<{
-        candleTime: number
-        x: number
-        y: number
-        trades: TradeItem[]
-        avgPrice: number
-      }> = []
-      
-      tradesByCandle.forEach((candleTrades, candleTime) => {
-        const x = chartRef.current?.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
-        if (x === null || x === undefined) return
-        
-        // Calculate average price for positioning
-        const avgPrice = candleTrades.reduce((sum, t) => sum + parseFloat(t.price), 0) / candleTrades.length
-        const y = seriesRef.current?.priceToCoordinate(avgPrice)
-        if (y === null || y === undefined) return
-        
-        console.log(`Trade Candle ${new Date(candleTime * 1000).toISOString()}: ${candleTrades.length} trades, avgPrice=${avgPrice}, x=${x}, y=${y}`)
-        
-        positions.push({
-          candleTime,
-          x,
-          y,
-          trades: candleTrades,
-          avgPrice,
-        })
-      })
-      
-      console.log('Final trade positions:', positions.length)
-      setTradePositions(positions)
+      calculateTradePositions()
     }, 600)
     
-    return () => clearTimeout(timer)
-  }, [chartData, trades, timeframe])
+    return () => {
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
+      clearTimeout(timer)
+    }
+  }, [calculateTradePositions, chartData.length])
 
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
     setSelectedSymbol(next)
     router.push(`/chart/${next}`)
   }
+
+  useEffect(() => {
+    const handleResize = () => updateOverlayPosition()
+    const handleScroll = () => updateOverlayPosition()
+    
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('scroll', handleScroll, true)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [updateOverlayPosition])
 
   return (
     <div className="flex flex-col gap-6">
@@ -529,9 +584,23 @@ export function Chart() {
         </div>
       </section>
 
-      <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative">
+      <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
         <div className="h-[480px] w-full" ref={containerRef} />
-        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 50 }}>
+      </div>
+
+      {mounted && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: `${overlayRect.left}px`,
+            top: `${overlayRect.top}px`,
+            width: `${overlayRect.width}px`,
+            height: `${overlayRect.height}px`,
+            zIndex: 9999,
+            pointerEvents: 'none',
+            overflow: 'hidden'
+          }}
+        >
           {bubblePositions.map((group) => {
             const count = group.bubbles.length
             const hasBuy = group.bubbles.some(b => b.tags?.includes('buy') || b.bubble_type === 'buy')
@@ -542,11 +611,12 @@ export function Chart() {
             return (
               <div
                 key={group.candleTime}
-                className="absolute group cursor-pointer pointer-events-auto"
+                className="absolute group cursor-pointer"
                 style={{
                   left: `${group.x}px`,
                   top: `${group.y - 30}px`,
                   transform: 'translateX(-50%)',
+                  pointerEvents: 'auto'
                 }}
               >
                 <div
@@ -628,11 +698,12 @@ export function Chart() {
             return (
               <div
                 key={`trade-${group.candleTime}`}
-                className="absolute group cursor-pointer pointer-events-auto"
+                className="absolute group cursor-pointer"
                 style={{
                   left: `${group.x + 20}px`,
                   top: `${group.y - 30}px`,
                   transform: 'translateX(-50%)',
+                  pointerEvents: 'auto'
                 }}
               >
                 <div
@@ -703,8 +774,8 @@ export function Chart() {
                </div>
             )
           })}
-          </div>
         </div>
+      )}
 
       <BubbleCreateModal
         open={isModalOpen}

@@ -1,42 +1,49 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 type AuthState = {
   accessToken: string | null
   refreshToken: string | null
   isAuthenticated: boolean
+  _hasHydrated: boolean
   setTokens: (accessToken: string, refreshToken: string) => void
   clearTokens: () => void
+  setHasHydrated: (state: boolean) => void
 }
 
-const accessKey = 'kifu_access_token'
-const refreshKey = 'kifu_refresh_token'
-
-const getInitialState = () => {
-  if (typeof window === 'undefined') {
-    return {
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
       accessToken: null,
       refreshToken: null,
+      isAuthenticated: false,
+      _hasHydrated: false,
+      setTokens: (accessToken, refreshToken) => {
+        set({ accessToken, refreshToken, isAuthenticated: true })
+      },
+      clearTokens: () => {
+        set({ accessToken: null, refreshToken: null, isAuthenticated: false })
+      },
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state })
+      },
+    }),
+    {
+      name: 'kifu-auth-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
     }
-  }
-  const accessToken = localStorage.getItem(accessKey)
-  const refreshToken = localStorage.getItem(refreshKey)
-  return {
-    accessToken,
-    refreshToken,
-    isAuthenticated: Boolean(accessToken),
-  }
-}
+  )
+)
 
-export const useAuthStore = create<AuthState>((set) => ({
-  ...getInitialState(),
-  setTokens: (accessToken, refreshToken) => {
-    localStorage.setItem(accessKey, accessToken)
-    localStorage.setItem(refreshKey, refreshToken)
-    set({ accessToken, refreshToken, isAuthenticated: true })
-  },
-  clearTokens: () => {
-    localStorage.removeItem(accessKey)
-    localStorage.removeItem(refreshKey)
-    set({ accessToken: null, refreshToken: null, isAuthenticated: false })
-  },
-}))
+// SSR-safe getter for token (used by API interceptor)
+export const getAccessToken = (): string | null => {
+  return useAuthStore.getState().accessToken
+}
