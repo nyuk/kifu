@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 type Locale = 'en' | 'ko'
 
@@ -230,10 +230,22 @@ const dictionary = {
 }
 
 export function useLocale() {
-  return useMemo<Locale>(() => {
-    if (typeof navigator === 'undefined') return 'en'
-    return navigator.language.toLowerCase().startsWith('ko') ? 'ko' : 'en'
+  const [locale, setLocale] = useState<Locale>('en')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const savedLocale = localStorage.getItem('kifu-language')
+    if (savedLocale === 'ko' || savedLocale === 'en') {
+      setLocale(savedLocale)
+    } else if (navigator.language.toLowerCase().startsWith('ko')) {
+      setLocale('ko')
+    }
   }, [])
+
+  // Return default locale during SSR and initial hydration
+  // Only return detected locale after component is mounted
+  return mounted ? locale : 'en'
 }
 
 export function useI18n() {
