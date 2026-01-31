@@ -51,7 +51,7 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 	query := `
 		SELECT id, email, password_hash, name, created_at, updated_at
 		FROM users
-		WHERE email = $1
+		WHERE LOWER(email) = LOWER($1)
 	`
 	var user entities.User
 	err := r.pool.QueryRow(ctx, query, email).Scan(

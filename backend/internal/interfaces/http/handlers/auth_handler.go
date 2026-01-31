@@ -68,7 +68,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	now := time.Now()
 	user := &entities.User{
 		ID:           uuid.New(),
-		Email:        req.Email,
+		Email:        strings.ToLower(req.Email),
 		PasswordHash: passwordHash,
 		Name:         req.Name,
 		CreatedAt:    now,
@@ -111,7 +111,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
 	}
 
-	user, err := h.userRepo.GetByEmail(c.Context(), req.Email)
+	user, err := h.userRepo.GetByEmail(c.Context(), strings.ToLower(req.Email))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
