@@ -1,14 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { useBubbleStore, type AgentResponse } from '../lib/bubbleStore'
+import { fetchAiOpinion } from '../lib/mockAi'
+
 
 type BubbleCreateModalProps = {
   open: boolean
   symbol: string
   defaultTimeframe: string
   defaultPrice?: string
+  defaultTime?: number // epoch ms
   onClose: () => void
   onCreated?: () => void
 }
@@ -20,10 +22,11 @@ export function BubbleCreateModal({
   symbol,
   defaultTimeframe,
   defaultPrice,
+  defaultTime,
   onClose,
   onCreated,
 }: BubbleCreateModalProps) {
-  const { t } = useI18n()
+
   const [timeframe, setTimeframe] = useState(defaultTimeframe)
   const [candleTime, setCandleTime] = useState('')
   const [price, setPrice] = useState(defaultPrice || '')
@@ -31,6 +34,9 @@ export function BubbleCreateModal({
   const [tagsInput, setTagsInput] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
+  const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
 
   useEffect(() => {
     if (!open) return
@@ -39,8 +45,14 @@ export function BubbleCreateModal({
     setMemo('')
     setTagsInput('')
     setError('')
-    setCandleTime(formatLocalDateTime(new Date()))
-  }, [open, defaultPrice, defaultTimeframe])
+    setAiResponse(null)
+    setAiLoading(false)
+    setPromptType('brief')
+
+    // Use defaultTime if provided, otherwise now
+    const initialDate = defaultTime ? new Date(defaultTime) : new Date()
+    setCandleTime(formatLocalDateTime(initialDate))
+  }, [open, defaultPrice, defaultTimeframe, defaultTime])
 
   const tags = useMemo(() => {
     return tagsInput
@@ -49,7 +61,27 @@ export function BubbleCreateModal({
       .filter(Boolean)
   }, [tagsInput])
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const addBubble = useBubbleStore((state) => state.addBubble)
+
+  const handleAskAi = async () => {
+    if (!price || !symbol) return
+    setAiLoading(true)
+    try {
+      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType)
+      setAiResponse(response)
+      // Auto-append recommendation to note if empty
+      if (!memo) {
+        setMemo(response.response)
+      }
+    } catch (e) {
+      console.error(e)
+      setError('AI 의견을 가져오는데 실패했습니다.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (!symbol) {
       setError('심볼이 선택되지 않았습니다.')
@@ -67,19 +99,26 @@ export function BubbleCreateModal({
     setError('')
     setIsSubmitting(true)
     try {
-      const candleISO = new Date(candleTime).toISOString()
-      await api.post('/v1/bubbles', {
+      const ts = new Date(candleTime).getTime()
+
+      addBubble({
+        id: crypto.randomUUID(),
         symbol,
         timeframe,
-        candle_time: candleISO,
-        price: price.trim(),
-        memo: memo.trim() ? memo.trim() : undefined,
+        ts,
+        price: parseFloat(price.trim()),
+        note: memo.trim(),
         tags,
+        agents: aiResponse ? [aiResponse] : undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
+
       onCreated?.()
       onClose()
     } catch (err: any) {
-      setError(err?.response?.data?.message || '버블 생성에 실패했습니다.')
+      console.error(err)
+      setError('버블 생성에 실패했습니다.')
     } finally {
       setIsSubmitting(false)
     }
@@ -167,6 +206,39 @@ export function BubbleCreateModal({
               </div>
             )}
           </label>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI Insight</span>
+              {!aiResponse && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={promptType}
+                    onChange={(e) => setPromptType(e.target.value as any)}
+                    disabled={aiLoading}
+                    className="rounded bg-neutral-950 border border-neutral-700 px-2 py-1 text-xs text-neutral-300"
+                  >
+                    <option value="brief">Brief</option>
+                    <option value="detailed">Detailed</option>
+                    <option value="technical">Technical</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleAskAi}
+                    disabled={aiLoading || !price}
+                    className="rounded px-2 py-1 text-xs font-semibold text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-50"
+                  >
+                    {aiLoading ? 'Analyzing...' : 'Ask AI'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {aiResponse && (
+              <div className="mt-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                {aiResponse.response}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
             <button
               type="button"

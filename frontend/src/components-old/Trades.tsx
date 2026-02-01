@@ -77,6 +77,7 @@ export function Trades() {
   const [to, setTo] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
+  const [isDummyMode, setIsDummyMode] = useState(false)
 
   const params = useMemo(() => {
     const apiParams: Record<string, string> = {}
@@ -109,8 +110,53 @@ export function Trades() {
   }, [params, t.tradesLoadFailed])
 
   useEffect(() => {
+    if (isDummyMode) return
     loadData()
-  }, [loadData])
+  }, [loadData, isDummyMode])
+
+  const generateDummyTrades = () => {
+    const dummies: TradeItem[] = []
+    const now = Date.now()
+    const validSymbols = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'SOLUSDT', 'DOGEUSDT']
+
+    for (let i = 0; i < 50; i++) {
+      const isWin = Math.random() > 0.5
+      const pnl = isWin ? (Math.random() * 50).toFixed(2) : (Math.random() * -50).toFixed(2)
+      const symbol = validSymbols[Math.floor(Math.random() * validSymbols.length)]
+
+      dummies.push({
+        id: `dummy-${i}`,
+        exchange: Math.random() > 0.5 ? 'binance_futures' : 'upbit',
+        symbol,
+        side: Math.random() > 0.5 ? 'BUY' : 'SELL',
+        quantity: (Math.random() * 2).toFixed(3),
+        price: (Math.random() * 50000 + 20000).toFixed(2),
+        realized_pnl: pnl,
+        trade_time: new Date(now - i * 3600000).toISOString()
+      })
+    }
+
+    setIsDummyMode(true)
+    setTrades(dummies)
+    // Compute local summary
+    const totalPnl = dummies.reduce((sum, t) => sum + Number(t.realized_pnl || 0), 0)
+    const wins = dummies.filter(t => Number(t.realized_pnl) > 0).length
+    const losses = dummies.filter(t => Number(t.realized_pnl) < 0).length
+
+    setSummary({
+      exchange: 'all',
+      totals: {
+        total_trades: dummies.length,
+        realized_pnl_total: totalPnl.toFixed(2),
+        wins,
+        losses,
+        breakeven: dummies.length - wins - losses
+      },
+      by_exchange: [],
+      by_side: [],
+      by_symbol: []
+    })
+  }
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -203,6 +249,13 @@ export function Trades() {
             className="rounded-lg border border-neutral-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-200 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? t.loading : t.refresh}
+          </button>
+          <button
+            type="button"
+            onClick={generateDummyTrades}
+            className="rounded-lg border border-yellow-500/50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-400 transition hover:bg-yellow-500/10"
+          >
+            {isDummyMode ? 'Reload Live' : '+ Dummy Data'}
           </button>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -325,8 +378,8 @@ export function Trades() {
           <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.byExchange}</p>
             <div className="mt-4 space-y-3 text-sm text-neutral-300">
-              {(summary?.by_exchange || []).map((item) => (
-                <div key={item.exchange} className="flex items-center justify-between">
+              {(summary?.by_exchange || []).map((item, i) => (
+                <div key={`${item.exchange}-${i}`} className="flex items-center justify-between">
                   <span className="font-semibold text-neutral-100">{item.exchange}</span>
                   <span>{item.total_trades} · {formatSigned(item.realized_pnl_total)}</span>
                 </div>
@@ -337,8 +390,8 @@ export function Trades() {
           <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.bySide}</p>
             <div className="mt-4 space-y-3 text-sm text-neutral-300">
-              {(summary?.by_side || []).map((item) => (
-                <div key={item.side} className="flex items-center justify-between">
+              {(summary?.by_side || []).map((item, i) => (
+                <div key={`${item.side}-${i}`} className="flex items-center justify-between">
                   <span className="font-semibold text-neutral-100">{item.side}</span>
                   <span>{item.total_trades} · {formatSigned(item.realized_pnl_total)}</span>
                 </div>
@@ -349,8 +402,8 @@ export function Trades() {
           <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.bySymbol}</p>
             <div className="mt-4 space-y-3 text-sm text-neutral-300">
-              {(summary?.by_symbol || []).map((item) => (
-                <div key={item.symbol} className="flex items-center justify-between">
+              {(summary?.by_symbol || []).map((item, i) => (
+                <div key={`${item.symbol}-${i}`} className="flex items-center justify-between">
                   <span className="font-semibold text-neutral-100">{item.symbol}</span>
                   <span>{item.total_trades} · {formatSigned(item.realized_pnl_total)}</span>
                 </div>

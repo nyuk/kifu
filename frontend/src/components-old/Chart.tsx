@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
 import { api } from '../lib/api'
+import { exportBubbles, importBubbles } from '../lib/dataHandler'
+import { parseTradeCsv } from '../lib/csvParser'
 import { BubbleCreateModal } from '../components/BubbleCreateModal'
+import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
+import { useToast } from '../components/ui/Toast'
 
 type UserSymbolItem = {
   symbol: string
@@ -18,28 +22,6 @@ type KlineItem = {
   low: string
   close: string
   volume: string
-}
-
-type BubbleItem = {
-  id: string
-  symbol: string
-  timeframe: string
-  candle_time: string
-  price: string
-  bubble_type: string
-  memo?: string | null
-  tags?: string[]
-}
-
-type TradeItem = {
-  id: string
-  symbol: string
-  exchange: string
-  side: 'buy' | 'sell'
-  quantity: string
-  price: string
-  realized_pnl?: string
-  trade_time: string
 }
 
 const intervals = ['1m', '15m', '1h', '4h', '1d']
@@ -56,13 +38,8 @@ function getTimeframeSeconds(tf: string): number {
   return map[tf] || 3600
 }
 
-// Floor timestamp to candle start time based on timeframe
-function floorToCandle(timestamp: number, timeframe: string): number {
-  const seconds = getTimeframeSeconds(timeframe)
-  return Math.floor(timestamp / seconds) * seconds
-}
-
 export function Chart() {
+  console.log('>>> CHART COMPONENT RENDER (V2 Fixed) <<<')
   const { symbol: symbolParam } = useParams()
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -76,39 +53,36 @@ export function Chart() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [bubbles, setBubbles] = useState<BubbleItem[]>([])
-  const [bubblePositions, setBubblePositions] = useState<Array<{
+  const { toast } = useToast()
+
+  const bubbles = useBubbleStore((state) => state.bubbles)
+  const trades = useBubbleStore((state) => state.trades)
+  const importTrades = useBubbleStore((state) => state.importTrades)
+
+  const [overlayPositions, setOverlayPositions] = useState<Array<{
     candleTime: number
     x: number
     y: number
-    bubbles: BubbleItem[]
+    bubbles: Bubble[]
+    trades: Trade[]
     avgPrice: number
   }>>([])
+
   const [clickedCandle, setClickedCandle] = useState<{ time: number; price: number } | null>(null)
-  const [trades, setTrades] = useState<TradeItem[]>([])
-  const [tradePositions, setTradePositions] = useState<Array<{
-    candleTime: number
-    x: number
-    y: number
-    trades: TradeItem[]
-    avgPrice: number
-  }>>([])
   const [mounted, setMounted] = useState(false)
   const [overlayRect, setOverlayRect] = useState({ left: 0, top: 0, width: 0, height: 0 })
-  const bubblesRef = useRef<BubbleItem[]>([])
-  const timeframeRef = useRef(timeframe)
-  
+
+  const activeBubbles = useMemo(() => {
+    return bubbles.filter(b => b.symbol === selectedSymbol)
+  }, [bubbles, selectedSymbol])
+
+  const activeTrades = useMemo(() => {
+    return trades.filter(t => t.symbol === selectedSymbol)
+  }, [trades, selectedSymbol])
+
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    bubblesRef.current = bubbles
-  }, [bubbles])
-
-  useEffect(() => {
-    timeframeRef.current = timeframe
-  }, [timeframe])
 
   const updateOverlayPosition = useCallback(() => {
     if (!wrapperRef.current || !chartRef.current) return
@@ -121,6 +95,7 @@ export function Chart() {
     })
   }, [])
 
+  // Load Symbols
   useEffect(() => {
     let active = true
     const loadSymbols = async () => {
@@ -134,28 +109,25 @@ export function Chart() {
         setError(err?.response?.data?.message || '심볼을 불러오지 못했습니다.')
       }
     }
-
     loadSymbols()
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [])
 
+  // Sync Symbol Param
   useEffect(() => {
     if (symbols.length === 0) return
-    const symbolsUpper = symbols.map((item) => item.symbol)
-    const normalizedParam = symbolParam?.toUpperCase() || ''
+    const normalizedParam = Array.isArray(symbolParam) ? symbolParam[0]?.toUpperCase() : symbolParam?.toUpperCase() || ''
     const match = symbols.find((item) => item.symbol === normalizedParam)
     const selected = match?.symbol || symbols[0].symbol
 
     setSelectedSymbol(selected)
-    // Always use 1d as default timeframe on initial load
     setTimeframe('1d')
-    if (!normalizedParam || !symbolsUpper.includes(normalizedParam)) {
+    if (!normalizedParam || !match) {
       router.replace(`/chart/${selected}`)
     }
   }, [router, symbolParam, symbols])
 
+  // Load Klines
   useEffect(() => {
     if (!selectedSymbol) return
     let active = true
@@ -175,56 +147,9 @@ export function Chart() {
         if (active) setLoading(false)
       }
     }
-
     loadKlines()
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [selectedSymbol, timeframe])
-
-  useEffect(() => {
-    if (!selectedSymbol) return
-    let active = true
-    const loadBubbles = async () => {
-      try {
-        const response = await api.get('/v1/bubbles', {
-          params: { symbol: selectedSymbol, limit: 200, sort: 'desc' },
-        })
-        if (!active) return
-        setBubbles(response.data?.items || [])
-      } catch {
-        if (!active) return
-        setBubbles([])
-      }
-    }
-
-    loadBubbles()
-    return () => {
-      active = false
-    }
-  }, [selectedSymbol])
-
-  useEffect(() => {
-    if (!selectedSymbol) return
-    let active = true
-    const loadTrades = async () => {
-      try {
-        const response = await api.get('/v1/trades', {
-          params: { symbol: selectedSymbol, limit: 200 },
-        })
-        if (!active) return
-        setTrades(response.data?.trades || [])
-      } catch {
-        if (!active) return
-        setTrades([])
-      }
-    }
-
-    loadTrades()
-    return () => {
-      active = false
-    }
-  }, [selectedSymbol])
 
   const chartData = useMemo(() => {
     return klines
@@ -248,6 +173,71 @@ export function Chart() {
     return klines[klines.length - 1].close || ''
   }, [klines])
 
+  // Update Positions for Bubbles AND Trades
+  const updatePositions = useCallback(() => {
+    if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
+
+    const dataByCandle = new Map<number, { bubbles: Bubble[], trades: Trade[] }>()
+
+    const findMatchingCandleTime = (ts: number): number | null => {
+      const itemTime = Math.floor(ts / 1000)
+      const secondsPerCandle = getTimeframeSeconds(timeframe)
+      // Simple binary search or filter could be optimized, but find is fine for N=500
+      const match = chartData.find(kline => {
+        const kTime = kline.time as number
+        return itemTime >= kTime && itemTime < kTime + secondsPerCandle
+      })
+      return match ? (match.time as number) : null
+    }
+
+    // Process Bubbles
+    activeBubbles.forEach(bubble => {
+      const candleTime = findMatchingCandleTime(bubble.ts)
+      if (candleTime !== null) {
+        if (!dataByCandle.has(candleTime)) {
+          dataByCandle.set(candleTime, { bubbles: [], trades: [] })
+        }
+        dataByCandle.get(candleTime)!.bubbles.push(bubble)
+      }
+    })
+
+    // Process Trades
+    activeTrades.forEach(trade => {
+      const candleTime = findMatchingCandleTime(trade.ts)
+      if (candleTime !== null) {
+        if (!dataByCandle.has(candleTime)) {
+          dataByCandle.set(candleTime, { bubbles: [], trades: [] })
+        }
+        dataByCandle.get(candleTime)!.trades.push(trade)
+      }
+    })
+
+    const positions: Array<{
+      candleTime: number
+      x: number
+      y: number
+      bubbles: Bubble[]
+      trades: Trade[]
+      avgPrice: number
+    }> = []
+
+    const chart = chartRef.current
+    dataByCandle.forEach((data, candleTime) => {
+      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+      if (x === null || x === undefined) return
+
+      const candle = chartData.find(c => (c.time as number) === candleTime)
+      const avgPrice = candle ? candle.close : 0
+      const y = seriesRef.current?.priceToCoordinate(avgPrice)
+
+      if (y === null || y === undefined) return
+      positions.push({ candleTime, x, y, bubbles: data.bubbles, trades: data.trades, avgPrice })
+    })
+
+    setOverlayPositions(positions)
+  }, [chartData, activeBubbles, activeTrades, timeframe])
+
+  // Chart Initialization
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -278,40 +268,37 @@ export function Chart() {
     chartRef.current = chart
     seriesRef.current = series
 
+    if (chartData.length > 0) {
+      series.setData(chartData)
+      chart.timeScale().fitContent()
+    }
+
     const clickHandler = (param: any) => {
       if (!param.point || !param.time) return
-      
       const price = series.coordinateToPrice(param.point.y)
       if (price === null) return
-      
+
       const clickedTime = param.time as number
-      
-      const getTimeRangeForTimeframe = (tf: string): number => {
-        const ranges: Record<string, number> = {
-          '1m': 60,
-          '15m': 900,
-          '1h': 3600,
-          '4h': 14400,
-          '1d': 86400,
-        }
-        return ranges[tf] || 3600
+      const timeRange = getTimeframeSeconds(timeframe)
+
+      // Check if clicking near an existing bubble
+      const existingGrouping = overlayPositions.find(p => p.candleTime === clickedTime)
+
+      if (existingGrouping && existingGrouping.bubbles.length > 0) {
+        console.log('Clicked group:', existingGrouping)
+        // Ideally open modal to edit the first bubble or show list?
+        // Current logic: Create new bubble at this time anyway
       }
-      
-      const existingBubble = bubblesRef.current.find(b => {
-        const bubbleTime = Math.floor(new Date(b.candle_time).getTime() / 1000)
-        const timeRange = getTimeRangeForTimeframe(timeframeRef.current)
-        return Math.abs(bubbleTime - clickedTime) < timeRange / 2
-      })
-      
-      if (existingBubble) {
-        console.log('Existing bubble clicked:', existingBubble)
-      } else {
-        setClickedCandle({ time: clickedTime, price })
-        setIsModalOpen(true)
-      }
+
+      setClickedCandle({ time: clickedTime, price })
+      setIsModalOpen(true)
     }
-    
+
     chart.subscribeClick(clickHandler)
+    chart.timeScale().subscribeVisibleTimeRangeChange(() => {
+      updateOverlayPosition()
+      updatePositions()
+    })
 
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries.length) return
@@ -327,156 +314,59 @@ export function Chart() {
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [])
+  }, [overlayPositions, timeframe, chartData, updatePositions, updateOverlayPosition])
 
+  // Update Data Effect
   useEffect(() => {
-    if (!seriesRef.current || !chartRef.current) return
+    if (!seriesRef.current) return
     seriesRef.current.setData(chartData)
-    chartRef.current.timeScale().fitContent()
-    
-    setTimeout(() => {
-      updateOverlayPosition()
-    }, 100)
+    chartRef.current?.timeScale().fitContent()
+    setTimeout(() => { updateOverlayPosition() }, 100)
   }, [chartData, updateOverlayPosition])
 
-  const calculateBubblePositions = useCallback(() => {
-    if (!seriesRef.current || !chartRef.current || chartData.length === 0 || bubbles.length === 0) {
-      setBubblePositions([])
-      return
-    }
-    
-    const chart = chartRef.current
-    
-    const bubblesByCandle = new Map<number, BubbleItem[]>()
-    
-    bubbles.forEach(bubble => {
-      const bubbleTime = Math.floor(new Date(bubble.candle_time).getTime() / 1000)
-      const candleTime = floorToCandle(bubbleTime, timeframe)
-      
-      if (!bubblesByCandle.has(candleTime)) {
-        bubblesByCandle.set(candleTime, [])
+  // Handlers
+  const handleImportClick = () => {
+    document.getElementById('import-json-input')?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (confirm('현재 데이터를 모두 삭제하고 파일 내용으로 교체하시겠습니까? (복구 불가)')) {
+      const result = await importBubbles(file)
+      if (result.success) {
+        toast(result.message, 'success')
+      } else {
+        toast(result.message, 'error')
       }
-      bubblesByCandle.get(candleTime)!.push(bubble)
-    })
-    
-    const positions: Array<{
-      candleTime: number
-      x: number
-      y: number
-      bubbles: BubbleItem[]
-      avgPrice: number
-    }> = []
-    
-    bubblesByCandle.forEach((candleBubbles, candleTime) => {
-      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
-      if (x === null || x === undefined) return
-      
-      const avgPrice = candleBubbles.reduce((sum, b) => sum + parseFloat(b.price), 0) / candleBubbles.length
-      const y = seriesRef.current?.priceToCoordinate(avgPrice)
-      if (y === null || y === undefined) return
-      
-      positions.push({
-        candleTime,
-        x,
-        y,
-        bubbles: candleBubbles,
-        avgPrice,
-      })
-    })
-    setBubblePositions(positions)
-    updateOverlayPosition()
-  }, [chartData, bubbles, timeframe, updateOverlayPosition])
+    }
+    event.target.value = ''
+  }
 
-  useEffect(() => {
-    if (!chartRef.current || chartData.length === 0) return
-    
-    const chart = chartRef.current
-    
-    const handleVisibleRangeChange = () => {
-      calculateBubblePositions()
-    }
-    
-    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
-    
-    const timer = setTimeout(() => {
-      calculateBubblePositions()
-    }, 500)
-    
-    return () => {
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
-      clearTimeout(timer)
-    }
-  }, [calculateBubblePositions, chartData.length])
+  const handleTradeImportClick = () => {
+    document.getElementById('import-csv-input')?.click()
+  }
 
-  const calculateTradePositions = useCallback(() => {
-    if (!seriesRef.current || !chartRef.current || chartData.length === 0 || trades.length === 0) {
-      setTradePositions([])
-      return
-    }
-    
-    const tradesByCandle = new Map<number, TradeItem[]>()
-    
-    trades.forEach(trade => {
-      const tradeTime = Math.floor(new Date(trade.trade_time).getTime() / 1000)
-      const candleTime = floorToCandle(tradeTime, timeframe)
-      
-      if (!tradesByCandle.has(candleTime)) {
-        tradesByCandle.set(candleTime, [])
+  const handleTradeFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const newTrades = await parseTradeCsv(file)
+      if (newTrades.length === 0) {
+        toast('가져올 거래 내역이 없거나 형식이 잘못되었습니다.', 'error')
+        return
       }
-      tradesByCandle.get(candleTime)!.push(trade)
-    })
-    
-    const positions: Array<{
-      candleTime: number
-      x: number
-      y: number
-      trades: TradeItem[]
-      avgPrice: number
-    }> = []
-    
-    const chart = chartRef.current
-    
-    tradesByCandle.forEach((candleTrades, candleTime) => {
-      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
-      if (x === null || x === undefined) return
-      
-      const avgPrice = candleTrades.reduce((sum, t) => sum + parseFloat(t.price), 0) / candleTrades.length
-      const y = seriesRef.current?.priceToCoordinate(avgPrice)
-      if (y === null || y === undefined) return
-      
-      positions.push({
-        candleTime,
-        x,
-        y,
-        trades: candleTrades,
-        avgPrice,
-      })
-    })
-    
-    setTradePositions(positions)
-    updateOverlayPosition()
-  }, [chartData, trades, timeframe, updateOverlayPosition])
 
-  useEffect(() => {
-    if (!chartRef.current || chartData.length === 0) return
-    
-    const chart = chartRef.current
-    
-    const handleVisibleRangeChange = () => {
-      calculateTradePositions()
+      if (confirm(`${newTrades.length}개의 거래내역을 가져오시겠습니까?`)) {
+        importTrades(newTrades)
+        toast(`${newTrades.length}개 거래내역 가져오기 완료`, 'success')
+      }
+    } catch (e: any) {
+      console.error(e)
+      toast('CSV 파싱 실패: ' + e.message, 'error')
     }
-    
-    chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
-    
-    const timer = setTimeout(() => {
-      calculateTradePositions()
-    }, 600)
-    
-    return () => {
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange)
-      clearTimeout(timer)
-    }
-  }, [calculateTradePositions, chartData.length])
+    event.target.value = ''
+  }
 
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
@@ -487,15 +377,34 @@ export function Chart() {
   useEffect(() => {
     const handleResize = () => updateOverlayPosition()
     const handleScroll = () => updateOverlayPosition()
-    
     window.addEventListener('resize', handleResize)
     window.addEventListener('scroll', handleScroll, true)
-    
     return () => {
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('scroll', handleScroll, true)
     }
   }, [updateOverlayPosition])
+
+  const generateDummyBubbles = () => {
+    if (chartData.length === 0) return
+    const times = chartData.map(c => c.time as number)
+    const prices = chartData.map(c => c.close)
+    for (let i = 0; i < 20; i++) {
+      const idx = Math.floor(Math.random() * times.length)
+      const type = Math.random() > 0.5 ? 'buy' : 'sell'
+      useBubbleStore.getState().addBubble({
+        id: crypto.randomUUID(),
+        symbol: selectedSymbol,
+        timeframe,
+        ts: times[idx] * 1000,
+        price: prices[idx],
+        note: `Dummy ${type}`,
+        tags: [type],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -503,84 +412,97 @@ export function Chart() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Market</p>
-            <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Chart Overview</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Chart Overview <span className="text-xs text-green-500 ml-2">V2 (Fixed)</span></h2>
             <p className="mt-2 text-sm text-neutral-400">
-              실시간 캔들 데이터를 확인하고 바로 말풍선을 생성할 수 있도록 준비 중입니다.
+              Live Chart with Bubble Journaling & Trade Overlay
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {/* Symbol Select */}
             <div className="flex flex-col text-xs text-neutral-400">
               <span className="uppercase tracking-[0.2em]">Symbol</span>
               <select
                 value={selectedSymbol}
-                onChange={(event) => handleSymbolChange(event.target.value)}
+                onChange={(e) => handleSymbolChange(e.target.value)}
                 className="mt-2 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
               >
                 {symbols.map((item) => (
-                  <option key={item.symbol} value={item.symbol}>
-                    {item.symbol}
-                  </option>
+                  <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
                 ))}
               </select>
             </div>
+            {/* Timeframe */}
             <div className="flex flex-col text-xs text-neutral-400">
               <span className="uppercase tracking-[0.2em]">Timeframe</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {intervals.map((interval) => (
                   <button
                     key={interval}
-                    type="button"
                     onClick={() => setTimeframe(interval)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-                      timeframe === interval
-                        ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                    }`}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${timeframe === interval ? 'border-neutral-100 bg-neutral-100 text-neutral-950' : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'}`}
                   >
                     {interval}
                   </button>
                 ))}
               </div>
             </div>
+            {/* Actions */}
             <div className="flex flex-col text-xs text-neutral-400">
               <span className="uppercase tracking-[0.2em]">Actions</span>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(true)}
-                disabled={!selectedSymbol}
-                className="mt-2 rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Create Bubble
-              </button>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!selectedSymbol}
+                  className="mt-2 rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-950 hover:bg-white disabled:opacity-60"
+                >
+                  Create Bubble
+                </button>
+                <button onClick={exportBubbles} className="mt-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800">
+                  Export JSON
+                </button>
+                <button onClick={handleImportClick} className="mt-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800">
+                  Import JSON
+                </button>
+                <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
+
+                <button onClick={handleTradeImportClick} className="mt-2 rounded-lg border border-blue-900/50 px-3 py-2 text-xs text-blue-300 hover:bg-blue-900/20">
+                  Import CSV
+                </button>
+                <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
+
+                <button onClick={generateDummyBubbles} disabled={!selectedSymbol} className="mt-2 rounded-lg border border-yellow-500/50 px-3 py-2 text-xs text-yellow-400 hover:bg-yellow-500/10">
+                  + DUMMY
+                </button>
+                <button onClick={() => { if (confirm('Reset all?')) { localStorage.removeItem('bubble-storage'); window.location.reload(); } }} className="mt-2 rounded-lg border border-red-500/50 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10">
+                  RESET
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-            {error}
-          </div>
-        )}
+        {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3">
+        {/* Status Panels */}
         <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Status</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">
-            {loading ? 'Loading candles...' : 'Live view ready'}
-          </p>
-          <p className="mt-2 text-sm text-neutral-500">
-            {selectedSymbol || 'Symbol'} · {timeframe}
-          </p>
+          <p className="mt-3 text-lg font-semibold text-neutral-200">{loading ? 'Loading...' : 'Ready'}</p>
         </div>
         <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Bubble Flow</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">Next step</p>
-          <p className="mt-2 text-sm text-neutral-500">Click a candle to create a bubble.</p>
+          <p className="mt-3 text-lg font-semibold text-neutral-200">
+            {activeBubbles.length > 0 ? 'Active' : 'Empty State'}
+          </p>
+          <p className="mt-2 text-sm text-neutral-500">
+            {activeBubbles.length === 0
+              ? 'Click a candle to create a bubble.'
+              : `${activeBubbles.length} bubbles tracked.`}
+          </p>
         </div>
         <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">AI Insights</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">Ready</p>
-          <p className="mt-2 text-sm text-neutral-500">AI commentary will appear on demand.</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Imported Trades</p>
+          <p className="mt-3 text-lg font-semibold text-neutral-200">{activeTrades.length}</p>
         </div>
       </section>
 
@@ -589,189 +511,80 @@ export function Chart() {
       </div>
 
       {mounted && (
-        <div 
-          style={{
-            position: 'fixed',
-            left: `${overlayRect.left}px`,
-            top: `${overlayRect.top}px`,
-            width: `${overlayRect.width}px`,
-            height: `${overlayRect.height}px`,
-            zIndex: 9999,
-            pointerEvents: 'none',
-            overflow: 'hidden'
-          }}
-        >
-          {bubblePositions.map((group) => {
-            const count = group.bubbles.length
-            const hasBuy = group.bubbles.some(b => b.tags?.includes('buy') || b.bubble_type === 'buy')
-            const hasSell = group.bubbles.some(b => b.tags?.includes('sell') || b.bubble_type === 'sell')
-            const isMixed = hasBuy && hasSell
-            const isBuy = hasBuy && !hasSell
-            
+        <div style={{ position: 'fixed', left: overlayRect.left, top: overlayRect.top, width: overlayRect.width, height: overlayRect.height, zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
+          {overlayPositions.map((group) => {
+            const hasBubbles = group.bubbles.length > 0
+            const hasTrades = group.trades.length > 0
+
+            // Determine Marker Style
+            // Priority: Mixed > Bubble > Trade
+            let bgColor = 'bg-neutral-700'
+            const borderColor = hasBubbles && hasTrades ? 'border-yellow-500' : 'transparent'
+
+            if (hasBubbles && hasTrades) {
+              bgColor = 'bg-neutral-800'
+            } else if (hasBubbles) {
+              const isBuy = group.bubbles.some(b => b.tags?.includes('buy') || b.action === 'BUY')
+              const isSell = group.bubbles.some(b => b.tags?.includes('sell') || b.action === 'SELL')
+              if (isBuy && isSell) bgColor = 'bg-yellow-600'
+              else if (isBuy) bgColor = 'bg-green-600'
+              else if (isSell) bgColor = 'bg-red-600'
+              else bgColor = 'bg-neutral-600'
+            } else if (hasTrades) {
+              // Determine net side? or just show count
+              const buyCount = group.trades.filter(t => t.side === 'buy').length
+              const sellCount = group.trades.filter(t => t.side === 'sell').length
+              if (buyCount > sellCount) bgColor = 'bg-green-900/80 text-green-200'
+              else if (sellCount > buyCount) bgColor = 'bg-red-900/80 text-red-200'
+              else bgColor = 'bg-blue-900/80 text-blue-200'
+            }
+
             return (
-              <div
-                key={group.candleTime}
-                className="absolute group cursor-pointer"
-                style={{
-                  left: `${group.x}px`,
-                  top: `${group.y - 30}px`,
-                  transform: 'translateX(-50%)',
-                  pointerEvents: 'auto'
-                }}
-              >
-                <div
-                  className={`relative rounded-lg px-3 py-2 text-xs font-semibold shadow-lg transition-all hover:scale-110 ${
-                    isMixed
-                      ? 'bg-yellow-500 text-white'
-                      : isBuy
-                        ? 'bg-green-500 text-white'
-                        : 'bg-red-500 text-white'
-                  }`}
-                  style={{
-                    minWidth: '50px',
-                  }}
-                >
-                  {count === 1 ? (
-                    <div className="truncate max-w-[150px]">
-                      {group.bubbles[0].memo || `$${group.bubbles[0].price}`}
-                    </div>
-                  ) : (
-                    <div className="text-center">{count}개 거래</div>
-                  )}
-                  <div
-                    className="absolute"
-                    style={{
-                      left: '50%',
-                      bottom: '-6px',
-                      transform: 'translateX(-50%)',
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: isMixed
-                        ? '6px solid rgb(234, 179, 8)'
-                        : isBuy
-                          ? '6px solid rgb(34, 197, 94)'
-                          : '6px solid rgb(239, 68, 68)',
-                    }}
-                  />
+              <div key={group.candleTime} className="absolute group cursor-pointer" style={{ left: group.x, top: group.y - 40, transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
+                <div className={`relative rounded px-2 py-1 text-xs font-semibold shadow-md transition-transform hover:scale-110 ${bgColor} ${hasBubbles && hasTrades ? 'border border-yellow-500' : ''}`}>
+                  <div className="flex items-center gap-1">
+                    {hasBubbles && <span className="text-white">💬{group.bubbles.length}</span>}
+                    {hasTrades && <span className="text-xs">
+                      {group.trades.filter(t => t.side === 'buy').length > 0 && '↑'}
+                      {group.trades.filter(t => t.side === 'sell').length > 0 && '↓'}
+                    </span>}
+                  </div>
                 </div>
-                <div className="absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[200px] max-w-[300px] z-20">
-                  <div className="font-semibold mb-2">
-                    {new Date(group.candleTime * 1000).toLocaleString('ko-KR')}
+
+                {/* Tooltip */}
+                <div className="absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] z-50">
+                  <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
+                    {new Date(group.candleTime * 1000).toLocaleString()}
                   </div>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {group.bubbles.map((b, idx) => (
-                      <div key={b.id} className="border-t border-neutral-700 pt-2 first:border-0 first:pt-0">
-                        <div className="flex items-center justify-between">
-                          <span className={`font-medium ${
-                            b.tags?.includes('buy') || b.bubble_type === 'buy'
-                              ? 'text-green-400'
-                              : 'text-red-400'
-                          }`}>
-                            {b.tags?.includes('buy') || b.bubble_type === 'buy' ? '매수' : '매도'}
-                          </span>
-                          <span className="text-neutral-400">${b.price}</span>
-                        </div>
-                        {b.memo && <div className="mt-1 text-neutral-300">{b.memo}</div>}
-                        {b.tags && b.tags.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {b.tags.map(tag => (
-                              <span key={tag} className="px-1.5 py-0.5 bg-neutral-800 rounded text-[10px]">
-                                {tag}
-                              </span>
-                            ))}
+                  {/* Bubbles List */}
+                  {hasBubbles && (
+                    <div className="mb-2">
+                      <div className="text-[10px] uppercase text-neutral-500 mb-1">Bubbles</div>
+                      {group.bubbles.map(b => (
+                        <div key={b.id} className="mb-1 last:mb-0 p-1 bg-neutral-800 rounded">
+                          <div className="flex justify-between">
+                            <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
+                            <span>${b.price}</span>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                          <div className="text-neutral-400 truncate">{b.note}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Trades List */}
+                  {hasTrades && (
+                    <div>
+                      <div className="text-[10px] uppercase text-neutral-500 mb-1">Trades</div>
+                      {group.trades.map(t => (
+                        <div key={t.id} className="mb-1 last:mb-0 p-1 bg-neutral-800/50 rounded flex justify-between">
+                          <span className={t.side === 'buy' ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{t.side.toUpperCase()}</span>
+                          <span>{t.qty} @ {t.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            )
-          })}
-          {tradePositions.map((group) => {
-            const count = group.trades.length
-            const hasBuy = group.trades.some(t => t.side === 'buy')
-            const hasSell = group.trades.some(t => t.side === 'sell')
-            const isMixed = hasBuy && hasSell
-            const isBuy = hasBuy && !hasSell
-            
-            return (
-              <div
-                key={`trade-${group.candleTime}`}
-                className="absolute group cursor-pointer"
-                style={{
-                  left: `${group.x + 20}px`,
-                  top: `${group.y - 30}px`,
-                  transform: 'translateX(-50%)',
-                  pointerEvents: 'auto'
-                }}
-              >
-                <div
-                  className={`relative rounded px-2 py-1 text-xs font-semibold shadow-lg transition-all hover:scale-110 border-2 ${
-                    isMixed
-                      ? 'bg-purple-500 border-purple-300 text-white'
-                      : isBuy
-                        ? 'bg-blue-500 border-blue-300 text-white'
-                        : 'bg-cyan-500 border-cyan-300 text-white'
-                  }`}
-                  style={{
-                    minWidth: '40px',
-                  }}
-                >
-                  {count === 1 ? (
-                    <div className="truncate max-w-[100px]">
-                      {group.trades[0].side === 'buy' ? '매수' : '매도'}
-                    </div>
-                  ) : (
-                    <div className="text-center">{count}거래</div>
-                  )}
-                  <div
-                    className="absolute"
-                    style={{
-                      left: '50%',
-                      bottom: '-6px',
-                      transform: 'translateX(-50%)',
-                      borderLeft: '6px solid transparent',
-                      borderRight: '6px solid transparent',
-                      borderTop: isMixed
-                        ? '6px solid rgb(168, 85, 247)'
-                        : isBuy
-                          ? '6px solid rgb(59, 130, 246)'
-                          : '6px solid rgb(6, 182, 212)',
-                    }}
-                  />
-                </div>
-                <div className="absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-w-[320px] z-20">
-                  <div className="font-semibold mb-2 text-purple-400">
-                    거래내역 {new Date(group.candleTime * 1000).toLocaleDateString('ko-KR')}
-                  </div>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {group.trades.map((t) => (
-                      <div key={t.id} className="border-t border-neutral-700 pt-2 first:border-0 first:pt-0">
-                        <div className="flex items-center justify-between">
-                          <span className={`font-medium ${
-                            t.side === 'buy' ? 'text-blue-400' : 'text-cyan-400'
-                          }`}>
-                            {t.side === 'buy' ? '매수' : '매도'}
-                          </span>
-                          <span className="text-neutral-400">{t.exchange}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-neutral-300">수량: {parseFloat(t.quantity).toFixed(4)}</span>
-                          <span className="text-neutral-400">${parseFloat(t.price).toFixed(2)}</span>
-                        </div>
-                        {t.realized_pnl && (
-                          <div className={`mt-1 text-right ${
-                            parseFloat(t.realized_pnl) >= 0 ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                            PnL: {parseFloat(t.realized_pnl) >= 0 ? '+' : ''}{parseFloat(t.realized_pnl).toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-               </div>
             )
           })}
         </div>
@@ -782,10 +595,8 @@ export function Chart() {
         symbol={selectedSymbol}
         defaultTimeframe={timeframe}
         defaultPrice={clickedCandle?.price.toString() || latestPrice}
-        onClose={() => {
-          setIsModalOpen(false)
-          setClickedCandle(null)
-        }}
+        defaultTime={clickedCandle?.time ? clickedCandle.time * 1000 : undefined}
+        onClose={() => { setIsModalOpen(false); setClickedCandle(null) }}
       />
     </div>
   )
