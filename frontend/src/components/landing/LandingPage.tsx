@@ -196,6 +196,7 @@ export function LandingPage() {
                     </div>
                     <div className="flex items-center gap-6 text-sm font-medium">
                         <Link href="#features" className="hover:text-neutral-100 transition-colors">Features</Link>
+                        <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">Roadmap</Link>
                         <Link href="#pricing" className="hover:text-neutral-100 transition-colors">Pricing</Link>
                         <Link
                             href="/chart"
@@ -275,6 +276,49 @@ export function LandingPage() {
                 </div>
             </section>
 
+            {/* Proof / Demo */}
+            <section className="py-24 bg-neutral-900/30 border-t border-white/5 relative z-20">
+                <div className="mx-auto max-w-7xl px-6">
+                    <div className="mb-12 text-center">
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">Live Demo</h2>
+                        <h3 className="mt-3 text-3xl font-bold text-white">지금 바로 체험하세요</h3>
+                        <p className="mt-4 text-neutral-400 max-w-xl mx-auto">
+                            실제 차트에서 말풍선을 만들고, AI 의견을 수집해보세요. 로그인 없이 바로 시작할 수 있습니다.
+                        </p>
+                    </div>
+                    <div className="relative max-w-4xl mx-auto">
+                        <div className="aspect-video rounded-2xl border border-white/10 bg-neutral-900/80 overflow-hidden relative group">
+                            {/* Demo screenshot placeholder */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
+                                <div className="text-center">
+                                    <div className="w-20 h-20 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mb-4">
+                                        <span className="text-4xl">📊</span>
+                                    </div>
+                                    <p className="text-neutral-400 text-sm">차트 + 말풍선 + AI 의견 수집</p>
+                                </div>
+                            </div>
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Link
+                                    href="/chart"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
+                                >
+                                    <span>🚀</span> 데모 시작하기
+                                </Link>
+                            </div>
+                        </div>
+                        {/* Feature pills */}
+                        <div className="flex flex-wrap justify-center gap-3 mt-6">
+                            {['캔들 클릭', '말풍선 생성', 'AI 의견 수집', '복기 모드', 'JSON Export'].map((tag) => (
+                                <span key={tag} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Features Detail */}
             <section id="features" className="py-24 bg-neutral-900/20 border-t border-white/5 relative z-20">
                 <div className="mx-auto max-w-7xl px-6">
@@ -325,6 +369,155 @@ export function LandingPage() {
                                 <span className="text-4xl">🔒</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Mobile Roadmap */}
+            <section id="roadmap" className="py-24 border-t border-white/5 relative z-20 bg-[#0B0F14]">
+                <div className="mx-auto max-w-7xl px-6">
+                    <div className="grid md:grid-cols-2 gap-12 items-center">
+                        {/* Text content */}
+                        <div>
+                            <div className="inline-block rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-amber-400 mb-6">
+                                Planned
+                            </div>
+                            <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                                모바일로 더 빠르게,<br />
+                                <span className="text-amber-400">더 안전하게</span>
+                            </h2>
+                            <p className="mt-6 text-neutral-400 leading-relaxed">
+                                알림이 울린 순간, 차트에서 바로 기록하고 복기할 수 있도록<br />
+                                모바일 경험을 준비하고 있습니다.
+                            </p>
+                            <ul className="mt-8 space-y-4">
+                                {[
+                                    { icon: '🔔', text: '알림 → 원클릭 진입' },
+                                    { icon: '💬', text: '캔들 탭 → 의견 수집(Quick) → 말풍선 저장' },
+                                    { icon: '📱', text: '최근 기록 오프라인 복기(캐시)' },
+                                ].map((item, i) => (
+                                    <li key={i} className="flex items-start gap-3 text-neutral-300">
+                                        <span className="text-lg">{item.icon}</span>
+                                        <span>{item.text}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <p className="mt-8 text-sm text-neutral-500 border-l-2 border-amber-500/30 pl-4">
+                                모바일은 기능 확장이 아니라,<br />
+                                <strong className="text-neutral-400">기록과 복기가 끊기지 않도록 만드는 채널</strong>입니다.
+                            </p>
+                        </div>
+                        {/* Mobile mockup */}
+                        <div className="flex justify-center">
+                            <div className="relative w-64 h-[500px] rounded-[3rem] border-4 border-neutral-700 bg-neutral-900 p-2 shadow-2xl">
+                                {/* Notch */}
+                                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-6 bg-neutral-800 rounded-full" />
+                                {/* Screen */}
+                                <div className="w-full h-full rounded-[2.5rem] bg-gradient-to-b from-neutral-800 to-neutral-900 overflow-hidden flex flex-col">
+                                    {/* Status bar */}
+                                    <div className="h-12 flex items-end justify-center pb-2">
+                                        <span className="text-[10px] text-neutral-500">KIFU</span>
+                                    </div>
+                                    {/* Mini chart area */}
+                                    <div className="flex-1 px-3 py-2">
+                                        <div className="h-32 bg-neutral-800/50 rounded-lg mb-3 flex items-end justify-center gap-[2px] p-2">
+                                            {Array.from({ length: 15 }).map((_, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`w-2 rounded-sm ${Math.random() > 0.4 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
+                                                    style={{ height: 20 + Math.random() * 40 }}
+                                                />
+                                            ))}
+                                        </div>
+                                        {/* Bubble */}
+                                        <div className="bg-cyan-500/20 border border-cyan-500/40 rounded-lg p-3 mb-3">
+                                            <p className="text-[10px] text-cyan-300">📝 RSI 과매도 진입...</p>
+                                        </div>
+                                        {/* Quick actions */}
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 bg-amber-500/20 rounded-lg py-2 text-center text-[10px] text-amber-300">AI Quick</div>
+                                            <div className="flex-1 bg-neutral-700/50 rounded-lg py-2 text-center text-[10px] text-neutral-400">저장</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Vision */}
+            <section className="py-24 border-t border-white/5 relative z-20 bg-neutral-900/30">
+                <div className="mx-auto max-w-7xl px-6">
+                    <div className="text-center mb-16">
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-500">Vision</h2>
+                        <h3 className="mt-3 text-3xl md:text-4xl font-bold text-white">
+                            복기를 <span className="text-emerald-400">'자산'</span>으로 만든다
+                        </h3>
+                        <p className="mt-6 text-lg text-neutral-400 max-w-2xl mx-auto">
+                            우리는 예측을 팔지 않습니다.<br />
+                            <strong className="text-neutral-200">결정의 순간을 저장하고, 실수를 줄이는 시스템</strong>을 만듭니다.
+                        </p>
+                    </div>
+
+                    {/* Timeline cards */}
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {[
+                            {
+                                phase: 'Today',
+                                color: 'emerald',
+                                items: ['캔들별 기록', 'AI 의견 수집', '복기 모드'],
+                                status: 'Available Now',
+                            },
+                            {
+                                phase: 'Next',
+                                color: 'cyan',
+                                items: ['거래내역(CSV/API) 오버레이', '자동 요약', '개인 패턴 리포트'],
+                                status: 'In Development',
+                            },
+                            {
+                                phase: 'Later',
+                                color: 'purple',
+                                items: ['멀티 디바이스 동기화', '팀/친구 공유', '커뮤니티 인사이트 레이어'],
+                                status: 'Planned',
+                            },
+                        ].map((card, i) => (
+                            <div
+                                key={i}
+                                className={`relative rounded-2xl border p-8 transition-all hover:-translate-y-1 ${
+                                    card.color === 'emerald'
+                                        ? 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
+                                        : card.color === 'cyan'
+                                        ? 'border-cyan-500/30 bg-cyan-500/5 hover:border-cyan-500/50'
+                                        : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/50'
+                                }`}
+                            >
+                                <div className={`text-xs font-bold uppercase tracking-widest mb-4 ${
+                                    card.color === 'emerald' ? 'text-emerald-400' : card.color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'
+                                }`}>
+                                    {card.phase}
+                                </div>
+                                <ul className="space-y-3">
+                                    {card.items.map((item, j) => (
+                                        <li key={j} className="flex items-center gap-2 text-neutral-300">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${
+                                                card.color === 'emerald' ? 'bg-emerald-400' : card.color === 'cyan' ? 'bg-cyan-400' : 'bg-purple-400'
+                                            }`} />
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <div className={`mt-6 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                                    card.color === 'emerald'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : card.color === 'cyan'
+                                        ? 'bg-cyan-500/20 text-cyan-300'
+                                        : 'bg-purple-500/20 text-purple-300'
+                                }`}>
+                                    {card.status}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>
