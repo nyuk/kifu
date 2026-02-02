@@ -3,7 +3,7 @@ import '../src/index.css'
 import { ToastProvider } from '../src/components/ui/Toast'
 
 export const metadata: Metadata = {
-  title: 'MoneyVessel',
+  title: 'KIFU',
   description: 'AI-Powered Crypto Trading Journal',
 }
 

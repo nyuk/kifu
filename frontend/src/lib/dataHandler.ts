@@ -1,19 +1,21 @@
 
-import { useBubbleStore, type Bubble } from './bubbleStore'
+import { useBubbleStore, type Bubble, type Trade } from './bubbleStore'
 
-export interface BubbleDataExport {
-    schemaVersion: number
-    exportedAt: string
+export interface DataExport {
+    schemaVersion?: number
+    exportedAt?: string
     appVersion?: string
     bubbles: Bubble[]
+    trades?: Trade[]
 }
 
 export function exportBubbles() {
-    const bubbles = useBubbleStore.getState().bubbles
-    const data: BubbleDataExport = {
-        schemaVersion: 1,
+    const { bubbles, trades } = useBubbleStore.getState()
+    const data: DataExport = {
+        schemaVersion: 2,
         exportedAt: new Date().toISOString(),
         bubbles,
+        trades,
     }
 
     const jsonString = JSON.stringify(data, null, 2)
@@ -22,7 +24,7 @@ export function exportBubbles() {
 
     const a = document.createElement('a')
     a.href = url
-    a.download = `bubbles-export-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `kifu-export-${new Date().toISOString().slice(0, 10)}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -32,32 +34,31 @@ export function exportBubbles() {
 export async function importBubbles(file: File): Promise<{ success: boolean; message: string }> {
     try {
         const text = await file.text()
-        const data = JSON.parse(text) as BubbleDataExport
+        const data = JSON.parse(text) as DataExport
 
-        // Basic Validation
-        if (data.schemaVersion !== 1) {
-            return { success: false, message: `Unsupported schema version: ${data.schemaVersion}` }
-        }
+        // bubbles 배열 확인
         if (!Array.isArray(data.bubbles)) {
             return { success: false, message: 'Invalid file format: bubbles array missing' }
         }
 
-        // Replace All Strategy
-        // We need a way to replace all bubbles. The store currently has add/update/delete.
-        // I should probably add a `setBubbles` action to the store or just clear and add.
-        // Ideally update the store to have a `loadBubbles` action.
-        // For now, let's see if we can iterate delete or just forcefully set state if zustand allows easy access,
-        // but best practice is to add an action.
-        // I will assume I need to add `setBubbles` to the store in the next step.
-
-        // For now, I will use the store's current methods or plan to update it.
-        // Let's assume I will update store to have `replaceAllBubbles`.
-
+        // 버블 교체
         useBubbleStore.getState().replaceAllBubbles(data.bubbles)
 
-        return { success: true, message: `Successfully imported ${data.bubbles.length} bubbles` }
+        // trades가 있으면 함께 import
+        let tradeCount = 0
+        if (Array.isArray(data.trades) && data.trades.length > 0) {
+            useBubbleStore.getState().deleteAllTrades()
+            useBubbleStore.getState().importTrades(data.trades)
+            tradeCount = data.trades.length
+        }
+
+        const message = tradeCount > 0
+            ? `${data.bubbles.length}개 버블, ${tradeCount}개 거래 가져오기 완료`
+            : `${data.bubbles.length}개 버블 가져오기 완료`
+
+        return { success: true, message }
     } catch (error) {
         console.error(error)
-        return { success: false, message: 'Failed to parse JSON file' }
+        return { success: false, message: 'JSON 파일 파싱 실패' }
     }
 }

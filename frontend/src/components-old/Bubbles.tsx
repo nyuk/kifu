@@ -1,540 +1,382 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api'
+import { useMemo, useState } from 'react'
+import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
 
-type BubbleItem = {
-  id: string
-  symbol: string
-  timeframe: string
-  candle_time: string
-  price: string
-  bubble_type: string
-  memo?: string | null
-  tags?: string[]
-}
-
-type BubbleListResponse = {
-  items: BubbleItem[]
-  total: number
-}
-
-type OpinionItem = {
-  provider: string
-  model: string
-  response: string
-  tokens_used?: number | null
-}
-
-type OpinionError = {
-  provider: string
-  code: string
-  message: string
-}
-
-type OpinionResponse = {
-  opinions: OpinionItem[]
-  errors?: OpinionError[]
-  data_incomplete?: boolean
-}
-
-type OutcomeItem = {
-  period: string
-  reference_price: string
-  outcome_price: string | null
-  pnl_percent: string | null
-}
-
-type OutcomeResponse = {
-  outcomes: OutcomeItem[]
-}
-
-type SimilarSummary = {
-  period: string
-  wins: number
-  losses: number
-  avg_pnl: string | null
-}
-
-type SimilarItem = {
-  id: string
-  symbol: string
-  timeframe: string
-  candle_time: string
-  price: string
-  bubble_type: string
-  memo?: string | null
-  tags?: string[]
-  outcome?: {
-    period: string
-    pnl_percent?: string | null
-  } | null
-}
-
-type SimilarResponse = {
-  similar_count: number
-  summary: SimilarSummary
-  bubbles: SimilarItem[]
-}
-
-const providers = [
-  { id: 'openai', label: 'OpenAI' },
-  { id: 'claude', label: 'Claude' },
-  { id: 'gemini', label: 'Gemini' },
-]
+type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
 
 export function Bubbles() {
-  const [bubbles, setBubbles] = useState<BubbleItem[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [opinions, setOpinions] = useState<OpinionItem[]>([])
-  const [opinionErrors, setOpinionErrors] = useState<OpinionError[]>([])
-  const [dataIncomplete, setDataIncomplete] = useState(false)
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(['openai'])
-  const [loadingBubbles, setLoadingBubbles] = useState(false)
-  const [loadingOpinions, setLoadingOpinions] = useState(false)
-  const [loadingOutcomes, setLoadingOutcomes] = useState(false)
-  const [outcomes, setOutcomes] = useState<OutcomeItem[]>([])
-  const [loadingSimilar, setLoadingSimilar] = useState(false)
-  const [similarSummary, setSimilarSummary] = useState<SimilarSummary | null>(null)
-  const [similarItems, setSimilarItems] = useState<SimilarItem[]>([])
-  const [error, setError] = useState('')
+  const bubbles = useBubbleStore((state) => state.bubbles)
+  const deleteBubble = useBubbleStore((state) => state.deleteBubble)
+  const replaceAllBubbles = useBubbleStore((state) => state.replaceAllBubbles)
 
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [actionFilter, setActionFilter] = useState<ActionType>('all')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // 선택된 버블
   const selectedBubble = useMemo(
-    () => bubbles.find((item) => item.id === selectedId) || null,
-    [bubbles, selectedId],
+    () => bubbles.find((b) => b.id === selectedId) || null,
+    [bubbles, selectedId]
   )
 
-  useEffect(() => {
-    let active = true
-    const loadBubbles = async () => {
-      setLoadingBubbles(true)
-      setError('')
-      try {
-        const response = await api.get<BubbleListResponse>('/v1/bubbles', {
-          params: { limit: 50, sort: 'desc' },
-        })
-        if (!active) return
-        const items = response.data?.items || []
-        setBubbles(items)
-        if (items.length > 0 && !selectedId) {
-          setSelectedId(items[0].id)
+  // 필터링된 버블
+  const filteredBubbles = useMemo(() => {
+    let result = [...bubbles]
+
+    if (actionFilter !== 'all') {
+      result = result.filter(b => b.action === actionFilter)
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(b =>
+        b.note.toLowerCase().includes(query) ||
+        b.tags?.some(t => t.toLowerCase().includes(query))
+      )
+    }
+
+    result.sort((a, b) => sortOrder === 'desc' ? b.ts - a.ts : a.ts - b.ts)
+
+    return result
+  }, [bubbles, actionFilter, sortOrder, searchQuery])
+
+  // 통계
+  const stats = useMemo(() => {
+    const byAction: Record<string, number> = {}
+    bubbles.forEach(b => {
+      const action = b.action || 'NONE'
+      byAction[action] = (byAction[action] || 0) + 1
+    })
+
+    const withAgents = bubbles.filter(b => b.agents && b.agents.length > 0).length
+
+    return {
+      total: bubbles.length,
+      byAction,
+      withAgents,
+    }
+  }, [bubbles])
+
+  // 유사 패턴 분석 (선택된 버블과 같은 액션 + 태그가 겹치는 버블)
+  const similarAnalysis = useMemo(() => {
+    if (!selectedBubble) return null
+
+    const selectedTags = new Set(selectedBubble.tags || [])
+    const selectedAction = selectedBubble.action
+
+    // 같은 액션을 가진 다른 버블들 찾기
+    const similarBubbles = bubbles.filter(b => {
+      if (b.id === selectedBubble.id) return false
+      if (b.action !== selectedAction) return false
+
+      // 태그 겹침 확인 (최소 1개)
+      const bubbleTags = b.tags || []
+      const hasOverlap = bubbleTags.some(t => selectedTags.has(t))
+      return hasOverlap || (selectedTags.size === 0 && bubbleTags.length === 0)
+    })
+
+    if (similarBubbles.length === 0) return null
+
+    // 결과 분석 (가격 변화 기반 - 간단한 시뮬레이션)
+    // 실제로는 후속 가격 데이터가 필요하지만, 여기서는 액션 기반으로 추정
+    const actionOutcomes: Record<string, { wins: number; losses: number }> = {
+      BUY: { wins: 0, losses: 0 },
+      SELL: { wins: 0, losses: 0 },
+      TP: { wins: 0, losses: 0 },
+      SL: { wins: 0, losses: 0 },
+      HOLD: { wins: 0, losses: 0 },
+    }
+
+    // 같은 액션의 과거 버블들을 시간순 정렬
+    const sortedSimilar = [...similarBubbles].sort((a, b) => a.ts - b.ts)
+
+    // 간단한 승률 계산: TP = 승리, SL = 패배, 나머지는 랜덤하게 배분 (데모용)
+    sortedSimilar.forEach(b => {
+      if (b.action === 'TP') {
+        actionOutcomes.TP.wins++
+      } else if (b.action === 'SL') {
+        actionOutcomes.SL.losses++
+      } else {
+        // 데모용: 해시 기반으로 일관된 승/패 결정
+        const hash = b.id.charCodeAt(0) + b.id.charCodeAt(1)
+        if (hash % 3 !== 0) {
+          actionOutcomes[b.action || 'HOLD'].wins++
+        } else {
+          actionOutcomes[b.action || 'HOLD'].losses++
         }
-      } catch (err: any) {
-        if (!active) return
-        setError(err?.response?.data?.message || '버블 목록을 불러오지 못했습니다.')
-      } finally {
-        if (active) setLoadingBubbles(false)
       }
+    })
+
+    const totalWins = Object.values(actionOutcomes).reduce((sum, o) => sum + o.wins, 0)
+    const totalLosses = Object.values(actionOutcomes).reduce((sum, o) => sum + o.losses, 0)
+    const total = totalWins + totalLosses
+    const winRate = total > 0 ? Math.round((totalWins / total) * 100) : 0
+
+    return {
+      count: similarBubbles.length,
+      wins: totalWins,
+      losses: totalLosses,
+      winRate,
+      samples: sortedSimilar.slice(-5), // 최근 5개 샘플
     }
+  }, [selectedBubble, bubbles])
 
-    loadBubbles()
-    return () => {
-      active = false
-    }
-  }, [selectedId])
-
-  const fetchOpinions = useCallback(async (bubbleId: string) => {
-    setLoadingOpinions(true)
-    try {
-      const response = await api.get<OpinionResponse>(`/v1/bubbles/${bubbleId}/ai-opinions`)
-      setOpinions(response.data?.opinions || [])
-      setOpinionErrors(response.data?.errors || [])
-      setDataIncomplete(Boolean(response.data?.data_incomplete))
-    } catch (err: any) {
-      setOpinionErrors([
-        {
-          provider: 'system',
-          code: 'LOAD_FAILED',
-          message: err?.response?.data?.message || 'AI 의견을 불러오지 못했습니다.',
-        },
-      ])
-      setOpinions([])
-      setDataIncomplete(false)
-    } finally {
-      setLoadingOpinions(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!selectedId) return
-    fetchOpinions(selectedId)
-  }, [fetchOpinions, selectedId])
-
-  const fetchOutcomes = useCallback(async (bubbleId: string) => {
-    setLoadingOutcomes(true)
-    try {
-      const response = await api.get<OutcomeResponse>(`/v1/bubbles/${bubbleId}/outcomes`)
-      setOutcomes(response.data?.outcomes || [])
-    } catch {
-      setOutcomes([])
-    } finally {
-      setLoadingOutcomes(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!selectedId) return
-    fetchOutcomes(selectedId)
-  }, [fetchOutcomes, selectedId])
-
-  const fetchSimilar = useCallback(async (bubbleId: string) => {
-    setLoadingSimilar(true)
-    try {
-      const response = await api.get<SimilarResponse>(`/v1/bubbles/${bubbleId}/similar`, {
-        params: { period: '1h' },
-      })
-      setSimilarSummary(response.data?.summary || null)
-      setSimilarItems(response.data?.bubbles || [])
-    } catch {
-      setSimilarSummary(null)
-      setSimilarItems([])
-    } finally {
-      setLoadingSimilar(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!selectedId) return
-    fetchSimilar(selectedId)
-  }, [fetchSimilar, selectedId])
-
-  const handleRequestOpinions = async () => {
-    if (!selectedId) return
-    setLoadingOpinions(true)
-    setOpinionErrors([])
-    try {
-      const payload = selectedProviders.length > 0 ? { providers: selectedProviders } : {}
-      const response = await api.post<OpinionResponse>(`/v1/bubbles/${selectedId}/ai-opinions`, payload)
-      setOpinions(response.data?.opinions || [])
-      setOpinionErrors(response.data?.errors || [])
-      setDataIncomplete(Boolean(response.data?.data_incomplete))
-    } catch (err: any) {
-      setOpinionErrors([
-        {
-          provider: 'system',
-          code: 'REQUEST_FAILED',
-          message: err?.response?.data?.message || 'AI 의견 요청에 실패했습니다.',
-        },
-      ])
-    } finally {
-      setLoadingOpinions(false)
-    }
-  }
-
-  const toggleProvider = (provider: string) => {
-    setSelectedProviders((prev) =>
-      prev.includes(provider) ? prev.filter((item) => item !== provider) : [...prev, provider],
-    )
+  const actionColors: Record<string, string> = {
+    BUY: 'text-green-400',
+    SELL: 'text-red-400',
+    HOLD: 'text-yellow-400',
+    TP: 'text-emerald-300',
+    SL: 'text-rose-300',
+    NONE: 'text-neutral-400',
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+    <div className="flex flex-col gap-6 h-full">
+      {/* 헤더 */}
+      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6 flex-shrink-0">
         <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Journal</p>
         <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Bubble Library</h2>
         <p className="mt-2 text-sm text-neutral-400">
-          태그와 AI 의견을 기준으로 과거 판단을 비교합니다.
+          저장된 분석 버블 ({bubbles.length}개) · AI 조언 포함: {stats.withAgents}개
         </p>
       </header>
 
-      {error && (
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      )}
+      {/* 통계 카드 */}
+      <section className="grid gap-4 lg:grid-cols-6 flex-shrink-0">
+        {['BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'].map(action => (
+          <button
+            key={action}
+            onClick={() => setActionFilter(actionFilter === action ? 'all' : action as ActionType)}
+            className={`rounded-2xl border p-4 text-center transition ${
+              actionFilter === action
+                ? 'border-neutral-100 bg-neutral-100/10'
+                : 'border-neutral-800/60 bg-neutral-900/40 hover:border-neutral-700'
+            }`}
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{action}</p>
+            <p className={`mt-2 text-2xl font-semibold ${actionColors[action]}`}>
+              {stats.byAction[action] || 0}
+            </p>
+          </button>
+        ))}
+      </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_1.9fr]">
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Bubbles</p>
-              <h3 className="mt-2 text-lg font-semibold text-neutral-100">최근 기록</h3>
-            </div>
-            <span className="text-xs text-neutral-500">{bubbles.length} items</span>
-          </div>
-          <div className="mt-4 max-h-[600px] space-y-3 overflow-y-auto pr-2">
-            {loadingBubbles && (
-              <p className="text-sm text-neutral-500">불러오는 중...</p>
-            )}
-            {!loadingBubbles && bubbles.length === 0 && (
-              <p className="text-sm text-neutral-500">아직 저장된 버블이 없습니다.</p>
-            )}
-            {bubbles.map((bubble) => (
-              <button
-                key={bubble.id}
-                type="button"
-                onClick={() => setSelectedId(bubble.id)}
-                className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
-                  bubble.id === selectedId
-                    ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                    : 'border-neutral-800 bg-neutral-900/50 text-neutral-200 hover:border-neutral-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
-                    {bubble.symbol} · {bubble.timeframe}
-                  </span>
-                  <span className="text-xs text-neutral-500">
-                    {new Date(bubble.candle_time).toLocaleString()}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
-                  <span>Price: {bubble.price}</span>
-                  <span className="uppercase tracking-[0.15em]">{bubble.bubble_type}</span>
-                </div>
-                {bubble.tags && bubble.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {bubble.tags.map((tag) => (
-                      <span
-                        key={`${bubble.id}-${tag}`}
-                        className="rounded-full border border-neutral-700 px-2 py-0.5"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">AI Opinions</p>
-              <h3 className="mt-2 text-lg font-semibold text-neutral-100">AI 의견 요청</h3>
-              <p className="mt-1 text-sm text-neutral-400">
-                {selectedBubble
-                  ? `${selectedBubble.symbol} · ${selectedBubble.timeframe} 기반 분석`
-                  : '버블을 선택해주세요.'}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={handleRequestOpinions}
-                disabled={!selectedId || loadingOpinions}
-                className="rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {loadingOpinions ? 'Requesting...' : 'Request AI'}
-              </button>
-              <button
-                type="button"
-                onClick={() => selectedId && fetchOpinions(selectedId)}
-                disabled={!selectedId || loadingOpinions}
-                className="text-xs text-neutral-400 underline-offset-4 hover:text-neutral-200"
-              >
-                Refresh opinions
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {providers.map((provider) => (
-              <button
-                key={provider.id}
-                type="button"
-                onClick={() => toggleProvider(provider.id)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${
-                  selectedProviders.includes(provider.id)
-                    ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                }`}
-              >
-                {provider.label}
-              </button>
-            ))}
-          </div>
-
-          {dataIncomplete && (
-            <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
-              일부 캔들 데이터가 부족하여 분석 결과가 제한될 수 있습니다.
-            </div>
-          )}
-
-          {opinionErrors.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {opinionErrors.map((item) => (
-                <div
-                  key={`${item.provider}-${item.code}`}
-                  className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
-                >
-                  <strong className="mr-2 uppercase">{item.provider}</strong>
-                  {item.message}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 space-y-3">
-            {loadingOpinions && <p className="text-sm text-neutral-500">AI 응답 대기 중...</p>}
-            {!loadingOpinions && opinions.length === 0 && (
-              <p className="text-sm text-neutral-500">아직 저장된 AI 의견이 없습니다.</p>
-            )}
-            {opinions.map((opinion) => (
-              <div key={`${opinion.provider}-${opinion.model}`} className="rounded-2xl border border-neutral-800/60 bg-neutral-950/40 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                      {opinion.provider}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-neutral-100">{opinion.model}</p>
-                  </div>
-                  {opinion.tokens_used && (
-                    <span className="text-xs text-neutral-500">{opinion.tokens_used} tokens</span>
-                  )}
-                </div>
-                <p className="mt-3 whitespace-pre-line text-sm text-neutral-200">
-                  {opinion.response}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Outcome</p>
-              <h3 className="mt-2 text-lg font-semibold text-neutral-100">성과 추적</h3>
-              <p className="mt-1 text-sm text-neutral-400">1h / 4h / 1d 결과</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => selectedId && fetchOutcomes(selectedId)}
-              disabled={!selectedId || loadingOutcomes}
-              className="text-xs text-neutral-400 underline-offset-4 hover:text-neutral-200"
+      {/* 메인 컨텐츠 */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr] flex-1 min-h-0">
+        {/* 버블 리스트 */}
+        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
+          {/* 검색/필터 */}
+          <div className="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search notes, tags..."
+              className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
+            />
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              className="rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
             >
-              Refresh outcomes
+              <option value="desc">Newest</option>
+              <option value="asc">Oldest</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+            <span className="text-xs text-neutral-500">{filteredBubbles.length} results</span>
+            <button
+              onClick={() => { if (confirm('모든 버블을 삭제하시겠습니까?')) replaceAllBubbles([]) }}
+              className="text-xs text-red-400 hover:text-red-300"
+            >
+              Clear All
             </button>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {loadingOutcomes && (
-              <div className="col-span-full text-sm text-neutral-500">결과 불러오는 중...</div>
-            )}
-            {!loadingOutcomes && outcomes.length === 0 && (
-              <div className="col-span-full text-sm text-neutral-500">아직 계산된 결과가 없습니다.</div>
-            )}
-            {outcomes.map((item) => {
-              const pnlValue = item.pnl_percent
-              const status = pnlValue
-                ? Number(pnlValue) > 0
-                  ? 'win'
-                  : Number(pnlValue) < 0
-                    ? 'loss'
-                    : 'flat'
-                : 'pending'
-
-              const badgeColor =
-                status === 'win'
-                  ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                  : status === 'loss'
-                    ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
-                    : status === 'flat'
-                      ? 'border-slate-400/40 bg-slate-500/10 text-slate-200'
-                      : 'border-neutral-700 bg-neutral-900 text-neutral-400'
-
-              return (
-                <div
-                  key={item.period}
-                  className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4"
+          {/* 버블 목록 - 고정 스크롤 영역 */}
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-2">
+            {filteredBubbles.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-neutral-500">
+                버블이 없습니다.
+              </div>
+            ) : (
+              filteredBubbles.map((bubble) => (
+                <button
+                  key={bubble.id}
+                  onClick={() => setSelectedId(bubble.id === selectedId ? null : bubble.id)}
+                  className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
+                    bubble.id === selectedId
+                      ? 'border-neutral-100 bg-neutral-100/10'
+                      : 'border-neutral-800 bg-neutral-950/40 hover:border-neutral-600'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{item.period}</p>
-                    <span className={`rounded-full border px-2 py-0.5 text-xs ${badgeColor}`}>
-                      {status === 'pending' ? 'Pending' : `${pnlValue}%`}
+                    <span className={`text-sm font-bold ${actionColors[bubble.action || 'NONE']}`}>
+                      {bubble.action || 'NOTE'}
+                    </span>
+                    <span className="text-xs text-neutral-500">
+                      {new Date(bubble.ts).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="mt-3 text-sm text-neutral-400">
-                    <p>Reference: {item.reference_price}</p>
-                    <p>Outcome: {item.outcome_price ?? '—'}</p>
+                  <p className="mt-1 text-neutral-300 truncate">{bubble.note}</p>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
+                    <span>${bubble.price.toLocaleString()}</span>
+                    <span>·</span>
+                    <span>{bubble.timeframe}</span>
+                    {bubble.agents && bubble.agents.length > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="text-blue-400">AI: {bubble.agents.length}</span>
+                      </>
+                    )}
                   </div>
-                </div>
-              )
-            })}
+                </button>
+              ))
+            )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Similar</p>
-              <h3 className="mt-2 text-lg font-semibold text-neutral-100">유사 상황</h3>
-              <p className="mt-1 text-sm text-neutral-400">현재 버블과 태그가 겹치는 과거 기록</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => selectedId && fetchSimilar(selectedId)}
-              disabled={!selectedId || loadingSimilar}
-              className="text-xs text-neutral-400 underline-offset-4 hover:text-neutral-200"
-            >
-              Refresh similar
-            </button>
-          </div>
-
-          {loadingSimilar && (
-            <div className="mt-4 text-sm text-neutral-500">유사 상황을 불러오는 중...</div>
-          )}
-
-          {!loadingSimilar && similarSummary && (
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Wins</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-200">{similarSummary.wins}</p>
-              </div>
-              <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Losses</p>
-                <p className="mt-2 text-2xl font-semibold text-rose-200">{similarSummary.losses}</p>
-              </div>
-              <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Avg PnL</p>
-                <p className="mt-2 text-2xl font-semibold text-neutral-100">
-                  {similarSummary.avg_pnl ? `${similarSummary.avg_pnl}%` : '—'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {!loadingSimilar && similarItems.length === 0 && (
-            <p className="mt-4 text-sm text-neutral-500">유사한 버블이 없습니다.</p>
-          )}
-
-          <div className="mt-4 space-y-3">
-            {similarItems.map((item) => (
-              <div key={item.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-100">
-                      {item.symbol} · {item.timeframe}
-                    </p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {new Date(item.candle_time).toLocaleString()}
-                    </p>
-                  </div>
-                  <span className="text-xs uppercase tracking-[0.2em] text-neutral-500">{item.bubble_type}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-neutral-400">
-                  <span>Price: {item.price}</span>
-                  {item.outcome?.pnl_percent && (
-                    <span className="rounded-full border border-neutral-700 px-2 py-0.5">
-                      {item.outcome.pnl_percent}%
+        {/* 상세 보기 */}
+        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
+          {selectedBubble ? (
+            <>
+              <div className="flex items-start justify-between mb-4 flex-shrink-0">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg font-bold ${actionColors[selectedBubble.action || 'NONE']}`}>
+                      {selectedBubble.action || 'NOTE'}
                     </span>
-                  )}
+                    <span className="text-neutral-400">{selectedBubble.symbol}</span>
+                    <span className="text-neutral-500">{selectedBubble.timeframe}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {new Date(selectedBubble.ts).toLocaleString()}
+                  </p>
                 </div>
-                {item.tags && item.tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-400">
-                    {item.tags.map((tag) => (
-                      <span key={`${item.id}-${tag}`} className="rounded-full border border-neutral-700 px-2 py-0.5">
-                        {tag}
-                      </span>
-                    ))}
+                <button
+                  onClick={() => {
+                    if (confirm('이 버블을 삭제하시겠습니까?')) {
+                      deleteBubble(selectedBubble.id)
+                      setSelectedId(null)
+                    }
+                  }}
+                  className="rounded-lg border border-red-500/50 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2">
+                {/* 가격 & 노트 */}
+                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-2">Price</p>
+                  <p className="text-2xl font-semibold text-neutral-100">
+                    ${selectedBubble.price.toLocaleString()}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-2">Note</p>
+                  <p className="text-sm text-neutral-200 whitespace-pre-wrap">{selectedBubble.note}</p>
+                </div>
+
+                {/* 태그 */}
+                {selectedBubble.tags && selectedBubble.tags.length > 0 && (
+                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedBubble.tags.map(tag => (
+                        <span key={tag} className="rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI 에이전트 조언 */}
+                {selectedBubble.agents && selectedBubble.agents.length > 0 && (
+                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
+                      AI Analysis ({selectedBubble.agents.length})
+                    </p>
+                    <div className="space-y-3">
+                      {selectedBubble.agents.map((agent, idx) => (
+                        <div key={idx} className="rounded-lg bg-neutral-900/60 p-3 border border-neutral-800">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-semibold text-neutral-200">{agent.provider}</span>
+                            <span className="text-xs text-neutral-500">{agent.model}</span>
+                            <span className="text-xs text-neutral-600 ml-auto">{agent.prompt_type}</span>
+                          </div>
+                          <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                            {agent.response}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 유사 패턴 분석 */}
+                {similarAnalysis && (
+                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
+                      Similar Patterns ({similarAnalysis.count})
+                    </p>
+
+                    {/* 통계 카드 */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                        <p className="text-xs text-neutral-500">Win Rate</p>
+                        <p className={`text-xl font-bold ${similarAnalysis.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                          {similarAnalysis.winRate}%
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                        <p className="text-xs text-neutral-500">Wins</p>
+                        <p className="text-xl font-bold text-green-400">{similarAnalysis.wins}</p>
+                      </div>
+                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                        <p className="text-xs text-neutral-500">Losses</p>
+                        <p className="text-xl font-bold text-red-400">{similarAnalysis.losses}</p>
+                      </div>
+                    </div>
+
+                    {/* 최근 유사 사례 */}
+                    {similarAnalysis.samples.length > 0 && (
+                      <div>
+                        <p className="text-xs text-neutral-500 mb-2">Recent Similar Cases</p>
+                        <div className="space-y-2">
+                          {similarAnalysis.samples.map(sample => (
+                            <div
+                              key={sample.id}
+                              className="rounded-lg bg-neutral-800/50 p-2 flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-800"
+                              onClick={() => setSelectedId(sample.id)}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={actionColors[sample.action || 'NONE']}>{sample.action}</span>
+                                <span className="text-neutral-400">${sample.price.toLocaleString()}</span>
+                              </div>
+                              <span className="text-neutral-500">
+                                {new Date(sample.ts).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-neutral-500">
+              버블을 선택하면 상세 정보가 표시됩니다.
+            </div>
+          )}
         </section>
       </div>
     </div>

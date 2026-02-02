@@ -58,6 +58,29 @@ cd backend && go build -o main ./cmd/...
 - Use Fiber v2 patterns for handlers
 - Database: pgx for PostgreSQL
 
+### Testing
+- Frontend: Vitest + React Testing Library
+- Backend: Go standard testing package
+- 테스트 파일명: `*.test.ts` (프론트), `*_test.go` (백엔드)
+- 단위 테스트 우선, 필요시 통합 테스트 추가
+
+### API Conventions
+- RESTful 엔드포인트: `/api/v1/{resource}`
+- 복수형 리소스명 사용: `/trades`, `/portfolios`
+- 액션은 동사 사용: `/auth/login`, `/auth/logout`
+
+### Error Handling
+- Frontend: try-catch + toast 알림
+- Backend: 표준 에러 응답 형식 사용
+  ```json
+  {
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "Invalid input"
+    }
+  }
+  ```
+
 ## Prohibited
 
 - ❌ No `console.log` in production code (use proper logging)

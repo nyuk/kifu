@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
-import { api } from '../lib/api'
+import { api, DEFAULT_SYMBOLS } from '../lib/api'
 import { exportBubbles, importBubbles } from '../lib/dataHandler'
 import { parseTradeCsv } from '../lib/csvParser'
 import { BubbleCreateModal } from '../components/BubbleCreateModal'
@@ -72,6 +72,26 @@ export function Chart() {
   const [mounted, setMounted] = useState(false)
   const [overlayRect, setOverlayRect] = useState({ left: 0, top: 0, width: 0, height: 0 })
 
+  // 표시 옵션
+  const [showBubbles, setShowBubbles] = useState(true)
+  const [showTrades, setShowTrades] = useState(true)
+
+  // 선택된 버블 그룹 (상세 보기용)
+  const [selectedGroup, setSelectedGroup] = useState<{
+    candleTime: number
+    bubbles: Bubble[]
+    trades: Trade[]
+  } | null>(null)
+
+  // Refs for stable access in effects/callbacks
+  const overlayPositionsRef = useRef(overlayPositions)
+  const updatePositionsRef = useRef<() => void>(() => { })
+
+  // Update refs
+  useEffect(() => {
+    overlayPositionsRef.current = overlayPositions
+  }, [overlayPositions])
+
   const activeBubbles = useMemo(() => {
     return bubbles.filter(b => b.symbol === selectedSymbol)
   }, [bubbles, selectedSymbol])
@@ -103,10 +123,18 @@ export function Chart() {
         const response = await api.get('/v1/users/me/symbols')
         if (!active) return
         const data = response.data?.symbols || []
-        setSymbols(data)
+        if (data.length > 0) {
+          setSymbols(data)
+        } else {
+          // No symbols from API, use defaults
+          setSymbols(DEFAULT_SYMBOLS)
+        }
       } catch (err: any) {
         if (!active) return
-        setError(err?.response?.data?.message || '심볼을 불러오지 못했습니다.')
+        // On error (including 401), use default symbols for guest mode
+        console.warn('Failed to load user symbols, using defaults:', err?.message)
+        setSymbols(DEFAULT_SYMBOLS)
+        setError('') // Clear error - we have fallback
       }
     }
     loadSymbols()
@@ -237,6 +265,20 @@ export function Chart() {
     setOverlayPositions(positions)
   }, [chartData, activeBubbles, activeTrades, timeframe])
 
+  useEffect(() => {
+    updatePositionsRef.current = updatePositions
+  }, [updatePositions])
+
+  // 버블/트레이드 변경 시 위치 업데이트
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return
+    // 약간의 딜레이 후 위치 업데이트 (차트 렌더링 완료 대기)
+    const timer = setTimeout(() => {
+      if (updatePositionsRef.current) updatePositionsRef.current()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [activeBubbles, activeTrades, timeframe])
+
   // Chart Initialization
   useEffect(() => {
     if (!containerRef.current) return
@@ -279,15 +321,13 @@ export function Chart() {
       if (price === null) return
 
       const clickedTime = param.time as number
-      const timeRange = getTimeframeSeconds(timeframe)
+      // const timeRange = getTimeframeSeconds(timeframe)
 
       // Check if clicking near an existing bubble
-      const existingGrouping = overlayPositions.find(p => p.candleTime === clickedTime)
+      const existingGrouping = overlayPositionsRef.current.find(p => p.candleTime === clickedTime)
 
       if (existingGrouping && existingGrouping.bubbles.length > 0) {
         console.log('Clicked group:', existingGrouping)
-        // Ideally open modal to edit the first bubble or show list?
-        // Current logic: Create new bubble at this time anyway
       }
 
       setClickedCandle({ time: clickedTime, price })
@@ -295,10 +335,29 @@ export function Chart() {
     }
 
     chart.subscribeClick(clickHandler)
-    chart.timeScale().subscribeVisibleTimeRangeChange(() => {
+
+    const handleVisibleTimeRangeChange = (newVisibleTimeRange: any) => {
+      // 1. Update overlay positions (existing logic)
       updateOverlayPosition()
-      updatePositions()
-    })
+      if (updatePositionsRef.current) updatePositionsRef.current()
+
+      // 2. Continuous Scroll Logic
+      const logicalRange = chart.timeScale().getVisibleLogicalRange()
+      if (!logicalRange) return
+
+      // If user is scrolling near the start (left side) and not currently loading
+      // 'from' is the logical index. 0 is the oldest LOADED candle. Negative means scrolling into empty space before data.
+      // We trigger load if they are close to 0 (e.g. < 10)
+      if (logicalRange.from < 10 && !loading && klines.length > 0) {
+        // Debouncing logic could be added here, but for now direct call
+        // We need a ref to access current 'loading' state inside this callback if it closes over stale state
+        // But here we rely on the effect dependency or ref
+        // Let's use a specialized function that checks a ref to prevent spam
+        loadMoreHistory()
+      }
+    }
+
+    chart.timeScale().subscribeVisibleTimeRangeChange(handleVisibleTimeRangeChange)
 
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries.length) return
@@ -309,20 +368,98 @@ export function Chart() {
 
     return () => {
       chart.unsubscribeClick(clickHandler)
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handleVisibleTimeRangeChange)
       resizeObserver.disconnect()
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [overlayPositions, timeframe, chartData, updatePositions, updateOverlayPosition])
+  }, [timeframe, chartData, updateOverlayPosition]) // Add dependencies if needed, but be careful of loops using 'loading' or 'klines' directly here causes re-mount
+
+  // Ref for loading state to use inside the chart event listener without re-binding
+  const loadingRef = useRef(loading)
+  useEffect(() => { loadingRef.current = loading }, [loading])
+
+  const klinesRef = useRef(klines)
+  useEffect(() => { klinesRef.current = klines }, [klines])
+
+  // 히스토리 로드 디바운싱을 위한 ref
+  const lastHistoryLoadRef = useRef<number>(0)
+  const historyLoadCooldown = 3000 // 3초 쿨다운
+
+  const loadMoreHistory = useCallback(async () => {
+    const now = Date.now()
+    // 쿨다운 체크 - 너무 자주 호출되지 않도록
+    if (now - lastHistoryLoadRef.current < historyLoadCooldown) return
+    if (loadingRef.current || klinesRef.current.length === 0) return
+
+    lastHistoryLoadRef.current = now
+
+    // Get the oldest time from current data
+    const oldestItem = klinesRef.current[0]
+    const endTimeMs = (oldestItem.time as number) * 1000 - 1
+
+    setLoading(true)
+    try {
+      const response = await api.get('/v1/market/klines', {
+        params: { symbol: selectedSymbol, interval: timeframe, limit: 500, endTime: endTimeMs },
+      })
+
+      const newKlines = response.data || []
+      if (newKlines.length === 0) {
+        return
+      }
+
+      const merged = [...newKlines, ...klinesRef.current]
+      const uniqueDetails = new Map()
+      merged.forEach(k => uniqueDetails.set(k.time, k))
+      const deduplicated = Array.from(uniqueDetails.values()).sort((a, b) => a.time - b.time)
+
+      setKlines(deduplicated)
+      // 토스트 제거 - 너무 자주 뜸
+
+    } catch (err: any) {
+      // 401 에러는 조용히 무시 (인증 필요)
+      if (err?.response?.status !== 401) {
+        console.error('Failed to load history', err)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedSymbol, timeframe])
 
   // Update Data Effect
   useEffect(() => {
-    if (!seriesRef.current) return
+    if (!seriesRef.current || !chartRef.current) return
     seriesRef.current.setData(chartData)
-    chartRef.current?.timeScale().fitContent()
-    setTimeout(() => { updateOverlayPosition() }, 100)
-  }, [chartData, updateOverlayPosition])
+
+    // 타임프레임에 따라 표시할 캔들 수 제한
+    const maxVisibleCandles: Record<string, number> = {
+      '1m': 200,
+      '15m': 200,
+      '1h': 168,   // 약 1주일
+      '4h': 180,   // 약 1달
+      '1d': 365,   // 1년
+    }
+    const visibleCount = maxVisibleCandles[timeframe] || 200
+
+    if (chartData.length > visibleCount) {
+      // 최근 N개 캔들만 보이도록 설정
+      const fromIndex = chartData.length - visibleCount
+      chartRef.current.timeScale().setVisibleLogicalRange({
+        from: fromIndex,
+        to: chartData.length - 1,
+      })
+    } else {
+      chartRef.current.timeScale().fitContent()
+    }
+
+    // 데이터 로드 후 버블 위치 업데이트
+    setTimeout(() => {
+      updateOverlayPosition()
+      if (updatePositionsRef.current) updatePositionsRef.current()
+    }, 150)
+  }, [chartData, updateOverlayPosition, timeframe])
 
   // Handlers
   const handleImportClick = () => {
@@ -446,6 +583,30 @@ export function Chart() {
                 ))}
               </div>
             </div>
+            {/* Display Options */}
+            <div className="flex flex-col text-xs text-neutral-400">
+              <span className="uppercase tracking-[0.2em]">Display</span>
+              <div className="mt-2 flex gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBubbles}
+                    onChange={(e) => setShowBubbles(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-green-500 focus:ring-green-500"
+                  />
+                  <span className="text-neutral-300">Bubbles</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showTrades}
+                    onChange={(e) => setShowTrades(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-neutral-300">Trades</span>
+                </label>
+              </div>
+            </div>
             {/* Actions */}
             <div className="flex flex-col text-xs text-neutral-400">
               <span className="uppercase tracking-[0.2em]">Actions</span>
@@ -507,46 +668,66 @@ export function Chart() {
       </section>
 
       <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
-        <div className="h-[480px] w-full" ref={containerRef} />
-      </div>
+        <div className="h-[480px] w-full relative" ref={containerRef}>
+          {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
+          {mounted && (
+            <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
+              {overlayPositions.map((group) => {
+            // 토글에 따라 필터링
+            const visibleBubbles = showBubbles ? group.bubbles : []
+            const visibleTrades = showTrades ? group.trades : []
 
-      {mounted && (
-        <div style={{ position: 'fixed', left: overlayRect.left, top: overlayRect.top, width: overlayRect.width, height: overlayRect.height, zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
-          {overlayPositions.map((group) => {
-            const hasBubbles = group.bubbles.length > 0
-            const hasTrades = group.trades.length > 0
+            // 표시할 항목이 없으면 렌더링하지 않음
+            if (visibleBubbles.length === 0 && visibleTrades.length === 0) return null
+
+            // 차트 영역 밖이면 렌더링하지 않음 (여유 40px)
+            if (group.x < -40 || group.x > (containerRef.current?.clientWidth || 0) + 40) return null
+            if (group.y < 0 || group.y > (containerRef.current?.clientHeight || 0)) return null
+
+            const hasBubbles = visibleBubbles.length > 0
+            const hasTrades = visibleTrades.length > 0
 
             // Determine Marker Style
-            // Priority: Mixed > Bubble > Trade
             let bgColor = 'bg-neutral-700'
-            const borderColor = hasBubbles && hasTrades ? 'border-yellow-500' : 'transparent'
 
             if (hasBubbles && hasTrades) {
               bgColor = 'bg-neutral-800'
             } else if (hasBubbles) {
-              const isBuy = group.bubbles.some(b => b.tags?.includes('buy') || b.action === 'BUY')
-              const isSell = group.bubbles.some(b => b.tags?.includes('sell') || b.action === 'SELL')
+              const isBuy = visibleBubbles.some(b => b.tags?.includes('buy') || b.action === 'BUY')
+              const isSell = visibleBubbles.some(b => b.tags?.includes('sell') || b.action === 'SELL')
               if (isBuy && isSell) bgColor = 'bg-yellow-600'
               else if (isBuy) bgColor = 'bg-green-600'
               else if (isSell) bgColor = 'bg-red-600'
               else bgColor = 'bg-neutral-600'
             } else if (hasTrades) {
-              // Determine net side? or just show count
-              const buyCount = group.trades.filter(t => t.side === 'buy').length
-              const sellCount = group.trades.filter(t => t.side === 'sell').length
+              const buyCount = visibleTrades.filter(t => t.side === 'buy').length
+              const sellCount = visibleTrades.filter(t => t.side === 'sell').length
               if (buyCount > sellCount) bgColor = 'bg-green-900/80 text-green-200'
               else if (sellCount > buyCount) bgColor = 'bg-red-900/80 text-red-200'
               else bgColor = 'bg-blue-900/80 text-blue-200'
             }
 
+            const isSelected = selectedGroup?.candleTime === group.candleTime
+
             return (
-              <div key={group.candleTime} className="absolute group cursor-pointer" style={{ left: group.x, top: group.y - 40, transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
-                <div className={`relative rounded px-2 py-1 text-xs font-semibold shadow-md transition-transform hover:scale-110 ${bgColor} ${hasBubbles && hasTrades ? 'border border-yellow-500' : ''}`}>
+              <div
+                key={group.candleTime}
+                className="absolute group cursor-pointer hover:z-50"
+                style={{ left: group.x, top: Math.max(40, group.y) - 40, transform: 'translateX(-50%)', pointerEvents: 'auto' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedGroup(isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades })
+                }}
+              >
+                {/* Visual Connector Line */}
+                <div className={`absolute left-1/2 -bottom-10 w-px h-10 -translate-x-1/2 border-l border-dashed pointer-events-none ${isSelected ? 'border-yellow-400' : 'border-neutral-400'} opacity-80`} />
+
+                <div className={`relative rounded px-2 py-1 text-xs font-semibold shadow-md transition-transform hover:scale-110 ${bgColor} ${isSelected ? 'ring-2 ring-yellow-400' : ''} ${hasBubbles && hasTrades ? 'border border-yellow-500' : ''}`}>
                   <div className="flex items-center gap-1">
-                    {hasBubbles && <span className="text-white">💬{group.bubbles.length}</span>}
+                    {hasBubbles && <span className="text-white">💬{visibleBubbles.length}</span>}
                     {hasTrades && <span className="text-xs">
-                      {group.trades.filter(t => t.side === 'buy').length > 0 && '↑'}
-                      {group.trades.filter(t => t.side === 'sell').length > 0 && '↓'}
+                      {visibleTrades.filter(t => t.side === 'buy').length > 0 && '↑'}
+                      {visibleTrades.filter(t => t.side === 'sell').length > 0 && '↓'}
                     </span>}
                   </div>
                 </div>
@@ -560,7 +741,7 @@ export function Chart() {
                   {hasBubbles && (
                     <div className="mb-2">
                       <div className="text-[10px] uppercase text-neutral-500 mb-1">Bubbles</div>
-                      {group.bubbles.map(b => (
+                      {visibleBubbles.map(b => (
                         <div key={b.id} className="mb-1 last:mb-0 p-1 bg-neutral-800 rounded">
                           <div className="flex justify-between">
                             <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
@@ -575,7 +756,7 @@ export function Chart() {
                   {hasTrades && (
                     <div>
                       <div className="text-[10px] uppercase text-neutral-500 mb-1">Trades</div>
-                      {group.trades.map(t => (
+                      {visibleTrades.map(t => (
                         <div key={t.id} className="mb-1 last:mb-0 p-1 bg-neutral-800/50 rounded flex justify-between">
                           <span className={t.side === 'buy' ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{t.side.toUpperCase()}</span>
                           <span>{t.qty} @ {t.price}</span>
@@ -587,6 +768,112 @@ export function Chart() {
               </div>
             )
           })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 선택된 버블/거래 상세 패널 */}
+      {selectedGroup && (
+        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
+              <h3 className="mt-1 text-lg font-semibold text-neutral-100">
+                {new Date(selectedGroup.candleTime * 1000).toLocaleString()}
+              </h3>
+            </div>
+            <button
+              onClick={() => setSelectedGroup(null)}
+              className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-400 hover:bg-neutral-800"
+            >
+              닫기
+            </button>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {/* 버블 목록 */}
+            {selectedGroup.bubbles.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
+                  Bubbles ({selectedGroup.bubbles.length})
+                </p>
+                <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2">
+                  {selectedGroup.bubbles.map(bubble => (
+                    <div key={bubble.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-bold ${
+                          bubble.action === 'BUY' ? 'text-green-400' :
+                          bubble.action === 'SELL' ? 'text-red-400' :
+                          bubble.action === 'TP' ? 'text-emerald-300' :
+                          bubble.action === 'SL' ? 'text-rose-300' :
+                          'text-neutral-300'
+                        }`}>
+                          {bubble.action || 'NOTE'}
+                        </span>
+                        <span className="text-sm text-neutral-400">${bubble.price.toLocaleString()}</span>
+                      </div>
+                      <p className="mt-2 text-sm text-neutral-200">{bubble.note}</p>
+                      {bubble.tags && bubble.tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {bubble.tags.map(tag => (
+                            <span key={tag} className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* AI 에이전트 조언 */}
+                      {bubble.agents && bubble.agents.length > 0 && (
+                        <div className="mt-3 border-t border-neutral-800 pt-3">
+                          <p className="text-xs uppercase tracking-[0.15em] text-neutral-500 mb-2">AI Analysis</p>
+                          <div className="space-y-2">
+                            {bubble.agents.map((agent, idx) => (
+                              <div key={idx} className="rounded-lg bg-neutral-900/60 p-2">
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="font-semibold text-neutral-300">{agent.provider}</span>
+                                  <span className="text-neutral-500">{agent.model}</span>
+                                </div>
+                                <p className="mt-1 text-xs text-neutral-400 leading-relaxed">{agent.response}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 거래 목록 */}
+            {selectedGroup.trades.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
+                  Trades ({selectedGroup.trades.length})
+                </p>
+                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                  {selectedGroup.trades.map(trade => (
+                    <div key={trade.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-bold ${trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
+                          {trade.side.toUpperCase()}
+                        </span>
+                        <span className="text-xs text-neutral-500">{trade.exchange}</span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-sm text-neutral-300">
+                        <span>{trade.qty} BTC</span>
+                        <span>@ ${trade.price.toLocaleString()}</span>
+                      </div>
+                      {trade.fee && (
+                        <div className="mt-1 text-xs text-neutral-500">Fee: ${trade.fee}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

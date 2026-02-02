@@ -78,9 +78,10 @@ func Run() error {
 	})
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
-		AllowMethods: "GET,POST,PUT,DELETE",
-		AllowHeaders: "Content-Type,Authorization",
+		AllowOrigins:     "*", // Allow all for debugging
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Content-Type,Authorization,Origin,Accept",
+		AllowCredentials: true,
 	}))
 
 	app.Use(func(c *fiber.Ctx) error {

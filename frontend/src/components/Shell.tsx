@@ -32,9 +32,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // Prevent hydration mismatch by rendering a simplified version during SSR
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100">
-        <div className="flex min-h-screen flex-col gap-6 px-4 py-6 lg:flex-row">
-          <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64">
+      <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden">
+        <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
+          <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64 flex-shrink-0">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
               <h1 className="mt-3 text-2xl font-semibold text-neutral-100">Trading Journal</h1>
@@ -62,7 +62,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </aside>
-          <main className="flex-1">
+          <main className="flex-1 overflow-y-auto min-h-0">
             {children}
           </main>
         </div>
@@ -71,9 +71,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="flex min-h-screen flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64">
+    <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden">
+      <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
+        <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64 flex-shrink-0 overflow-y-auto">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
             <h1 className="mt-3 text-2xl font-semibold text-neutral-100">{t.appTagline}</h1>
@@ -108,7 +108,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </aside>
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto min-h-0">
           {children}
         </main>
       </div>
