@@ -195,14 +195,14 @@ export function LandingPage() {
                         KIFU
                     </div>
                     <div className="flex items-center gap-6 text-sm font-medium">
-                        <Link href="#features" className="hover:text-neutral-100 transition-colors">Features</Link>
-                        <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">Roadmap</Link>
-                        <Link href="#pricing" className="hover:text-neutral-100 transition-colors">Pricing</Link>
+                        <Link href="#features" className="hover:text-neutral-100 transition-colors">기능</Link>
+                        <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">로드맵</Link>
+                        <Link href="#pricing" className="hover:text-neutral-100 transition-colors">요금제</Link>
                         <Link
                             href="/chart"
                             className="rounded-full bg-neutral-100 px-5 py-2 text-neutral-950 hover:bg-white transition-colors"
                         >
-                            Launch App
+                            앱 시작
                         </Link>
                     </div>
                 </div>
@@ -214,28 +214,28 @@ export function LandingPage() {
 
                 <div className="relative z-30 mx-auto max-w-4xl px-6 text-center">
                     <div className="inline-block rounded-full border border-neutral-700/60 bg-neutral-900/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 backdrop-blur-sm">
-                        AI-Powered Trading Journal
+                        AI 트레이딩 저널
                     </div>
                     <h1 className="mt-8 text-5xl font-bold leading-tight tracking-tight text-white md:text-7xl">
-                        Record. Review. <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Improve.</span>
+                        기록하고, 복기하고, <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">성장하라.</span>
                     </h1>
                     <p className="mx-auto mt-6 max-w-2xl text-lg text-neutral-400">
-                        Pin your thoughts directly on the chart. Collect AI opinions.
-                        Replay your history to eliminate costly mistakes.
+                        차트 위에 직접 생각을 기록하세요. AI의 의견을 수집하세요.
+                        과거를 복기해서 값비싼 실수를 없애세요.
                     </p>
                     <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                         <Link
                             href="/chart"
                             className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
                         >
-                            Start Free
+                            무료 시작
                         </Link>
                         <Link
                             href="/chart?openImport=true"
                             className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-8 py-3 text-sm font-bold uppercase tracking-widest text-neutral-300 transition-all hover:border-neutral-500 hover:bg-white/5"
                         >
-                            Import Data
+                            데이터 가져오기
                         </Link>
                     </div>
                 </div>
@@ -245,25 +245,25 @@ export function LandingPage() {
             <section className="py-24 border-t border-white/5 relative z-20 bg-[#0B0F14]">
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="mb-16 text-center">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">Workflow</h2>
-                        <h3 className="mt-3 text-3xl font-bold text-white">Three steps to consistency</h3>
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">작동 방식</h2>
+                        <h3 className="mt-3 text-3xl font-bold text-white">3단계로 일관성을 만들다</h3>
                     </div>
                     <div className="grid gap-8 md:grid-cols-3">
                         {[
                             {
                                 step: '01',
-                                title: 'Click Context',
-                                desc: 'Click any candle on the chart to anchor your thought. Captures price, time, and indicators instantly.'
+                                title: '캔들 선택',
+                                desc: '차트에서 원하는 캔들을 클릭하세요. 가격, 시간, 지표가 즉시 기록됩니다.'
                             },
                             {
                                 step: '02',
-                                title: 'Collect Opinion',
-                                desc: 'Ask AI agents for objective analysis like a Risk Manager or FOMO Checker, or write your own rationale.'
+                                title: '의견 수집',
+                                desc: 'AI 에이전트에게 객관적인 분석을 요청하세요. 리스크 매니저, FOMO 체커 등 다양한 관점을 얻을 수 있습니다.'
                             },
                             {
                                 step: '03',
-                                title: 'Review & Replay',
-                                desc: 'Toggle "Replay Mode" to compare your thesis against future price action. Spot patterns in your errors.'
+                                title: '복기 & 리플레이',
+                                desc: '"복기 모드"를 켜서 당신의 판단과 이후 가격 움직임을 비교하세요. 실수의 패턴을 발견하세요.'
                             }
                         ].map((item, i) => (
                             <div key={i} className="group relative rounded-2xl border border-white/5 bg-white/5 p-8 transition-all hover:-translate-y-1 hover:border-cyan-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-cyan-900/10">
@@ -280,7 +280,7 @@ export function LandingPage() {
             <section className="py-24 bg-neutral-900/30 border-t border-white/5 relative z-20">
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="mb-12 text-center">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">Live Demo</h2>
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">라이브 데모</h2>
                         <h3 className="mt-3 text-3xl font-bold text-white">지금 바로 체험하세요</h3>
                         <p className="mt-4 text-neutral-400 max-w-xl mx-auto">
                             실제 차트에서 말풍선을 만들고, AI 의견을 수집해보세요. 로그인 없이 바로 시작할 수 있습니다.
@@ -309,7 +309,7 @@ export function LandingPage() {
                         </div>
                         {/* Feature pills */}
                         <div className="flex flex-wrap justify-center gap-3 mt-6">
-                            {['캔들 클릭', '말풍선 생성', 'AI 의견 수집', '복기 모드', 'JSON Export'].map((tag) => (
+                            {['캔들 클릭', '말풍선 생성', 'AI 의견 수집', '복기 모드', 'JSON 내보내기'].map((tag) => (
                                 <span key={tag} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
                                     {tag}
                                 </span>
@@ -323,8 +323,8 @@ export function LandingPage() {
             <section id="features" className="py-24 bg-neutral-900/20 border-t border-white/5 relative z-20">
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="mb-16">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">Why KIFU?</h2>
-                        <h3 className="mt-3 text-4xl font-bold text-white">Built for the <br /><span className="text-neutral-500">Serious Journaler</span></h3>
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">왜 KIFU인가?</h2>
+                        <h3 className="mt-3 text-4xl font-bold text-white">진지한 트레이더를 위한 <br /><span className="text-neutral-500">복기 도구</span></h3>
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -333,8 +333,8 @@ export function LandingPage() {
                             <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <div className="w-32 h-32 bg-cyan-500 blur-3xl rounded-full"></div>
                             </div>
-                            <h4 className="text-2xl font-bold text-white mb-2">Visual Bubble Overlay</h4>
-                            <p className="text-neutral-400 mb-6 max-w-md">Stop using spreadsheets. Pin your thoughts directly on the candles where they happened.</p>
+                            <h4 className="text-2xl font-bold text-white mb-2">시각적 말풍선 오버레이</h4>
+                            <p className="text-neutral-400 mb-6 max-w-md">스프레드시트는 이제 그만. 생각을 캔들 위에 직접 기록하세요.</p>
                             <MiniChartPreview />
                         </div>
 
@@ -343,8 +343,8 @@ export function LandingPage() {
                             <div className="w-10 h-10 rounded-full bg-cyan-900/30 flex items-center justify-center mb-4 text-cyan-400">
                                 <span className="text-xl">🤖</span>
                             </div>
-                            <h4 className="text-xl font-bold text-white mb-2">Multi-Agent Personas</h4>
-                            <p className="text-sm text-neutral-400">Consult with a "Risk Manager" or "FOMO Checker" AI before you execute a trade.</p>
+                            <h4 className="text-xl font-bold text-white mb-2">멀티 AI 에이전트</h4>
+                            <p className="text-sm text-neutral-400">거래 전에 "리스크 매니저"나 "FOMO 체커" AI에게 조언을 구하세요.</p>
                         </div>
 
                         {/* Card 3 */}
@@ -352,17 +352,17 @@ export function LandingPage() {
                             <div className="w-10 h-10 rounded-full bg-orange-900/30 flex items-center justify-center mb-4 text-orange-400">
                                 <span className="text-xl">📊</span>
                             </div>
-                            <h4 className="text-xl font-bold text-white mb-2">CSV Import</h4>
-                            <p className="text-sm text-neutral-400">Import trade history from Upbit or Binance to visualize your actual entry/exit points.</p>
+                            <h4 className="text-xl font-bold text-white mb-2">CSV 가져오기</h4>
+                            <p className="text-sm text-neutral-400">업비트나 바이낸스에서 거래 내역을 가져와 실제 진입/청산 지점을 시각화하세요.</p>
                         </div>
 
                         {/* Card 4 */}
                         <div className="md:col-span-2 lg:col-span-2 rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors flex flex-col md:flex-row items-center gap-8">
                             <div className="flex-1">
-                                <h4 className="text-2xl font-bold text-white mb-2">Privacy First</h4>
+                                <h4 className="text-2xl font-bold text-white mb-2">프라이버시 우선</h4>
                                 <p className="text-neutral-400">
-                                    Your trading journal is sensitive data. KIFU stores bubbles locally in your browser (LocalStorage) by default.
-                                    Export to JSON whenever you need a backup.
+                                    트레이딩 저널은 민감한 데이터입니다. KIFU는 기본적으로 브라우저 로컬 저장소에 데이터를 저장합니다.
+                                    필요할 때 JSON으로 백업하세요.
                                 </p>
                             </div>
                             <div className="w-full md:w-1/3 h-32 bg-neutral-800/30 rounded-xl border border-neutral-700/30 flex items-center justify-center">
@@ -380,7 +380,7 @@ export function LandingPage() {
                         {/* Text content */}
                         <div>
                             <div className="inline-block rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-amber-400 mb-6">
-                                Planned
+                                예정
                             </div>
                             <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
                                 모바일로 더 빠르게,<br />
@@ -457,7 +457,7 @@ export function LandingPage() {
             <section className="py-24 border-t border-white/5 relative z-20 bg-neutral-900/30">
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="text-center mb-16">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-500">Vision</h2>
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-500">비전</h2>
                         <h3 className="mt-3 text-3xl md:text-4xl font-bold text-white">
                             복기를 <span className="text-emerald-400">'자산'</span>으로 만든다
                         </h3>
@@ -471,22 +471,22 @@ export function LandingPage() {
                     <div className="grid md:grid-cols-3 gap-6">
                         {[
                             {
-                                phase: 'Today',
+                                phase: '지금',
                                 color: 'emerald',
                                 items: ['캔들별 기록', 'AI 의견 수집', '복기 모드'],
-                                status: 'Available Now',
+                                status: '사용 가능',
                             },
                             {
-                                phase: 'Next',
+                                phase: '다음',
                                 color: 'cyan',
                                 items: ['거래내역(CSV/API) 오버레이', '자동 요약', '개인 패턴 리포트'],
-                                status: 'In Development',
+                                status: '개발 중',
                             },
                             {
-                                phase: 'Later',
+                                phase: '이후',
                                 color: 'purple',
                                 items: ['멀티 디바이스 동기화', '팀/친구 공유', '커뮤니티 인사이트 레이어'],
-                                status: 'Planned',
+                                status: '예정',
                             },
                         ].map((card, i) => (
                             <div
@@ -532,28 +532,28 @@ export function LandingPage() {
             {/* Pricing */}
             <section id="pricing" className="py-24 border-t border-white/5">
                 <div className="mx-auto max-w-4xl px-6 text-center">
-                    <h2 className="text-3xl font-bold text-white">Pricing</h2>
+                    <h2 className="text-3xl font-bold text-white">요금제</h2>
                     <div className="mt-12 grid gap-8 md:grid-cols-2">
                         <div className="rounded-3xl border border-white/5 bg-white/5 p-8 text-left">
-                            <h3 className="text-xl font-bold text-white">Free (MVP)</h3>
-                            <div className="mt-4 text-3xl font-bold text-white">$0</div>
+                            <h3 className="text-xl font-bold text-white">무료</h3>
+                            <div className="mt-4 text-3xl font-bold text-white">₩0</div>
                             <ul className="mt-8 space-y-4 text-sm text-neutral-400">
-                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> Unlimited Local Bubbles</li>
-                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> Daily Timeframe</li>
-                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> Basic AI Prompts</li>
+                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> 무제한 로컬 말풍선</li>
+                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> 일봉 타임프레임</li>
+                                <li className="flex gap-2"><span className="text-cyan-500">✓</span> 기본 AI 프롬프트</li>
                             </ul>
                         </div>
                         <div className="relative rounded-3xl border border-white/10 bg-gradient-to-b from-neutral-800 to-neutral-900 p-8 text-left">
                             <div className="absolute -top-3 left-8 rounded-full bg-cyan-500 px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-black">
-                                Coming Soon
+                                출시 예정
                             </div>
-                            <h3 className="text-xl font-bold text-white">Pro</h3>
-                            <div className="mt-4 text-3xl font-bold text-white">$??</div>
-                            <p className="mt-2 text-xs text-neutral-500">Pricing to be determined</p>
+                            <h3 className="text-xl font-bold text-white">프로</h3>
+                            <div className="mt-4 text-3xl font-bold text-white">₩??</div>
+                            <p className="mt-2 text-xs text-neutral-500">가격 미정</p>
                             <ul className="mt-8 space-y-4 text-sm text-neutral-400">
-                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> Cloud Sync & Backup</li>
-                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> 15m/1h/4h Timeframes</li>
-                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> Advanced Agent Personas</li>
+                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> 클라우드 동기화 & 백업</li>
+                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> 15분/1시간/4시간 타임프레임</li>
+                                <li className="flex gap-2"><span className="text-neutral-200">✓</span> 고급 AI 에이전트</li>
                             </ul>
                         </div>
                     </div>
@@ -563,7 +563,7 @@ export function LandingPage() {
             {/* Footer */}
             <footer className="border-t border-white/5 py-12 text-center text-xs text-neutral-600">
                 <p>&copy; 2026 KIFU. All rights reserved.</p>
-                <p className="mt-2">AI-Powered Trading Journal</p>
+                <p className="mt-2">AI 트레이딩 저널</p>
             </footer>
         </div>
     )
