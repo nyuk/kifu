@@ -421,11 +421,18 @@ export function LandingPage() {
                                     {/* Mini chart area */}
                                     <div className="flex-1 px-3 py-2">
                                         <div className="h-32 bg-neutral-800/50 rounded-lg mb-3 flex items-end justify-center gap-[2px] p-2">
-                                            {Array.from({ length: 15 }).map((_, i) => (
+                                            {/* Fixed data to avoid hydration mismatch */}
+                                            {[
+                                                { green: true, h: 45 }, { green: false, h: 32 }, { green: true, h: 55 },
+                                                { green: true, h: 38 }, { green: false, h: 28 }, { green: true, h: 48 },
+                                                { green: true, h: 52 }, { green: false, h: 35 }, { green: true, h: 42 },
+                                                { green: true, h: 58 }, { green: false, h: 30 }, { green: true, h: 50 },
+                                                { green: false, h: 25 }, { green: true, h: 46 }, { green: true, h: 40 },
+                                            ].map((candle, i) => (
                                                 <div
                                                     key={i}
-                                                    className={`w-2 rounded-sm ${Math.random() > 0.4 ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
-                                                    style={{ height: 20 + Math.random() * 40 }}
+                                                    className={`w-2 rounded-sm ${candle.green ? 'bg-emerald-500/60' : 'bg-red-500/60'}`}
+                                                    style={{ height: candle.h }}
                                                 />
                                             ))}
                                         </div>
