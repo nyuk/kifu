@@ -379,6 +379,11 @@ func (r *TradeRepositoryImpl) UpdateBubbleID(ctx context.Context, tradeID uuid.U
 	return err
 }
 
+func (r *TradeRepositoryImpl) ClearBubbleID(ctx context.Context, tradeID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, "UPDATE trades SET bubble_id = NULL WHERE id = $1", tradeID)
+	return err
+}
+
 func buildTradeWhere(userID uuid.UUID, filter repositories.TradeFilter) (string, []interface{}, int) {
 	conditions := []string{"user_id = $1"}
 	args := []interface{}{userID}

@@ -590,3 +590,143 @@ func parseTimeQuery(value string) (*time.Time, error) {
 	}
 	return &parsed, nil
 }
+
+type LinkTradeRequest struct {
+	TradeID  string `json:"trade_id"`
+	BubbleID string `json:"bubble_id"`
+}
+
+type UnlinkTradeRequest struct {
+	TradeID string `json:"trade_id"`
+}
+
+// LinkToBubble links a trade to a bubble
+func (h *TradeHandler) LinkToBubble(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	var req LinkTradeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid request body"})
+	}
+
+	tradeID, err := uuid.Parse(req.TradeID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid trade_id"})
+	}
+
+	bubbleID, err := uuid.Parse(req.BubbleID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid bubble_id"})
+	}
+
+	// Verify trade belongs to user
+	trade, err := h.tradeRepo.GetByID(c.Context(), tradeID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"code": "NOT_FOUND", "message": "trade not found"})
+	}
+	if trade.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "trade does not belong to user"})
+	}
+
+	// Verify bubble belongs to user
+	bubble, err := h.bubbleRepo.GetByID(c.Context(), bubbleID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"code": "NOT_FOUND", "message": "bubble not found"})
+	}
+	if bubble.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "bubble does not belong to user"})
+	}
+
+	// Link trade to bubble
+	if err := h.tradeRepo.UpdateBubbleID(c.Context(), tradeID, bubbleID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"success": true, "trade_id": tradeID.String(), "bubble_id": bubbleID.String()})
+}
+
+// UnlinkFromBubble unlinks a trade from its bubble
+func (h *TradeHandler) UnlinkFromBubble(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	var req UnlinkTradeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid request body"})
+	}
+
+	tradeID, err := uuid.Parse(req.TradeID)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid trade_id"})
+	}
+
+	// Verify trade belongs to user
+	trade, err := h.tradeRepo.GetByID(c.Context(), tradeID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"code": "NOT_FOUND", "message": "trade not found"})
+	}
+	if trade.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "trade does not belong to user"})
+	}
+
+	// Unlink trade from bubble
+	if err := h.tradeRepo.ClearBubbleID(c.Context(), tradeID); err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"success": true, "trade_id": tradeID.String()})
+}
+
+// ListByBubble returns trades linked to a specific bubble
+func (h *TradeHandler) ListByBubble(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	bubbleID, err := uuid.Parse(c.Params("bubbleId"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid bubble_id"})
+	}
+
+	// Verify bubble belongs to user
+	bubble, err := h.bubbleRepo.GetByID(c.Context(), bubbleID)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"code": "NOT_FOUND", "message": "bubble not found"})
+	}
+	if bubble.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "bubble does not belong to user"})
+	}
+
+	trades, err := h.tradeRepo.ListByBubble(c.Context(), bubbleID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	items := make([]TradeItem, 0, len(trades))
+	for _, trade := range trades {
+		item := TradeItem{
+			ID:             trade.ID.String(),
+			Exchange:       trade.Exchange,
+			Symbol:         trade.Symbol,
+			Side:           trade.Side,
+			Quantity:       trade.Quantity,
+			Price:          trade.Price,
+			RealizedPnL:    trade.RealizedPnL,
+			TradeTime:      trade.TradeTime.Format(time.RFC3339),
+			BinanceTradeID: trade.BinanceTradeID,
+		}
+		if trade.BubbleID != nil {
+			id := trade.BubbleID.String()
+			item.BubbleID = &id
+		}
+		items = append(items, item)
+	}
+
+	return c.Status(200).JSON(fiber.Map{"trades": items})
+}

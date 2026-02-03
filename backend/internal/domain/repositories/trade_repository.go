@@ -73,5 +73,6 @@ type TradeRepository interface {
 	SummaryBySide(ctx context.Context, userID uuid.UUID, filter TradeFilter) ([]*TradeSideSummary, error)
 	SummaryBySymbol(ctx context.Context, userID uuid.UUID, filter TradeFilter) ([]*TradeSymbolSummary, error)
 	UpdateBubbleID(ctx context.Context, tradeID uuid.UUID, bubbleID uuid.UUID) error
+	ClearBubbleID(ctx context.Context, tradeID uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

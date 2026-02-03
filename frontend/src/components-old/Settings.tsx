@@ -3,6 +3,7 @@
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
 import { LanguageSelector } from '../components/LanguageSelector'
+import { AIKeyManager } from '../components/settings/AIKeyManager'
 
 export function Settings() {
   const { t } = useI18n()
@@ -32,12 +33,12 @@ export function Settings() {
             This section will surface subscription state and usage.
           </p>
         </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Security</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">API keys</p>
-          <p className="mt-2 text-sm text-neutral-500">
-            Manage exchange and AI keys in the next milestone.
-          </p>
+        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:col-span-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">AI Providers</p>
+          <p className="mt-3 text-lg font-semibold text-neutral-200">AI API Keys</p>
+          <div className="mt-4">
+            <AIKeyManager />
+          </div>
         </div>
       </section>
       <button

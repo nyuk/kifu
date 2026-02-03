@@ -21,6 +21,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { label: t.navChart, to: '/chart' },
     { label: t.navBubbles, to: '/bubbles' },
     { label: t.navTrades, to: '/trades' },
+    { label: t.navReview, to: '/review' },
     { label: t.navSettings, to: '/settings' },
   ]
 

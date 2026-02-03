@@ -1,0 +1,238 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useAuthStore } from '../../stores/auth'
+
+type AIKeyItem = {
+  provider: string
+  hasKey: boolean
+  last4: string
+}
+
+const PROVIDERS = [
+  { id: 'openai', name: 'OpenAI', model: 'GPT-4o' },
+  { id: 'claude', name: 'Claude', model: 'Claude 3.5 Sonnet' },
+  { id: 'gemini', name: 'Gemini', model: 'Gemini 1.5 Pro' },
+]
+
+export function AIKeyManager() {
+  const [keys, setKeys] = useState<AIKeyItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingProvider, setEditingProvider] = useState<string | null>(null)
+  const [newKey, setNewKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const accessToken = useAuthStore((state) => state.accessToken)
+
+  const fetchKeys = async () => {
+    if (!accessToken) return
+
+    try {
+      setLoading(true)
+      const res = await fetch('/api/v1/users/me/ai-keys', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) throw new Error('Failed to fetch keys')
+
+      const data = await res.json()
+      setKeys(data.keys || [])
+    } catch (err) {
+      console.error('Failed to fetch AI keys:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchKeys()
+  }, [accessToken])
+
+  const handleSaveKey = async (provider: string) => {
+    if (!newKey.trim() || !accessToken) return
+
+    try {
+      setSaving(true)
+      setError(null)
+
+      const res = await fetch('/api/v1/users/me/ai-keys', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          provider,
+          api_key: newKey.trim(),
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.message || 'Failed to save key')
+      }
+
+      setEditingProvider(null)
+      setNewKey('')
+      await fetchKeys()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save key')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteKey = async (provider: string) => {
+    if (!accessToken) return
+    if (!confirm(`${provider} API 키를 삭제하시겠습니까?`)) return
+
+    try {
+      setSaving(true)
+      const res = await fetch(`/api/v1/users/me/ai-keys/${provider}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+
+      if (!res.ok) throw new Error('Failed to delete key')
+
+      await fetchKeys()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete key')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const getKeyStatus = (providerId: string) => {
+    return keys.find((k) => k.provider === providerId)
+  }
+
+  if (loading) {
+    return (
+      <div className="animate-pulse space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 bg-neutral-800 rounded-lg" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {PROVIDERS.map((provider) => {
+        const keyStatus = getKeyStatus(provider.id)
+        const isEditing = editingProvider === provider.id
+
+        return (
+          <div
+            key={provider.id}
+            className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-neutral-200">{provider.name}</span>
+                  <span className="text-xs text-neutral-500">{provider.model}</span>
+                </div>
+                {keyStatus?.hasKey && (
+                  <div className="mt-1 text-xs text-neutral-500">
+                    API Key: ****{keyStatus.last4}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {keyStatus?.hasKey ? (
+                  <>
+                    <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded">
+                      설정됨
+                    </span>
+                    <button
+                      onClick={() => {
+                        setEditingProvider(provider.id)
+                        setNewKey('')
+                      }}
+                      className="px-3 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition"
+                    >
+                      변경
+                    </button>
+                    <button
+                      onClick={() => handleDeleteKey(provider.id)}
+                      disabled={saving}
+                      className="px-3 py-1 text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="px-2 py-1 text-xs bg-neutral-800 text-neutral-500 rounded">
+                      미설정
+                    </span>
+                    <button
+                      onClick={() => {
+                        setEditingProvider(provider.id)
+                        setNewKey('')
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+                    >
+                      추가
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isEditing && (
+              <div className="mt-4 pt-4 border-t border-neutral-800">
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    placeholder={`${provider.name} API Key 입력`}
+                    className="flex-1 px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={() => handleSaveKey(provider.id)}
+                    disabled={saving || !newKey.trim()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? '저장 중...' : '저장'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingProvider(null)
+                      setNewKey('')
+                      setError(null)
+                    }}
+                    className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm rounded-lg transition"
+                  >
+                    취소
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  API 키는 암호화되어 안전하게 저장됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      <div className="mt-4 p-4 bg-neutral-900/40 border border-neutral-800/60 rounded-lg">
+        <p className="text-xs text-neutral-500">
+          AI 키를 등록하면 버블 생성 시 각 AI의 의견을 받을 수 있습니다.
+          <br />
+          최소 하나 이상의 AI 키를 등록해야 AI 의견 기능을 사용할 수 있습니다.
+        </p>
+      </div>
+    </div>
+  )
+}

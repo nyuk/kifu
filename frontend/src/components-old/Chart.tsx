@@ -9,6 +9,7 @@ import { parseTradeCsv } from '../lib/csvParser'
 import { BubbleCreateModal } from '../components/BubbleCreateModal'
 import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
 import { useToast } from '../components/ui/Toast'
+import { ChartReplay } from '../components/chart/ChartReplay'
 
 type UserSymbolItem = {
   symbol: string
@@ -50,6 +51,7 @@ export function Chart() {
   const [selectedSymbol, setSelectedSymbol] = useState('')
   const [timeframe, setTimeframe] = useState('1d')
   const [klines, setKlines] = useState<KlineItem[]>([])
+  const [displayKlines, setDisplayKlines] = useState<KlineItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -102,6 +104,15 @@ export function Chart() {
 
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Sync displayKlines with klines (for replay filtering)
+  useEffect(() => {
+    setDisplayKlines(klines)
+  }, [klines])
+
+  const handleReplayFilteredKlines = useCallback((filtered: KlineItem[]) => {
+    setDisplayKlines(filtered)
   }, [])
 
   const updateOverlayPosition = useCallback(() => {
@@ -180,7 +191,7 @@ export function Chart() {
   }, [selectedSymbol, timeframe])
 
   const chartData = useMemo(() => {
-    return klines
+    return displayKlines
       .map((item) => ({
         time: item.time as UTCTimestamp,
         open: Number(item.open),
@@ -194,7 +205,7 @@ export function Chart() {
         Number.isFinite(item.low) &&
         Number.isFinite(item.close),
       )
-  }, [klines])
+  }, [displayKlines])
 
   const latestPrice = useMemo(() => {
     if (klines.length === 0) return ''
@@ -666,6 +677,13 @@ export function Chart() {
           <p className="mt-3 text-lg font-semibold text-neutral-200">{activeTrades.length}</p>
         </div>
       </section>
+
+      {/* Chart Replay Controls */}
+      <ChartReplay
+        klines={klines}
+        onFilteredKlines={handleReplayFilteredKlines}
+        timeframeSeconds={getTimeframeSeconds(timeframe)}
+      />
 
       <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
         <div className="h-[480px] w-full relative" ref={containerRef}>

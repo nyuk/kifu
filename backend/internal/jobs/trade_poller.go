@@ -32,17 +32,17 @@ const (
 )
 
 type TradePoller struct {
-	pool            *pgxpool.Pool
-	exchangeRepo    repositories.ExchangeCredentialRepository
-	userSymbolRepo  repositories.UserSymbolRepository
-	syncStateRepo   repositories.TradeSyncStateRepository
-	encryptionKey   []byte
-	pollInterval    time.Duration
-	client          *http.Client
-	runningPollers  map[uuid.UUID]context.CancelFunc
-	mu              sync.Mutex
-	useMockTrades   bool
-	mockTradesPath  string
+	pool           *pgxpool.Pool
+	exchangeRepo   repositories.ExchangeCredentialRepository
+	userSymbolRepo repositories.UserSymbolRepository
+	syncStateRepo  repositories.TradeSyncStateRepository
+	encryptionKey  []byte
+	pollInterval   time.Duration
+	client         *http.Client
+	runningPollers map[uuid.UUID]context.CancelFunc
+	mu             sync.Mutex
+	useMockTrades  bool
+	mockTradesPath string
 }
 
 type binanceTrade struct {

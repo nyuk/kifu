@@ -19,6 +19,8 @@ func RegisterRoutes(
 	aiProviderRepo repositories.AIProviderRepository,
 	userAIKeyRepo repositories.UserAIKeyRepository,
 	outcomeRepo repositories.OutcomeRepository,
+	accuracyRepo repositories.AIOpinionAccuracyRepository,
+	noteRepo repositories.ReviewNoteRepository,
 	encryptionKey []byte,
 	jwtSecret string,
 ) {
@@ -35,6 +37,9 @@ func RegisterRoutes(
 	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, subscriptionRepo, encryptionKey)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
+	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
+	noteHandler := handlers.NewNoteHandler(noteRepo)
+	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
@@ -82,4 +87,36 @@ func RegisterRoutes(
 	trades.Get("/", tradeHandler.List)
 	trades.Get("/summary", tradeHandler.Summary)
 	trades.Post("/convert-bubbles", tradeHandler.ConvertBubbles)
+	trades.Post("/link", tradeHandler.LinkToBubble)
+	trades.Post("/unlink", tradeHandler.UnlinkFromBubble)
+
+	// Trades by bubble
+	bubbles.Get("/:bubbleId/trades", tradeHandler.ListByBubble)
+
+	// Review endpoints
+	review := api.Group("/review")
+	review.Get("/stats", reviewHandler.GetStats)
+	review.Get("/accuracy", reviewHandler.GetAccuracy)
+	review.Get("/calendar", reviewHandler.GetCalendar)
+	review.Get("/trend", reviewHandler.GetTrend)
+
+	// Bubble accuracy endpoint
+	bubbles.Get("/:id/accuracy", reviewHandler.GetBubbleAccuracy)
+
+	// Notes endpoints
+	notes := api.Group("/notes")
+	notes.Post("/", noteHandler.CreateNote)
+	notes.Get("/", noteHandler.ListNotes)
+	notes.Get("/:id", noteHandler.GetNote)
+	notes.Put("/:id", noteHandler.UpdateNote)
+	notes.Delete("/:id", noteHandler.DeleteNote)
+
+	// Notes by bubble
+	bubbles.Get("/:bubbleId/notes", noteHandler.ListNotesByBubble)
+
+	// Export endpoints
+	export := api.Group("/export")
+	export.Get("/stats", exportHandler.ExportStats)
+	export.Get("/accuracy", exportHandler.ExportAccuracy)
+	export.Get("/bubbles", exportHandler.ExportBubbles)
 }

@@ -39,7 +39,6 @@ func main() {
 	log.Printf("Seeded dummy data for user %s", user.Email)
 }
 
-
 func ensureUser(ctx context.Context, userRepo domainrepos.UserRepository, subRepo domainrepos.SubscriptionRepository) *entities.User {
 	const email = "demo@kifu.local"
 	const password = "password123"
@@ -95,10 +94,10 @@ func seedBubbles(
 	baseTime := time.Now().UTC().AddDate(0, 0, -360)
 
 	entries := []struct {
-		dayOffset int
-		price     string
-		memo      string
-		tags      []string
+		dayOffset  int
+		price      string
+		memo       string
+		tags       []string
 		bubbleType string
 	}{
 		{0, "43850", "주봉 지지 확인 후 분할 매수. tweet:/dummy/tweet-1.svg", []string{"breakout", "weekly"}, "manual"},

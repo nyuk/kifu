@@ -18,14 +18,14 @@ func NewSimilarHandler(bubbleRepo repositories.BubbleRepository) *SimilarHandler
 }
 
 type SimilarBubbleItem struct {
-	ID         uuid.UUID `json:"id"`
-	Symbol     string    `json:"symbol"`
-	Timeframe  string    `json:"timeframe"`
-	CandleTime string    `json:"candle_time"`
-	Price      string    `json:"price"`
-	BubbleType string    `json:"bubble_type"`
-	Memo       *string   `json:"memo,omitempty"`
-	Tags       []string  `json:"tags,omitempty"`
+	ID         uuid.UUID    `json:"id"`
+	Symbol     string       `json:"symbol"`
+	Timeframe  string       `json:"timeframe"`
+	CandleTime string       `json:"candle_time"`
+	Price      string       `json:"price"`
+	BubbleType string       `json:"bubble_type"`
+	Memo       *string      `json:"memo,omitempty"`
+	Tags       []string     `json:"tags,omitempty"`
 	Outcome    *OutcomeItem `json:"outcome,omitempty"`
 }
 
@@ -35,10 +35,10 @@ type OutcomeItem struct {
 }
 
 type SimilarSummaryResponse struct {
-	Period  string  `json:"period"`
-	Wins    int     `json:"wins"`
-	Losses  int     `json:"losses"`
-	AvgPnL  *string `json:"avg_pnl"`
+	Period string  `json:"period"`
+	Wins   int     `json:"wins"`
+	Losses int     `json:"losses"`
+	AvgPnL *string `json:"avg_pnl"`
 }
 
 func (h *SimilarHandler) SimilarByBubble(c *fiber.Ctx) error {
@@ -71,8 +71,8 @@ func (h *SimilarHandler) SimilarByBubble(c *fiber.Ctx) error {
 	if len(bubble.Tags) == 0 {
 		return c.Status(200).JSON(fiber.Map{
 			"similar_count": 0,
-			"summary": SimilarSummaryResponse{Period: period, Wins: 0, Losses: 0, AvgPnL: nil},
-			"bubbles": []SimilarBubbleItem{},
+			"summary":       SimilarSummaryResponse{Period: period, Wins: 0, Losses: 0, AvgPnL: nil},
+			"bubbles":       []SimilarBubbleItem{},
 		})
 	}
 
@@ -93,8 +93,8 @@ func (h *SimilarHandler) SimilarByBubble(c *fiber.Ctx) error {
 
 	return c.Status(200).JSON(fiber.Map{
 		"similar_count": total,
-		"summary": SimilarSummaryResponse{Period: period, Wins: summary.Wins, Losses: summary.Losses, AvgPnL: summary.AvgPnL},
-		"bubbles": mapSimilarItems(items),
+		"summary":       SimilarSummaryResponse{Period: period, Wins: summary.Wins, Losses: summary.Losses, AvgPnL: summary.AvgPnL},
+		"bubbles":       mapSimilarItems(items),
 	})
 }
 

@@ -24,18 +24,18 @@ func NewUserHandler(
 }
 
 type SubscriptionInfo struct {
-	Tier              string     `json:"tier"`
-	AIQuotaRemaining  int        `json:"ai_quota_remaining"`
-	LastResetAt       *time.Time `json:"last_reset_at,omitempty"`
-	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+	Tier             string     `json:"tier"`
+	AIQuotaRemaining int        `json:"ai_quota_remaining"`
+	LastResetAt      *time.Time `json:"last_reset_at,omitempty"`
+	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
 }
 
 type UserProfileResponse struct {
-	ID           uuid.UUID          `json:"id"`
-	Email        string             `json:"email"`
-	Name         string             `json:"name"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Subscription *SubscriptionInfo  `json:"subscription,omitempty"`
+	ID           uuid.UUID         `json:"id"`
+	Email        string            `json:"email"`
+	Name         string            `json:"name"`
+	CreatedAt    time.Time         `json:"created_at"`
+	Subscription *SubscriptionInfo `json:"subscription,omitempty"`
 }
 
 type UpdateProfileRequest struct {
@@ -43,10 +43,10 @@ type UpdateProfileRequest struct {
 }
 
 type SubscriptionResponse struct {
-	Tier              string     `json:"tier"`
-	AIQuotaRemaining  int        `json:"ai_quota_remaining"`
-	LastResetAt       *time.Time `json:"last_reset_at,omitempty"`
-	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+	Tier             string     `json:"tier"`
+	AIQuotaRemaining int        `json:"ai_quota_remaining"`
+	LastResetAt      *time.Time `json:"last_reset_at,omitempty"`
+	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
 }
 
 // GetProfile returns the authenticated user's profile with subscription info
