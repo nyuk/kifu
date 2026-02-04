@@ -22,7 +22,7 @@ export function Login() {
     try {
       const response = await api.post('/v1/auth/login', { email, password })
       setTokens(response.data.access_token, response.data.refresh_token)
-      const from = searchParams?.get('from') || '/chart'
+      const from = searchParams?.get('from') || '/home'
       router.push(from)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Login failed. Please try again.')

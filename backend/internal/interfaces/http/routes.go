@@ -21,6 +21,9 @@ func RegisterRoutes(
 	outcomeRepo repositories.OutcomeRepository,
 	accuracyRepo repositories.AIOpinionAccuracyRepository,
 	noteRepo repositories.ReviewNoteRepository,
+	portfolioRepo repositories.PortfolioRepository,
+	safetyRepo repositories.TradeSafetyReviewRepository,
+	exchangeSyncer handlers.ExchangeSyncer,
 	encryptionKey []byte,
 	jwtSecret string,
 ) {
@@ -30,7 +33,7 @@ func RegisterRoutes(
 
 	authHandler := handlers.NewAuthHandler(userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
 	userHandler := handlers.NewUserHandler(userRepo, subscriptionRepo)
-	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, encryptionKey)
+	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, encryptionKey, exchangeSyncer)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo)
@@ -40,6 +43,10 @@ func RegisterRoutes(
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 	noteHandler := handlers.NewNoteHandler(noteRepo)
 	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
+	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo)
+	importHandler := handlers.NewImportHandler(portfolioRepo)
+	connectionHandler := handlers.NewConnectionHandler()
+	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
 
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
@@ -64,6 +71,7 @@ func RegisterRoutes(
 	exchanges.Get("/", exchangeHandler.List)
 	exchanges.Delete("/:id", exchangeHandler.Delete)
 	exchanges.Post("/:id/test", exchangeHandler.Test)
+	exchanges.Post("/:id/sync", exchangeHandler.Sync)
 
 	market := api.Group("/market")
 	market.Get("/klines", marketHandler.GetKlines)
@@ -87,6 +95,7 @@ func RegisterRoutes(
 	trades.Get("/", tradeHandler.List)
 	trades.Get("/summary", tradeHandler.Summary)
 	trades.Post("/convert-bubbles", tradeHandler.ConvertBubbles)
+	trades.Post("/backfill-bubbles", tradeHandler.BackfillBubbles)
 	trades.Post("/link", tradeHandler.LinkToBubble)
 	trades.Post("/unlink", tradeHandler.UnlinkFromBubble)
 
@@ -119,4 +128,22 @@ func RegisterRoutes(
 	export.Get("/stats", exportHandler.ExportStats)
 	export.Get("/accuracy", exportHandler.ExportAccuracy)
 	export.Get("/bubbles", exportHandler.ExportBubbles)
+
+	// Unified portfolio endpoints (stubs)
+	portfolio := api.Group("/portfolio")
+	portfolio.Get("/timeline", portfolioHandler.Timeline)
+	portfolio.Get("/positions", portfolioHandler.Positions)
+	portfolio.Post("/backfill-bubbles", portfolioHandler.BackfillBubbles)
+
+	api.Get("/instruments", portfolioHandler.Instruments)
+
+	imports := api.Group("/imports")
+	imports.Post("/trades", importHandler.ImportTrades)
+
+	connections := api.Group("/connections")
+	connections.Post("/", connectionHandler.Create)
+
+	safety := api.Group("/safety")
+	safety.Get("/today", safetyHandler.ListDaily)
+	safety.Post("/reviews", safetyHandler.UpsertReview)
 }

@@ -1,0 +1,429 @@
+{
+  "timestamp": "2026-02-02T13:32:24.750Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-02T13:28:15.882Z",
+    "activeFeatures": [
+      "review-replay",
+      "frontend",
+      "landing",
+      "entities",
+      "repositories",
+      "direction_extractor.go",
+      "jobs",
+      "handlers",
+      "http",
+      "backend",
+      "stores",
+      "review",
+      "chart"
+    ],
+    "primaryFeature": "review-replay",
+    "features": {
+      "review-replay": {
+        "phase": "design",
+        "phaseNumber": 2,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [
+          "AI 의견 정확도 비교",
+          "복기 대시보드",
+          "차트 리플레이"
+        ],
+        "documents": {
+          "plan": "docs/01-plan/features/review-replay.plan.md",
+          "design": "docs/02-design/features/review-replay.design.md"
+        },
+        "timestamps": {
+          "started": "2026-02-02T16:30:00.000Z",
+          "lastUpdated": "2026-02-02T16:45:00.000Z"
+        }
+      },
+      "frontend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T02:18:21.066Z",
+          "lastUpdated": "2026-02-02T13:25:59.318Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/components/Shell.tsx"
+      },
+      "landing": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T02:18:21.216Z",
+          "lastUpdated": "2026-02-02T07:20:53.840Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/components/landing/LandingPage.tsx"
+      },
+      "entities": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:16:20.090Z",
+          "lastUpdated": "2026-02-02T13:16:20.090Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/domain/entities/ai_opinion_accuracy.go"
+      },
+      "repositories": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:16:39.883Z",
+          "lastUpdated": "2026-02-02T13:19:51.218Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/infrastructure/repositories/bubble_repository_impl.go"
+      },
+      "direction_extractor.go": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:17:34.361Z",
+          "lastUpdated": "2026-02-02T13:17:34.361Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/services/direction_extractor.go"
+      },
+      "jobs": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:17:54.976Z",
+          "lastUpdated": "2026-02-02T13:17:54.976Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/jobs/accuracy_calculator.go"
+      },
+      "handlers": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:18:46.503Z",
+          "lastUpdated": "2026-02-02T13:20:59.586Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/interfaces/http/handlers/review_handler.go"
+      },
+      "http": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:20:01.852Z",
+          "lastUpdated": "2026-02-02T13:20:17.420Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/interfaces/http/routes.go"
+      },
+      "backend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:20:31.312Z",
+          "lastUpdated": "2026-02-02T13:20:42.176Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/app/app.go"
+      },
+      "stores": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:23:32.835Z",
+          "lastUpdated": "2026-02-02T13:23:32.835Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/stores/reviewStore.ts"
+      },
+      "review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:23:49.020Z",
+          "lastUpdated": "2026-02-02T13:25:26.383Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/app/(app)/review/page.tsx"
+      },
+      "chart": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-02T13:27:29.856Z",
+          "lastUpdated": "2026-02-02T13:28:15.882Z"
+        },
+        "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/components/chart/index.ts"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-02T02:18:02.465Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-02T13:28:15.882Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-02T16:30:00.000Z",
+        "feature": "review-replay",
+        "phase": "plan",
+        "action": "created"
+      },
+      {
+        "timestamp": "2026-02-02T16:45:00.000Z",
+        "feature": "review-replay",
+        "phase": "design",
+        "action": "created"
+      },
+      {
+        "timestamp": "2026-02-02T13:16:20.090Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:16:39.883Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:17:05.918Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:17:34.361Z",
+        "feature": "direction_extractor.go",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:17:54.976Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:18:04.033Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:18:16.073Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:18:46.503Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:19:04.489Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:19:13.424Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:19:51.218Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:01.852Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:10.942Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:17.420Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:31.312Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:36.583Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:42.176Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:20:59.586Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:23:17.805Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:23:32.835Z",
+        "feature": "stores",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:23:49.020Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:24:09.274Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:24:21.554Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:24:31.823Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:24:41.732Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:25:02.466Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:25:26.383Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:25:48.556Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:25:53.231Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:25:59.318Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:27:29.856Z",
+        "feature": "chart",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:27:44.743Z",
+        "feature": "chart",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:28:10.795Z",
+        "feature": "chart",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-02T13:28:15.882Z",
+        "feature": "chart",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

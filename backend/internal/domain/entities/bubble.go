@@ -14,6 +14,8 @@ type Bubble struct {
 	CandleTime time.Time `json:"candle_time"`
 	Price      string    `json:"price"`
 	BubbleType string    `json:"bubble_type"`
+	AssetClass *string   `json:"asset_class,omitempty"`
+	VenueName  *string   `json:"venue_name,omitempty"`
 	Memo       *string   `json:"memo,omitempty"`
 	Tags       []string  `json:"tags,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`

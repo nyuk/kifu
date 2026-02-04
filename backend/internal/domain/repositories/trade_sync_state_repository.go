@@ -8,6 +8,6 @@ import (
 )
 
 type TradeSyncStateRepository interface {
-	GetByUserAndSymbol(ctx context.Context, userID uuid.UUID, symbol string) (*entities.TradeSyncState, error)
+	GetByUserAndSymbol(ctx context.Context, userID uuid.UUID, exchange string, symbol string) (*entities.TradeSyncState, error)
 	Upsert(ctx context.Context, state *entities.TradeSyncState) error
 }

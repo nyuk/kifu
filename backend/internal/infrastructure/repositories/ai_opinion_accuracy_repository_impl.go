@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,7 +84,7 @@ func (r *AIOpinionAccuracyRepositoryImpl) ExistsByOpinionAndOutcome(ctx context.
 	return exists, err
 }
 
-func (r *AIOpinionAccuracyRepositoryImpl) GetProviderStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string) (map[string]*repositories.ProviderAccuracyStats, error) {
+func (r *AIOpinionAccuracyRepositoryImpl) GetProviderStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string, assetClass string, venueName string) (map[string]*repositories.ProviderAccuracyStats, error) {
 	// Calculate date range
 	var since time.Time
 	switch period {
@@ -94,7 +96,25 @@ func (r *AIOpinionAccuracyRepositoryImpl) GetProviderStats(ctx context.Context, 
 		since = time.Time{}
 	}
 
-	query := `
+	conditions := []string{"b.user_id = $1", "a.period = $2", "($3::timestamptz IS NULL OR b.candle_time >= $3)"}
+	args := []interface{}{userID, outcomePeriod, nil}
+	if !since.IsZero() {
+		args[2] = since
+	}
+	argIndex := 4
+	if assetClass != "" {
+		conditions = append(conditions, fmt.Sprintf("b.asset_class = $%d", argIndex))
+		args = append(args, assetClass)
+		argIndex++
+	}
+	if venueName != "" {
+		conditions = append(conditions, fmt.Sprintf("b.venue_name = $%d", argIndex))
+		args = append(args, venueName)
+		argIndex++
+	}
+	whereClause := strings.Join(conditions, " AND ")
+
+	query := fmt.Sprintf(`
 		SELECT
 			a.provider,
 			a.predicted_direction,
@@ -102,21 +122,12 @@ func (r *AIOpinionAccuracyRepositoryImpl) GetProviderStats(ctx context.Context, 
 			SUM(CASE WHEN a.is_correct THEN 1 ELSE 0 END) as correct
 		FROM ai_opinion_accuracies a
 		JOIN bubbles b ON a.bubble_id = b.id
-		WHERE b.user_id = $1
-		AND a.period = $2
-		AND ($3::timestamptz IS NULL OR a.created_at >= $3)
+		WHERE %s
 		GROUP BY a.provider, a.predicted_direction
 		ORDER BY a.provider, a.predicted_direction
-	`
+	`, whereClause)
 
-	var sinceParam interface{}
-	if since.IsZero() {
-		sinceParam = nil
-	} else {
-		sinceParam = since
-	}
-
-	rows, err := r.pool.Query(ctx, query, userID, outcomePeriod, sinceParam)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +178,7 @@ func (r *AIOpinionAccuracyRepositoryImpl) GetProviderStats(ctx context.Context, 
 	return stats, rows.Err()
 }
 
-func (r *AIOpinionAccuracyRepositoryImpl) GetTotalStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string) (total int, evaluated int, err error) {
+func (r *AIOpinionAccuracyRepositoryImpl) GetTotalStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string, assetClass string, venueName string) (total int, evaluated int, err error) {
 	var since time.Time
 	switch period {
 	case "7d":
@@ -178,35 +189,47 @@ func (r *AIOpinionAccuracyRepositoryImpl) GetTotalStats(ctx context.Context, use
 		since = time.Time{}
 	}
 
+	conditions := []string{"b.user_id = $1", "($2::timestamptz IS NULL OR b.candle_time >= $2)"}
+	args := []interface{}{userID, nil}
+	if !since.IsZero() {
+		args[1] = since
+	}
+	argIndex := 3
+	if assetClass != "" {
+		conditions = append(conditions, fmt.Sprintf("b.asset_class = $%d", argIndex))
+		args = append(args, assetClass)
+		argIndex++
+	}
+	if venueName != "" {
+		conditions = append(conditions, fmt.Sprintf("b.venue_name = $%d", argIndex))
+		args = append(args, venueName)
+		argIndex++
+	}
+	whereClause := strings.Join(conditions, " AND ")
+
 	// Total opinions count
-	totalQuery := `
+	totalQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT ao.id)
 		FROM ai_opinions ao
 		JOIN bubbles b ON ao.bubble_id = b.id
-		WHERE b.user_id = $1
-		AND ($2::timestamptz IS NULL OR ao.created_at >= $2)
-	`
+		WHERE %s
+	`, whereClause)
 
 	// Evaluated (has accuracy record)
-	evaluatedQuery := `
+	evaluatedQuery := fmt.Sprintf(`
 		SELECT COUNT(DISTINCT a.opinion_id)
 		FROM ai_opinion_accuracies a
 		JOIN bubbles b ON a.bubble_id = b.id
-		WHERE b.user_id = $1
-		AND a.period = $2
-		AND ($3::timestamptz IS NULL OR a.created_at >= $3)
-	`
+		WHERE %s
+		AND a.period = $%d
+	`, whereClause, argIndex)
 
-	var sinceParam interface{}
-	if since.IsZero() {
-		sinceParam = nil
-	} else {
-		sinceParam = since
-	}
+	evaluatedArgs := append([]interface{}{}, args...)
+	evaluatedArgs = append(evaluatedArgs, outcomePeriod)
 
-	if err = r.pool.QueryRow(ctx, totalQuery, userID, sinceParam).Scan(&total); err != nil {
+	if err = r.pool.QueryRow(ctx, totalQuery, args...).Scan(&total); err != nil {
 		return
 	}
-	err = r.pool.QueryRow(ctx, evaluatedQuery, userID, outcomePeriod, sinceParam).Scan(&evaluated)
+	err = r.pool.QueryRow(ctx, evaluatedQuery, evaluatedArgs...).Scan(&evaluated)
 	return
 }

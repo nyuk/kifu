@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
+import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 
 type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
 
@@ -169,25 +170,31 @@ export function Bubbles() {
         <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
           {/* 검색/필터 */}
           <div className="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search notes, tags..."
-              className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
-            />
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
-            >
-              <option value="desc">Newest</option>
-              <option value="asc">Oldest</option>
-            </select>
+            <FilterGroup label="SEARCH" tone="cyan">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search notes, tags..."
+                className="flex-1 min-w-[220px] rounded-lg border border-cyan-400/40 bg-neutral-950/70 px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/70"
+              />
+            </FilterGroup>
+            <FilterGroup label="SORT" tone="amber">
+              <FilterPills
+                options={[
+                  { value: 'desc', label: 'Newest' },
+                  { value: 'asc', label: 'Oldest' },
+                ]}
+                value={sortOrder}
+                onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+                tone="amber"
+                ariaLabel="Sort order"
+              />
+            </FilterGroup>
           </div>
 
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <span className="text-xs text-neutral-500">{filteredBubbles.length} results</span>
+            <span className="text-xs text-neutral-400">{filteredBubbles.length} results</span>
             <button
               onClick={() => { if (confirm('모든 버블을 삭제하시겠습니까?')) replaceAllBubbles([]) }}
               className="text-xs text-red-400 hover:text-red-300"

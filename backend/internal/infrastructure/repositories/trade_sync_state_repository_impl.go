@@ -19,15 +19,15 @@ func NewTradeSyncStateRepository(pool *pgxpool.Pool) repositories.TradeSyncState
 	return &TradeSyncStateRepositoryImpl{pool: pool}
 }
 
-func (r *TradeSyncStateRepositoryImpl) GetByUserAndSymbol(ctx context.Context, userID uuid.UUID, symbol string) (*entities.TradeSyncState, error) {
+func (r *TradeSyncStateRepositoryImpl) GetByUserAndSymbol(ctx context.Context, userID uuid.UUID, exchange string, symbol string) (*entities.TradeSyncState, error) {
 	query := `
-		SELECT id, user_id, symbol, last_trade_id, last_sync_at
+		SELECT id, user_id, exchange, symbol, last_trade_id, last_sync_at
 		FROM trade_sync_state
-		WHERE user_id = $1 AND symbol = $2
+		WHERE user_id = $1 AND exchange = $2 AND symbol = $3
 	`
 	var state entities.TradeSyncState
-	err := r.pool.QueryRow(ctx, query, userID, symbol).Scan(
-		&state.ID, &state.UserID, &state.Symbol, &state.LastTradeID, &state.LastSyncAt)
+	err := r.pool.QueryRow(ctx, query, userID, exchange, symbol).Scan(
+		&state.ID, &state.UserID, &state.Exchange, &state.Symbol, &state.LastTradeID, &state.LastSyncAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -39,12 +39,12 @@ func (r *TradeSyncStateRepositoryImpl) GetByUserAndSymbol(ctx context.Context, u
 
 func (r *TradeSyncStateRepositoryImpl) Upsert(ctx context.Context, state *entities.TradeSyncState) error {
 	query := `
-		INSERT INTO trade_sync_state (id, user_id, symbol, last_trade_id, last_sync_at)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id, symbol)
+		INSERT INTO trade_sync_state (id, user_id, exchange, symbol, last_trade_id, last_sync_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (user_id, exchange, symbol)
 		DO UPDATE SET last_trade_id = EXCLUDED.last_trade_id, last_sync_at = EXCLUDED.last_sync_at
 	`
 	_, err := r.pool.Exec(ctx, query,
-		state.ID, state.UserID, state.Symbol, state.LastTradeID, state.LastSyncAt)
+		state.ID, state.UserID, state.Exchange, state.Symbol, state.LastTradeID, state.LastSyncAt)
 	return err
 }

@@ -10,6 +10,7 @@ import { BubbleCreateModal } from '../components/BubbleCreateModal'
 import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
 import { useToast } from '../components/ui/Toast'
 import { ChartReplay } from '../components/chart/ChartReplay'
+import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 
 type UserSymbolItem = {
   symbol: string
@@ -26,6 +27,66 @@ type KlineItem = {
 }
 
 const intervals = ['1m', '15m', '1h', '4h', '1d']
+const quickPicks = [
+  { label: 'BTCUSDT', value: 'BTCUSDT' },
+  { label: 'ETHUSDT', value: 'ETHUSDT' },
+  { label: 'SOLUSDT', value: 'SOLUSDT' },
+  { label: 'AAPL', value: 'AAPL' },
+  { label: 'TSLA', value: 'TSLA' },
+  { label: '005930', value: '005930' },
+]
+
+const chartThemes = {
+  noir: {
+    label: 'Noir',
+    layout: { background: { type: ColorType.Solid, color: '#0a0a0a' }, textColor: '#d4d4d8', fontFamily: 'Space Grotesk, sans-serif' },
+    grid: { vertLines: { color: 'rgba(255,255,255,0.06)' }, horzLines: { color: 'rgba(255,255,255,0.06)' } },
+    candle: { upColor: '#22c55e', downColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444' },
+  },
+  studio: {
+    label: 'Studio',
+    layout: { background: { type: ColorType.Solid, color: '#0e1117' }, textColor: '#e2e8f0', fontFamily: 'Space Grotesk, sans-serif' },
+    grid: { vertLines: { color: 'rgba(148,163,184,0.12)' }, horzLines: { color: 'rgba(148,163,184,0.12)' } },
+    candle: { upColor: '#38bdf8', downColor: '#f87171', wickUpColor: '#38bdf8', wickDownColor: '#f87171' },
+  },
+  paper: {
+    label: 'Paper',
+    layout: { background: { type: ColorType.Solid, color: '#f8fafc' }, textColor: '#0f172a', fontFamily: 'Space Grotesk, sans-serif' },
+    grid: { vertLines: { color: 'rgba(15,23,42,0.08)' }, horzLines: { color: 'rgba(15,23,42,0.08)' } },
+    candle: { upColor: '#16a34a', downColor: '#dc2626', wickUpColor: '#16a34a', wickDownColor: '#dc2626' },
+  },
+  ledger: {
+    label: 'Ledger',
+    layout: { background: { type: ColorType.Solid, color: '#f4f1ea' }, textColor: '#1f2937', fontFamily: 'Space Grotesk, sans-serif' },
+    grid: { vertLines: { color: 'rgba(17,24,39,0.08)' }, horzLines: { color: 'rgba(17,24,39,0.08)' } },
+    candle: { upColor: '#0f766e', downColor: '#b91c1c', wickUpColor: '#0f766e', wickDownColor: '#b91c1c' },
+  },
+} as const
+
+const densityOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'recent', label: 'Recent' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'smart', label: 'Smart' },
+] as const
+
+const actionOptions = ['ALL', 'BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'] as const
+
+const isMarketSupported = (value: string) => {
+  const symbol = value.toUpperCase()
+  return symbol.endsWith('USDT') || symbol.endsWith('USDC') || symbol.endsWith('USD') || symbol.endsWith('BUSD')
+}
+
+const getWeekKey = (value: Date) => {
+  const date = new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()))
+  const dayNum = date.getUTCDay() || 7
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return `${date.getUTCFullYear()}-W${weekNo}`
+}
 
 // Helper to get timeframe duration in seconds
 function getTimeframeSeconds(tf: string): number {
@@ -55,11 +116,22 @@ export function Chart() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [autoBubbleFromTrades, setAutoBubbleFromTrades] = useState(true)
+  const [densityMode, setDensityMode] = useState<typeof densityOptions[number]['value']>('smart')
+  const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('noir')
+  const [dataSource, setDataSource] = useState<'crypto' | 'stock'>('crypto')
+  const [bubbleSearch, setBubbleSearch] = useState('')
+  const [actionFilter, setActionFilter] = useState<typeof actionOptions[number]>('ALL')
+  const [stockKlines, setStockKlines] = useState<KlineItem[]>([])
+  const [showReplay, setShowReplay] = useState(false)
+  const [showStyleMenu, setShowStyleMenu] = useState(false)
+  const [panelTab, setPanelTab] = useState<'summary' | 'detail'>('summary')
   const { toast } = useToast()
 
   const bubbles = useBubbleStore((state) => state.bubbles)
   const trades = useBubbleStore((state) => state.trades)
   const importTrades = useBubbleStore((state) => state.importTrades)
+  const createBubblesFromTrades = useBubbleStore((state) => state.createBubblesFromTrades)
 
   const [overlayPositions, setOverlayPositions] = useState<Array<{
     candleTime: number
@@ -106,10 +178,45 @@ export function Chart() {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (selectedGroup) {
+      setPanelTab('detail')
+    }
+  }, [selectedGroup])
+
+  useEffect(() => {
+    const stored = localStorage.getItem('kifu:auto-bubble-trades')
+    if (stored !== null) {
+      setAutoBubbleFromTrades(stored === 'true')
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('kifu:auto-bubble-trades', String(autoBubbleFromTrades))
+  }, [autoBubbleFromTrades])
+
   // Sync displayKlines with klines (for replay filtering)
   useEffect(() => {
     setDisplayKlines(klines)
   }, [klines])
+
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return
+    const theme = chartThemes[themeMode]
+    chartRef.current.applyOptions({
+      layout: theme.layout,
+      grid: theme.grid,
+      rightPriceScale: { borderColor: theme.layout.textColor, borderVisible: true },
+      timeScale: { borderColor: theme.layout.textColor, borderVisible: true },
+    })
+    seriesRef.current.applyOptions({
+      upColor: theme.candle.upColor,
+      downColor: theme.candle.downColor,
+      wickUpColor: theme.candle.wickUpColor,
+      wickDownColor: theme.candle.wickDownColor,
+      borderVisible: false,
+    })
+  }, [themeMode])
 
   const handleReplayFilteredKlines = useCallback((filtered: KlineItem[]) => {
     setDisplayKlines(filtered)
@@ -169,6 +276,18 @@ export function Chart() {
   // Load Klines
   useEffect(() => {
     if (!selectedSymbol) return
+    if (dataSource === 'crypto' && !isMarketSupported(selectedSymbol)) {
+      setKlines([])
+      setDisplayKlines([])
+      setError('이 심볼은 아직 차트 데이터 소스가 준비되지 않았습니다.')
+      return
+    }
+    if (dataSource === 'stock') {
+      setKlines(stockKlines)
+      setDisplayKlines(stockKlines)
+      setError(stockKlines.length === 0 ? '주식 CSV를 업로드하면 차트에 표시됩니다.' : '')
+      return
+    }
     let active = true
     const loadKlines = async () => {
       setLoading(true)
@@ -188,7 +307,7 @@ export function Chart() {
     }
     loadKlines()
     return () => { active = false }
-  }, [selectedSymbol, timeframe])
+  }, [selectedSymbol, timeframe, dataSource, stockKlines])
 
   const chartData = useMemo(() => {
     return displayKlines
@@ -280,6 +399,81 @@ export function Chart() {
     updatePositionsRef.current = updatePositions
   }, [updatePositions])
 
+  const densityAdjustedPositions = useMemo(() => {
+    if (overlayPositions.length === 0) return []
+    const sorted = [...overlayPositions].sort((a, b) => a.candleTime - b.candleTime)
+    const mode = densityMode === 'smart' ? (sorted.length > 120 ? 'daily' : 'all') : densityMode
+    if (mode === 'all') return sorted
+    if (mode === 'recent') return sorted.slice(Math.max(sorted.length - 80, 0))
+    if (mode === 'weekly') {
+      const grouped = new Map<string, typeof overlayPositions[number]>()
+      sorted.forEach((item) => {
+        const date = new Date(item.candleTime * 1000)
+        const key = getWeekKey(date)
+        const existing = grouped.get(key)
+        if (!existing) {
+          grouped.set(key, { ...item })
+          return
+        }
+        grouped.set(key, {
+          ...item,
+          bubbles: [...existing.bubbles, ...item.bubbles],
+          trades: [...existing.trades, ...item.trades],
+          avgPrice: item.avgPrice,
+        })
+      })
+      return Array.from(grouped.values())
+    }
+    if (mode === 'monthly') {
+      const grouped = new Map<string, typeof overlayPositions[number]>()
+      sorted.forEach((item) => {
+        const date = new Date(item.candleTime * 1000)
+        const key = `${date.getFullYear()}-${date.getMonth() + 1}`
+        const existing = grouped.get(key)
+        if (!existing) {
+          grouped.set(key, { ...item })
+          return
+        }
+        grouped.set(key, {
+          ...item,
+          bubbles: [...existing.bubbles, ...item.bubbles],
+          trades: [...existing.trades, ...item.trades],
+          avgPrice: item.avgPrice,
+        })
+      })
+      return Array.from(grouped.values())
+    }
+    if (mode === 'daily') {
+      const grouped = new Map<string, typeof overlayPositions[number]>()
+      sorted.forEach((item) => {
+        const date = new Date(item.candleTime * 1000)
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+        const existing = grouped.get(key)
+        if (!existing) {
+          grouped.set(key, { ...item })
+          return
+        }
+        grouped.set(key, {
+          ...item,
+          bubbles: [...existing.bubbles, ...item.bubbles],
+          trades: [...existing.trades, ...item.trades],
+          avgPrice: item.avgPrice,
+        })
+      })
+      return Array.from(grouped.values())
+    }
+    return sorted
+  }, [overlayPositions, densityMode])
+
+  const filteredBubbles = useMemo(() => {
+    const query = bubbleSearch.trim().toLowerCase()
+    return activeBubbles.filter((bubble) => {
+      if (actionFilter !== 'ALL' && bubble.action !== actionFilter) return false
+      if (!query) return true
+      return bubble.note.toLowerCase().includes(query) || (bubble.tags || []).some((tag) => tag.toLowerCase().includes(query))
+    }).sort((a, b) => b.ts - a.ts)
+  }, [activeBubbles, bubbleSearch, actionFilter])
+
   // 버블/트레이드 변경 시 위치 업데이트
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current) return
@@ -294,16 +488,10 @@ export function Chart() {
   useEffect(() => {
     if (!containerRef.current) return
 
+    const initialTheme = chartThemes[themeMode]
     const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: '#0a0a0a' },
-        textColor: '#d4d4d8',
-        fontFamily: 'Space Grotesk, sans-serif',
-      },
-      grid: {
-        vertLines: { color: 'rgba(255,255,255,0.06)' },
-        horzLines: { color: 'rgba(255,255,255,0.06)' },
-      },
+      layout: initialTheme.layout,
+      grid: initialTheme.grid,
       crosshair: { mode: CrosshairMode.Magnet },
       rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
       timeScale: { borderColor: 'rgba(255,255,255,0.08)' },
@@ -311,11 +499,11 @@ export function Chart() {
     })
 
     const series = chart.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
+      upColor: initialTheme.candle.upColor,
+      downColor: initialTheme.candle.downColor,
       borderVisible: false,
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      wickUpColor: initialTheme.candle.wickUpColor,
+      wickDownColor: initialTheme.candle.wickDownColor,
     })
 
     chartRef.current = chart
@@ -507,6 +695,14 @@ export function Chart() {
 
       if (confirm(`${newTrades.length}개의 거래내역을 가져오시겠습니까?`)) {
         importTrades(newTrades)
+        if (autoBubbleFromTrades) {
+          try {
+            const result = await createBubblesFromTrades(newTrades)
+            toast(`거래 버블 자동 생성 ${result.created.length}건`, 'success')
+          } catch (err) {
+            toast('거래 버블 자동 생성에 실패했습니다.', 'error')
+          }
+        }
         toast(`${newTrades.length}개 거래내역 가져오기 완료`, 'success')
       }
     } catch (e: any) {
@@ -514,6 +710,68 @@ export function Chart() {
       toast('CSV 파싱 실패: ' + e.message, 'error')
     }
     event.target.value = ''
+  }
+
+  const handleStockCsvClick = () => {
+    document.getElementById('import-stock-csv-input')?.click()
+  }
+
+  const handleStockCsvChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+      if (lines.length <= 1) {
+        toast('CSV 데이터가 비어 있습니다.', 'error')
+        return
+      }
+      const header = lines[0].toLowerCase().split(',').map((c) => c.trim())
+      const colIndex = (name: string) => header.findIndex((h) => h === name)
+      const timeIdx = colIndex('time')
+      const dateIdx = colIndex('date')
+      const openIdx = colIndex('open')
+      const highIdx = colIndex('high')
+      const lowIdx = colIndex('low')
+      const closeIdx = colIndex('close')
+      const volumeIdx = colIndex('volume')
+
+      if ((timeIdx < 0 && dateIdx < 0) || openIdx < 0 || highIdx < 0 || lowIdx < 0 || closeIdx < 0) {
+        toast('CSV 컬럼이 올바르지 않습니다. (time/date, open, high, low, close 필요)', 'error')
+        return
+      }
+
+      const items: KlineItem[] = []
+      for (let i = 1; i < lines.length; i += 1) {
+        const row = lines[i].split(',').map((c) => c.trim())
+        const timeRaw = timeIdx >= 0 ? row[timeIdx] : row[dateIdx]
+        if (!timeRaw) continue
+        const parsed = new Date(timeRaw)
+        if (Number.isNaN(parsed.getTime())) continue
+        items.push({
+          time: Math.floor(parsed.getTime() / 1000),
+          open: row[openIdx],
+          high: row[highIdx],
+          low: row[lowIdx],
+          close: row[closeIdx],
+          volume: volumeIdx >= 0 ? row[volumeIdx] : '0',
+        })
+      }
+      if (items.length === 0) {
+        toast('유효한 캔들 데이터를 찾지 못했습니다.', 'error')
+        return
+      }
+      const sorted = items.sort((a, b) => a.time - b.time)
+      setStockKlines(sorted)
+      setKlines(sorted)
+      setDisplayKlines(sorted)
+      setError('')
+      toast(`주식 캔들 ${sorted.length}개 로드 완료`, 'success')
+    } catch (err) {
+      toast('CSV 파싱에 실패했습니다.', 'error')
+    } finally {
+      event.target.value = ''
+    }
   }
 
   const handleSymbolChange = (value: string) => {
@@ -565,132 +823,221 @@ export function Chart() {
               Live Chart with Bubble Journaling & Trade Overlay
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Symbol Select */}
-            <div className="flex flex-col text-xs text-neutral-400">
-              <span className="uppercase tracking-[0.2em]">Symbol</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterGroup label="Market" tone="emerald">
+              <FilterPills
+                options={[
+                  { value: 'crypto', label: 'Crypto' },
+                  { value: 'stock', label: 'Stock' },
+                ]}
+                value={dataSource}
+                onChange={(value) => setDataSource(value as 'crypto' | 'stock')}
+                tone="emerald"
+                ariaLabel="Market source"
+              />
+            </FilterGroup>
+
+            <FilterGroup label="Symbol" tone="sky">
               <select
                 value={selectedSymbol}
                 onChange={(e) => handleSymbolChange(e.target.value)}
-                className="mt-2 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="rounded-md border border-sky-400/40 bg-neutral-950/70 px-2 py-1 text-xs font-semibold text-sky-100"
               >
                 {symbols.map((item) => (
                   <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
                 ))}
               </select>
-            </div>
-            {/* Timeframe */}
-            <div className="flex flex-col text-xs text-neutral-400">
-              <span className="uppercase tracking-[0.2em]">Timeframe</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {intervals.map((interval) => (
-                  <button
-                    key={interval}
-                    onClick={() => setTimeframe(interval)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] transition ${timeframe === interval ? 'border-neutral-100 bg-neutral-100 text-neutral-950' : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'}`}
-                  >
-                    {interval}
-                  </button>
-                ))}
+            </FilterGroup>
+
+            <FilterGroup label="Timeframe" tone="amber">
+              <FilterPills
+                options={intervals.map((interval) => ({ value: interval, label: interval }))}
+                value={timeframe}
+                onChange={(value) => setTimeframe(value)}
+                tone="amber"
+                ariaLabel="Timeframe filter"
+              />
+            </FilterGroup>
+
+            <FilterGroup label="Display" tone="emerald">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBubbles((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                    showBubbles
+                      ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                      : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                  }`}
+                >
+                  Bubbles
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTrades((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                    showTrades
+                      ? 'border-sky-300 bg-sky-300/20 text-sky-200'
+                      : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
+                  }`}
+                >
+                  Trades
+                </button>
               </div>
-            </div>
-            {/* Display Options */}
-            <div className="flex flex-col text-xs text-neutral-400">
-              <span className="uppercase tracking-[0.2em]">Display</span>
-              <div className="mt-2 flex gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showBubbles}
-                    onChange={(e) => setShowBubbles(e.target.checked)}
-                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-green-500 focus:ring-green-500"
-                  />
-                  <span className="text-neutral-300">Bubbles</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showTrades}
-                    onChange={(e) => setShowTrades(e.target.checked)}
-                    className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-blue-500 focus:ring-blue-500"
-                  />
-                  <span className="text-neutral-300">Trades</span>
-                </label>
+            </FilterGroup>
+
+            <FilterGroup label="Density" tone="amber">
+              <FilterPills
+                options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
+                value={densityMode}
+                onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
+                tone="amber"
+                ariaLabel="Density filter"
+              />
+            </FilterGroup>
+
+            <FilterGroup label="Style" tone="sky">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowStyleMenu((prev) => !prev)}
+                  className="rounded-full border border-sky-300/40 bg-sky-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200 hover:bg-sky-300/20"
+                >
+                  {chartThemes[themeMode].label}
+                </button>
+                {showStyleMenu && (
+                  <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl">
+                    {Object.entries(chartThemes).map(([value, item]) => (
+                      <button
+                        key={value}
+                        onClick={() => {
+                          setThemeMode(value as keyof typeof chartThemes)
+                          setShowStyleMenu(false)
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
+                          themeMode === value
+                            ? 'bg-sky-300/20 text-sky-200'
+                            : 'text-neutral-300 hover:bg-neutral-800/60'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-            {/* Actions */}
-            <div className="flex flex-col text-xs text-neutral-400">
-              <span className="uppercase tracking-[0.2em]">Actions</span>
+            </FilterGroup>
+
+            <FilterGroup label="Auto Bubble" tone="rose">
+              <button
+                type="button"
+                onClick={() => setAutoBubbleFromTrades((prev) => !prev)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                  autoBubbleFromTrades
+                    ? 'border-rose-300 bg-rose-300/20 text-rose-200'
+                    : 'border-neutral-700 text-neutral-400 hover:border-rose-300/40 hover:text-rose-200'
+                }`}
+              >
+                {autoBubbleFromTrades ? 'On' : 'Off'}
+              </button>
+            </FilterGroup>
+
+            <FilterGroup label="Actions" tone="fuchsia">
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setIsModalOpen(true)}
                   disabled={!selectedSymbol}
-                  className="mt-2 rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-950 hover:bg-white disabled:opacity-60"
+                  className="mt-2 rounded-md bg-neutral-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-950 hover:bg-white disabled:opacity-60"
                 >
                   Create Bubble
                 </button>
-                <button onClick={exportBubbles} className="mt-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800">
+                <button onClick={exportBubbles} className="mt-2 rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
                   Export JSON
                 </button>
-                <button onClick={handleImportClick} className="mt-2 rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800">
+                <button onClick={handleImportClick} className="mt-2 rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
                   Import JSON
                 </button>
                 <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
 
-                <button onClick={handleTradeImportClick} className="mt-2 rounded-lg border border-blue-900/50 px-3 py-2 text-xs text-blue-300 hover:bg-blue-900/20">
+                <button onClick={handleTradeImportClick} className="mt-2 rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20">
                   Import CSV
                 </button>
                 <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
 
-                <button onClick={generateDummyBubbles} disabled={!selectedSymbol} className="mt-2 rounded-lg border border-yellow-500/50 px-3 py-2 text-xs text-yellow-400 hover:bg-yellow-500/10">
+                <button
+                  onClick={handleStockCsvClick}
+                  className="mt-2 rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10"
+                >
+                  Stock CSV
+                </button>
+                <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
+
+                <button onClick={generateDummyBubbles} disabled={!selectedSymbol} className="mt-2 rounded-md border border-yellow-500/50 px-3 py-1 text-[10px] text-yellow-400 hover:bg-yellow-500/10">
                   + DUMMY
                 </button>
-                <button onClick={() => { if (confirm('Reset all?')) { localStorage.removeItem('bubble-storage'); window.location.reload(); } }} className="mt-2 rounded-lg border border-red-500/50 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10">
+                <button onClick={() => { if (confirm('Reset all?')) { localStorage.removeItem('bubble-storage'); window.location.reload(); } }} className="mt-2 rounded-md border border-red-500/50 px-3 py-1 text-[10px] text-red-400 hover:bg-red-500/10">
                   RESET
                 </button>
               </div>
-            </div>
+            </FilterGroup>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
+            <span className="uppercase tracking-[0.2em] text-neutral-500">Quick</span>
+            {quickPicks.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => handleSymbolChange(item.value)}
+                className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                  selectedSymbol === item.value
+                    ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowReplay((prev) => !prev)}
+              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                showReplay
+                  ? 'border-sky-300 bg-sky-300/20 text-sky-200'
+                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+              }`}
+            >
+              {showReplay ? 'Hide Replay' : 'Replay'}
+            </button>
           </div>
         </div>
         {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+        {(dataSource === 'crypto' && !isMarketSupported(selectedSymbol)) && (
+          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+            현재 차트 데이터는 Binance(USDT/USDC/USD) 기반입니다. 주식/기타 심볼은 준비 중입니다.
+          </div>
+        )}
+        {(dataSource === 'stock') && (
+          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+            주식 차트 데이터 소스는 아직 연결되지 않았습니다. (연동 예정)
+          </div>
+        )}
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        {/* Status Panels */}
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Status</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">{loading ? 'Loading...' : 'Ready'}</p>
+      {showReplay && (
+        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4">
+          <ChartReplay
+            klines={klines}
+            onFilteredKlines={handleReplayFilteredKlines}
+            timeframeSeconds={getTimeframeSeconds(timeframe)}
+          />
         </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Bubble Flow</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">
-            {activeBubbles.length > 0 ? 'Active' : 'Empty State'}
-          </p>
-          <p className="mt-2 text-sm text-neutral-500">
-            {activeBubbles.length === 0
-              ? 'Click a candle to create a bubble.'
-              : `${activeBubbles.length} bubbles tracked.`}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Imported Trades</p>
-          <p className="mt-3 text-lg font-semibold text-neutral-200">{activeTrades.length}</p>
-        </div>
-      </section>
+      )}
 
-      {/* Chart Replay Controls */}
-      <ChartReplay
-        klines={klines}
-        onFilteredKlines={handleReplayFilteredKlines}
-        timeframeSeconds={getTimeframeSeconds(timeframe)}
-      />
-
-      <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
-        <div className="h-[480px] w-full relative" ref={containerRef}>
-          {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
-          {mounted && (
-            <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
-              {overlayPositions.map((group) => {
+      <section className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
+          <div className="h-[520px] w-full relative" ref={containerRef}>
+            {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
+            {mounted && (
+              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
+                {densityAdjustedPositions.map((group) => {
             // 토글에 따라 필터링
             const visibleBubbles = showBubbles ? group.bubbles : []
             const visibleTrades = showTrades ? group.trades : []
@@ -785,115 +1132,181 @@ export function Chart() {
                 </div>
               </div>
             )
-          })}
-            </div>
-          )}
+                })}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* 선택된 버블/거래 상세 패널 */}
-      {selectedGroup && (
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
-              <h3 className="mt-1 text-lg font-semibold text-neutral-100">
-                {new Date(selectedGroup.candleTime * 1000).toLocaleString()}
-              </h3>
-            </div>
+        <aside className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble Board</p>
+            <h3 className="mt-2 text-lg font-semibold text-neutral-100">말풍선 컨트롤</h3>
+            <p className="text-xs text-neutral-400 mt-1">
+              {filteredBubbles.length} bubbles · {activeTrades.length} trades
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedGroup(null)}
-              className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-400 hover:bg-neutral-800"
+              onClick={() => setPanelTab('summary')}
+              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                panelTab === 'summary'
+                  ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+              }`}
             >
-              닫기
+              Summary
+            </button>
+            <button
+              onClick={() => setPanelTab('detail')}
+              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                panelTab === 'detail'
+                  ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+              }`}
+            >
+              Detail
             </button>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* 버블 목록 */}
-            {selectedGroup.bubbles.length > 0 && (
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
-                  Bubbles ({selectedGroup.bubbles.length})
-                </p>
-                <div className="max-h-[300px] overflow-y-auto space-y-3 pr-2">
-                  {selectedGroup.bubbles.map(bubble => (
-                    <div key={bubble.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-bold ${
-                          bubble.action === 'BUY' ? 'text-green-400' :
-                          bubble.action === 'SELL' ? 'text-red-400' :
-                          bubble.action === 'TP' ? 'text-emerald-300' :
-                          bubble.action === 'SL' ? 'text-rose-300' :
-                          'text-neutral-300'
-                        }`}>
+          {panelTab === 'summary' && (
+            <>
+              <div className="space-y-3">
+                <input
+                  value={bubbleSearch}
+                  onChange={(e) => setBubbleSearch(e.target.value)}
+                  placeholder="메모/태그 검색"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950/70 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {actionOptions.map((action) => (
+                    <button
+                      key={action}
+                      onClick={() => setActionFilter(action)}
+                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                        actionFilter === action
+                          ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                          : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                      }`}
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-neutral-500">
+                  <span>최근 기록</span>
+                  <span>{filteredBubbles.length} items</span>
+                </div>
+                <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2">
+                  {filteredBubbles.length === 0 && (
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-4 text-xs text-neutral-500">
+                      표시할 버블이 없습니다.
+                    </div>
+                  )}
+                  {filteredBubbles.slice(0, 40).map((bubble) => (
+                    <div key={bubble.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                      <div className="flex items-center justify-between text-xs text-neutral-500">
+                        <span>{new Date(bubble.ts).toLocaleDateString()}</span>
+                        <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
                           {bubble.action || 'NOTE'}
                         </span>
-                        <span className="text-sm text-neutral-400">${bubble.price.toLocaleString()}</span>
                       </div>
-                      <p className="mt-2 text-sm text-neutral-200">{bubble.note}</p>
-                      {bubble.tags && bubble.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {bubble.tags.map(tag => (
-                            <span key={tag} className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {/* AI 에이전트 조언 */}
-                      {bubble.agents && bubble.agents.length > 0 && (
-                        <div className="mt-3 border-t border-neutral-800 pt-3">
-                          <p className="text-xs uppercase tracking-[0.15em] text-neutral-500 mb-2">AI Analysis</p>
-                          <div className="space-y-2">
-                            {bubble.agents.map((agent, idx) => (
-                              <div key={idx} className="rounded-lg bg-neutral-900/60 p-2">
-                                <div className="flex items-center gap-2 text-xs">
-                                  <span className="font-semibold text-neutral-300">{agent.provider}</span>
-                                  <span className="text-neutral-500">{agent.model}</span>
-                                </div>
-                                <p className="mt-1 text-xs text-neutral-400 leading-relaxed">{agent.response}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{bubble.note}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-neutral-500">
+                        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.symbol}</span>
+                        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.timeframe}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
+            </>
+          )}
 
-            {/* 거래 목록 */}
-            {selectedGroup.trades.length > 0 && (
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-neutral-500 mb-3">
-                  Trades ({selectedGroup.trades.length})
-                </p>
-                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                  {selectedGroup.trades.map(trade => (
-                    <div key={trade.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-bold ${trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}`}>
-                          {trade.side.toUpperCase()}
-                        </span>
-                        <span className="text-xs text-neutral-500">{trade.exchange}</span>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-sm text-neutral-300">
-                        <span>{trade.qty} BTC</span>
-                        <span>@ ${trade.price.toLocaleString()}</span>
-                      </div>
-                      {trade.fee && (
-                        <div className="mt-1 text-xs text-neutral-500">Fee: ${trade.fee}</div>
-                      )}
-                    </div>
-                  ))}
+          {panelTab === 'detail' && (
+            <div className="space-y-3">
+              {!selectedGroup && (
+                <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-4 text-xs text-neutral-500">
+                  차트에서 말풍선을 선택하면 상세가 표시됩니다.
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+              {selectedGroup && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
+                      <h3 className="mt-1 text-sm font-semibold text-neutral-100">
+                        {new Date(selectedGroup.candleTime * 1000).toLocaleString()}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setSelectedGroup(null)}
+                      className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                    >
+                      닫기
+                    </button>
+                  </div>
+
+                  {selectedGroup.bubbles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                        Bubbles ({selectedGroup.bubbles.length})
+                      </p>
+                      <div className="max-h-[220px] overflow-y-auto space-y-2 pr-2">
+                        {selectedGroup.bubbles.map((bubble) => (
+                          <div key={bubble.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-bold ${
+                                bubble.action === 'BUY' ? 'text-green-400' :
+                                bubble.action === 'SELL' ? 'text-red-400' :
+                                bubble.action === 'TP' ? 'text-emerald-300' :
+                                bubble.action === 'SL' ? 'text-rose-300' :
+                                'text-neutral-300'
+                              }`}>
+                                {bubble.action || 'NOTE'}
+                              </span>
+                              <span className="text-xs text-neutral-400">${bubble.price.toLocaleString()}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{bubble.note}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedGroup.trades.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
+                        Trades ({selectedGroup.trades.length})
+                      </p>
+                      <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
+                        {selectedGroup.trades.map((trade) => (
+                          <div key={trade.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                            <div className="flex items-center justify-between text-xs text-neutral-500">
+                              <span className={trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}>
+                                {trade.side.toUpperCase()}
+                              </span>
+                              <span>{trade.exchange}</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between text-xs text-neutral-300">
+                              <span>{trade.qty} BTC</span>
+                              <span>@ ${trade.price.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </aside>
+      </section>
 
       <BubbleCreateModal
         open={isModalOpen}

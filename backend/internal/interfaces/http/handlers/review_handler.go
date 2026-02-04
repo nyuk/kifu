@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -75,8 +76,10 @@ func (h *ReviewHandler) GetStats(c *fiber.Ctx) error {
 	period := c.Query("period", "30d")
 	symbol := c.Query("symbol", "")
 	tag := c.Query("tag", "")
+	assetClass := strings.ToLower(strings.TrimSpace(c.Query("asset_class", "")))
+	venueName := strings.ToLower(strings.TrimSpace(c.Query("venue", "")))
 
-	stats, err := h.bubbleRepo.GetReviewStats(c.Context(), userID, period, symbol, tag)
+	stats, err := h.bubbleRepo.GetReviewStats(c.Context(), userID, period, symbol, tag, assetClass, venueName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -108,15 +111,17 @@ func (h *ReviewHandler) GetAccuracy(c *fiber.Ctx) error {
 
 	period := c.Query("period", "30d")
 	outcomePeriod := c.Query("outcome_period", "1h")
+	assetClass := strings.ToLower(strings.TrimSpace(c.Query("asset_class", "")))
+	venueName := strings.ToLower(strings.TrimSpace(c.Query("venue", "")))
 
 	// Get provider stats
-	byProvider, err := h.accuracyRepo.GetProviderStats(c.Context(), userID, period, outcomePeriod)
+	byProvider, err := h.accuracyRepo.GetProviderStats(c.Context(), userID, period, outcomePeriod, assetClass, venueName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Get total stats
-	totalOpinions, evaluatedOpinions, err := h.accuracyRepo.GetTotalStats(c.Context(), userID, period, outcomePeriod)
+	totalOpinions, evaluatedOpinions, err := h.accuracyRepo.GetTotalStats(c.Context(), userID, period, outcomePeriod, assetClass, venueName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -173,6 +178,8 @@ func (h *ReviewHandler) GetCalendar(c *fiber.Ctx) error {
 
 	fromStr := c.Query("from", time.Now().AddDate(0, -1, 0).Format("2006-01-02"))
 	toStr := c.Query("to", time.Now().Format("2006-01-02"))
+	assetClass := strings.ToLower(strings.TrimSpace(c.Query("asset_class", "")))
+	venueName := strings.ToLower(strings.TrimSpace(c.Query("venue", "")))
 
 	from, err := time.Parse("2006-01-02", fromStr)
 	if err != nil {
@@ -183,7 +190,7 @@ func (h *ReviewHandler) GetCalendar(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid to date"})
 	}
 
-	calendarData, err := h.bubbleRepo.GetCalendarData(c.Context(), userID, from, to)
+	calendarData, err := h.bubbleRepo.GetCalendarData(c.Context(), userID, from, to, assetClass, venueName)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

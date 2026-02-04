@@ -18,6 +18,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [])
   
   const navItems = [
+    { label: t.navHome, to: '/home' },
+    { label: t.navPortfolio, to: '/portfolio' },
     { label: t.navChart, to: '/chart' },
     { label: t.navBubbles, to: '/bubbles' },
     { label: t.navTrades, to: '/trades' },

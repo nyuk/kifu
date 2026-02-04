@@ -65,6 +65,9 @@ func Run() error {
 	outcomeRepo := repositories.NewOutcomeRepository(pool)
 	accuracyRepo := repositories.NewAIOpinionAccuracyRepository(pool)
 	noteRepo := repositories.NewReviewNoteRepository(pool)
+	portfolioRepo := repositories.NewPortfolioRepository(pool)
+	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
+	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -113,9 +116,8 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, portfolioRepo, safetyRepo, poller, encKey, jwtSecret)
 
-	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
 	go poller.Start(context.Background())
 
 	quotaReset := jobs.NewQuotaResetJob(subscriptionRepo)
@@ -126,6 +128,9 @@ func Run() error {
 
 	accuracyCalc := jobs.NewAccuracyCalculator(outcomeRepo, aiOpinionRepo, accuracyRepo)
 	accuracyCalc.Start(context.Background())
+
+	positionCalc := jobs.NewPositionCalculator(portfolioRepo)
+	positionCalc.Start(context.Background())
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)

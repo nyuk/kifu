@@ -199,7 +199,7 @@ export function LandingPage() {
                         <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">로드맵</Link>
                         <Link href="#pricing" className="hover:text-neutral-100 transition-colors">요금제</Link>
                         <Link
-                            href="/chart"
+                            href="/home"
                             className="rounded-full bg-neutral-100 px-5 py-2 text-neutral-950 hover:bg-white transition-colors"
                         >
                             앱 시작
@@ -226,13 +226,13 @@ export function LandingPage() {
                     </p>
                     <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                         <Link
-                            href="/chart"
+                            href="/home"
                             className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
                         >
                             무료 시작
                         </Link>
                         <Link
-                            href="/chart?openImport=true"
+                            href="/home"
                             className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-8 py-3 text-sm font-bold uppercase tracking-widest text-neutral-300 transition-all hover:border-neutral-500 hover:bg-white/5"
                         >
                             데이터 가져오기
@@ -300,7 +300,7 @@ export function LandingPage() {
                             {/* Hover overlay */}
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <Link
-                                    href="/chart"
+                                    href="/home"
                                     className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
                                 >
                                     <span>🚀</span> 데모 시작하기

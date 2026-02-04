@@ -98,6 +98,8 @@ export type ReviewFilters = {
   period: '7d' | '30d' | 'all'
   symbol?: string
   tag?: string
+  assetClass?: 'all' | 'crypto' | 'stock'
+  venue?: string
   outcomePeriod: '1h' | '4h' | '1d'
 }
 

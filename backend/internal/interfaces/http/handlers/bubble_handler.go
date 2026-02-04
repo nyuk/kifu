@@ -37,13 +37,17 @@ type CreateBubbleRequest struct {
 	Timeframe  string    `json:"timeframe"`
 	CandleTime time.Time `json:"candle_time"`
 	Price      string    `json:"price"`
+	AssetClass *string   `json:"asset_class,omitempty"`
+	VenueName  *string   `json:"venue_name,omitempty"`
 	Memo       *string   `json:"memo"`
 	Tags       []string  `json:"tags"`
 }
 
 type UpdateBubbleRequest struct {
-	Memo *string  `json:"memo"`
-	Tags []string `json:"tags"`
+	Memo       *string  `json:"memo"`
+	Tags       []string `json:"tags"`
+	AssetClass *string  `json:"asset_class,omitempty"`
+	VenueName  *string  `json:"venue_name,omitempty"`
 }
 
 type BubbleResponse struct {
@@ -53,6 +57,8 @@ type BubbleResponse struct {
 	CandleTime time.Time `json:"candle_time"`
 	Price      string    `json:"price"`
 	BubbleType string    `json:"bubble_type"`
+	AssetClass *string   `json:"asset_class,omitempty"`
+	VenueName  *string   `json:"venue_name,omitempty"`
 	Memo       *string   `json:"memo,omitempty"`
 	Tags       []string  `json:"tags,omitempty"`
 }
@@ -106,6 +112,8 @@ func (h *BubbleHandler) Create(c *fiber.Ctx) error {
 		CandleTime: req.CandleTime.UTC(),
 		Price:      strings.TrimSpace(req.Price),
 		BubbleType: "manual",
+		AssetClass: normalizeOptionalLabel(req.AssetClass, 32),
+		VenueName:  normalizeOptionalLabel(req.VenueName, 64),
 		Memo:       req.Memo,
 		Tags:       cleanTags,
 		CreatedAt:  time.Now().UTC(),
@@ -256,6 +264,12 @@ func (h *BubbleHandler) Update(c *fiber.Ctx) error {
 		}
 		bubble.Tags = cleanTags
 	}
+	if req.AssetClass != nil {
+		bubble.AssetClass = normalizeOptionalLabel(req.AssetClass, 32)
+	}
+	if req.VenueName != nil {
+		bubble.VenueName = normalizeOptionalLabel(req.VenueName, 64)
+	}
 
 	if err := h.bubbleRepo.Update(c.Context(), bubble); err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
@@ -294,9 +308,26 @@ func mapBubbleResponse(bubble *entities.Bubble) BubbleResponse {
 		CandleTime: bubble.CandleTime,
 		Price:      bubble.Price,
 		BubbleType: bubble.BubbleType,
+		AssetClass: bubble.AssetClass,
+		VenueName:  bubble.VenueName,
 		Memo:       bubble.Memo,
 		Tags:       bubble.Tags,
 	}
+}
+
+func normalizeOptionalLabel(value *string, maxLen int) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	if len(trimmed) > maxLen {
+		trimmed = trimmed[:maxLen]
+	}
+	normalized := strings.ToLower(trimmed)
+	return &normalized
 }
 
 func normalizeTags(tags []string) ([]string, error) {

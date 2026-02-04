@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../stores/auth'
+import { api } from '../../lib/api'
 
 type AIKeyItem = {
   provider: string
-  hasKey: boolean
-  last4: string
+  masked?: string | null
 }
 
 const PROVIDERS = [
@@ -29,16 +29,11 @@ export function AIKeyManager() {
 
     try {
       setLoading(true)
-      const res = await fetch('/api/v1/users/me/ai-keys', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!res.ok) throw new Error('Failed to fetch keys')
-
-      const data = await res.json()
-      setKeys(data.keys || [])
+      const response = await api.get<{ keys: AIKeyItem[] }>('/v1/users/me/ai-keys')
+      setKeys(response.data.keys || [])
     } catch (err) {
       console.error('Failed to fetch AI keys:', err)
+      setError('AI 키 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -55,28 +50,19 @@ export function AIKeyManager() {
       setSaving(true)
       setError(null)
 
-      const res = await fetch('/api/v1/users/me/ai-keys', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
+      await api.put('/v1/users/me/ai-keys', {
+        keys: [{
           provider,
           api_key: newKey.trim(),
-        }),
+        }],
       })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.message || 'Failed to save key')
-      }
 
       setEditingProvider(null)
       setNewKey('')
       await fetchKeys()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save key')
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Failed to save key'
+      setError(message)
     } finally {
       setSaving(false)
     }
@@ -88,16 +74,11 @@ export function AIKeyManager() {
 
     try {
       setSaving(true)
-      const res = await fetch(`/api/v1/users/me/ai-keys/${provider}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-
-      if (!res.ok) throw new Error('Failed to delete key')
-
+      await api.delete(`/v1/users/me/ai-keys/${provider}`)
       await fetchKeys()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete key')
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'Failed to delete key'
+      setError(message)
     } finally {
       setSaving(false)
     }
@@ -140,15 +121,15 @@ export function AIKeyManager() {
                   <span className="font-medium text-neutral-200">{provider.name}</span>
                   <span className="text-xs text-neutral-500">{provider.model}</span>
                 </div>
-                {keyStatus?.hasKey && (
+                {keyStatus?.masked && (
                   <div className="mt-1 text-xs text-neutral-500">
-                    API Key: ****{keyStatus.last4}
+                    API Key: {keyStatus.masked}
                   </div>
                 )}
               </div>
 
               <div className="flex items-center gap-2">
-                {keyStatus?.hasKey ? (
+                {keyStatus?.masked ? (
                   <>
                     <span className="px-2 py-1 text-xs bg-green-500/20 text-green-400 rounded">
                       설정됨

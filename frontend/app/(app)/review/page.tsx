@@ -27,14 +27,19 @@ export default function ReviewPage() {
     fetchCalendar,
   } = useReviewStore()
 
+  const getCurrentMonthRange = () => {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    return { from, to }
+  }
+
   useEffect(() => {
     fetchStats()
     fetchAccuracy()
 
     // Fetch calendar for current month
-    const now = new Date()
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    const { from, to } = getCurrentMonthRange()
     fetchCalendar(from, to)
   }, [fetchStats, fetchAccuracy, fetchCalendar])
 
@@ -42,7 +47,17 @@ export default function ReviewPage() {
   useEffect(() => {
     fetchStats()
     fetchAccuracy()
-  }, [filters.period, filters.outcomePeriod, fetchStats, fetchAccuracy])
+    const { from, to } = getCurrentMonthRange()
+    fetchCalendar(from, to)
+  }, [
+    filters.period,
+    filters.outcomePeriod,
+    filters.assetClass,
+    filters.venue,
+    fetchStats,
+    fetchAccuracy,
+    fetchCalendar,
+  ])
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white p-4 md:p-8">

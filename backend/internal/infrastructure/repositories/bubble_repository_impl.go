@@ -25,23 +25,23 @@ func NewBubbleRepository(pool *pgxpool.Pool) repositories.BubbleRepository {
 
 func (r *BubbleRepositoryImpl) Create(ctx context.Context, bubble *entities.Bubble) error {
 	query := `
-		INSERT INTO bubbles (id, user_id, symbol, timeframe, candle_time, price, bubble_type, memo, tags, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO bubbles (id, user_id, symbol, timeframe, candle_time, price, bubble_type, asset_class, venue_name, memo, tags, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 	_, err := r.pool.Exec(ctx, query,
-		bubble.ID, bubble.UserID, bubble.Symbol, bubble.Timeframe, bubble.CandleTime, bubble.Price, bubble.BubbleType, bubble.Memo, bubble.Tags, bubble.CreatedAt)
+		bubble.ID, bubble.UserID, bubble.Symbol, bubble.Timeframe, bubble.CandleTime, bubble.Price, bubble.BubbleType, bubble.AssetClass, bubble.VenueName, bubble.Memo, bubble.Tags, bubble.CreatedAt)
 	return err
 }
 
 func (r *BubbleRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*entities.Bubble, error) {
 	query := `
-		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, memo, tags, created_at
+		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, asset_class, venue_name, memo, tags, created_at
 		FROM bubbles
 		WHERE id = $1
 	`
 	var bubble entities.Bubble
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
+		&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.AssetClass, &bubble.VenueName, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -90,7 +90,7 @@ func (r *BubbleRepositoryImpl) List(ctx context.Context, userID uuid.UUID, filte
 	}
 
 	listQuery := fmt.Sprintf(`
-		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, memo, tags, created_at
+		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, asset_class, venue_name, memo, tags, created_at
 		FROM bubbles
 		%s
 		%s
@@ -108,7 +108,7 @@ func (r *BubbleRepositoryImpl) List(ctx context.Context, userID uuid.UUID, filte
 	for rows.Next() {
 		var bubble entities.Bubble
 		err := rows.Scan(
-			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
+			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.AssetClass, &bubble.VenueName, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -130,7 +130,7 @@ func (r *BubbleRepositoryImpl) ListByUser(ctx context.Context, userID uuid.UUID,
 	}
 
 	query := `
-		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, memo, tags, created_at
+		SELECT id, user_id, symbol, timeframe, candle_time, price, bubble_type, asset_class, venue_name, memo, tags, created_at
 		FROM bubbles
 		WHERE user_id = $1
 		ORDER BY candle_time DESC
@@ -146,7 +146,7 @@ func (r *BubbleRepositoryImpl) ListByUser(ctx context.Context, userID uuid.UUID,
 	for rows.Next() {
 		var bubble entities.Bubble
 		err := rows.Scan(
-			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
+			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.AssetClass, &bubble.VenueName, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -163,10 +163,10 @@ func (r *BubbleRepositoryImpl) ListByUser(ctx context.Context, userID uuid.UUID,
 func (r *BubbleRepositoryImpl) Update(ctx context.Context, bubble *entities.Bubble) error {
 	query := `
 		UPDATE bubbles
-		SET memo = $2, tags = $3
+		SET memo = $2, tags = $3, asset_class = $4, venue_name = $5
 		WHERE id = $1
 	`
-	_, err := r.pool.Exec(ctx, query, bubble.ID, bubble.Memo, bubble.Tags)
+	_, err := r.pool.Exec(ctx, query, bubble.ID, bubble.Memo, bubble.Tags, bubble.AssetClass, bubble.VenueName)
 	return err
 }
 
@@ -198,7 +198,7 @@ func (r *BubbleRepositoryImpl) ListSimilar(ctx context.Context, userID uuid.UUID
 	}
 
 	listQuery := fmt.Sprintf(`
-		SELECT b.id, b.user_id, b.symbol, b.timeframe, b.candle_time, b.price, b.bubble_type, b.memo, b.tags, b.created_at,
+		SELECT b.id, b.user_id, b.symbol, b.timeframe, b.candle_time, b.price, b.bubble_type, b.asset_class, b.venue_name, b.memo, b.tags, b.created_at,
 		       o.period, o.reference_price, o.outcome_price, o.pnl_percent, o.calculated_at
 		FROM bubbles b
 		LEFT JOIN outcomes o ON o.bubble_id = b.id AND o.period = $%d
@@ -223,7 +223,7 @@ func (r *BubbleRepositoryImpl) ListSimilar(ctx context.Context, userID uuid.UUID
 		var pnlPercent *string
 		var calculatedAt *time.Time
 		err := rows.Scan(
-			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt,
+			&bubble.ID, &bubble.UserID, &bubble.Symbol, &bubble.Timeframe, &bubble.CandleTime, &bubble.Price, &bubble.BubbleType, &bubble.AssetClass, &bubble.VenueName, &bubble.Memo, &bubble.Tags, &bubble.CreatedAt,
 			&outcomePeriod, &referencePrice, &outcomePrice, &pnlPercent, &calculatedAt)
 		if err != nil {
 			return nil, 0, err
@@ -358,7 +358,7 @@ func safeTime(value *time.Time) time.Time {
 	return *value
 }
 
-func (r *BubbleRepositoryImpl) GetReviewStats(ctx context.Context, userID uuid.UUID, period string, symbol string, tag string) (*repositories.ReviewStats, error) {
+func (r *BubbleRepositoryImpl) GetReviewStats(ctx context.Context, userID uuid.UUID, period string, symbol string, tag string, assetClass string, venueName string) (*repositories.ReviewStats, error) {
 	// Calculate date range
 	var since time.Time
 	switch period {
@@ -376,7 +376,7 @@ func (r *BubbleRepositoryImpl) GetReviewStats(ctx context.Context, userID uuid.U
 	argIndex := 2
 
 	if !since.IsZero() {
-		conditions = append(conditions, fmt.Sprintf("b.created_at >= $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("b.candle_time >= $%d", argIndex))
 		args = append(args, since)
 		argIndex++
 	}
@@ -388,6 +388,16 @@ func (r *BubbleRepositoryImpl) GetReviewStats(ctx context.Context, userID uuid.U
 	if tag != "" {
 		conditions = append(conditions, fmt.Sprintf("$%d = ANY(b.tags)", argIndex))
 		args = append(args, tag)
+		argIndex++
+	}
+	if assetClass != "" {
+		conditions = append(conditions, fmt.Sprintf("b.asset_class = $%d", argIndex))
+		args = append(args, assetClass)
+		argIndex++
+	}
+	if venueName != "" {
+		conditions = append(conditions, fmt.Sprintf("b.venue_name = $%d", argIndex))
+		args = append(args, venueName)
 		argIndex++
 	}
 
@@ -571,8 +581,25 @@ func (r *BubbleRepositoryImpl) GetReviewStats(ctx context.Context, userID uuid.U
 	}, nil
 }
 
-func (r *BubbleRepositoryImpl) GetCalendarData(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time) (map[string]repositories.CalendarDay, error) {
-	query := `
+func (r *BubbleRepositoryImpl) GetCalendarData(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time, assetClass string, venueName string) (map[string]repositories.CalendarDay, error) {
+	conditions := []string{"b.user_id = $1", "b.candle_time >= $2", "b.candle_time < $3"}
+	args := []interface{}{userID, from, to.AddDate(0, 0, 1)}
+	argIndex := 4
+
+	if assetClass != "" {
+		conditions = append(conditions, fmt.Sprintf("b.asset_class = $%d", argIndex))
+		args = append(args, assetClass)
+		argIndex++
+	}
+	if venueName != "" {
+		conditions = append(conditions, fmt.Sprintf("b.venue_name = $%d", argIndex))
+		args = append(args, venueName)
+		argIndex++
+	}
+
+	whereClause := strings.Join(conditions, " AND ")
+
+	query := fmt.Sprintf(`
 		SELECT
 			DATE(b.candle_time) as date,
 			COUNT(DISTINCT b.id) as bubble_count,
@@ -581,14 +608,12 @@ func (r *BubbleRepositoryImpl) GetCalendarData(ctx context.Context, userID uuid.
 			COALESCE(SUM(CAST(o.pnl_percent AS DECIMAL)), 0) as total_pnl
 		FROM bubbles b
 		LEFT JOIN outcomes o ON o.bubble_id = b.id AND o.period = '1h'
-		WHERE b.user_id = $1
-		AND b.candle_time >= $2
-		AND b.candle_time < $3
+		WHERE %s
 		GROUP BY DATE(b.candle_time)
 		ORDER BY date
-	`
+	`, whereClause)
 
-	rows, err := r.pool.Query(ctx, query, userID, from, to.AddDate(0, 0, 1))
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

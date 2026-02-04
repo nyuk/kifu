@@ -14,26 +14,41 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
+	"github.com/moneyvessel/kifu/internal/jobs"
 )
 
 const (
 	binanceSapiBaseURL = "https://api.binance.com"
-	binanceExchangeID  = "binance_futures"
+	upbitBaseURL       = "https://api.upbit.com"
+	binanceFuturesID   = "binance_futures"
+	binanceSpotID      = "binance_spot"
+	upbitExchangeID    = "upbit"
 )
 
 type ExchangeHandler struct {
 	exchangeRepo  repositories.ExchangeCredentialRepository
 	encryptionKey []byte
 	client        *http.Client
+	syncer        ExchangeSyncer
+}
+
+type ExchangeSyncer interface {
+	SyncCredentialOnce(ctx context.Context, cred *entities.ExchangeCredential) error
+}
+
+type ExchangeSyncerWithOptions interface {
+	SyncCredentialOnceWithOptions(ctx context.Context, cred *entities.ExchangeCredential, options jobs.SyncOptions) error
 }
 
 func NewExchangeHandler(
 	exchangeRepo repositories.ExchangeCredentialRepository,
 	encryptionKey []byte,
+	syncer ExchangeSyncer,
 ) *ExchangeHandler {
 	return &ExchangeHandler{
 		exchangeRepo:  exchangeRepo,
@@ -41,6 +56,7 @@ func NewExchangeHandler(
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		syncer: syncer,
 	}
 }
 
@@ -70,8 +86,9 @@ type ExchangeListItem struct {
 }
 
 type ExchangeTestResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Success   bool    `json:"success"`
+	Message   string  `json:"message"`
+	ExpiresAt *string `json:"expires_at,omitempty"`
 }
 
 type apiRestrictionsResponse struct {
@@ -79,6 +96,11 @@ type apiRestrictionsResponse struct {
 	EnableSpotAndMarginTrading bool `json:"enableSpotAndMarginTrading"`
 	EnableFutures              bool `json:"enableFutures"`
 	EnableWithdrawals          bool `json:"enableWithdrawals"`
+}
+
+type upbitAPIKeyInfo struct {
+	AccessKey string `json:"access_key"`
+	ExpireAt  string `json:"expire_at"`
 }
 
 func (h *ExchangeHandler) Register(c *fiber.Ctx) error {
@@ -100,16 +122,33 @@ func (h *ExchangeHandler) Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "exchange, api_key, and api_secret are required"})
 	}
 
-	if req.Exchange != binanceExchangeID {
+	if req.Exchange != binanceFuturesID && req.Exchange != binanceSpotID && req.Exchange != upbitExchangeID {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_EXCHANGE", "message": "unsupported exchange"})
 	}
 
-	allowed, err := h.checkBinancePermissions(c.Context(), req.APIKey, req.APISecret)
-	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
-	}
-	if !allowed {
-		return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "API key permissions must be read-only futures"})
+	switch req.Exchange {
+	case binanceFuturesID:
+		allowed, err := h.checkBinancePermissions(c.Context(), req.APIKey, req.APISecret, true)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
+		}
+		if !allowed {
+			return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Binance Futures 권한(read + futures)이 필요합니다."})
+		}
+	case binanceSpotID:
+		allowed, err := h.checkBinancePermissions(c.Context(), req.APIKey, req.APISecret, false)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
+		}
+		if !allowed {
+			return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Binance Spot 조회 권한(read)이 필요합니다."})
+		}
+	case upbitExchangeID:
+		// Upbit keys can be scoped in many ways; do not hard-fail registration on accounts scope.
+		expireAt, err := h.getUpbitKeyExpiry(c.Context(), req.APIKey, req.APISecret)
+		if err == nil && expireAt != nil && expireAt.Before(time.Now().UTC()) {
+			return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Upbit API key is expired. Reissue the key and try again."})
+		}
 	}
 
 	apiKeyEnc, err := cryptoutil.Encrypt(req.APIKey, h.encryptionKey)
@@ -247,18 +286,114 @@ func (h *ExchangeHandler) Test(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
-	allowed, err := h.checkBinancePermissions(c.Context(), apiKey, apiSecret)
-	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
-	}
-	if !allowed {
-		return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "API key permissions must be read-only futures"})
+	switch cred.Exchange {
+	case binanceFuturesID:
+		allowed, err := h.checkBinancePermissions(c.Context(), apiKey, apiSecret, true)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
+		}
+		if !allowed {
+			return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Binance Futures 권한(read + futures)이 필요합니다."})
+		}
+	case binanceSpotID:
+		allowed, err := h.checkBinancePermissions(c.Context(), apiKey, apiSecret, false)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_CHECK_FAILED", "message": err.Error()})
+		}
+		if !allowed {
+			return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Binance Spot 조회 권한(read)이 필요합니다."})
+		}
+	case upbitExchangeID:
+		expireAt, err := h.getUpbitKeyExpiry(c.Context(), apiKey, apiSecret)
+		if err == nil && expireAt != nil {
+			if expireAt.Before(time.Now().UTC()) {
+				return c.Status(400).JSON(fiber.Map{"code": "EXCHANGE_PERMISSION_DENIED", "message": "Upbit API key is expired. Reissue the key and try again."})
+			}
+			expiresAt := expireAt.Format(time.RFC3339)
+			return c.Status(200).JSON(ExchangeTestResponse{
+				Success:   true,
+				Message:   "connection successful",
+				ExpiresAt: &expiresAt,
+			})
+		}
+		return c.Status(200).JSON(ExchangeTestResponse{
+			Success: true,
+			Message: "connection saved. trade history scope will be verified during sync.",
+		})
+	default:
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_EXCHANGE", "message": "unsupported exchange"})
 	}
 
 	return c.Status(200).JSON(ExchangeTestResponse{Success: true, Message: "connection successful"})
 }
 
-func (h *ExchangeHandler) checkBinancePermissions(ctx context.Context, apiKey string, apiSecret string) (bool, error) {
+func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	if h.syncer == nil {
+		return c.Status(501).JSON(fiber.Map{"code": "NOT_IMPLEMENTED", "message": "sync service is not available"})
+	}
+
+	credID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid id"})
+	}
+
+	cred, err := h.exchangeRepo.GetByID(c.Context(), credID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if cred == nil {
+		return c.Status(404).JSON(fiber.Map{"code": "EXCHANGE_NOT_FOUND", "message": "exchange credential not found"})
+	}
+	if cred.UserID != userID {
+		return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "access denied"})
+	}
+	if !cred.IsValid {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_EXCHANGE", "message": "exchange credential is invalid"})
+	}
+
+	fullBackfill := strings.EqualFold(strings.TrimSpace(c.Query("full_backfill")), "true")
+	historyDays := 0
+	if raw := strings.TrimSpace(c.Query("history_days")); raw != "" {
+		parsed, parseErr := parsePositiveInt(raw)
+		if parseErr != nil {
+			return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "history_days is invalid"})
+		}
+		historyDays = parsed
+	}
+
+	var syncErr error
+	if fullBackfill {
+		if advanced, ok := h.syncer.(ExchangeSyncerWithOptions); ok {
+			syncErr = advanced.SyncCredentialOnceWithOptions(c.Context(), cred, jobs.SyncOptions{
+				FullBackfill: true,
+				HistoryDays:  historyDays,
+			})
+		} else {
+			syncErr = h.syncer.SyncCredentialOnce(c.Context(), cred)
+		}
+	} else {
+		syncErr = h.syncer.SyncCredentialOnce(c.Context(), cred)
+	}
+
+	if syncErr != nil {
+		if syncErr == jobs.ErrUnsupportedExchange {
+			return c.Status(400).JSON(fiber.Map{
+				"code":    "UNSUPPORTED_SYNC",
+				"message": "이 거래소는 자동 동기화가 아직 준비중입니다. CSV import를 사용해주세요.",
+			})
+		}
+		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_SYNC_FAILED", "message": syncErr.Error()})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"success": true, "message": "sync completed"})
+}
+
+func (h *ExchangeHandler) checkBinancePermissions(ctx context.Context, apiKey string, apiSecret string, requireFutures bool) (bool, error) {
 	params := url.Values{}
 	params.Set("timestamp", fmt.Sprintf("%d", time.Now().UnixMilli()))
 	params.Set("recvWindow", "5000")
@@ -290,14 +425,66 @@ func (h *ExchangeHandler) checkBinancePermissions(ctx context.Context, apiKey st
 		return false, err
 	}
 
-	if !result.EnableFutures {
+	if !result.EnableReading {
 		return false, nil
 	}
-	if result.EnableWithdrawals || result.EnableSpotAndMarginTrading {
+	if requireFutures && !result.EnableFutures {
 		return false, nil
 	}
 
 	return true, nil
+}
+
+func (h *ExchangeHandler) getUpbitKeyExpiry(ctx context.Context, apiKey string, apiSecret string) (*time.Time, error) {
+	token, err := generateUpbitJWT(apiKey, apiSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, upbitBaseURL+"/v1/api_keys", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("api key metadata check failed with status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var keys []upbitAPIKeyInfo
+	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
+		return nil, err
+	}
+
+	for _, info := range keys {
+		if strings.TrimSpace(info.AccessKey) != strings.TrimSpace(apiKey) {
+			continue
+		}
+		parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(info.ExpireAt))
+		if err != nil {
+			return nil, err
+		}
+		utc := parsed.UTC()
+		return &utc, nil
+	}
+
+	return nil, nil
+}
+
+func generateUpbitJWT(apiKey string, apiSecret string) (string, error) {
+	claims := jwt.MapClaims{
+		"access_key": apiKey,
+		"nonce":      uuid.NewString(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	return token.SignedString([]byte(apiSecret))
 }
 
 func signRequest(secret string, params url.Values) string {

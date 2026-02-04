@@ -23,7 +23,7 @@ export function Register() {
       await api.post('/v1/auth/register', { name, email, password })
       const loginResponse = await api.post('/v1/auth/login', { email, password })
       setTokens(loginResponse.data.access_token, loginResponse.data.refresh_token)
-      router.push('/chart', { replace: true })
+      router.push('/home', { replace: true })
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Registration failed. Please try again.')
     } finally {

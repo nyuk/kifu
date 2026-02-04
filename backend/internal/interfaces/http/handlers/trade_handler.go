@@ -22,6 +22,7 @@ const defaultExchange = "binance_futures"
 
 var allowedExchanges = map[string]struct{}{
 	"binance_futures": {},
+	"binance_spot":    {},
 	"upbit":           {},
 }
 
@@ -49,6 +50,9 @@ type TradeItem struct {
 	Exchange       string  `json:"exchange"`
 	Symbol         string  `json:"symbol"`
 	Side           string  `json:"side"`
+	PositionSide   *string `json:"position_side,omitempty"`
+	OpenClose      *string `json:"open_close,omitempty"`
+	ReduceOnly     *bool   `json:"reduce_only,omitempty"`
 	Quantity       string  `json:"quantity"`
 	Price          string  `json:"price"`
 	RealizedPnL    *string `json:"realized_pnl,omitempty"`
@@ -137,6 +141,9 @@ func (h *TradeHandler) List(c *fiber.Ctx) error {
 			Exchange:       trade.Exchange,
 			Symbol:         trade.Symbol,
 			Side:           trade.Side,
+			PositionSide:   trade.PositionSide,
+			OpenClose:      trade.OpenClose,
+			ReduceOnly:     trade.ReduceOnly,
 			Quantity:       trade.Quantity,
 			Price:          trade.Price,
 			RealizedPnL:    trade.RealizedPnL,
@@ -275,6 +282,8 @@ func (h *TradeHandler) Import(c *fiber.Ctx) error {
 			CandleTime: floorToTimeframe(payload.TradeTime, payload.Timeframe),
 			Price:      payload.Price,
 			BubbleType: "auto",
+			AssetClass: normalizeOptionalLabelPtr("crypto"),
+			VenueName:  normalizeOptionalLabelPtr(payload.Exchange),
 			Memo:       payload.Memo,
 			Tags:       payload.Tags,
 			CreatedAt:  time.Now().UTC(),
@@ -383,6 +392,8 @@ func (h *TradeHandler) ConvertBubbles(c *fiber.Ctx) error {
 				CandleTime: floorToTimeframe(trade.TradeTime, timeframe),
 				Price:      trade.Price,
 				BubbleType: "auto",
+				AssetClass: normalizeOptionalLabelPtr("crypto"),
+				VenueName:  normalizeOptionalLabelPtr(trade.Exchange),
 				Memo:       memoPtr,
 				Tags:       tags,
 				CreatedAt:  time.Now().UTC(),
@@ -403,6 +414,20 @@ func (h *TradeHandler) ConvertBubbles(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(TradeConvertResponse{Created: created, Skipped: skipped})
+}
+
+func (h *TradeHandler) BackfillBubbles(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	updated, err := h.tradeRepo.BackfillBubbleMetadata(c.Context(), userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"updated": updated})
 }
 
 type csvTradePayload struct {
@@ -429,6 +454,15 @@ func mapCsvHeader(header []string) map[string]int {
 		index[trimmed] = i
 	}
 	return index
+}
+
+func normalizeOptionalLabelPtr(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	normalized := strings.ToLower(trimmed)
+	return &normalized
 }
 
 func missingCsvColumns(index map[string]int, columns []string) []string {

@@ -17,6 +17,15 @@ type BubbleCreateModalProps = {
 
 const timeframes = ['1m', '15m', '1h', '4h', '1d']
 
+const inferAssetClass = (value: string) => {
+  const symbol = value.trim().toUpperCase()
+  if (!symbol) return 'crypto' as const
+  if (/^\d{5,6}$/.test(symbol)) return 'stock' as const
+  if (symbol.endsWith('USDT') || symbol.endsWith('USDC') || symbol.endsWith('USD')) return 'crypto' as const
+  if (symbol.endsWith('BTC') || symbol.endsWith('ETH')) return 'crypto' as const
+  return 'crypto' as const
+}
+
 export function BubbleCreateModal({
   open,
   symbol,
@@ -32,6 +41,8 @@ export function BubbleCreateModal({
   const [price, setPrice] = useState(defaultPrice || '')
   const [memo, setMemo] = useState('')
   const [tagsInput, setTagsInput] = useState('')
+  const [assetClass, setAssetClass] = useState<'crypto' | 'stock'>('crypto')
+  const [venueName, setVenueName] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
@@ -44,6 +55,8 @@ export function BubbleCreateModal({
     setPrice(defaultPrice || '')
     setMemo('')
     setTagsInput('')
+    setAssetClass(inferAssetClass(symbol))
+    setVenueName('')
     setError('')
     setAiResponse(null)
     setAiLoading(false)
@@ -61,7 +74,8 @@ export function BubbleCreateModal({
       .filter(Boolean)
   }, [tagsInput])
 
-  const addBubble = useBubbleStore((state) => state.addBubble)
+  const createBubbleRemote = useBubbleStore((state) => state.createBubbleRemote)
+  const updateBubble = useBubbleStore((state) => state.updateBubble)
 
   const handleAskAi = async () => {
     if (!price || !symbol) return
@@ -81,7 +95,7 @@ export function BubbleCreateModal({
     }
   }
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!symbol) {
       setError('심볼이 선택되지 않았습니다.')
@@ -99,20 +113,20 @@ export function BubbleCreateModal({
     setError('')
     setIsSubmitting(true)
     try {
-      const ts = new Date(candleTime).getTime()
-
-      addBubble({
-        id: crypto.randomUUID(),
+      const bubble = await createBubbleRemote({
         symbol,
         timeframe,
-        ts,
-        price: parseFloat(price.trim()),
-        note: memo.trim(),
+        candle_time: new Date(candleTime).toISOString(),
+        price: price.trim(),
+        memo: memo.trim(),
         tags,
-        agents: aiResponse ? [aiResponse] : undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        asset_class: assetClass,
+        venue_name: venueName.trim() || undefined,
       })
+
+      if (aiResponse) {
+        updateBubble(bubble.id, { agents: [aiResponse], note: memo.trim(), tags })
+      }
 
       onCreated?.()
       onClose()
@@ -206,6 +220,29 @@ export function BubbleCreateModal({
               </div>
             )}
           </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-neutral-300">
+              Asset Class
+              <select
+                value={assetClass}
+                onChange={(event) => setAssetClass(event.target.value as 'crypto' | 'stock')}
+                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+              >
+                <option value="crypto">Crypto</option>
+                <option value="stock">Stock</option>
+              </select>
+            </label>
+            <label className="text-sm text-neutral-300">
+              Venue
+              <input
+                type="text"
+                value={venueName}
+                onChange={(event) => setVenueName(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                placeholder="binance, upbit, kis"
+              />
+            </label>
+          </div>
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI Insight</span>
