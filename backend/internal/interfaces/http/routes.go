@@ -33,7 +33,7 @@ func RegisterRoutes(
 
 	authHandler := handlers.NewAuthHandler(userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
 	userHandler := handlers.NewUserHandler(userRepo, subscriptionRepo)
-	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, encryptionKey, exchangeSyncer)
+	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo)

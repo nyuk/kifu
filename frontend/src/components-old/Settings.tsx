@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
+import { clearGuestSession } from '../lib/guestSession'
 import { LanguageSelector } from '../components/LanguageSelector'
 import { AIKeyManager } from '../components/settings/AIKeyManager'
 import { ExchangeConnectionManager } from '../components/settings/ExchangeConnectionManager'
@@ -51,7 +52,10 @@ export function Settings() {
       </section>
       <button
         type="button"
-        onClick={clearTokens}
+        onClick={() => {
+          clearGuestSession()
+          clearTokens()
+        }}
         className="w-full rounded-xl border border-neutral-700/80 bg-neutral-900/60 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-500"
       >
         Log out (local only)

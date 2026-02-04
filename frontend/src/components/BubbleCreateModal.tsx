@@ -11,6 +11,7 @@ type BubbleCreateModalProps = {
   defaultTimeframe: string
   defaultPrice?: string
   defaultTime?: number // epoch ms
+  disableAi?: boolean
   onClose: () => void
   onCreated?: () => void
 }
@@ -32,6 +33,7 @@ export function BubbleCreateModal({
   defaultTimeframe,
   defaultPrice,
   defaultTime,
+  disableAi = false,
   onClose,
   onCreated,
 }: BubbleCreateModalProps) {
@@ -78,6 +80,10 @@ export function BubbleCreateModal({
   const updateBubble = useBubbleStore((state) => state.updateBubble)
 
   const handleAskAi = async () => {
+    if (disableAi) {
+      setError('게스트 모드에서는 AI 의견 요청이 비활성화됩니다.')
+      return
+    }
     if (!price || !symbol) return
     setAiLoading(true)
     try {
@@ -261,14 +267,19 @@ export function BubbleCreateModal({
                   <button
                     type="button"
                     onClick={handleAskAi}
-                    disabled={aiLoading || !price}
+                    disabled={aiLoading || !price || disableAi}
                     className="rounded px-2 py-1 text-xs font-semibold text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-50"
                   >
-                    {aiLoading ? 'Analyzing...' : 'Ask AI'}
+                    {disableAi ? '멤버 전용' : aiLoading ? 'Analyzing...' : 'Ask AI'}
                   </button>
                 </div>
               )}
             </div>
+            {disableAi && !aiResponse && (
+              <p className="mt-2 text-[11px] text-neutral-500">
+                AI 분석 요청은 회원 전용 기능입니다.
+              </p>
+            )}
             {aiResponse && (
               <div className="mt-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
                 {aiResponse.response}

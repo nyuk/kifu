@@ -232,7 +232,7 @@ export const useBubbleStore = create<BubbleState>()(
       deleteAllTrades: () => set({ trades: [] }),
     }),
     {
-      name: 'bubble-storage',
+      name: 'bubble-storage-v2',
       storage: createJSONStorage(() => localStorage),
     }
   )

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
+import { isGuestSession } from '../../lib/guestSession'
 
 type ExchangeOption = 'binance_futures' | 'binance_spot' | 'upbit'
 
@@ -23,6 +24,15 @@ type ExchangeTestResponse = {
   expires_at?: string
 }
 
+type ExchangeSyncResponse = {
+  success?: boolean
+  message?: string
+  exchange?: string
+  before_count?: number
+  after_count?: number
+  inserted_count?: number
+}
+
 const exchangeLabel: Record<ExchangeOption, string> = {
   binance_futures: 'Binance Futures',
   binance_spot: 'Binance Spot',
@@ -39,6 +49,7 @@ export function ExchangeConnectionManager() {
   const [syncStartedAtMap, setSyncStartedAtMap] = useState<Record<string, number>>({})
   const [tick, setTick] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [guestMode, setGuestMode] = useState(false)
 
   const [exchange, setExchange] = useState<ExchangeOption>('binance_futures')
   const [apiKey, setApiKey] = useState('')
@@ -51,7 +62,7 @@ export function ExchangeConnectionManager() {
     if (exchange === 'binance_spot') {
       return '권한: read(현물 거래내역 조회)'
     }
-    return '권한: 거래 조회(read). 현재 KRW 마켓만 자동 동기화합니다.'
+    return '권한: 거래 조회(read). 자동 동기화 시 KRW/USDT/BTC 마켓을 함께 조회합니다.'
   }, [exchange])
 
   const fetchConnections = useCallback(async () => {
@@ -68,6 +79,10 @@ export function ExchangeConnectionManager() {
   }, [])
 
   useEffect(() => {
+    setGuestMode(isGuestSession())
+  }, [])
+
+  useEffect(() => {
     fetchConnections()
   }, [fetchConnections])
 
@@ -79,6 +94,7 @@ export function ExchangeConnectionManager() {
   }, [syncingMap])
 
   const onConnect = async () => {
+    if (guestMode) return
     if (!apiKey.trim() || !apiSecret.trim()) {
       setError('API Key와 Secret을 입력해주세요.')
       return
@@ -104,6 +120,7 @@ export function ExchangeConnectionManager() {
   }
 
   const onTest = async (item: ExchangeItem) => {
+    if (guestMode) return
     setStatusMap((prev) => ({ ...prev, [item.id]: '연결 테스트 중...' }))
     try {
       const response = await api.post<ExchangeTestResponse>(`/v1/exchanges/${item.id}/test`)
@@ -142,16 +159,24 @@ export function ExchangeConnectionManager() {
   }
 
   const onSync = async (item: ExchangeItem, fullBackfill = false) => {
-    const modeLabel = fullBackfill ? '초기 백필(1년)' : '지금 동기화'
+    if (guestMode) return
+    const modeLabel = fullBackfill ? '초기 백필(전체)' : '지금 동기화'
     setStatusMap((prev) => ({ ...prev, [item.id]: `${modeLabel} 실행 중...` }))
     setSyncingMap((prev) => ({ ...prev, [item.id]: true }))
     setSyncStartedAtMap((prev) => ({ ...prev, [item.id]: Date.now() }))
     try {
-      const query = fullBackfill ? '?full_backfill=true&history_days=365' : ''
-      const response = await api.post<{ message?: string }>(`/v1/exchanges/${item.id}/sync${query}`, undefined, {
+      const query = fullBackfill ? '?full_backfill=true' : ''
+      const response = await api.post<ExchangeSyncResponse>(`/v1/exchanges/${item.id}/sync${query}`, undefined, {
         timeout: fullBackfill ? 10 * 60 * 1000 : 2 * 60 * 1000,
       })
-      setStatusMap((prev) => ({ ...prev, [item.id]: response.data.message || '동기화 완료' }))
+      const before = response.data.before_count
+      const after = response.data.after_count
+      const inserted = response.data.inserted_count
+      const detail =
+        typeof before === 'number' && typeof after === 'number' && typeof inserted === 'number'
+          ? ` (추가 ${inserted}건 · 총 ${after}건, 이전 ${before}건)`
+          : ''
+      setStatusMap((prev) => ({ ...prev, [item.id]: `${response.data.message || '동기화 완료'}${detail}` }))
     } catch (err: any) {
       const message = err?.response?.data?.message ?? '동기화 실패'
       setStatusMap((prev) => ({ ...prev, [item.id]: message }))
@@ -161,6 +186,7 @@ export function ExchangeConnectionManager() {
   }
 
   const onDelete = async (item: ExchangeItem) => {
+    if (guestMode) return
     setStatusMap((prev) => ({ ...prev, [item.id]: '삭제 중...' }))
     try {
       await api.delete(`/v1/exchanges/${item.id}`)
@@ -173,6 +199,11 @@ export function ExchangeConnectionManager() {
 
   return (
     <div className="space-y-4">
+      {guestMode && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          게스트 모드에서는 거래소 API 연결/동기화 기능이 비활성화됩니다.
+        </div>
+      )}
       <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 p-4">
         <p className="text-sm font-semibold text-neutral-100">거래소 API 연결</p>
         <p className="mt-1 text-xs text-neutral-500">연결 후 테스트, 동기화를 바로 실행할 수 있습니다.</p>
@@ -181,6 +212,7 @@ export function ExchangeConnectionManager() {
           <select
             value={exchange}
             onChange={(event) => setExchange(event.target.value as ExchangeOption)}
+            disabled={guestMode}
             className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
           >
             <option value="binance_futures">Binance Futures</option>
@@ -192,6 +224,7 @@ export function ExchangeConnectionManager() {
             value={apiKey}
             onChange={(event) => setApiKey(event.target.value)}
             placeholder="API Key"
+            disabled={guestMode}
             className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
           />
 
@@ -200,6 +233,7 @@ export function ExchangeConnectionManager() {
             onChange={(event) => setApiSecret(event.target.value)}
             placeholder="API Secret"
             type="password"
+            disabled={guestMode}
             className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
           />
         </div>
@@ -209,7 +243,7 @@ export function ExchangeConnectionManager() {
         <button
           type="button"
           onClick={onConnect}
-          disabled={submitting}
+          disabled={submitting || guestMode}
           className="mt-3 rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-neutral-200 disabled:opacity-60"
         >
           {submitting ? '저장 중...' : '연결 저장'}
@@ -224,6 +258,7 @@ export function ExchangeConnectionManager() {
           <button
             type="button"
             onClick={fetchConnections}
+            disabled={guestMode}
             className="rounded-md border border-neutral-700 px-2.5 py-1 text-xs font-semibold text-neutral-200"
           >
             새로고침
@@ -253,6 +288,7 @@ export function ExchangeConnectionManager() {
                   <button
                     type="button"
                     onClick={() => onTest(item)}
+                    disabled={guestMode}
                     className="rounded-md border border-emerald-400/50 px-2.5 py-1 text-xs font-semibold text-emerald-200"
                   >
                     테스트
@@ -260,7 +296,7 @@ export function ExchangeConnectionManager() {
                   <button
                     type="button"
                     onClick={() => onSync(item)}
-                    disabled={syncingMap[item.id]}
+                    disabled={syncingMap[item.id] || guestMode}
                     className="rounded-md border border-sky-400/50 px-2.5 py-1 text-xs font-semibold text-sky-200"
                   >
                     지금 동기화
@@ -268,14 +304,15 @@ export function ExchangeConnectionManager() {
                   <button
                     type="button"
                     onClick={() => onSync(item, true)}
-                    disabled={syncingMap[item.id]}
+                    disabled={syncingMap[item.id] || guestMode}
                     className="rounded-md border border-indigo-400/50 px-2.5 py-1 text-xs font-semibold text-indigo-200"
                   >
-                    초기 백필(1년)
+                    초기 백필(전체)
                   </button>
                   <button
                     type="button"
                     onClick={() => onDelete(item)}
+                    disabled={guestMode}
                     className="rounded-md border border-rose-400/50 px-2.5 py-1 text-xs font-semibold text-rose-200"
                   >
                     삭제

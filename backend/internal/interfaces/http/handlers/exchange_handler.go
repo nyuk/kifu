@@ -32,6 +32,7 @@ const (
 
 type ExchangeHandler struct {
 	exchangeRepo  repositories.ExchangeCredentialRepository
+	tradeRepo     repositories.TradeRepository
 	encryptionKey []byte
 	client        *http.Client
 	syncer        ExchangeSyncer
@@ -47,11 +48,13 @@ type ExchangeSyncerWithOptions interface {
 
 func NewExchangeHandler(
 	exchangeRepo repositories.ExchangeCredentialRepository,
+	tradeRepo repositories.TradeRepository,
 	encryptionKey []byte,
 	syncer ExchangeSyncer,
 ) *ExchangeHandler {
 	return &ExchangeHandler{
 		exchangeRepo:  exchangeRepo,
+		tradeRepo:     tradeRepo,
 		encryptionKey: encryptionKey,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -355,6 +358,7 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 	if !cred.IsValid {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_EXCHANGE", "message": "exchange credential is invalid"})
 	}
+	beforeCount := h.exchangeTradeCount(c.Context(), userID, cred.Exchange)
 
 	fullBackfill := strings.EqualFold(strings.TrimSpace(c.Query("full_backfill")), "true")
 	historyDays := 0
@@ -390,7 +394,36 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_SYNC_FAILED", "message": syncErr.Error()})
 	}
 
-	return c.Status(200).JSON(fiber.Map{"success": true, "message": "sync completed"})
+	afterCount := h.exchangeTradeCount(c.Context(), userID, cred.Exchange)
+	inserted := afterCount - beforeCount
+	if inserted < 0 {
+		inserted = 0
+	}
+	return c.Status(200).JSON(fiber.Map{
+		"success":       true,
+		"message":       "sync completed",
+		"exchange":      cred.Exchange,
+		"before_count":  beforeCount,
+		"after_count":   afterCount,
+		"inserted_count": inserted,
+	})
+}
+
+func (h *ExchangeHandler) exchangeTradeCount(ctx context.Context, userID uuid.UUID, exchange string) int {
+	if h.tradeRepo == nil {
+		return 0
+	}
+	summary, err := h.tradeRepo.SummaryByExchange(ctx, userID, repositories.TradeFilter{Exchange: exchange})
+	if err != nil {
+		return 0
+	}
+	if len(summary) == 0 {
+		return 0
+	}
+	if summary[0].TradeCount > 0 {
+		return summary[0].TradeCount
+	}
+	return summary[0].TotalTrades
 }
 
 func (h *ExchangeHandler) checkBinancePermissions(ctx context.Context, apiKey string, apiSecret string, requireFutures bool) (bool, error) {

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
+import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { FilterGroup, FilterPills } from '../ui/FilterPills'
 import type { PositionItem, PositionsResponse, TimelineItem, TimelineResponse } from '../../types/portfolio'
+import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../../types/trade'
 
 type Filters = {
   assetClass: 'all' | 'crypto' | 'stock'
@@ -39,7 +41,7 @@ export function PortfolioDashboard() {
   const [filters, setFilters] = useState<Filters>({
     assetClass: 'all',
     venue: '',
-    source: 'all',
+    source: 'api',
     status: 'all',
   })
   const [positions, setPositions] = useState<PositionItem[]>([])
@@ -47,6 +49,8 @@ export function PortfolioDashboard() {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loadingPositions, setLoadingPositions] = useState(false)
   const [loadingTimeline, setLoadingTimeline] = useState(false)
+  const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
+  const [usingTradeFallback, setUsingTradeFallback] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const statusOptions = useMemo(
@@ -122,6 +126,107 @@ export function PortfolioDashboard() {
     fetchTimeline()
   }, [filters])
 
+  useEffect(() => {
+    if (loadingPositions || loadingTimeline) return
+    if (positions.length > 0 || timeline.length > 0) {
+      setUsingTradeFallback(false)
+      return
+    }
+
+    let isActive = true
+    const loadFromTradesFallback = async () => {
+      try {
+        const response = await api.get<TradeListResponse>('/v1/trades?page=1&limit=500&sort=desc')
+        if (!isActive) return
+        const trades = response.data.items || []
+        if (trades.length === 0) return
+
+        const timelineItems: TimelineItem[] = trades.map((trade) => ({
+          id: trade.id,
+          executed_at: trade.trade_time,
+          asset_class: 'crypto',
+          venue_type: 'cex',
+          venue: trade.exchange,
+          venue_name: trade.exchange,
+          instrument: trade.symbol,
+          event_type: trade.exchange.includes('futures') ? 'perp_trade' : 'spot_trade',
+          side: trade.side.toLowerCase(),
+          qty: trade.quantity,
+          price: trade.price,
+          source: 'api',
+        }))
+
+        const grouped = new Map<string, PositionItem>()
+        for (const trade of trades) {
+          const key = `${trade.exchange}|${trade.symbol}`
+          const qty = Number(trade.quantity) || 0
+          const price = Number(trade.price) || 0
+          const existing = grouped.get(key)
+          if (!existing) {
+            grouped.set(key, {
+              key,
+              instrument: trade.symbol,
+              venue: trade.exchange,
+              venue_name: trade.exchange,
+              asset_class: 'crypto',
+              venue_type: 'cex',
+              status: qty > 0 ? 'open' : 'closed',
+              net_qty: trade.side.toUpperCase() === 'BUY' ? String(qty) : String(-qty),
+              avg_entry: String(price),
+              buy_qty: trade.side.toUpperCase() === 'BUY' ? String(qty) : '0',
+              sell_qty: trade.side.toUpperCase() === 'SELL' ? String(qty) : '0',
+              buy_notional: trade.side.toUpperCase() === 'BUY' ? String(qty * price) : '0',
+              sell_notional: trade.side.toUpperCase() === 'SELL' ? String(qty * price) : '0',
+              last_executed_at: trade.trade_time,
+            })
+            continue
+          }
+
+          const buyQty = Number(existing.buy_qty) + (trade.side.toUpperCase() === 'BUY' ? qty : 0)
+          const sellQty = Number(existing.sell_qty) + (trade.side.toUpperCase() === 'SELL' ? qty : 0)
+          const buyNotional = Number(existing.buy_notional) + (trade.side.toUpperCase() === 'BUY' ? qty * price : 0)
+          const sellNotional = Number(existing.sell_notional) + (trade.side.toUpperCase() === 'SELL' ? qty * price : 0)
+          const netQty = buyQty - sellQty
+          grouped.set(key, {
+            ...existing,
+            buy_qty: String(buyQty),
+            sell_qty: String(sellQty),
+            buy_notional: String(buyNotional),
+            sell_notional: String(sellNotional),
+            net_qty: String(netQty),
+            avg_entry: buyQty > 0 ? String(buyNotional / buyQty) : existing.avg_entry,
+            status: Math.abs(netQty) > 1e-8 ? 'open' : 'closed',
+            last_executed_at: trade.trade_time > existing.last_executed_at ? trade.trade_time : existing.last_executed_at,
+          })
+        }
+
+        setTimeline(timelineItems)
+        setPositions(Array.from(grouped.values()))
+        setUsingTradeFallback(true)
+      } catch {
+        // ignore fallback errors
+      }
+    }
+    loadFromTradesFallback()
+    return () => {
+      isActive = false
+    }
+  }, [loadingPositions, loadingTimeline, positions.length, timeline.length])
+
+  useEffect(() => {
+    const fetchTradeSummary = async () => {
+      try {
+        const params = new URLSearchParams()
+        if (filters.venue.trim() !== '') params.set('exchange', filters.venue.trim())
+        const response = await api.get(`/v1/trades/summary?${params}`)
+        setTradeSummary(normalizeTradeSummary(response.data))
+      } catch {
+        setTradeSummary(null)
+      }
+    }
+    fetchTradeSummary()
+  }, [filters.venue])
+
   const loadMoreTimeline = async () => {
     if (!nextCursor) return
     setLoadingTimeline(true)
@@ -143,7 +248,7 @@ export function PortfolioDashboard() {
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Portfolio</p>
           <h1 className="text-3xl font-semibold">통합 포트폴리오</h1>
-          <p className="text-sm text-neutral-400">코인, 주식, DEX 흐름을 하나로 묶습니다.</p>
+          <p className="text-sm text-neutral-400">실거래(API) 타임라인을 기본으로 코인/주식/DEX 흐름을 묶습니다.</p>
         </header>
 
         <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
@@ -211,6 +316,33 @@ export function PortfolioDashboard() {
           </div>
         </section>
 
+        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Trade Sync Summary</p>
+            <p className="text-sm font-semibold text-emerald-300">
+              총 {(tradeSummary?.totals?.total_trades ?? 0).toLocaleString()}건
+            </p>
+          </div>
+          {usingTradeFallback && (
+            <p className="mt-2 text-xs text-amber-300">포트폴리오 이벤트가 비어 있어 거래내역 기반으로 대체 표시 중</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(tradeSummary?.by_exchange || []).map((item, index) => {
+              const exchangeName = item.exchange || 'unknown'
+              const tradeCount = Number(item.total_trades || item.trade_count || 0)
+              const chipKey = `${exchangeName}-${tradeCount}-${index}`
+              return (
+                <span key={chipKey} className="rounded-full border border-neutral-700 px-2 py-1 text-[11px] text-neutral-300">
+                  {exchangeName} · {tradeCount.toLocaleString()}건
+                </span>
+              )
+            })}
+            {(!tradeSummary || tradeSummary.by_exchange.length === 0) && (
+              <span className="text-xs text-neutral-500">거래소 동기화 통계 없음</span>
+            )}
+          </div>
+        </section>
+
         <section className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
             <div className="flex items-center justify-between">
@@ -222,7 +354,7 @@ export function PortfolioDashboard() {
               {!loadingTimeline && timeline.length === 0 && (
                 <p className="text-xs text-neutral-500">아직 타임라인 데이터가 없습니다.</p>
               )}
-              {timeline.map((item) => {
+              {timeline.map((item, index) => {
                 const sideTone =
                   item.side === 'buy' ? 'text-lime-300' : item.side === 'sell' ? 'text-rose-300' : 'text-neutral-300'
                 const venueTone =
@@ -233,8 +365,9 @@ export function PortfolioDashboard() {
                       : 'text-amber-300'
                 const assetTone = item.asset_class === 'stock' ? 'text-sky-200' : 'text-emerald-200'
 
+                const timelineKey = `${item.id || 'evt'}-${item.executed_at || 'time'}-${index}`
                 return (
-                  <div key={item.id} className="rounded-xl border border-neutral-800/60 bg-neutral-950/50 p-4">
+                  <div key={timelineKey} className="rounded-xl border border-neutral-800/60 bg-neutral-950/50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">

@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { api } from '../../lib/api'
+import { readOnboardingProfile } from '../../lib/onboardingProfile'
+import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { useReviewStore } from '../../stores/reviewStore'
-import { useBubbleStore, type Trade } from '../../lib/bubbleStore'
 import type { AccuracyResponse } from '../../types/review'
+import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
 
 type BubbleItem = {
@@ -77,9 +79,13 @@ const toneByPercent = (value?: string | number) => {
   return 'text-neutral-200'
 }
 
-const getCurrency = (trades: Trade[]) => {
-  const hasUpbit = trades.some((trade) => trade.exchange === 'upbit')
-  const hasBinance = trades.some((trade) => trade.exchange === 'binance')
+const getCurrency = (summary: TradeSummaryResponse | null) => {
+  const exchanges = (summary?.by_exchange || [])
+    .map((item) => (item?.exchange || '').toLowerCase())
+    .filter(Boolean)
+  if (exchanges.length === 0) return { code: 'USDT', symbol: '$' }
+  const hasUpbit = exchanges.includes('upbit')
+  const hasBinance = exchanges.some((exchange) => exchange.includes('binance'))
   if (hasUpbit && !hasBinance) return { code: 'KRW', symbol: '₩' }
   return { code: 'USDT', symbol: '$' }
 }
@@ -147,8 +153,7 @@ export function HomeSnapshot() {
      fetchStats,
     fetchAccuracy,
   } = useReviewStore()
-  const trades = useBubbleStore((state) => state.trades)
-  const tradesCount = trades.length
+  const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [recentBubbles, setRecentBubbles] = useState<BubbleItem[]>([])
   const [bubblesLoading, setBubblesLoading] = useState(false)
   const [bubblesError, setBubblesError] = useState<string | null>(null)
@@ -157,6 +162,7 @@ export function HomeSnapshot() {
   const [animatedPnl, setAnimatedPnl] = useState(0)
   const prevPnlRef = useRef(0)
   const [currencyMode, setCurrencyMode] = useState<'auto' | 'usdt' | 'krw'>('auto')
+  const [onboardingProfile, setOnboardingProfile] = useState<ReturnType<typeof readOnboardingProfile>>(null)
 
   useEffect(() => {
     let isActive = true
@@ -199,6 +205,28 @@ export function HomeSnapshot() {
   }, [])
 
   useEffect(() => {
+    let isActive = true
+    const loadTradeSummary = async () => {
+      try {
+        const params = new URLSearchParams()
+        if (filters.period === '7d') {
+          params.set('from', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        } else if (filters.period === '30d') {
+          params.set('from', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        }
+        const response = await api.get(`/v1/trades/summary?${params.toString()}`)
+        if (isActive) setTradeSummary(normalizeTradeSummary(response.data))
+      } catch {
+        if (isActive) setTradeSummary(null)
+      }
+    }
+    loadTradeSummary()
+    return () => {
+      isActive = false
+    }
+  }, [filters.period])
+
+  useEffect(() => {
     const saved = localStorage.getItem('kifu-home-currency')
     if (saved === 'usdt' || saved === 'krw' || saved === 'auto') {
       setCurrencyMode(saved)
@@ -209,29 +237,50 @@ export function HomeSnapshot() {
     localStorage.setItem('kifu-home-currency', currencyMode)
   }, [currencyMode])
 
+  useEffect(() => {
+    setOnboardingProfile(readOnboardingProfile())
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'kifu-onboarding-profile-v1') {
+        setOnboardingProfile(readOnboardingProfile())
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
+
   const snapshotPeriod = periodLabels[filters.period] ?? '최근'
   const summary = stats?.overall
   const topProvider = useMemo(() => getTopProvider(accuracy), [accuracy])
   const accuracyLabel = topProvider ? `${topProvider.provider} ${formatPercent(topProvider.accuracy)}` : '-'
   const totalOpinions = accuracy?.total_opinions ?? 0
-  const statsTrades = useMemo(() => {
-    const buyTrades = trades.filter((trade) => trade.side === 'buy')
-    const sellTrades = trades.filter((trade) => trade.side === 'sell')
-    const totalBuyValue = buyTrades.reduce((sum, trade) => sum + trade.price * (trade.qty || 0), 0)
-    const totalSellValue = sellTrades.reduce((sum, trade) => sum + trade.price * (trade.qty || 0), 0)
-    const totalFees = trades.reduce((sum, trade) => sum + (trade.fee || 0), 0)
-    return {
-      totalBuyValue,
-      totalSellValue,
-      totalFees,
-      netFlow: totalSellValue - totalBuyValue - totalFees,
+  const tradeTotals = tradeSummary?.totals
+  const bySide = useMemo(() => {
+    const source = tradeSummary?.by_side || []
+    const findCount = (sideKey: string) => {
+      const found = source.find((item) => item.side?.toUpperCase() === sideKey)
+      return Number(found?.total_trades || found?.trade_count || 0)
     }
-  }, [trades])
-  const currency = currencyMode === 'auto' ? getCurrency(trades) : currencyPreset(currencyMode)
-  const totalPnlNumeric = statsTrades.netFlow
+    return {
+      buyCount: findCount('BUY'),
+      sellCount: findCount('SELL'),
+    }
+  }, [tradeSummary])
+  const topExchange = useMemo(() => {
+    const rows = tradeSummary?.by_exchange || []
+    if (rows.length === 0) return null
+    return [...rows].sort((a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0))[0]
+  }, [tradeSummary])
+  const topSymbol = useMemo(() => {
+    const rows = tradeSummary?.by_symbol || []
+    if (rows.length === 0) return null
+    return [...rows].sort((a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0))[0]
+  }, [tradeSummary])
+  const currency = currencyMode === 'auto' ? getCurrency(tradeSummary) : currencyPreset(currencyMode)
+  const totalPnlNumeric = Number(tradeTotals?.realized_pnl_total || 0)
   const pnlTone = toneByNumber(totalPnlNumeric)
   const pnlGlow = totalPnlNumeric >= 0 ? 'shadow-[0_0_24px_rgba(163,230,53,0.35)]' : 'shadow-[0_0_24px_rgba(244,63,94,0.35)]'
   const bubbleCount = stats?.total_bubbles ?? 0
+  const tradesCount = tradeTotals?.total_trades ?? 0
   const isNoAction = bubbleCount === 0 && tradesCount === 0
   const resolvedMode = visualMode === 'auto'
     ? isNoAction
@@ -398,6 +447,56 @@ export function HomeSnapshot() {
           </div>
         </section>
 
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">실거래</p>
+            <p className="mt-2 text-2xl font-semibold text-sky-300">{tradesCount.toLocaleString()}건</p>
+          </div>
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">매수/매도</p>
+            <p className="mt-2 text-sm font-semibold text-neutral-100">
+              BUY {bySide.buyCount.toLocaleString()} · SELL {bySide.sellCount.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">주요 거래소</p>
+            <p className="mt-2 text-sm font-semibold text-amber-200">
+              {topExchange ? `${topExchange.exchange} · ${(topExchange.total_trades || topExchange.trade_count || 0).toLocaleString()}건` : '-'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">주요 심볼</p>
+            <p className="mt-2 text-sm font-semibold text-emerald-200">
+              {topSymbol ? `${topSymbol.symbol} · ${(topSymbol.total_trades || topSymbol.trade_count || 0).toLocaleString()}건` : '-'}
+            </p>
+          </div>
+        </section>
+
+        {onboardingProfile && (tradesCount === 0 || bubbleCount === 0) && (
+          <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-amber-200/80">Onboarding Profile</p>
+                <p className="mt-1 text-lg font-semibold text-amber-100">{onboardingProfile.tendency}</p>
+                <p className="mt-1 text-xs text-amber-100/70">
+                  LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
+                </p>
+                <p className="mt-2 text-xs text-amber-100/80">
+                  오늘 루틴 1개: 최근 24시간 변동이 큰 캔들에 말풍선 1개만 남기기
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/chart?onboarding=1" className="rounded-lg border border-amber-200/40 px-3 py-2 text-xs font-semibold text-amber-100">
+                  오늘 루틴 시작
+                </Link>
+                <Link href="/settings" className="rounded-lg border border-amber-200/40 px-3 py-2 text-xs font-semibold text-amber-100">
+                  거래소 연결하기
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+
         <HomeSafetyCheckCard />
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -419,9 +518,9 @@ export function HomeSnapshot() {
               </div>
               <div>
                 <p className="text-xs text-neutral-500">평균 손익</p>
-                <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? statsTrades.netFlow / tradesCount : 0)}`}>
+                <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? totalPnlNumeric / tradesCount : 0)}`}>
                   {tradesCount
-                    ? formatCurrency(statsTrades.netFlow / tradesCount, currency.symbol)
+                    ? formatCurrency(totalPnlNumeric / tradesCount, currency.symbol)
                     : '-'}
                 </p>
               </div>
@@ -516,27 +615,27 @@ export function HomeSnapshot() {
              <div className="mt-4 space-y-4 text-sm text-neutral-300">
               <div>
                 <p className="text-xs text-neutral-500">순 손익</p>
-                <p className={`text-2xl font-semibold ${toneByNumber(statsTrades.netFlow)}`}>
-                  {tradesCount ? formatCurrency(statsTrades.netFlow, currency.symbol) : '-'}
+                <p className={`text-2xl font-semibold ${toneByNumber(totalPnlNumeric)}`}>
+                  {tradesCount ? formatCurrency(totalPnlNumeric, currency.symbol) : '-'}
                 </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-neutral-500">
                   <span>총 매수</span>
                   <span className="text-neutral-200">
-                    {tradesCount ? formatCurrency(statsTrades.totalBuyValue, currency.symbol) : '-'}
+                    {tradesCount ? `${bySide.buyCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-neutral-500">
                   <span>총 매도</span>
                   <span className="text-neutral-200">
-                    {tradesCount ? formatCurrency(statsTrades.totalSellValue, currency.symbol) : '-'}
+                    {tradesCount ? `${bySide.sellCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-neutral-500">
-                  <span>수수료</span>
+                  <span>체결 수</span>
                   <span className="text-neutral-200">
-                    {tradesCount ? formatCurrency(statsTrades.totalFees, currency.symbol) : '-'}
+                    {tradesCount ? `${tradesCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
               </div>

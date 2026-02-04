@@ -199,10 +199,10 @@ export function LandingPage() {
                         <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">로드맵</Link>
                         <Link href="#pricing" className="hover:text-neutral-100 transition-colors">요금제</Link>
                         <Link
-                            href="/home"
+                            href="/login"
                             className="rounded-full bg-neutral-100 px-5 py-2 text-neutral-950 hover:bg-white transition-colors"
                         >
-                            앱 시작
+                            로그인
                         </Link>
                     </div>
                 </div>
@@ -224,18 +224,18 @@ export function LandingPage() {
                         차트 위에 직접 생각을 기록하세요. AI의 의견을 수집하세요.
                         과거를 복기해서 값비싼 실수를 없애세요.
                     </p>
-                    <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                    <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
                         <Link
-                            href="/home"
+                            href="/guest"
                             className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
                         >
-                            무료 시작
+                            게스트로 입장
                         </Link>
                         <Link
-                            href="/home"
+                            href="/onboarding/start"
                             className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-8 py-3 text-sm font-bold uppercase tracking-widest text-neutral-300 transition-all hover:border-neutral-500 hover:bg-white/5"
                         >
-                            데이터 가져오기
+                            처음부터 시작
                         </Link>
                     </div>
                 </div>

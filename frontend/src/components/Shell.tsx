@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
 import { useState, useEffect } from 'react'
+import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
@@ -12,15 +13,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
+  const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   
   useEffect(() => {
     setMounted(true)
+    setGuestSessionId(readGuestSession()?.id || null)
   }, [])
   
   const navItems = [
     { label: t.navHome, to: '/home' },
     { label: t.navPortfolio, to: '/portfolio' },
     { label: t.navChart, to: '/chart' },
+    { label: t.navAlert, to: '/alert' },
     { label: t.navBubbles, to: '/bubbles' },
     { label: t.navTrades, to: '/trades' },
     { label: t.navReview, to: '/review' },
@@ -28,6 +32,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   ]
 
   const handleLogout = () => {
+    clearGuestSession()
     clearTokens()
     router.push('/login')
   }
@@ -102,6 +107,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.sessionLabel}</p>
             <p className="mt-2 text-sm text-neutral-300">{t.sessionText}</p>
+            {guestSessionId && (
+              <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                Guest Session · {guestSessionId}
+              </p>
+            )}
             <button
               type="button"
               onClick={handleLogout}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../../stores/auth'
 import { api } from '../../lib/api'
+import { isGuestSession } from '../../lib/guestSession'
 
 type AIKeyItem = {
   provider: string
@@ -22,10 +23,11 @@ export function AIKeyManager() {
   const [newKey, setNewKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [guestMode, setGuestMode] = useState(false)
   const accessToken = useAuthStore((state) => state.accessToken)
 
   const fetchKeys = async () => {
-    if (!accessToken) return
+    if (!accessToken || guestMode) return
 
     try {
       setLoading(true)
@@ -40,11 +42,15 @@ export function AIKeyManager() {
   }
 
   useEffect(() => {
+    setGuestMode(isGuestSession())
+  }, [])
+
+  useEffect(() => {
     fetchKeys()
-  }, [accessToken])
+  }, [accessToken, guestMode])
 
   const handleSaveKey = async (provider: string) => {
-    if (!newKey.trim() || !accessToken) return
+    if (!newKey.trim() || !accessToken || guestMode) return
 
     try {
       setSaving(true)
@@ -69,7 +75,7 @@ export function AIKeyManager() {
   }
 
   const handleDeleteKey = async (provider: string) => {
-    if (!accessToken) return
+    if (!accessToken || guestMode) return
     if (!confirm(`${provider} API 키를 삭제하시겠습니까?`)) return
 
     try {
@@ -100,6 +106,11 @@ export function AIKeyManager() {
 
   return (
     <div className="space-y-4">
+      {guestMode && (
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200">
+          게스트 모드에서는 AI 키 관리 기능이 비활성화됩니다.
+        </div>
+      )}
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
           {error}
@@ -136,16 +147,18 @@ export function AIKeyManager() {
                     </span>
                     <button
                       onClick={() => {
+                        if (guestMode) return
                         setEditingProvider(provider.id)
                         setNewKey('')
                       }}
+                      disabled={guestMode}
                       className="px-3 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition"
                     >
                       변경
                     </button>
                     <button
                       onClick={() => handleDeleteKey(provider.id)}
-                      disabled={saving}
+                      disabled={saving || guestMode}
                       className="px-3 py-1 text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
                     >
                       삭제
@@ -158,9 +171,11 @@ export function AIKeyManager() {
                     </span>
                     <button
                       onClick={() => {
+                        if (guestMode) return
                         setEditingProvider(provider.id)
                         setNewKey('')
                       }}
+                      disabled={guestMode}
                       className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
                     >
                       추가
@@ -182,7 +197,7 @@ export function AIKeyManager() {
                   />
                   <button
                     onClick={() => handleSaveKey(provider.id)}
-                    disabled={saving || !newKey.trim()}
+                    disabled={saving || !newKey.trim() || guestMode}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {saving ? '저장 중...' : '저장'}

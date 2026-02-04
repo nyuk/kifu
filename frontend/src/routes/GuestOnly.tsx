@@ -11,8 +11,9 @@ export function GuestOnly({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const from = searchParams?.get('from')
-      router.replace(from || '/home')
+      const target = searchParams?.get('next') || searchParams?.get('from')
+      const destination = target && target.startsWith('/') ? target : '/home'
+      router.replace(destination)
     }
   }, [isAuthenticated, router, searchParams])
 

@@ -1,16 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
 import { api, DEFAULT_SYMBOLS } from '../lib/api'
 import { exportBubbles, importBubbles } from '../lib/dataHandler'
 import { parseTradeCsv } from '../lib/csvParser'
+import { isGuestSession } from '../lib/guestSession'
 import { BubbleCreateModal } from '../components/BubbleCreateModal'
 import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
 import { useToast } from '../components/ui/Toast'
 import { ChartReplay } from '../components/chart/ChartReplay'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
+import type { TradeItem, TradeListResponse } from '../types/trade'
 
 type UserSymbolItem = {
   symbol: string
@@ -24,6 +26,17 @@ type KlineItem = {
   low: string
   close: string
   volume: string
+}
+
+type OverlayTrade = {
+  id: string
+  exchange: string
+  symbol: string
+  side: 'buy' | 'sell'
+  ts: number
+  price: number
+  qty?: number
+  raw?: TradeItem | Trade
 }
 
 const intervals = ['1m', '15m', '1h', '4h', '1d']
@@ -104,6 +117,7 @@ export function Chart() {
   console.log('>>> CHART COMPONENT RENDER (V2 Fixed) <<<')
   const { symbol: symbolParam } = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
@@ -126,19 +140,22 @@ export function Chart() {
   const [showReplay, setShowReplay] = useState(false)
   const [showStyleMenu, setShowStyleMenu] = useState(false)
   const [panelTab, setPanelTab] = useState<'summary' | 'detail'>('summary')
+  const [showOnboardingGuide, setShowOnboardingGuide] = useState(false)
+  const [guestMode, setGuestMode] = useState(false)
   const { toast } = useToast()
 
   const bubbles = useBubbleStore((state) => state.bubbles)
-  const trades = useBubbleStore((state) => state.trades)
+  const localTrades = useBubbleStore((state) => state.trades)
   const importTrades = useBubbleStore((state) => state.importTrades)
   const createBubblesFromTrades = useBubbleStore((state) => state.createBubblesFromTrades)
+  const [serverTrades, setServerTrades] = useState<OverlayTrade[]>([])
 
   const [overlayPositions, setOverlayPositions] = useState<Array<{
     candleTime: number
     x: number
     y: number
     bubbles: Bubble[]
-    trades: Trade[]
+    trades: OverlayTrade[]
     avgPrice: number
   }>>([])
 
@@ -147,14 +164,14 @@ export function Chart() {
   const [overlayRect, setOverlayRect] = useState({ left: 0, top: 0, width: 0, height: 0 })
 
   // 표시 옵션
-  const [showBubbles, setShowBubbles] = useState(true)
+  const [showBubbles, setShowBubbles] = useState(false)
   const [showTrades, setShowTrades] = useState(true)
 
   // 선택된 버블 그룹 (상세 보기용)
   const [selectedGroup, setSelectedGroup] = useState<{
     candleTime: number
     bubbles: Bubble[]
-    trades: Trade[]
+    trades: OverlayTrade[]
   } | null>(null)
 
   // Refs for stable access in effects/callbacks
@@ -171,11 +188,63 @@ export function Chart() {
   }, [bubbles, selectedSymbol])
 
   const activeTrades = useMemo(() => {
-    return trades.filter(t => t.symbol === selectedSymbol)
-  }, [trades, selectedSymbol])
+    const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    const symbol = selectedSymbol.toUpperCase()
+    const symbolSet = new Set<string>([normalize(symbol)])
+    if (symbol.includes('-')) {
+      const [quote, base] = symbol.split('-')
+      if (base && quote) symbolSet.add(normalize(`${base}${quote}`))
+    }
+    const mappedLocal: OverlayTrade[] = localTrades.map((item) => ({
+      id: item.id,
+      exchange: item.exchange,
+      symbol: item.symbol,
+      side: item.side,
+      ts: item.ts,
+      price: item.price,
+      qty: item.qty,
+      raw: item,
+    }))
+    return [...serverTrades, ...mappedLocal].filter((trade) => symbolSet.has(normalize(trade.symbol)))
+  }, [localTrades, selectedSymbol, serverTrades])
+
+  useEffect(() => {
+    if (!selectedSymbol) return
+    let isActive = true
+    const fetchTrades = async () => {
+      try {
+        const params = new URLSearchParams({ page: '1', limit: '2000', sort: 'desc' })
+        params.set('symbol', selectedSymbol.toUpperCase())
+        let response = await api.get<TradeListResponse>(`/v1/trades?${params.toString()}`)
+        if ((response.data.items || []).length === 0) {
+          const fallbackParams = new URLSearchParams({ page: '1', limit: '2000', sort: 'desc' })
+          response = await api.get<TradeListResponse>(`/v1/trades?${fallbackParams.toString()}`)
+        }
+        if (!isActive) return
+        const mapped: OverlayTrade[] = (response.data.items || []).map((trade) => ({
+          id: trade.id,
+          exchange: trade.exchange,
+          symbol: trade.symbol,
+          side: trade.side.toUpperCase() === 'BUY' ? 'buy' : 'sell',
+          ts: new Date(trade.trade_time).getTime(),
+          price: Number(trade.price),
+          qty: Number(trade.quantity),
+          raw: trade,
+        }))
+        setServerTrades(mapped)
+      } catch {
+        if (isActive) setServerTrades([])
+      }
+    }
+    fetchTrades()
+    return () => {
+      isActive = false
+    }
+  }, [selectedSymbol])
 
   useEffect(() => {
     setMounted(true)
+    setGuestMode(isGuestSession())
   }, [])
 
   useEffect(() => {
@@ -183,6 +252,11 @@ export function Chart() {
       setPanelTab('detail')
     }
   }, [selectedGroup])
+
+  useEffect(() => {
+    const isOnboarding = searchParams?.get('onboarding') === '1'
+    setShowOnboardingGuide(isOnboarding)
+  }, [searchParams])
 
   useEffect(() => {
     const stored = localStorage.getItem('kifu:auto-bubble-trades')
@@ -680,6 +754,10 @@ export function Chart() {
   }
 
   const handleTradeImportClick = () => {
+    if (guestMode) {
+      toast('게스트 모드에서는 CSV 가져오기가 비활성화됩니다.', 'error')
+      return
+    }
     document.getElementById('import-csv-input')?.click()
   }
 
@@ -713,6 +791,10 @@ export function Chart() {
   }
 
   const handleStockCsvClick = () => {
+    if (guestMode) {
+      toast('게스트 모드에서는 CSV 가져오기가 비활성화됩니다.', 'error')
+      return
+    }
     document.getElementById('import-stock-csv-input')?.click()
   }
 
@@ -883,6 +965,16 @@ export function Chart() {
                 >
                   Trades
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTrades(true)
+                    setShowBubbles(false)
+                  }}
+                  className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-300/20"
+                >
+                  Trade Focus
+                </button>
               </div>
             </FilterGroup>
 
@@ -959,14 +1051,15 @@ export function Chart() {
                 </button>
                 <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
 
-                <button onClick={handleTradeImportClick} className="mt-2 rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20">
+                <button onClick={handleTradeImportClick} disabled={guestMode} className="mt-2 rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50">
                   Import CSV
                 </button>
                 <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
 
                 <button
                   onClick={handleStockCsvClick}
-                  className="mt-2 rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10"
+                  disabled={guestMode}
+                  className="mt-2 rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
                 >
                   Stock CSV
                 </button>
@@ -1017,6 +1110,28 @@ export function Chart() {
         {(dataSource === 'stock') && (
           <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
             주식 차트 데이터 소스는 아직 연결되지 않았습니다. (연동 예정)
+          </div>
+        )}
+        {guestMode && (
+          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-100">
+            게스트 모드: API 동기화/CSV 가져오기/AI 요청은 회원 전용입니다.
+          </div>
+        )}
+        {showOnboardingGuide && (
+          <div className="mt-3 rounded-lg border border-cyan-400/40 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="font-semibold">온보딩 루틴</p>
+                <p className="mt-1 text-cyan-100/80">최근 변동이 큰 캔들 1개를 선택해서 말풍선을 남겨보세요. 오늘은 1개만 하면 충분합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOnboardingGuide(false)}
+                className="rounded-md border border-cyan-300/40 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-cyan-100 hover:bg-cyan-300/20"
+              >
+                닫기
+              </button>
+            </div>
           </div>
         )}
       </header>
@@ -1293,7 +1408,7 @@ export function Chart() {
                               <span>{trade.exchange}</span>
                             </div>
                             <div className="mt-1 flex items-center justify-between text-xs text-neutral-300">
-                              <span>{trade.qty} BTC</span>
+                              <span>{trade.qty ?? '-'} qty</span>
                               <span>@ ${trade.price.toLocaleString()}</span>
                             </div>
                           </div>
@@ -1314,6 +1429,7 @@ export function Chart() {
         defaultTimeframe={timeframe}
         defaultPrice={clickedCandle?.price.toString() || latestPrice}
         defaultTime={clickedCandle?.time ? clickedCandle.time * 1000 : undefined}
+        disableAi={guestMode}
         onClose={() => { setIsModalOpen(false); setClickedCandle(null) }}
       />
     </div>
