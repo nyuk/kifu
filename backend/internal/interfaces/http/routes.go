@@ -22,6 +22,7 @@ func RegisterRoutes(
 	accuracyRepo repositories.AIOpinionAccuracyRepository,
 	noteRepo repositories.ReviewNoteRepository,
 	portfolioRepo repositories.PortfolioRepository,
+	manualPositionRepo repositories.ManualPositionRepository,
 	safetyRepo repositories.TradeSafetyReviewRepository,
 	exchangeSyncer handlers.ExchangeSyncer,
 	encryptionKey []byte,
@@ -43,10 +44,11 @@ func RegisterRoutes(
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 	noteHandler := handlers.NewNoteHandler(noteRepo)
 	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
-	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo)
+	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
 	importHandler := handlers.NewImportHandler(portfolioRepo)
 	connectionHandler := handlers.NewConnectionHandler()
 	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
+	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
@@ -134,8 +136,15 @@ func RegisterRoutes(
 	portfolio.Get("/timeline", portfolioHandler.Timeline)
 	portfolio.Get("/positions", portfolioHandler.Positions)
 	portfolio.Post("/backfill-bubbles", portfolioHandler.BackfillBubbles)
+	portfolio.Post("/backfill-events", portfolioHandler.BackfillEventsFromTrades)
 
 	api.Get("/instruments", portfolioHandler.Instruments)
+
+	manualPositions := api.Group("/manual-positions")
+	manualPositions.Get("/", manualPositionHandler.List)
+	manualPositions.Post("/", manualPositionHandler.Create)
+	manualPositions.Put("/:id", manualPositionHandler.Update)
+	manualPositions.Delete("/:id", manualPositionHandler.Delete)
 
 	imports := api.Group("/imports")
 	imports.Post("/trades", importHandler.ImportTrades)

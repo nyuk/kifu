@@ -54,6 +54,7 @@ export function BubbleCreateModal({
   const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
   const [includeEvidence, setIncludeEvidence] = useState(false)
+  const [includePositions, setIncludePositions] = useState(true)
   const [includeRecentTrades, setIncludeRecentTrades] = useState(true)
   const [includeSummary, setIncludeSummary] = useState(true)
   const [evidencePacket, setEvidencePacket] = useState<EvidencePacket | null>(null)
@@ -79,6 +80,7 @@ export function BubbleCreateModal({
     setAiLoading(false)
     setPromptType('brief')
     setIncludeEvidence(false)
+    setIncludePositions(true)
     setIncludeRecentTrades(true)
     setIncludeSummary(true)
     setEvidencePacket(null)
@@ -92,18 +94,18 @@ export function BubbleCreateModal({
   }, [open, defaultPrice, defaultTimeframe, defaultTime])
 
   useEffect(() => {
-    if (!includeEvidence) {
+    if (!includeEvidence && !includePositions) {
       setEvidencePacket(null)
       setEvidencePreview([])
       setEvidenceError('')
     }
-  }, [includeEvidence])
+  }, [includeEvidence, includePositions])
 
   useEffect(() => {
-    if (!includeEvidence) return
+    if (!includeEvidence && !includePositions) return
     setEvidencePacket(null)
     setEvidencePreview([])
-  }, [includeEvidence, includeRecentTrades, includeSummary, symbol, timeframe])
+  }, [includeEvidence, includePositions, includeRecentTrades, includeSummary, symbol, timeframe])
 
   const tags = useMemo(() => {
     return tagsInput
@@ -125,14 +127,16 @@ export function BubbleCreateModal({
     setEvidenceError('')
     try {
       let packet: EvidencePacket | null = null
-      if (includeEvidence) {
+      const shouldBuildPacket = includeEvidence || includePositions
+      if (shouldBuildPacket) {
         setEvidenceLoading(true)
         try {
           packet = await buildEvidencePacket({
             symbol,
             timeframe,
-            includeRecentTrades,
-            includeSummary,
+            includePositions,
+            includeRecentTrades: includeEvidence ? includeRecentTrades : false,
+            includeSummary: includeEvidence ? includeSummary : false,
           })
           if (packet) {
             setEvidencePacket(packet)
@@ -169,15 +173,16 @@ export function BubbleCreateModal({
       setEvidenceError('게스트 모드에서는 증거 패킷을 사용할 수 없습니다.')
       return
     }
-    if (!includeEvidence) return
+    if (!includeEvidence && !includePositions) return
     setEvidenceLoading(true)
     setEvidenceError('')
     try {
       const packet = await buildEvidencePacket({
         symbol,
         timeframe,
-        includeRecentTrades,
-        includeSummary,
+        includePositions,
+        includeRecentTrades: includeEvidence ? includeRecentTrades : false,
+        includeSummary: includeEvidence ? includeSummary : false,
       })
       if (packet) {
         setEvidencePacket(packet)
@@ -250,7 +255,7 @@ export function BubbleCreateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-      <div className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-xl">
+      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-xl">
         <div className="border-b border-neutral-800 px-6 py-4">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble</p>
           <h3 className="mt-2 text-xl font-semibold">새 말풍선 기록</h3>
@@ -258,7 +263,7 @@ export function BubbleCreateModal({
             {symbol} · {timeframe}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+        <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5 pr-4">
           {error && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
               {error}
@@ -407,6 +412,7 @@ export function BubbleCreateModal({
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evidence Packet</p>
                 <p className="text-[11px] text-neutral-500">일회성 분석 패킷 · 서버에 저장되지 않습니다.</p>
+                <p className="text-[11px] text-neutral-500">포지션 포함은 별도 선택 가능합니다.</p>
               </div>
               <button
                 type="button"
@@ -418,62 +424,71 @@ export function BubbleCreateModal({
                     : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
                 } ${disableAi ? 'cursor-not-allowed opacity-60' : ''}`}
               >
-                {includeEvidence ? '첨부됨' : '첨부 안함'}
+                {includeEvidence ? '거래/요약 포함' : '거래/요약 제외'}
               </button>
             </div>
 
-            {includeEvidence && (
-              <div className="mt-3 space-y-2 text-xs text-neutral-300">
-                <div className="flex flex-wrap gap-3">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={includeRecentTrades}
-                      onChange={(event) => setIncludeRecentTrades(event.target.checked)}
-                      className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
-                    />
-                    최근 체결 10건
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={includeSummary}
-                      onChange={(event) => setIncludeSummary(event.target.checked)}
-                      className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
-                    />
-                    최근 7일 요약
-                  </label>
-                </div>
+            <div className="mt-3 space-y-2 text-xs text-neutral-300">
+              <div className="flex flex-wrap gap-3">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={includePositions}
+                    onChange={(event) => setIncludePositions(event.target.checked)}
+                    className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                  />
+                  현재 포지션 포함
+                </label>
+                <label className={`flex items-center gap-2 ${includeEvidence ? '' : 'opacity-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={includeRecentTrades}
+                    onChange={(event) => setIncludeRecentTrades(event.target.checked)}
+                    disabled={!includeEvidence}
+                    className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                  />
+                  최근 체결 10건
+                </label>
+                <label className={`flex items-center gap-2 ${includeEvidence ? '' : 'opacity-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={includeSummary}
+                    onChange={(event) => setIncludeSummary(event.target.checked)}
+                    disabled={!includeEvidence}
+                    className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                  />
+                  최근 7일 요약
+                </label>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleBuildEvidencePreview}
-                    disabled={evidenceLoading}
-                    className="rounded border border-neutral-700 px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-neutral-500 disabled:opacity-60"
-                  >
-                    {evidenceLoading ? '준비 중...' : '패킷 미리보기'}
-                  </button>
-                  {evidencePacket && (
-                    <span className="text-[11px] text-emerald-200">패킷 준비 완료</span>
-                  )}
-                </div>
-
-                {evidenceError && (
-                  <p className="rounded border border-rose-400/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
-                    {evidenceError}
-                  </p>
-                )}
-
-                {evidencePreview.length > 0 && (
-                  <div className="rounded border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-[11px] text-neutral-400">
-                    {evidencePreview.map((line) => (
-                      <p key={line}>{line}</p>
-                    ))}
-                  </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleBuildEvidencePreview}
+                  disabled={evidenceLoading || (!includeEvidence && !includePositions)}
+                  className="rounded border border-neutral-700 px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-neutral-500 disabled:opacity-60"
+                >
+                  {evidenceLoading ? '준비 중...' : '패킷 미리보기'}
+                </button>
+                {evidencePacket && (
+                  <span className="text-[11px] text-emerald-200">패킷 준비 완료</span>
                 )}
               </div>
-            )}
+
+              {evidenceError && (
+                <p className="rounded border border-rose-400/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+                  {evidenceError}
+                </p>
+              )}
+
+              {evidencePreview.length > 0 && (
+                <div className="rounded border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-[11px] text-neutral-400">
+                  {evidencePreview.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">

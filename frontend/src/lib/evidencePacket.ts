@@ -1,5 +1,6 @@
 import { api } from './api'
 import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../types/trade'
+import type { ManualPosition, ManualPositionsResponse } from '../types/position'
 
 export type EvidencePacketTrade = {
   id: string
@@ -16,6 +17,10 @@ export type EvidencePacket = {
   created_at: string
   symbol: string
   timeframe: string
+  positions?: {
+    count: number
+    items: EvidencePacketPosition[]
+  }
   trades?: {
     count: number
     items: EvidencePacketTrade[]
@@ -31,6 +36,7 @@ export type EvidencePacket = {
 export type EvidencePacketOptions = {
   symbol: string
   timeframe: string
+  includePositions?: boolean
   includeRecentTrades: boolean
   includeSummary: boolean
   tradeLimit?: number
@@ -49,6 +55,18 @@ const mapTradeItem = (item: TradeItem): EvidencePacketTrade => ({
   trade_time: item.trade_time,
 })
 
+export type EvidencePacketPosition = {
+  id: string
+  symbol: string
+  position_side: string
+  size?: string
+  entry_price?: string
+  stop_loss?: string
+  take_profit?: string
+  leverage?: string
+  strategy?: string
+}
+
 const resolveTradeRange = (items: EvidencePacketTrade[]) => {
   if (items.length === 0) return undefined
   const times = items.map((item) => new Date(item.trade_time).getTime()).filter((value) => !Number.isNaN(value))
@@ -62,13 +80,14 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
   const {
     symbol,
     timeframe,
+    includePositions = false,
     includeRecentTrades,
     includeSummary,
     tradeLimit = 10,
     summaryDays = 7,
   } = options
 
-  if (!includeRecentTrades && !includeSummary) return null
+  if (!includeRecentTrades && !includeSummary && !includePositions) return null
 
   const now = new Date()
   const packet: EvidencePacket = {
@@ -76,6 +95,22 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
     created_at: now.toISOString(),
     symbol: toUpper(symbol),
     timeframe,
+  }
+
+  if (includePositions) {
+    const response = await api.get<ManualPositionsResponse>('/v1/manual-positions?status=open')
+    const items: EvidencePacketPosition[] = (response.data.positions || []).map((item: ManualPosition) => ({
+      id: item.id,
+      symbol: item.symbol,
+      position_side: item.position_side,
+      size: item.size,
+      entry_price: item.entry_price,
+      stop_loss: item.stop_loss,
+      take_profit: item.take_profit,
+      leverage: item.leverage,
+      strategy: item.strategy,
+    }))
+    packet.positions = { count: items.length, items }
   }
 
   if (includeRecentTrades) {
@@ -119,6 +154,26 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
 export function describeEvidencePacket(packet: EvidencePacket): string[] {
   const lines: string[] = []
   lines.push(`One-shot packet · ${packet.symbol} · ${packet.timeframe}`)
+
+  if (packet.positions) {
+    lines.push(`Open positions: ${packet.positions.count}`)
+    const preview = packet.positions.items.slice(0, 3)
+    preview.forEach((position) => {
+      const parts = [
+        `${position.symbol} ${position.position_side.toUpperCase()}`,
+        position.entry_price ? `entry ${position.entry_price}` : 'entry -',
+        position.size ? `size ${position.size}` : 'size -',
+        position.stop_loss ? `SL ${position.stop_loss}` : 'SL -',
+        position.take_profit ? `TP ${position.take_profit}` : 'TP -',
+        position.leverage ? `Lev ${position.leverage}x` : 'Lev -',
+      ]
+      const line = `- ${parts.join(' · ')}${position.strategy ? ` · rule ${position.strategy}` : ''}`
+      lines.push(line)
+    })
+    if (packet.positions.count > preview.length) {
+      lines.push(`- ... +${packet.positions.count - preview.length} more`)
+    }
+  }
 
   if (packet.trades) {
     const range = packet.trades.range

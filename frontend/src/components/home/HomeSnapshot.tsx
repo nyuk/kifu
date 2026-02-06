@@ -9,6 +9,7 @@ import { useReviewStore } from '../../stores/reviewStore'
 import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
+import { PositionManager } from '../positions/PositionManager'
 
 type BubbleItem = {
    id: string
@@ -564,6 +565,8 @@ export function HomeSnapshot() {
             </div>
           </section>
         )}
+
+        <PositionManager />
 
         <HomeSafetyCheckCard />
 

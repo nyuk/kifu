@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { FilterGroup, FilterPills } from '../ui/FilterPills'
@@ -41,7 +41,7 @@ export function PortfolioDashboard() {
   const [filters, setFilters] = useState<Filters>({
     assetClass: 'all',
     venue: '',
-    source: 'api',
+    source: 'all',
     status: 'all',
   })
   const [positions, setPositions] = useState<PositionItem[]>([])
@@ -52,6 +52,13 @@ export function PortfolioDashboard() {
   const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [usingTradeFallback, setUsingTradeFallback] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [backfillLoading, setBackfillLoading] = useState(false)
+  const [backfillError, setBackfillError] = useState<string | null>(null)
+  const [backfillResult, setBackfillResult] = useState<{
+    created: number
+    skipped: number
+    processed: number
+  } | null>(null)
 
   const statusOptions = useMemo(
     () => [
@@ -92,39 +99,53 @@ export function PortfolioDashboard() {
     }
   }, [positions, timeline])
 
-  useEffect(() => {
-    const fetchPositions = async () => {
-      setLoadingPositions(true)
-      setError(null)
-      try {
-        const params = buildParams(filters)
-        const response = await api.get<PositionsResponse>(`/v1/portfolio/positions?${params}`)
-        setPositions(response.data.positions)
-      } catch (err) {
-        setError('포지션 데이터를 불러오지 못했습니다.')
-      } finally {
-        setLoadingPositions(false)
-      }
+  const fetchPositions = useCallback(async () => {
+    setLoadingPositions(true)
+    setError(null)
+    try {
+      const params = buildParams(filters)
+      const response = await api.get<PositionsResponse>(`/v1/portfolio/positions?${params}`)
+      setPositions(response.data.positions)
+    } catch (err) {
+      setError('포지션 데이터를 불러오지 못했습니다.')
+    } finally {
+      setLoadingPositions(false)
     }
-
-    const fetchTimeline = async () => {
-      setLoadingTimeline(true)
-      setError(null)
-      try {
-        const params = buildParams(filters)
-        const response = await api.get<TimelineResponse>(`/v1/portfolio/timeline?${params}`)
-        setTimeline(response.data.items)
-        setNextCursor(response.data.next_cursor ?? null)
-      } catch (err) {
-        setError('타임라인 데이터를 불러오지 못했습니다.')
-      } finally {
-        setLoadingTimeline(false)
-      }
-    }
-
-    fetchPositions()
-    fetchTimeline()
   }, [filters])
+
+  const fetchTimeline = useCallback(async () => {
+    setLoadingTimeline(true)
+    setError(null)
+    try {
+      const params = buildParams(filters)
+      const response = await api.get<TimelineResponse>(`/v1/portfolio/timeline?${params}`)
+      setTimeline(response.data.items)
+      setNextCursor(response.data.next_cursor ?? null)
+    } catch (err) {
+      setError('타임라인 데이터를 불러오지 못했습니다.')
+    } finally {
+      setLoadingTimeline(false)
+    }
+  }, [filters])
+
+  const fetchTradeSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filters.venue.trim() !== '') params.set('exchange', filters.venue.trim())
+      const response = await api.get(`/v1/trades/summary?${params}`)
+      setTradeSummary(normalizeTradeSummary(response.data))
+    } catch {
+      setTradeSummary(null)
+    }
+  }, [filters.venue])
+
+  const refreshPortfolio = useCallback(async () => {
+    await Promise.all([fetchPositions(), fetchTimeline(), fetchTradeSummary()])
+  }, [fetchPositions, fetchTimeline, fetchTradeSummary])
+
+  useEffect(() => {
+    refreshPortfolio()
+  }, [refreshPortfolio])
 
   useEffect(() => {
     if (loadingPositions || loadingTimeline) return
@@ -214,18 +235,26 @@ export function PortfolioDashboard() {
   }, [loadingPositions, loadingTimeline, positions.length, timeline.length])
 
   useEffect(() => {
-    const fetchTradeSummary = async () => {
-      try {
-        const params = new URLSearchParams()
-        if (filters.venue.trim() !== '') params.set('exchange', filters.venue.trim())
-        const response = await api.get(`/v1/trades/summary?${params}`)
-        setTradeSummary(normalizeTradeSummary(response.data))
-      } catch {
-        setTradeSummary(null)
+    fetchTradeSummary()
+  }, [fetchTradeSummary])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleRefresh = () => {
+      refreshPortfolio()
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'kifu-portfolio-refresh') {
+        refreshPortfolio()
       }
     }
-    fetchTradeSummary()
-  }, [filters.venue])
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [refreshPortfolio])
 
   const loadMoreTimeline = async () => {
     if (!nextCursor) return
@@ -239,6 +268,34 @@ export function PortfolioDashboard() {
       setError('추가 타임라인을 불러오지 못했습니다.')
     } finally {
       setLoadingTimeline(false)
+    }
+  }
+
+  const handleBackfillEvents = async () => {
+    setBackfillLoading(true)
+    setBackfillError(null)
+    try {
+      const response = await api.post('/v1/portfolio/backfill-events')
+      const payload = response.data || {}
+      setBackfillResult({
+        created: Number(payload.created || 0),
+        skipped: Number(payload.skipped || 0),
+        processed: Number(payload.processed || 0),
+      })
+
+      const params = buildParams(filters)
+      const [positionsResponse, timelineResponse] = await Promise.all([
+        api.get<PositionsResponse>(`/v1/portfolio/positions?${params}`),
+        api.get<TimelineResponse>(`/v1/portfolio/timeline?${params}`),
+      ])
+      setPositions(positionsResponse.data.positions)
+      setTimeline(timelineResponse.data.items)
+      setNextCursor(timelineResponse.data.next_cursor ?? null)
+      setUsingTradeFallback(false)
+    } catch (err) {
+      setBackfillError('포트폴리오 이벤트 생성에 실패했습니다.')
+    } finally {
+      setBackfillLoading(false)
     }
   }
 
@@ -324,7 +381,25 @@ export function PortfolioDashboard() {
             </p>
           </div>
           {usingTradeFallback && (
-            <p className="mt-2 text-xs text-amber-300">포트폴리오 이벤트가 비어 있어 거래내역 기반으로 대체 표시 중</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-xs text-amber-300">포트폴리오 이벤트가 비어 있어 거래내역 기반으로 대체 표시 중</p>
+              <button
+                type="button"
+                onClick={handleBackfillEvents}
+                disabled={backfillLoading}
+                className="rounded-full border border-amber-400/60 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 disabled:opacity-60"
+              >
+                {backfillLoading ? '생성 중...' : '포트폴리오 데이터 생성'}
+              </button>
+              {backfillResult && (
+                <span className="text-[11px] text-amber-200">
+                  생성 {backfillResult.created.toLocaleString()} · 스킵 {backfillResult.skipped.toLocaleString()}
+                </span>
+              )}
+            </div>
+          )}
+          {backfillError && (
+            <p className="mt-2 text-xs text-rose-300">{backfillError}</p>
           )}
           <div className="mt-3 flex flex-wrap gap-2">
             {(tradeSummary?.by_exchange || []).map((item, index) => {

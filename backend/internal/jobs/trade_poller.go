@@ -23,6 +23,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
@@ -44,6 +45,7 @@ type TradePoller struct {
 	exchangeRepo   repositories.ExchangeCredentialRepository
 	userSymbolRepo repositories.UserSymbolRepository
 	syncStateRepo  repositories.TradeSyncStateRepository
+	portfolioRepo  repositories.PortfolioRepository
 	encryptionKey  []byte
 	pollInterval   time.Duration
 	client         *http.Client
@@ -127,6 +129,7 @@ func NewTradePoller(
 	exchangeRepo repositories.ExchangeCredentialRepository,
 	userSymbolRepo repositories.UserSymbolRepository,
 	syncStateRepo repositories.TradeSyncStateRepository,
+	portfolioRepo repositories.PortfolioRepository,
 	encryptionKey []byte,
 ) *TradePoller {
 	useMock := strings.EqualFold(os.Getenv("MOCK_BINANCE_TRADES"), "true")
@@ -140,6 +143,7 @@ func NewTradePoller(
 		exchangeRepo:   exchangeRepo,
 		userSymbolRepo: userSymbolRepo,
 		syncStateRepo:  syncStateRepo,
+		portfolioRepo:  portfolioRepo,
 		encryptionKey:  encryptionKey,
 		pollInterval:   defaultPollInterval,
 		client: &http.Client{
@@ -810,6 +814,12 @@ func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, excha
 			}
 			return err
 		}
+
+		if p.portfolioRepo != nil {
+			if err := p.ensureTradeEvent(ctx, userID, exchange, tradeRecord); err != nil {
+				log.Printf("trade poller: trade_event sync failed (user=%s exchange=%s trade=%s): %v", userID.String(), exchange, tradeRecord.ID.String(), err)
+			}
+		}
 	}
 
 	return nil
@@ -862,6 +872,220 @@ func (p *TradePoller) insertBubbleTradeTx(ctx context.Context, bubble *entities.
 	}
 	committed = true
 	return nil
+}
+
+type tradeEventRecord struct {
+	Symbol     string
+	EventType  string
+	Side       *string
+	Qty        *string
+	Price      *string
+	ExecutedAt time.Time
+	ExternalID *string
+}
+
+func (p *TradePoller) ensureTradeEvent(ctx context.Context, userID uuid.UUID, exchange string, trade *entities.Trade) error {
+	if trade == nil {
+		return fmt.Errorf("trade is nil")
+	}
+	symbol := strings.ToUpper(strings.TrimSpace(trade.Symbol))
+	if symbol == "" {
+		return fmt.Errorf("symbol is empty")
+	}
+
+	venueCode, venueType, venueName := resolveVenueFromExchange(exchange)
+	venueID, err := p.portfolioRepo.UpsertVenue(ctx, venueCode, venueType, venueName, "")
+	if err != nil {
+		return err
+	}
+
+	base, quote, normalizedSymbol := parseInstrumentSymbol(symbol, venueCode)
+	instrumentID, err := p.portfolioRepo.UpsertInstrument(ctx, "crypto", base, quote, normalizedSymbol)
+	if err != nil {
+		return err
+	}
+	_ = p.portfolioRepo.UpsertInstrumentMapping(ctx, instrumentID, venueID, symbol)
+
+	accountID, err := p.portfolioRepo.UpsertAccount(ctx, userID, venueID, "api-sync", nil, "api")
+	if err != nil {
+		return err
+	}
+
+	side := strings.ToLower(strings.TrimSpace(trade.Side))
+	if side == "" {
+		side = "buy"
+	}
+	qty := normalizeOptionalLiteral(trade.Quantity)
+	price := normalizeOptionalLiteral(trade.Price)
+
+	externalID := ""
+	if trade.BinanceTradeID != 0 {
+		externalID = fmt.Sprintf("%d", trade.BinanceTradeID)
+	} else {
+		externalID = trade.ID.String()
+	}
+
+	eventType := resolveEventType(exchange)
+	eventRecord := &tradeEventRecord{
+		Symbol:     normalizedSymbol,
+		EventType:  eventType,
+		Side:       &side,
+		Qty:        qty,
+		Price:      price,
+		ExecutedAt: trade.TradeTime,
+		ExternalID: &externalID,
+	}
+
+	dedupe := buildTradeEventDedupeKey(venueCode, "crypto", eventRecord)
+
+	metadata := map[string]string{
+		"trade_id": trade.ID.String(),
+		"exchange": exchange,
+	}
+	metadataRaw, _ := json.Marshal(metadata)
+	raw := json.RawMessage(metadataRaw)
+
+	event := &entities.TradeEvent{
+		ID:           uuid.New(),
+		UserID:       userID,
+		AccountID:    &accountID,
+		VenueID:      &venueID,
+		InstrumentID: &instrumentID,
+		AssetClass:   "crypto",
+		VenueType:    venueType,
+		EventType:    eventType,
+		Side:         &side,
+		Qty:          qty,
+		Price:        price,
+		ExecutedAt:   trade.TradeTime,
+		Source:       "api",
+		ExternalID:   &externalID,
+		Metadata:     &raw,
+		DedupeKey:    &dedupe,
+	}
+
+	if err := p.portfolioRepo.CreateTradeEvent(ctx, event); err != nil {
+		if isUniqueViolation(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func resolveVenueFromExchange(exchange string) (code string, venueType string, displayName string) {
+	normalized := strings.ToLower(strings.TrimSpace(exchange))
+	if normalized == "" {
+		return "unknown", "cex", "Unknown"
+	}
+	switch normalized {
+	case "binance_futures":
+		return normalized, "cex", "Binance Futures"
+	case "binance_spot":
+		return normalized, "cex", "Binance Spot"
+	case "upbit":
+		return normalized, "cex", "Upbit"
+	default:
+		return normalized, "cex", titleizeVenue(normalized)
+	}
+}
+
+func titleizeVenue(value string) string {
+	parts := strings.Split(value, "_")
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(part[:1]) + strings.ToLower(part[1:])
+	}
+	return strings.Join(parts, " ")
+}
+
+func parseInstrumentSymbol(symbol string, venueCode string) (base string, quote string, normalized string) {
+	normalized = strings.ToUpper(strings.TrimSpace(symbol))
+	if normalized == "" {
+		return "UNKNOWN", defaultQuoteForVenue(venueCode), "UNKNOWN"
+	}
+	if strings.Contains(normalized, "-") {
+		parts := strings.Split(normalized, "-")
+		if len(parts) == 2 {
+			quote = parts[0]
+			base = parts[1]
+			normalized = base + quote
+			return base, quote, normalized
+		}
+	}
+
+	quotes := []string{"USDT", "USDC", "USD", "KRW", "BTC", "ETH"}
+	for _, q := range quotes {
+		if strings.HasSuffix(normalized, q) && len(normalized) > len(q) {
+			base = strings.TrimSuffix(normalized, q)
+			quote = q
+			return base, quote, normalized
+		}
+	}
+
+	quote = defaultQuoteForVenue(venueCode)
+	base = normalized
+	return base, quote, normalized
+}
+
+func defaultQuoteForVenue(venue string) string {
+	switch venue {
+	case "upbit", "bithumb", "kis":
+		return "KRW"
+	default:
+		return "USDT"
+	}
+}
+
+func resolveEventType(exchange string) string {
+	value := strings.ToLower(strings.TrimSpace(exchange))
+	if strings.Contains(value, "futures") || strings.Contains(value, "perp") {
+		return "perp_trade"
+	}
+	return "spot_trade"
+}
+
+func buildTradeEventDedupeKey(venue string, assetClass string, record *tradeEventRecord) string {
+	parts := []string{
+		strings.ToLower(strings.TrimSpace(venue)),
+		strings.ToLower(strings.TrimSpace(assetClass)),
+		record.Symbol,
+		record.EventType,
+	}
+	if record.Side != nil {
+		parts = append(parts, *record.Side)
+	}
+	if record.Qty != nil {
+		parts = append(parts, *record.Qty)
+	}
+	if record.Price != nil {
+		parts = append(parts, *record.Price)
+	}
+	parts = append(parts, record.ExecutedAt.UTC().Format(time.RFC3339Nano))
+	if record.ExternalID != nil {
+		parts = append(parts, *record.ExternalID)
+	}
+	payload := strings.Join(parts, "|")
+	hash := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(hash[:])
+}
+
+func normalizeOptionalLiteral(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23505"
+	}
+	return false
 }
 
 func (p *TradePoller) handleMockTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol) error {

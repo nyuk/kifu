@@ -177,6 +177,11 @@ export function ExchangeConnectionManager() {
           ? ` (추가 ${inserted}건 · 총 ${after}건, 이전 ${before}건)`
           : ''
       setStatusMap((prev) => ({ ...prev, [item.id]: `${response.data.message || '동기화 완료'}${detail}` }))
+      if (typeof window !== 'undefined') {
+        const stamp = new Date().toISOString()
+        localStorage.setItem('kifu-portfolio-refresh', stamp)
+        window.dispatchEvent(new CustomEvent('kifu-portfolio-refresh', { detail: { at: stamp } }))
+      }
     } catch (err: any) {
       const message = err?.response?.data?.message ?? '동기화 실패'
       setStatusMap((prev) => ({ ...prev, [item.id]: message }))

@@ -66,8 +66,9 @@ func Run() error {
 	accuracyRepo := repositories.NewAIOpinionAccuracyRepository(pool)
 	noteRepo := repositories.NewReviewNoteRepository(pool)
 	portfolioRepo := repositories.NewPortfolioRepository(pool)
+	manualPositionRepo := repositories.NewManualPositionRepository(pool)
 	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
-	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
+	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -116,7 +117,7 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, portfolioRepo, safetyRepo, poller, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, portfolioRepo, manualPositionRepo, safetyRepo, poller, encKey, jwtSecret)
 
 	go poller.Start(context.Background())
 
