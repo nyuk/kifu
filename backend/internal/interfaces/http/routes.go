@@ -37,7 +37,7 @@ func RegisterRoutes(
 	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
-	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo)
+	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo, portfolioRepo)
 	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, subscriptionRepo, encryptionKey)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)

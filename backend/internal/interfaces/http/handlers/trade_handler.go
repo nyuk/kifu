@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -30,17 +32,20 @@ type TradeHandler struct {
 	tradeRepo      repositories.TradeRepository
 	bubbleRepo     repositories.BubbleRepository
 	userSymbolRepo repositories.UserSymbolRepository
+	portfolioRepo  repositories.PortfolioRepository
 }
 
 func NewTradeHandler(
 	tradeRepo repositories.TradeRepository,
 	bubbleRepo repositories.BubbleRepository,
 	userSymbolRepo repositories.UserSymbolRepository,
+	portfolioRepo repositories.PortfolioRepository,
 ) *TradeHandler {
 	return &TradeHandler{
 		tradeRepo:      tradeRepo,
 		bubbleRepo:     bubbleRepo,
 		userSymbolRepo: userSymbolRepo,
+		portfolioRepo:  portfolioRepo,
 	}
 }
 
@@ -315,6 +320,13 @@ func (h *TradeHandler) Import(c *fiber.Ctx) error {
 				continue
 			}
 			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+
+		if h.portfolioRepo != nil {
+			if err := h.syncTradeEventFromCSV(c.Context(), userID, payload, trade); err != nil {
+				// Keep CSV import resilient; log and continue.
+				fmt.Printf("trade import: trade_event sync failed user=%s exchange=%s trade=%s err=%v\n", userID.String(), payload.Exchange, trade.ID.String(), err)
+			}
 		}
 
 		imported += 1
@@ -623,6 +635,90 @@ func parseTimeQuery(value string) (*time.Time, error) {
 		return nil, err
 	}
 	return &parsed, nil
+}
+
+func (h *TradeHandler) syncTradeEventFromCSV(ctx context.Context, userID uuid.UUID, payload csvTradePayload, trade *entities.Trade) error {
+	if trade == nil {
+		return fmt.Errorf("trade is nil")
+	}
+
+	venueCode, venueType, venueName := resolveVenueFromExchange(payload.Exchange)
+	venueID, err := h.portfolioRepo.UpsertVenue(ctx, venueCode, venueType, venueName, "")
+	if err != nil {
+		return err
+	}
+
+	base, quote, normalizedSymbol := parseInstrumentSymbol(payload.Symbol, venueCode)
+	instrumentID, err := h.portfolioRepo.UpsertInstrument(ctx, "crypto", base, quote, normalizedSymbol)
+	if err != nil {
+		return err
+	}
+	_ = h.portfolioRepo.UpsertInstrumentMapping(ctx, instrumentID, venueID, payload.Symbol)
+
+	accountID, err := h.portfolioRepo.UpsertAccount(ctx, userID, venueID, "csv-import", nil, "csv")
+	if err != nil {
+		return err
+	}
+
+	side := strings.ToLower(strings.TrimSpace(payload.Side))
+	if side == "" {
+		side = "buy"
+	}
+	qty := normalizeOptionalLiteral(payload.Quantity)
+	price := normalizeOptionalLiteral(payload.Price)
+
+	externalID := ""
+	if payload.TradeID != 0 {
+		externalID = fmt.Sprintf("%d", payload.TradeID)
+	} else {
+		externalID = trade.ID.String()
+	}
+
+	eventType := resolveEventType(payload.Exchange)
+	record := &portfolioTradeEventRecord{
+		Symbol:     normalizedSymbol,
+		EventType:  eventType,
+		Side:       &side,
+		Qty:        qty,
+		Price:      price,
+		ExecutedAt: payload.TradeTime,
+		ExternalID: &externalID,
+	}
+	dedupe := buildTradeEventDedupeKey(venueCode, "crypto", record)
+
+	metadata := map[string]string{
+		"trade_id": trade.ID.String(),
+		"exchange": payload.Exchange,
+	}
+	metadataRaw, _ := json.Marshal(metadata)
+	raw := json.RawMessage(metadataRaw)
+
+	event := &entities.TradeEvent{
+		ID:           uuid.New(),
+		UserID:       userID,
+		AccountID:    &accountID,
+		VenueID:      &venueID,
+		InstrumentID: &instrumentID,
+		AssetClass:   "crypto",
+		VenueType:    venueType,
+		EventType:    eventType,
+		Side:         &side,
+		Qty:          qty,
+		Price:        price,
+		ExecutedAt:   payload.TradeTime,
+		Source:       "csv",
+		ExternalID:   &externalID,
+		Metadata:     &raw,
+		DedupeKey:    &dedupe,
+	}
+
+	if err := h.portfolioRepo.CreateTradeEvent(ctx, event); err != nil {
+		if isUniqueViolationError(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 type LinkTradeRequest struct {
