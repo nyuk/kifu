@@ -51,6 +51,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { label: t.navBubbles, to: '/bubbles' },
     { label: t.navTrades, to: '/trades' },
     { label: t.navReview, to: '/review' },
+    { label: t.navAlerts, to: '/alerts' },
     { label: t.navSettings, to: '/settings' },
   ]
 

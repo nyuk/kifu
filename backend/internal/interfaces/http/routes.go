@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/handlers"
 )
 
@@ -21,6 +22,14 @@ func RegisterRoutes(
 	outcomeRepo repositories.OutcomeRepository,
 	accuracyRepo repositories.AIOpinionAccuracyRepository,
 	noteRepo repositories.ReviewNoteRepository,
+	alertRuleRepo repositories.AlertRuleRepository,
+	alertRepo repositories.AlertRepository,
+	alertBriefingRepo repositories.AlertBriefingRepository,
+	alertDecisionRepo repositories.AlertDecisionRepository,
+	alertOutcomeRepo repositories.AlertOutcomeRepository,
+	channelRepo repositories.NotificationChannelRepository,
+	verifyCodeRepo repositories.TelegramVerifyCodeRepository,
+	tgSender *notification.TelegramSender,
 	portfolioRepo repositories.PortfolioRepository,
 	manualPositionRepo repositories.ManualPositionRepository,
 	safetyRepo repositories.TradeSafetyReviewRepository,
@@ -44,6 +53,9 @@ func RegisterRoutes(
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 	noteHandler := handlers.NewNoteHandler(noteRepo)
 	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
+	alertRuleHandler := handlers.NewAlertRuleHandler(alertRuleRepo)
+	alertNotifHandler := handlers.NewAlertNotificationHandler(alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo)
+	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender)
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
 	importHandler := handlers.NewImportHandler(portfolioRepo)
 	connectionHandler := handlers.NewConnectionHandler()
@@ -131,7 +143,33 @@ func RegisterRoutes(
 	export.Get("/accuracy", exportHandler.ExportAccuracy)
 	export.Get("/bubbles", exportHandler.ExportBubbles)
 
-	// Unified portfolio endpoints (stubs)
+	// Alert Rules
+	alertRules := api.Group("/alert-rules")
+	alertRules.Post("/", alertRuleHandler.Create)
+	alertRules.Get("/", alertRuleHandler.List)
+	alertRules.Get("/:id", alertRuleHandler.GetByID)
+	alertRules.Put("/:id", alertRuleHandler.Update)
+	alertRules.Delete("/:id", alertRuleHandler.Delete)
+	alertRules.Patch("/:id/toggle", alertRuleHandler.Toggle)
+
+	// Alerts
+	alerts := api.Group("/alerts")
+	alerts.Get("/", alertNotifHandler.ListAlerts)
+	alerts.Get("/:id", alertNotifHandler.GetAlert)
+	alerts.Post("/:id/decision", alertNotifHandler.CreateDecision)
+	alerts.Patch("/:id/dismiss", alertNotifHandler.DismissAlert)
+	alerts.Get("/:id/outcome", alertNotifHandler.GetOutcome)
+
+	// Notifications
+	notif := api.Group("/notifications")
+	notif.Post("/telegram/connect", notificationHandler.TelegramConnect)
+	notif.Delete("/telegram", notificationHandler.TelegramDisconnect)
+	notif.Get("/channels", notificationHandler.ListChannels)
+
+	// Telegram webhook (no auth)
+	app.Post("/api/v1/webhook/telegram", notificationHandler.TelegramWebhook)
+
+	// Unified portfolio endpoints
 	portfolio := api.Group("/portfolio")
 	portfolio.Get("/timeline", portfolioHandler.Timeline)
 	portfolio.Get("/positions", portfolioHandler.Positions)
