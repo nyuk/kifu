@@ -15,9 +15,11 @@ import (
 	"github.com/joho/godotenv"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 	"github.com/moneyvessel/kifu/internal/infrastructure/database"
+	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"
 	"github.com/moneyvessel/kifu/internal/interfaces/http"
 	"github.com/moneyvessel/kifu/internal/jobs"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 func Run() error {
@@ -65,6 +67,20 @@ func Run() error {
 	outcomeRepo := repositories.NewOutcomeRepository(pool)
 	accuracyRepo := repositories.NewAIOpinionAccuracyRepository(pool)
 	noteRepo := repositories.NewReviewNoteRepository(pool)
+	alertRuleRepo := repositories.NewAlertRuleRepository(pool)
+	alertRepo := repositories.NewAlertRepository(pool)
+	alertBriefingRepo := repositories.NewAlertBriefingRepository(pool)
+	alertDecisionRepo := repositories.NewAlertDecisionRepository(pool)
+	alertOutcomeRepo := repositories.NewAlertOutcomeRepository(pool)
+	channelRepo := repositories.NewNotificationChannelRepository(pool)
+	verifyCodeRepo := repositories.NewTelegramVerifyCodeRepository(pool)
+
+	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
+	var tgSender *notification.TelegramSender
+	tgBotToken := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	if tgBotToken != "" {
+		tgSender = notification.NewTelegramSender(tgBotToken, channelRepo)
+	}
 
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -88,7 +104,7 @@ func Run() error {
 
 	app.Use(func(c *fiber.Ctx) error {
 		path := c.Path()
-		if path == "/health" || strings.HasPrefix(path, "/api/v1/auth/") {
+		if path == "/health" || strings.HasPrefix(path, "/api/v1/auth/") || path == "/api/v1/webhook/telegram" {
 			return c.Next()
 		}
 
@@ -113,7 +129,7 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, encKey, jwtSecret)
 
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
 	go poller.Start(context.Background())
@@ -126,6 +142,24 @@ func Run() error {
 
 	accuracyCalc := jobs.NewAccuracyCalculator(outcomeRepo, aiOpinionRepo, accuracyRepo)
 	accuracyCalc.Start(context.Background())
+
+	// Alert briefing service
+	var briefingSender notification.Sender
+	if tgSender != nil {
+		briefingSender = tgSender
+	}
+	briefingService := services.NewAlertBriefingService(
+		alertRepo, alertBriefingRepo, aiProviderRepo, userAIKeyRepo,
+		channelRepo, tradeRepo, encKey, briefingSender,
+	)
+
+	// Alert monitor job
+	alertMonitor := jobs.NewAlertMonitor(alertRuleRepo, alertRepo, briefingService.HandleTrigger)
+	alertMonitor.Start(context.Background())
+
+	// Alert outcome calculator job
+	alertOutcomeCalc := jobs.NewAlertOutcomeCalculator(alertOutcomeRepo)
+	alertOutcomeCalc.Start(context.Background())
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)
