@@ -27,6 +27,6 @@ type AIOpinionAccuracyRepository interface {
 	GetByBubbleID(ctx context.Context, bubbleID uuid.UUID) ([]*entities.AIOpinionAccuracy, error)
 	GetByOpinionAndOutcome(ctx context.Context, opinionID, outcomeID uuid.UUID) (*entities.AIOpinionAccuracy, error)
 	ExistsByOpinionAndOutcome(ctx context.Context, opinionID, outcomeID uuid.UUID) (bool, error)
-	GetProviderStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string) (map[string]*ProviderAccuracyStats, error)
-	GetTotalStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string) (total int, evaluated int, err error)
+	GetProviderStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string, assetClass string, venueName string) (map[string]*ProviderAccuracyStats, error)
+	GetTotalStats(ctx context.Context, userID uuid.UUID, period string, outcomePeriod string, assetClass string, venueName string) (total int, evaluated int, err error)
 }

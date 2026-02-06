@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../lib/api'
+import { clearGuestSession } from '../lib/guestSession'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -22,7 +23,8 @@ export function Login() {
     try {
       const response = await api.post('/v1/auth/login', { email, password })
       setTokens(response.data.access_token, response.data.refresh_token)
-      const from = searchParams?.get('from') || '/chart'
+      clearGuestSession()
+      const from = searchParams?.get('from') || '/home'
       router.push(from)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Login failed. Please try again.')
@@ -97,6 +99,12 @@ export function Login() {
               Create an account
             </Link>
           </p>
+          <Link
+            href="/"
+            className="text-sm text-neutral-500 transition hover:text-neutral-300"
+          >
+            랜딩페이지로 돌아가기
+          </Link>
         </form>
       </div>
     </div>

@@ -9,11 +9,11 @@ import (
 type Emotion string
 
 const (
-	EmotionGreedy    Emotion = "greedy"
-	EmotionFearful   Emotion = "fearful"
-	EmotionConfident Emotion = "confident"
-	EmotionUncertain Emotion = "uncertain"
-	EmotionCalm      Emotion = "calm"
+	EmotionGreedy     Emotion = "greedy"
+	EmotionFearful    Emotion = "fearful"
+	EmotionConfident  Emotion = "confident"
+	EmotionUncertain  Emotion = "uncertain"
+	EmotionCalm       Emotion = "calm"
 	EmotionFrustrated Emotion = "frustrated"
 )
 

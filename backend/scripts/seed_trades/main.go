@@ -82,9 +82,9 @@ func seedTrades(
 }
 
 func ensureUser(ctx context.Context, userRepo domainrepos.UserRepository, subRepo domainrepos.SubscriptionRepository) *entities.User {
-	const email = "demo@kifu.local"
-	const password = "password123"
-	name := "Demo Trader"
+	email := getenvOrDefault("SEED_USER_EMAIL", "guest.preview@kifu.local")
+	password := getenvOrDefault("SEED_USER_PASSWORD", "guest1234")
+	name := getenvOrDefault("SEED_USER_NAME", "Guest Preview")
 
 	user, err := userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -129,6 +129,14 @@ func getenvOrFail(name string) string {
 	value := os.Getenv(name)
 	if value == "" {
 		log.Fatalf("%s is required", name)
+	}
+	return value
+}
+
+func getenvOrDefault(name, defaultValue string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
 	}
 	return value
 }

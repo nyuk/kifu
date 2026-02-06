@@ -17,8 +17,8 @@ type BubbleRepository interface {
 	SummarySimilar(ctx context.Context, userID uuid.UUID, symbol string, tags []string, excludeID *uuid.UUID, period string) (*SimilarSummary, error)
 	Update(ctx context.Context, bubble *entities.Bubble) error
 	DeleteByIDAndUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) (bool, error)
-	GetReviewStats(ctx context.Context, userID uuid.UUID, period string, symbol string, tag string) (*ReviewStats, error)
-	GetCalendarData(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time) (map[string]CalendarDay, error)
+	GetReviewStats(ctx context.Context, userID uuid.UUID, period string, symbol string, tag string, assetClass string, venueName string) (*ReviewStats, error)
+	GetCalendarData(ctx context.Context, userID uuid.UUID, from time.Time, to time.Time, assetClass string, venueName string) (map[string]CalendarDay, error)
 }
 
 type BubbleFilter struct {

@@ -5,7 +5,10 @@ type Locale = 'en' | 'ko'
 const dictionary = {
   en: {
     appTagline: 'Trading Journal',
+    navHome: 'Home',
+    navPortfolio: 'Portfolio',
     navChart: 'Chart',
+    navAlert: 'Alert',
     navBubbles: 'Bubbles',
     navTrades: 'Trades',
     navReview: 'Review',
@@ -184,7 +187,10 @@ const dictionary = {
   },
   ko: {
     appTagline: 'Trading Journal',
+    navHome: '홈',
+    navPortfolio: '포트폴리오',
     navChart: '차트',
+    navAlert: '긴급',
     navBubbles: '버블',
     navTrades: '거래',
     navReview: '복기',

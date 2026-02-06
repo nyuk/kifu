@@ -1,1 +1,9 @@
 .mcp.json
+.env
+backend/.env
+.gocache/
+backend.log
+backend/backend.log
+backend/backend_debug.log
+backend/backups/
+.claude/settings.local.json

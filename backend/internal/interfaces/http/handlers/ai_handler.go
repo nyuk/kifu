@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -78,6 +79,24 @@ type AIOpinionResponse struct {
 	Opinions       []AIOpinionItem  `json:"opinions"`
 	Errors         []AIOpinionError `json:"errors,omitempty"`
 	DataIncomplete bool             `json:"data_incomplete"`
+}
+
+type OneShotAIRequest struct {
+	Provider     string `json:"provider"`
+	PromptType   string `json:"prompt_type"`
+	Symbol       string `json:"symbol"`
+	Timeframe    string `json:"timeframe"`
+	Price        string `json:"price"`
+	EvidenceText string `json:"evidence_text"`
+}
+
+type OneShotAIResponse struct {
+	Provider   string `json:"provider"`
+	Model      string `json:"model"`
+	PromptType string `json:"prompt_type"`
+	Response   string `json:"response"`
+	TokensUsed *int   `json:"tokens_used,omitempty"`
+	CreatedAt  string `json:"created_at"`
 }
 
 type UserAIKeyRequest struct {
@@ -232,6 +251,96 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		Opinions:       opinions,
 		Errors:         errorsList,
 		DataIncomplete: incomplete,
+	})
+}
+
+func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	var req OneShotAIRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(req.Provider))
+	if provider == "" {
+		provider = providerOpenAI
+	}
+	if !isSupportedProvider(provider) {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "unsupported provider"})
+	}
+
+	symbol := strings.TrimSpace(req.Symbol)
+	timeframe := strings.TrimSpace(req.Timeframe)
+	price := strings.TrimSpace(req.Price)
+	if symbol == "" || timeframe == "" || price == "" {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "symbol, timeframe, and price are required"})
+	}
+
+	subscription, err := h.subscriptionRepo.GetByUserID(c.Context(), userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if subscription == nil {
+		return c.Status(404).JSON(fiber.Map{"code": "SUBSCRIPTION_NOT_FOUND", "message": "subscription not found"})
+	}
+
+	apiKey, err := h.resolveAPIKey(c.Context(), userID, provider)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if apiKey == "" {
+		return c.Status(400).JSON(fiber.Map{"code": "MISSING_API_KEY", "message": "API key not configured"})
+	}
+
+	model, err := h.lookupModel(c.Context(), provider)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
+	}
+
+	if usesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
+		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+	}
+
+	prompt := buildOneShotPrompt(req)
+	responseText := ""
+	var tokensUsed *int
+	if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
+		responseText = mockOneShotResponse(req)
+	} else {
+		responseText, tokensUsed, err = h.callProvider(c.Context(), provider, model, apiKey, prompt)
+		if err != nil {
+			if strings.Contains(err.Error(), "openai error 502") || strings.Contains(err.Error(), "openai error 503") || strings.Contains(err.Error(), "openai error 504") {
+				time.Sleep(800 * time.Millisecond)
+				responseText, tokensUsed, err = h.callProvider(c.Context(), provider, model, apiKey, prompt)
+			}
+		}
+		if err != nil {
+			log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
+			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": err.Error()})
+		}
+	}
+
+	if usesServiceKey(provider, apiKey) {
+		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+		if !ok {
+			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+		}
+	}
+
+	return c.Status(200).JSON(OneShotAIResponse{
+		Provider:   provider,
+		Model:      model,
+		PromptType: strings.TrimSpace(req.PromptType),
+		Response:   responseText,
+		TokensUsed: tokensUsed,
+		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
 	})
 }
 
@@ -407,14 +516,6 @@ func (h *AIHandler) resolveProviders(ctx context.Context, requested []string) ([
 }
 
 func (h *AIHandler) resolveAPIKey(ctx context.Context, userID uuid.UUID, provider string) (string, error) {
-	key, err := h.userAIKeyRepo.GetByUserAndProvider(ctx, userID, provider)
-	if err != nil {
-		return "", err
-	}
-	if key != nil {
-		return cryptoutil.Decrypt(key.APIKeyEnc, h.encryptionKey)
-	}
-
 	switch provider {
 	case providerOpenAI:
 		return strings.TrimSpace(os.Getenv("OPENAI_API_KEY")), nil
@@ -453,10 +554,8 @@ func (h *AIHandler) callProvider(ctx context.Context, provider string, model str
 
 func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
 	payload := map[string]interface{}{
-		"model": model,
-		"messages": []map[string]string{
-			{"role": "user", "content": prompt},
-		},
+		"model":       model,
+		"input":       prompt,
 		"temperature": 0.4,
 	}
 	body, err := json.Marshal(payload)
@@ -464,7 +563,7 @@ func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string,
 		return "", nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/responses", bytes.NewReader(body))
 	if err != nil {
 		return "", nil, err
 	}
@@ -483,11 +582,14 @@ func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string,
 	}
 
 	var result struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
+		Output []struct {
+			Type    string `json:"type"`
+			Role    string `json:"role"`
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"output"`
 		Usage struct {
 			TotalTokens int `json:"total_tokens"`
 		} `json:"usage"`
@@ -496,12 +598,23 @@ func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string,
 		return "", nil, err
 	}
 
-	if len(result.Choices) == 0 {
-		return "", nil, errors.New("openai returned no choices")
+	parts := make([]string, 0)
+	for _, item := range result.Output {
+		if item.Type != "message" {
+			continue
+		}
+		for _, content := range item.Content {
+			if content.Type == "output_text" && strings.TrimSpace(content.Text) != "" {
+				parts = append(parts, strings.TrimSpace(content.Text))
+			}
+		}
+	}
+	if len(parts) == 0 {
+		return "", nil, errors.New("openai returned no content")
 	}
 
 	tokens := result.Usage.TotalTokens
-	return strings.TrimSpace(result.Choices[0].Message.Content), &tokens, nil
+	return strings.TrimSpace(strings.Join(parts, "\n")), &tokens, nil
 }
 
 func (h *AIHandler) callClaude(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
@@ -714,6 +827,85 @@ func buildPrompt(bubble *entities.Bubble, candles []klineItem) string {
 
 	builder.WriteString("\n질문: 이 상황에서의 단기 전망과 주의할 점을 분석해주세요.\n")
 	return builder.String()
+}
+
+func buildOneShotPrompt(req OneShotAIRequest) string {
+	builder := strings.Builder{}
+	builder.WriteString("당신은 트레이딩 복기 어시스턴트입니다.\n")
+	builder.WriteString("응답은 한국어로 간결하고 명확하게 작성하세요.\n")
+	builder.WriteString("출력은 지정된 포맷만 사용하며 불필요한 서론은 생략하세요.\n\n")
+	builder.WriteString("규칙:\n")
+	builder.WriteString("- 근거 없는 일반론 금지, 증거 패킷이 있으면 최소 1줄 이상 구체적으로 언급\n")
+	builder.WriteString("- 애매하면 '추가로 확인할 데이터'를 1줄 포함\n")
+	builder.WriteString("- 숫자/레벨/조건을 가능한 구체적으로 제시\n\n")
+	builder.WriteString("- 증거 패킷에 Open positions가 있으면 최소 1개 포지션을 언급하고 그 기준으로 행동 제안\n")
+	builder.WriteString("- 포지션에 손절/익절 가격이 있으면 해당 레벨을 반드시 언급\n\n")
+	builder.WriteString("현재 상황:\n")
+	builder.WriteString(fmt.Sprintf("- 심볼: %s\n", strings.TrimSpace(req.Symbol)))
+	builder.WriteString(fmt.Sprintf("- 타임프레임: %s\n", strings.TrimSpace(req.Timeframe)))
+	builder.WriteString(fmt.Sprintf("- 현재 가격: %s\n", strings.TrimSpace(req.Price)))
+
+	if strings.TrimSpace(req.EvidenceText) != "" {
+		builder.WriteString("\n증거 패킷(요약):\n")
+		builder.WriteString(strings.TrimSpace(req.EvidenceText))
+		builder.WriteString("\n")
+	}
+
+	switch strings.ToLower(strings.TrimSpace(req.PromptType)) {
+	case "detailed":
+		builder.WriteString("\n출력 형식:\n")
+		builder.WriteString("1) 요약: 한 줄\n")
+		builder.WriteString("2) 핵심 근거: 2줄 이내(증거 패킷 기준)\n")
+		builder.WriteString("3) 리스크: 2줄 이내\n")
+		builder.WriteString("4) 유효/무효 조건: 2줄 이내\n")
+		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소 + 이유 1줄\n")
+		builder.WriteString("6) 체크리스트: 불릿 3개 이하\n")
+		builder.WriteString("7) 결론: 한 줄\n")
+	case "technical":
+		builder.WriteString("\n출력 형식:\n")
+		builder.WriteString("1) 추세/모멘텀: 한 줄\n")
+		builder.WriteString("2) 핵심 레벨: 지지/저항 1~2개씩\n")
+		builder.WriteString("3) 무효화 조건: 한 줄\n")
+		builder.WriteString("4) 시나리오: 상승/하락 각 1줄\n")
+		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소\n")
+		builder.WriteString("6) 추가 확인 데이터: 한 줄(애매할 때)\n")
+		builder.WriteString("7) 결론: 한 줄\n")
+	default:
+		builder.WriteString("\n출력 형식:\n")
+		builder.WriteString("1) 상황: 한 줄\n")
+		builder.WriteString("2) 핵심 근거: 한 줄(증거 패킷 기준)\n")
+		builder.WriteString("3) 리스크: 한 줄\n")
+		builder.WriteString("4) 행동 제안: 포지션 있으면 유지/축소/정리/추가, 없으면 관망/진입/축소\n")
+		builder.WriteString("5) 결론: 한 줄\n")
+	}
+	return builder.String()
+}
+
+func mockOneShotResponse(req OneShotAIRequest) string {
+	switch strings.ToLower(strings.TrimSpace(req.PromptType)) {
+	case "detailed":
+		return strings.TrimSpace(`1) 요약: 급격한 변동 이후 관망/확인 구간으로 보입니다.
+2) 핵심 근거: 최근 변동성 확대와 거래량 증가 구간이 확인됩니다.
+3) 리스크: 변동성 확대 구간에서 역추세 진입은 손실 확률이 높습니다.
+4) 유효/무효 조건: 직전 고점 회복 실패 시 신중, 고점 회복 시 시나리오 재평가.
+5) 행동 제안: 보유 중이면 손절 기준 점검 후 축소 또는 정리 검토.
+6) 체크리스트: 손절 기준 확인 · 포지션 사이즈 축소 · 주요 뉴스/지표 확인
+7) 결론: 기준 레벨 확인 전까지 무리한 진입은 피하는 편이 안전합니다.`)
+	case "technical":
+		return strings.TrimSpace(`1) 추세/모멘텀: 단기 모멘텀 약화, 방향성 불명확.
+2) 핵심 레벨: 지지 1개/저항 1개 기준만 확인.
+3) 무효화 조건: 직전 저점 이탈 시 하방 시나리오 강화.
+4) 시나리오: 상승—저항 돌파 후 눌림 확인 / 하락—지지 이탈 후 반등 실패.
+5) 행동 제안: 보유 중이면 리스크 축소, 신규 진입은 관망.
+6) 추가 확인 데이터: 거래량/뉴스 이벤트 확인.
+7) 결론: 레벨 확인 전까지 관망이 합리적.`)
+	default:
+		return strings.TrimSpace(`1) 상황: 변동성 확대로 판단 구간이 빠르게 바뀌는 상태입니다.
+2) 핵심 근거: 변동폭 확대와 방향성 불확실 구간이 동시에 나타납니다.
+3) 리스크: 방향 확인 없이 추격 진입하면 손실 가능성이 높습니다.
+4) 행동 제안: 보유 중이면 축소 또는 정리 우선, 신규 진입은 관망.
+5) 결론: 신호 확인 전까지 관망 또는 소규모 대응이 적합합니다.`)
+	}
 }
 
 func isSupportedProvider(provider string) bool {

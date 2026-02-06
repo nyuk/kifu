@@ -23,23 +23,23 @@ func NewTradeRepository(pool *pgxpool.Pool) repositories.TradeRepository {
 
 func (r *TradeRepositoryImpl) Create(ctx context.Context, trade *entities.Trade) error {
 	query := `
-    INSERT INTO trades (id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    INSERT INTO trades (id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
   `
 	_, err := r.pool.Exec(ctx, query,
-		trade.ID, trade.UserID, trade.BubbleID, trade.BinanceTradeID, trade.Exchange, trade.Symbol, trade.Side, trade.Quantity, trade.Price, trade.RealizedPnL, trade.TradeTime)
+		trade.ID, trade.UserID, trade.BubbleID, trade.BinanceTradeID, trade.Exchange, trade.Symbol, trade.Side, trade.PositionSide, trade.OpenClose, trade.ReduceOnly, trade.Quantity, trade.Price, trade.RealizedPnL, trade.TradeTime)
 	return err
 }
 
 func (r *TradeRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*entities.Trade, error) {
 	query := `
-    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time
+    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
     FROM trades
     WHERE id = $1
   `
 	var trade entities.Trade
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime)
+		&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -51,7 +51,7 @@ func (r *TradeRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*entit
 
 func (r *TradeRepositoryImpl) ListByUserAndSymbol(ctx context.Context, userID uuid.UUID, symbol string) ([]*entities.Trade, error) {
 	query := `
-    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time
+    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
     FROM trades
     WHERE user_id = $1 AND symbol = $2
     ORDER BY trade_time DESC
@@ -66,7 +66,7 @@ func (r *TradeRepositoryImpl) ListByUserAndSymbol(ctx context.Context, userID uu
 	for rows.Next() {
 		var trade entities.Trade
 		if err := rows.Scan(
-			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
+			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
 			return nil, err
 		}
 		trades = append(trades, &trade)
@@ -79,7 +79,7 @@ func (r *TradeRepositoryImpl) ListByUserAndSymbol(ctx context.Context, userID uu
 
 func (r *TradeRepositoryImpl) ListByBubble(ctx context.Context, bubbleID uuid.UUID) ([]*entities.Trade, error) {
 	query := `
-    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time
+    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
     FROM trades
     WHERE bubble_id = $1
     ORDER BY trade_time DESC
@@ -94,7 +94,7 @@ func (r *TradeRepositoryImpl) ListByBubble(ctx context.Context, bubbleID uuid.UU
 	for rows.Next() {
 		var trade entities.Trade
 		if err := rows.Scan(
-			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
+			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
 			return nil, err
 		}
 		trades = append(trades, &trade)
@@ -125,7 +125,7 @@ func (r *TradeRepositoryImpl) List(ctx context.Context, userID uuid.UUID, filter
 	}
 
 	listQuery := fmt.Sprintf(`
-    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time
+    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
     FROM trades
     %s
     %s
@@ -143,7 +143,7 @@ func (r *TradeRepositoryImpl) List(ctx context.Context, userID uuid.UUID, filter
 	for rows.Next() {
 		var trade entities.Trade
 		if err := rows.Scan(
-			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
+			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
 			return nil, 0, err
 		}
 		trades = append(trades, &trade)
@@ -347,7 +347,7 @@ func (r *TradeRepositoryImpl) ListUnlinked(ctx context.Context, userID uuid.UUID
 		limit = 500
 	}
 	query := `
-		SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, quantity, price, realized_pnl, trade_time
+		SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
 		FROM trades
 		WHERE user_id = $1 AND bubble_id IS NULL
 		ORDER BY trade_time ASC
@@ -363,7 +363,7 @@ func (r *TradeRepositoryImpl) ListUnlinked(ctx context.Context, userID uuid.UUID
 	for rows.Next() {
 		var trade entities.Trade
 		if err := rows.Scan(
-			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
+			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
 			return nil, err
 		}
 		trades = append(trades, &trade)
@@ -382,6 +382,29 @@ func (r *TradeRepositoryImpl) UpdateBubbleID(ctx context.Context, tradeID uuid.U
 func (r *TradeRepositoryImpl) ClearBubbleID(ctx context.Context, tradeID uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, "UPDATE trades SET bubble_id = NULL WHERE id = $1", tradeID)
 	return err
+}
+
+func (r *TradeRepositoryImpl) BackfillBubbleMetadata(ctx context.Context, userID uuid.UUID) (int64, error) {
+	query := `
+		UPDATE bubbles b
+		SET
+			asset_class = COALESCE(b.asset_class, 'crypto'),
+			venue_name = COALESCE(b.venue_name, t.exchange),
+			memo = COALESCE(b.memo, CONCAT('Trade sync: ', t.symbol, ' ', UPPER(t.side), ' @ ', t.price)),
+			tags = CASE
+				WHEN b.tags IS NULL OR array_length(b.tags, 1) = 0 THEN ARRAY[t.side]
+				ELSE b.tags
+			END
+		FROM trades t
+		WHERE b.user_id = $1
+		AND t.user_id = $1
+		AND b.id = t.bubble_id
+	`
+	result, err := r.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 func buildTradeWhere(userID uuid.UUID, filter repositories.TradeFilter) (string, []interface{}, int) {

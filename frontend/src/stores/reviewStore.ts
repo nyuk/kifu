@@ -55,6 +55,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
   filters: {
     period: '30d',
     outcomePeriod: '1h',
+    assetClass: 'all',
+    venue: '',
   },
 
   replay: initialReplayState,
@@ -102,6 +104,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
       const params = new URLSearchParams({ period: filters.period })
       if (filters.symbol) params.set('symbol', filters.symbol)
       if (filters.tag) params.set('tag', filters.tag)
+      if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
+      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
 
       const response = await api.get(`/v1/review/stats?${params}`)
       set({ stats: response.data, isLoading: false })
@@ -118,6 +122,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
         period: filters.period,
         outcome_period: filters.outcomePeriod,
       })
+      if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
+      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
 
       console.log('[ReviewStore] Fetching accuracy with params:', params.toString())
       const response = await api.get(`/v1/review/accuracy?${params}`)
@@ -131,9 +137,13 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
   },
 
   fetchCalendar: async (from, to) => {
+    const { filters } = get()
     set({ isLoading: true, error: null })
     try {
-      const response = await api.get(`/v1/review/calendar?from=${from}&to=${to}`)
+      const params = new URLSearchParams({ from, to })
+      if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
+      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
+      const response = await api.get(`/v1/review/calendar?${params}`)
       set({ calendar: response.data, isLoading: false })
     } catch (error) {
       set({ error: '캘린더 데이터를 불러오는데 실패했습니다', isLoading: false })
@@ -148,7 +158,7 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
       isLoading: false,
       isLoadingAccuracy: false,
       error: null,
-      filters: { period: '30d', outcomePeriod: '1h' },
+      filters: { period: '30d', outcomePeriod: '1h', assetClass: 'all', venue: '' },
       replay: initialReplayState,
     }),
 }))

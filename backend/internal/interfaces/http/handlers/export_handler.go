@@ -37,7 +37,7 @@ func (h *ExportHandler) ExportStats(c *fiber.Ctx) error {
 
 	period := c.Query("period", "30d")
 
-	stats, err := h.bubbleRepo.GetReviewStats(c.Context(), userID, period, "", "")
+	stats, err := h.bubbleRepo.GetReviewStats(c.Context(), userID, period, "", "", "", "")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -97,7 +97,7 @@ func (h *ExportHandler) ExportAccuracy(c *fiber.Ctx) error {
 	period := c.Query("period", "30d")
 	outcomePeriod := c.Query("outcome_period", "1h")
 
-	providerStats, err := h.accuracyRepo.GetProviderStats(c.Context(), userID, period, outcomePeriod)
+	providerStats, err := h.accuracyRepo.GetProviderStats(c.Context(), userID, period, outcomePeriod, "", "")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -151,7 +151,7 @@ func (h *ExportHandler) ExportBubbles(c *fiber.Ctx) error {
 	writer := csv.NewWriter(&buf)
 
 	// Header
-	writer.Write([]string{"ID", "Symbol", "Timeframe", "Candle Time", "Price", "Type", "Memo", "Tags", "Created At"})
+	writer.Write([]string{"ID", "Symbol", "Timeframe", "Candle Time", "Price", "Type", "Asset Class", "Venue", "Memo", "Tags", "Created At"})
 
 	for _, bubble := range bubbles {
 		tags := ""
@@ -176,6 +176,8 @@ func (h *ExportHandler) ExportBubbles(c *fiber.Ctx) error {
 			bubble.CandleTime.Format("2006-01-02 15:04:05"),
 			bubble.Price,
 			bubble.BubbleType,
+			safeCsvValue(bubble.AssetClass),
+			safeCsvValue(bubble.VenueName),
 			memo,
 			tags,
 			bubble.CreatedAt.Format("2006-01-02 15:04:05"),
@@ -189,4 +191,11 @@ func (h *ExportHandler) ExportBubbles(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/csv")
 
 	return c.Send(buf.Bytes())
+}
+
+func safeCsvValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }

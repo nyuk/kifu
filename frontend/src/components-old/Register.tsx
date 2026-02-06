@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
+import { clearGuestSession } from '../lib/guestSession'
 
 export function Register() {
   const [name, setName] = useState('')
@@ -14,6 +15,7 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false)
   const setTokens = useAuthStore((state) => state.setTokens)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -23,7 +25,9 @@ export function Register() {
       await api.post('/v1/auth/register', { name, email, password })
       const loginResponse = await api.post('/v1/auth/login', { email, password })
       setTokens(loginResponse.data.access_token, loginResponse.data.refresh_token)
-      router.push('/chart', { replace: true })
+      clearGuestSession()
+      const next = searchParams?.get('next') || '/home'
+      router.replace(next)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Registration failed. Please try again.')
     } finally {

@@ -75,4 +75,5 @@ type TradeRepository interface {
 	UpdateBubbleID(ctx context.Context, tradeID uuid.UUID, bubbleID uuid.UUID) error
 	ClearBubbleID(ctx context.Context, tradeID uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	BackfillBubbleMetadata(ctx context.Context, userID uuid.UUID) (int64, error)
 }

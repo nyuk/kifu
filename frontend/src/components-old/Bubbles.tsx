@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
+import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
+import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 
 type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
 
@@ -169,25 +171,31 @@ export function Bubbles() {
         <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
           {/* 검색/필터 */}
           <div className="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search notes, tags..."
-              className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
-            />
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className="rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
-            >
-              <option value="desc">Newest</option>
-              <option value="asc">Oldest</option>
-            </select>
+            <FilterGroup label="SEARCH" tone="cyan">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search notes, tags..."
+                className="flex-1 min-w-[220px] rounded-lg border border-cyan-400/40 bg-neutral-950/70 px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/70"
+              />
+            </FilterGroup>
+            <FilterGroup label="SORT" tone="amber">
+              <FilterPills
+                options={[
+                  { value: 'desc', label: 'Newest' },
+                  { value: 'asc', label: 'Oldest' },
+                ]}
+                value={sortOrder}
+                onChange={(value) => setSortOrder(value as 'asc' | 'desc')}
+                tone="amber"
+                ariaLabel="Sort order"
+              />
+            </FilterGroup>
           </div>
 
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <span className="text-xs text-neutral-500">{filteredBubbles.length} results</span>
+            <span className="text-xs text-neutral-400">{filteredBubbles.length} results</span>
             <button
               onClick={() => { if (confirm('모든 버블을 삭제하시겠습니까?')) replaceAllBubbles([]) }}
               className="text-xs text-red-400 hover:text-red-300"
@@ -311,9 +319,29 @@ export function Bubbles() {
                             <span className="text-xs text-neutral-500">{agent.model}</span>
                             <span className="text-xs text-neutral-600 ml-auto">{agent.prompt_type}</span>
                           </div>
-                          <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                            {agent.response}
-                          </p>
+                          {(() => {
+                            const sections = parseAiSections(agent.response || '')
+                            if (sections.length === 0) {
+                              return (
+                                <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                                  {agent.response}
+                                </p>
+                              )
+                            }
+                            return (
+                              <div className="space-y-2">
+                                {sections.map((section) => (
+                                  <div
+                                    key={`${agent.provider}-${section.title}-${section.body.slice(0, 12)}`}
+                                    className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                                  >
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
+                                    <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          })()}
                         </div>
                       ))}
                     </div>

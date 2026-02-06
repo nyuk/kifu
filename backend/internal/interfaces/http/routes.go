@@ -30,6 +30,10 @@ func RegisterRoutes(
 	channelRepo repositories.NotificationChannelRepository,
 	verifyCodeRepo repositories.TelegramVerifyCodeRepository,
 	tgSender *notification.TelegramSender,
+	portfolioRepo repositories.PortfolioRepository,
+	manualPositionRepo repositories.ManualPositionRepository,
+	safetyRepo repositories.TradeSafetyReviewRepository,
+	exchangeSyncer handlers.ExchangeSyncer,
 	encryptionKey []byte,
 	jwtSecret string,
 ) {
@@ -39,7 +43,7 @@ func RegisterRoutes(
 
 	authHandler := handlers.NewAuthHandler(userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
 	userHandler := handlers.NewUserHandler(userRepo, subscriptionRepo)
-	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, encryptionKey)
+	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo)
@@ -52,6 +56,11 @@ func RegisterRoutes(
 	alertRuleHandler := handlers.NewAlertRuleHandler(alertRuleRepo)
 	alertNotifHandler := handlers.NewAlertNotificationHandler(alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo)
 	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender)
+	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
+	importHandler := handlers.NewImportHandler(portfolioRepo)
+	connectionHandler := handlers.NewConnectionHandler()
+	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
+	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
@@ -67,15 +76,13 @@ func RegisterRoutes(
 	users.Get("/me/subscription", userHandler.GetSubscription)
 	users.Get("/me/symbols", marketHandler.GetUserSymbols)
 	users.Put("/me/symbols", marketHandler.UpdateUserSymbols)
-	users.Get("/me/ai-keys", aiHandler.GetUserAIKeys)
-	users.Put("/me/ai-keys", aiHandler.UpdateUserAIKeys)
-	users.Delete("/me/ai-keys/:provider", aiHandler.DeleteUserAIKey)
 
 	exchanges := api.Group("/exchanges")
 	exchanges.Post("/", exchangeHandler.Register)
 	exchanges.Get("/", exchangeHandler.List)
 	exchanges.Delete("/:id", exchangeHandler.Delete)
 	exchanges.Post("/:id/test", exchangeHandler.Test)
+	exchanges.Post("/:id/sync", exchangeHandler.Sync)
 
 	market := api.Group("/market")
 	market.Get("/klines", marketHandler.GetKlines)
@@ -90,15 +97,19 @@ func RegisterRoutes(
 	bubbles.Get("/:id/similar", similarHandler.SimilarByBubble)
 	bubbles.Get("/search", similarHandler.Search)
 
-	ai := api.Group("/bubbles")
-	ai.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
-	ai.Get("/:id/ai-opinions", aiHandler.ListOpinions)
+	bubbleAI := api.Group("/bubbles")
+	bubbleAI.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
+	bubbleAI.Get("/:id/ai-opinions", aiHandler.ListOpinions)
+
+	ai := api.Group("/ai")
+	ai.Post("/one-shot", aiHandler.RequestOneShot)
 
 	trades := api.Group("/trades")
 	trades.Post("/import", tradeHandler.Import)
 	trades.Get("/", tradeHandler.List)
 	trades.Get("/summary", tradeHandler.Summary)
 	trades.Post("/convert-bubbles", tradeHandler.ConvertBubbles)
+	trades.Post("/backfill-bubbles", tradeHandler.BackfillBubbles)
 	trades.Post("/link", tradeHandler.LinkToBubble)
 	trades.Post("/unlink", tradeHandler.UnlinkFromBubble)
 
@@ -157,4 +168,29 @@ func RegisterRoutes(
 
 	// Telegram webhook (no auth)
 	app.Post("/api/v1/webhook/telegram", notificationHandler.TelegramWebhook)
+
+	// Unified portfolio endpoints
+	portfolio := api.Group("/portfolio")
+	portfolio.Get("/timeline", portfolioHandler.Timeline)
+	portfolio.Get("/positions", portfolioHandler.Positions)
+	portfolio.Post("/backfill-bubbles", portfolioHandler.BackfillBubbles)
+	portfolio.Post("/backfill-events", portfolioHandler.BackfillEventsFromTrades)
+
+	api.Get("/instruments", portfolioHandler.Instruments)
+
+	manualPositions := api.Group("/manual-positions")
+	manualPositions.Get("/", manualPositionHandler.List)
+	manualPositions.Post("/", manualPositionHandler.Create)
+	manualPositions.Put("/:id", manualPositionHandler.Update)
+	manualPositions.Delete("/:id", manualPositionHandler.Delete)
+
+	imports := api.Group("/imports")
+	imports.Post("/trades", importHandler.ImportTrades)
+
+	connections := api.Group("/connections")
+	connections.Post("/", connectionHandler.Create)
+
+	safety := api.Group("/safety")
+	safety.Get("/today", safetyHandler.ListDaily)
+	safety.Post("/reviews", safetyHandler.UpsertReview)
 }

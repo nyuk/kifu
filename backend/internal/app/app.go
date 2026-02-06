@@ -74,6 +74,10 @@ func Run() error {
 	alertOutcomeRepo := repositories.NewAlertOutcomeRepository(pool)
 	channelRepo := repositories.NewNotificationChannelRepository(pool)
 	verifyCodeRepo := repositories.NewTelegramVerifyCodeRepository(pool)
+	portfolioRepo := repositories.NewPortfolioRepository(pool)
+	manualPositionRepo := repositories.NewManualPositionRepository(pool)
+	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
+	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
 	var tgSender *notification.TelegramSender
@@ -129,9 +133,8 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, portfolioRepo, manualPositionRepo, safetyRepo, poller, encKey, jwtSecret)
 
-	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, encKey)
 	go poller.Start(context.Background())
 
 	quotaReset := jobs.NewQuotaResetJob(subscriptionRepo)
@@ -160,6 +163,9 @@ func Run() error {
 	// Alert outcome calculator job
 	alertOutcomeCalc := jobs.NewAlertOutcomeCalculator(alertOutcomeRepo)
 	alertOutcomeCalc.Start(context.Background())
+
+	positionCalc := jobs.NewPositionCalculator(portfolioRepo)
+	positionCalc.Start(context.Background())
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)
