@@ -62,9 +62,6 @@ func RegisterRoutes(
 	users.Get("/me/subscription", userHandler.GetSubscription)
 	users.Get("/me/symbols", marketHandler.GetUserSymbols)
 	users.Put("/me/symbols", marketHandler.UpdateUserSymbols)
-	users.Get("/me/ai-keys", aiHandler.GetUserAIKeys)
-	users.Put("/me/ai-keys", aiHandler.UpdateUserAIKeys)
-	users.Delete("/me/ai-keys/:provider", aiHandler.DeleteUserAIKey)
 
 	exchanges := api.Group("/exchanges")
 	exchanges.Post("/", exchangeHandler.Register)
@@ -86,9 +83,12 @@ func RegisterRoutes(
 	bubbles.Get("/:id/similar", similarHandler.SimilarByBubble)
 	bubbles.Get("/search", similarHandler.Search)
 
-	ai := api.Group("/bubbles")
-	ai.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
-	ai.Get("/:id/ai-opinions", aiHandler.ListOpinions)
+	bubbleAI := api.Group("/bubbles")
+	bubbleAI.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
+	bubbleAI.Get("/:id/ai-opinions", aiHandler.ListOpinions)
+
+	ai := api.Group("/ai")
+	ai.Post("/one-shot", aiHandler.RequestOneShot)
 
 	trades := api.Group("/trades")
 	trades.Post("/import", tradeHandler.Import)

@@ -6,19 +6,42 @@ import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
 import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
+import { api } from '../lib/api'
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
   const clearTokens = useAuthStore((state) => state.clearTokens)
+  const accessToken = useAuthStore((state) => state.accessToken)
   const router = useRouter()
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
+  const [profileEmail, setProfileEmail] = useState<string | null>(null)
   
   useEffect(() => {
     setMounted(true)
     setGuestSessionId(readGuestSession()?.id || null)
   }, [])
+
+  useEffect(() => {
+    let isActive = true
+    const load = async () => {
+      if (!accessToken) {
+        if (isActive) setProfileEmail(null)
+        return
+      }
+      try {
+        const response = await api.get<{ email?: string }>('/v1/users/me')
+        if (isActive) setProfileEmail(response.data?.email || null)
+      } catch {
+        if (isActive) setProfileEmail(null)
+      }
+    }
+    load()
+    return () => {
+      isActive = false
+    }
+  }, [accessToken])
   
   const navItems = [
     { label: t.navHome, to: '/home' },
@@ -106,12 +129,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.sessionLabel}</p>
-            <p className="mt-2 text-sm text-neutral-300">{t.sessionText}</p>
-            {guestSessionId && (
-              <p className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
-                Guest Session · {guestSessionId}
-              </p>
-            )}
+            <p className="mt-2 text-sm text-neutral-300">
+              {t.sessionText}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {guestSessionId ? (
+                <span className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                  Guest Session · {guestSessionId}
+                </span>
+              ) : (
+                <span className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200">
+                  Member Session
+                </span>
+              )}
+              <span className="text-[11px] text-neutral-500">
+                {profileEmail ? `현재 계정: ${profileEmail}` : '현재 계정 불러오는 중...'}
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleLogout}

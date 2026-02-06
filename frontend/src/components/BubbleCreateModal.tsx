@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useBubbleStore, type AgentResponse } from '../lib/bubbleStore'
 import { fetchAiOpinion } from '../lib/mockAi'
+import { buildEvidencePacket, describeEvidencePacket, type EvidencePacket } from '../lib/evidencePacket'
+import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
+import { api } from '../lib/api'
 
 
 type BubbleCreateModalProps = {
@@ -50,6 +53,18 @@ export function BubbleCreateModal({
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
+  const [includeEvidence, setIncludeEvidence] = useState(false)
+  const [includeRecentTrades, setIncludeRecentTrades] = useState(true)
+  const [includeSummary, setIncludeSummary] = useState(true)
+  const [evidencePacket, setEvidencePacket] = useState<EvidencePacket | null>(null)
+  const [evidencePreview, setEvidencePreview] = useState<string[]>([])
+  const [evidenceLoading, setEvidenceLoading] = useState(false)
+  const [evidenceError, setEvidenceError] = useState('')
+
+  const aiSections = useMemo(() => {
+    if (!aiResponse?.response) return []
+    return parseAiSections(aiResponse.response)
+  }, [aiResponse])
 
   useEffect(() => {
     if (!open) return
@@ -63,11 +78,32 @@ export function BubbleCreateModal({
     setAiResponse(null)
     setAiLoading(false)
     setPromptType('brief')
+    setIncludeEvidence(false)
+    setIncludeRecentTrades(true)
+    setIncludeSummary(true)
+    setEvidencePacket(null)
+    setEvidencePreview([])
+    setEvidenceLoading(false)
+    setEvidenceError('')
 
     // Use defaultTime if provided, otherwise now
     const initialDate = defaultTime ? new Date(defaultTime) : new Date()
     setCandleTime(formatLocalDateTime(initialDate))
   }, [open, defaultPrice, defaultTimeframe, defaultTime])
+
+  useEffect(() => {
+    if (!includeEvidence) {
+      setEvidencePacket(null)
+      setEvidencePreview([])
+      setEvidenceError('')
+    }
+  }, [includeEvidence])
+
+  useEffect(() => {
+    if (!includeEvidence) return
+    setEvidencePacket(null)
+    setEvidencePreview([])
+  }, [includeEvidence, includeRecentTrades, includeSummary, symbol, timeframe])
 
   const tags = useMemo(() => {
     return tagsInput
@@ -86,18 +122,72 @@ export function BubbleCreateModal({
     }
     if (!price || !symbol) return
     setAiLoading(true)
+    setEvidenceError('')
     try {
-      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType)
+      let packet: EvidencePacket | null = null
+      if (includeEvidence) {
+        setEvidenceLoading(true)
+        try {
+          packet = await buildEvidencePacket({
+            symbol,
+            timeframe,
+            includeRecentTrades,
+            includeSummary,
+          })
+          if (packet) {
+            setEvidencePacket(packet)
+            setEvidencePreview(describeEvidencePacket(packet))
+          }
+        } catch (err) {
+          console.error(err)
+          setEvidenceError('증거 패킷을 구성하지 못했습니다.')
+        } finally {
+          setEvidenceLoading(false)
+        }
+      }
+      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType, packet)
       setAiResponse(response)
       // Auto-append recommendation to note if empty
       if (!memo) {
         setMemo(response.response)
       }
-    } catch (e) {
-      console.error(e)
-      setError('AI 의견을 가져오는데 실패했습니다.')
+    } catch (e: any) {
+      const detail = e?.response?.data?.message
+      const hint = detail?.includes('openai error 502')
+        ? '일시적인 오류입니다. 잠시 후 다시 시도해주세요.'
+        : detail
+          ? `AI 의견을 가져오는데 실패했습니다. (${detail})`
+          : 'AI 의견을 가져오는데 실패했습니다.'
+      setError(hint)
     } finally {
       setAiLoading(false)
+    }
+  }
+
+  const handleBuildEvidencePreview = async () => {
+    if (disableAi) {
+      setEvidenceError('게스트 모드에서는 증거 패킷을 사용할 수 없습니다.')
+      return
+    }
+    if (!includeEvidence) return
+    setEvidenceLoading(true)
+    setEvidenceError('')
+    try {
+      const packet = await buildEvidencePacket({
+        symbol,
+        timeframe,
+        includeRecentTrades,
+        includeSummary,
+      })
+      if (packet) {
+        setEvidencePacket(packet)
+        setEvidencePreview(describeEvidencePacket(packet))
+      }
+    } catch (err) {
+      console.error(err)
+      setEvidenceError('증거 패킷을 구성하지 못했습니다.')
+    } finally {
+      setEvidenceLoading(false)
     }
   }
 
@@ -132,6 +222,18 @@ export function BubbleCreateModal({
 
       if (aiResponse) {
         updateBubble(bubble.id, { agents: [aiResponse], note: memo.trim(), tags })
+        try {
+          await api.post('/v1/notes', {
+            bubble_id: bubble.id,
+            title: 'AI 복기 요약',
+            content: aiResponse.response,
+            tags: ['ai', 'one-shot', promptType, symbol.toUpperCase()],
+            lesson_learned: 'AI 요약을 참고하되 최종 판단은 본인이 결정.',
+            emotion: 'uncertain',
+          })
+        } catch (noteError) {
+          console.error('Failed to save AI review note:', noteError)
+        }
       }
 
       onCreated?.()
@@ -281,8 +383,95 @@ export function BubbleCreateModal({
               </p>
             )}
             {aiResponse && (
-              <div className="mt-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
-                {aiResponse.response}
+              <div className="mt-2 space-y-2">
+                {aiSections.length > 0 ? (
+                  aiSections.map((section) => (
+                    <div
+                      key={`${section.title}-${section.body.slice(0, 16)}`}
+                      className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
+                      <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                    {aiResponse.response}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evidence Packet</p>
+                <p className="text-[11px] text-neutral-500">일회성 분석 패킷 · 서버에 저장되지 않습니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIncludeEvidence((prev) => !prev)}
+                disabled={disableAi}
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                  includeEvidence
+                    ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200'
+                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                } ${disableAi ? 'cursor-not-allowed opacity-60' : ''}`}
+              >
+                {includeEvidence ? '첨부됨' : '첨부 안함'}
+              </button>
+            </div>
+
+            {includeEvidence && (
+              <div className="mt-3 space-y-2 text-xs text-neutral-300">
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={includeRecentTrades}
+                      onChange={(event) => setIncludeRecentTrades(event.target.checked)}
+                      className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                    />
+                    최근 체결 10건
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={includeSummary}
+                      onChange={(event) => setIncludeSummary(event.target.checked)}
+                      className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                    />
+                    최근 7일 요약
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBuildEvidencePreview}
+                    disabled={evidenceLoading}
+                    className="rounded border border-neutral-700 px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-neutral-500 disabled:opacity-60"
+                  >
+                    {evidenceLoading ? '준비 중...' : '패킷 미리보기'}
+                  </button>
+                  {evidencePacket && (
+                    <span className="text-[11px] text-emerald-200">패킷 준비 완료</span>
+                  )}
+                </div>
+
+                {evidenceError && (
+                  <p className="rounded border border-rose-400/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200">
+                    {evidenceError}
+                  </p>
+                )}
+
+                {evidencePreview.length > 0 && (
+                  <div className="rounded border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-[11px] text-neutral-400">
+                    {evidencePreview.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

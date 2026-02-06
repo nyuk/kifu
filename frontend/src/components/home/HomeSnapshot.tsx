@@ -301,12 +301,12 @@ export function HomeSnapshot() {
           : 'bg-gradient-to-b from-slate-950 via-indigo-950/60 to-slate-950'
   const heroText =
     resolvedMode === 'good'
-      ? '오늘 흐름이 좋습니다. 이 리듬을 기억하세요.'
+      ? '오늘의 리듬이 선명합니다. 이 느낌을 기록하세요.'
       : resolvedMode === 'bad'
-        ? '손실 패턴이 보입니다. 복기가 필요한 순간입니다.'
+        ? '흔들림이 남아 있습니다. 다시 정리할 시간입니다.'
         : resolvedMode === 'ok'
-          ? '큰 흔들림 없이 중립입니다. 작은 신호를 기록해보세요.'
-          : '아직 기록이 없습니다. 첫 버블을 남겨보세요.'
+          ? '큰 흔들림은 없었습니다. 작은 신호만 남겨두세요.'
+          : '아직 기록이 없습니다. 첫 문장을 남겨주세요.'
   const heroAccent =
     resolvedMode === 'good'
       ? 'text-lime-300'
@@ -315,6 +315,29 @@ export function HomeSnapshot() {
         : resolvedMode === 'ok'
           ? 'text-emerald-200'
           : 'text-indigo-200'
+  const routineItems = [
+    {
+      key: 'market',
+      title: '시장 기운 읽기',
+      done: Boolean(lastUpdated),
+      href: '/alert',
+      hint: '긴급 브리핑 30초',
+    },
+    {
+      key: 'position',
+      title: '내 자리 확인',
+      done: tradesCount > 0,
+      href: '/portfolio',
+      hint: tradesCount > 0 ? `${tradesCount.toLocaleString()}건 체결 감지` : '거래 기록 비어있음',
+    },
+    {
+      key: 'journal',
+      title: '한 줄 남기기',
+      done: bubbleCount > 0,
+      href: '/chart?onboarding=1',
+      hint: bubbleCount > 0 ? `${bubbleCount.toLocaleString()}개 기록` : '오늘 판단 한 줄',
+    },
+  ] as const
 
   useEffect(() => {
     const from = prevPnlRef.current
@@ -338,9 +361,9 @@ export function HomeSnapshot() {
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Home Snapshot</p>
-            <h1 className="text-3xl font-semibold">오늘의 스냅샷</h1>
-            <p className="text-sm text-neutral-400">{snapshotPeriod} 핵심 신호만 빠르게</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Library Ritual</p>
+            <h1 className="text-3xl font-semibold">서재 모드</h1>
+            <p className="text-sm text-neutral-400">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
             <p className="text-xs text-neutral-500">기간 기준: 캔들 시간</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -386,8 +409,53 @@ export function HomeSnapshot() {
           </div>
         </header>
 
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Quiet Routine</p>
+            <h2 className="mt-2 text-xl font-semibold text-neutral-100">오늘의 3가지 질문</h2>
+            <div className="mt-4 space-y-2">
+              {routineItems.map((item) => (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className="flex items-center justify-between rounded-xl border border-neutral-800/70 bg-neutral-950/40 px-4 py-3 transition hover:border-neutral-600"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-100">{item.title}</p>
+                    <p className="text-xs text-neutral-500">{item.hint}</p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                      item.done
+                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                        : 'border-amber-400/40 bg-amber-500/10 text-amber-200'
+                    }`}
+                  >
+                    {item.done ? '완료' : '대기'}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Closing Note</p>
+            <h2 className="mt-2 text-xl font-semibold text-neutral-100">오늘의 마감</h2>
+            <p className="mt-2 text-sm text-neutral-400">
+              긴급 대응과 판단 흐름을 한 장으로 정리합니다.
+            </p>
+            <div className="mt-4 space-y-2">
+              <Link href="/alert" className="block rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200">
+                긴급 브리핑 다시보기
+              </Link>
+              <Link href="/review" className="block rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200">
+                복기 노트 남기기
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-3 text-xs text-neutral-300">
-          <span className="text-neutral-500">배경 미리보기:</span>
+          <span className="text-neutral-500">무드 미리보기:</span>
           {([
             { key: 'auto', label: '자동' },
             { key: 'good', label: '좋음' },
@@ -413,11 +481,11 @@ export function HomeSnapshot() {
         <section className="rounded-3xl border border-neutral-800/60 bg-gradient-to-br from-neutral-950 via-neutral-900/80 to-lime-900/30 p-6 lg:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Focus Snapshot</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Focus Memory</p>
               <p className={`text-sm ${heroAccent}`}>
                 {heroText}
               </p>
-              <p className="text-sm text-neutral-300">결과와 AI 합의를 한 번에 정리합니다.</p>
+              <p className="text-sm text-neutral-300">결과와 AI 의견을 한 장에 모아둡니다.</p>
               <StatusGauge mode={resolvedMode} />
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-neutral-700/80 bg-neutral-900/70 px-3 py-1 text-xs text-neutral-300">
@@ -442,7 +510,7 @@ export function HomeSnapshot() {
                   {formatCurrency(animatedPnl, currency.symbol)}
                 </p>
               </div>
-              <p className="mt-2 text-xs text-neutral-500">최근 흐름을 한 눈에</p>
+              <p className="mt-2 text-xs text-neutral-500">오늘 흐름을 한 눈에</p>
             </div>
           </div>
         </section>

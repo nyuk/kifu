@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
+import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 
 type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
@@ -318,9 +319,29 @@ export function Bubbles() {
                             <span className="text-xs text-neutral-500">{agent.model}</span>
                             <span className="text-xs text-neutral-600 ml-auto">{agent.prompt_type}</span>
                           </div>
-                          <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                            {agent.response}
-                          </p>
+                          {(() => {
+                            const sections = parseAiSections(agent.response || '')
+                            if (sections.length === 0) {
+                              return (
+                                <p className="text-sm text-neutral-300 leading-relaxed whitespace-pre-wrap">
+                                  {agent.response}
+                                </p>
+                              )
+                            }
+                            return (
+                              <div className="space-y-2">
+                                {sections.map((section) => (
+                                  <div
+                                    key={`${agent.provider}-${section.title}-${section.body.slice(0, 12)}`}
+                                    className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                                  >
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
+                                    <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          })()}
                         </div>
                       ))}
                     </div>

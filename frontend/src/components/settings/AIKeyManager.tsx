@@ -226,7 +226,7 @@ export function AIKeyManager() {
         <p className="text-xs text-neutral-500">
           AI 키를 등록하면 버블 생성 시 각 AI의 의견을 받을 수 있습니다.
           <br />
-          최소 하나 이상의 AI 키를 등록해야 AI 의견 기능을 사용할 수 있습니다.
+          서버에 관리자 키가 설정된 경우에는 등록 없이도 AI 의견 기능을 사용할 수 있습니다.
         </p>
       </div>
     </div>
