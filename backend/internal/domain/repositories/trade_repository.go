@@ -20,45 +20,45 @@ type TradeFilter struct {
 }
 
 type TradeSummary struct {
-	TotalTrades      int
-	BuyCount         int
-	SellCount        int
-	TotalVolume      string
-	RealizedPnLTotal *string
-	Wins             int
-	Losses           int
-	Breakeven        int
-	AveragePnL       *string
+	TotalTrades      int     `json:"total_trades"`
+	BuyCount         int     `json:"buy_count"`
+	SellCount        int     `json:"sell_count"`
+	TotalVolume      string  `json:"total_volume"`
+	RealizedPnLTotal *string `json:"realized_pnl_total"`
+	Wins             int     `json:"wins"`
+	Losses           int     `json:"losses"`
+	Breakeven        int     `json:"breakeven"`
+	AveragePnL       *string `json:"average_pnl"`
 }
 
 type TradeExchangeSummary struct {
-	Exchange         string
-	TradeCount       int
-	TotalTrades      int
-	BuyCount         int
-	SellCount        int
-	TotalVolume      string
-	RealizedPnLTotal *string
+	Exchange         string  `json:"exchange"`
+	TradeCount       int     `json:"trade_count"`
+	TotalTrades      int     `json:"total_trades"`
+	BuyCount         int     `json:"buy_count"`
+	SellCount        int     `json:"sell_count"`
+	TotalVolume      string  `json:"total_volume"`
+	RealizedPnLTotal *string `json:"realized_pnl_total"`
 }
 
 type TradeSideSummary struct {
-	Side             string
-	TradeCount       int
-	TotalTrades      int
-	TotalVolume      string
-	RealizedPnLTotal *string
+	Side             string  `json:"side"`
+	TradeCount       int     `json:"trade_count"`
+	TotalTrades      int     `json:"total_trades"`
+	TotalVolume      string  `json:"total_volume"`
+	RealizedPnLTotal *string `json:"realized_pnl_total"`
 }
 
 type TradeSymbolSummary struct {
-	Symbol           string
-	TradeCount       int
-	TotalTrades      int
-	BuyCount         int
-	SellCount        int
-	TotalVolume      string
-	RealizedPnLTotal *string
-	Wins             int
-	Losses           int
+	Symbol           string  `json:"symbol"`
+	TradeCount       int     `json:"trade_count"`
+	TotalTrades      int     `json:"total_trades"`
+	BuyCount         int     `json:"buy_count"`
+	SellCount        int     `json:"sell_count"`
+	TotalVolume      string  `json:"total_volume"`
+	RealizedPnLTotal *string `json:"realized_pnl_total"`
+	Wins             int     `json:"wins"`
+	Losses           int     `json:"losses"`
 }
 
 type TradeRepository interface {

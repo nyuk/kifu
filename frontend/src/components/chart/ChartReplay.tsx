@@ -112,7 +112,7 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
 
   if (!replay.isActive || klines.length === 0) {
     return (
-      <div className="bg-zinc-800/50 rounded-lg p-4">
+      <div className="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-3">
         <button
           onClick={() => {
             if (klines.length > 0) {
@@ -121,9 +121,9 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
               setReplayTime(initialTime)
             }
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
+          className="flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-400/20"
         >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
           </svg>
           리플레이 시작
@@ -133,22 +133,20 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
   }
 
   return (
-    <div className="bg-zinc-800/50 rounded-lg p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm">
+    <div className="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs">
           <span className="text-zinc-400">리플레이 모드</span>
-          <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 rounded text-xs">
+          <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
             {replay.isPlaying ? '재생 중' : '일시정지'}
           </span>
         </div>
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
-          <span>표시: {visibleCandles}개</span>
-          <span>숨김: {hiddenCandles}개</span>
+        <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+          <span>표시 {visibleCandles}개</span>
+          <span>숨김 {hiddenCandles}개</span>
         </div>
       </div>
 
-      {/* Time Slider */}
       <TimeSlider
         startTime={startTime}
         endTime={endTime}
@@ -157,7 +155,6 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
         disabled={replay.isPlaying}
       />
 
-      {/* Controls */}
       <div className="flex items-center justify-center">
         <ReplayControls
           isPlaying={replay.isPlaying}

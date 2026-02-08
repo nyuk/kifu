@@ -840,6 +840,7 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 	builder.WriteString("- 숫자/레벨/조건을 가능한 구체적으로 제시\n\n")
 	builder.WriteString("- 증거 패킷에 Open positions가 있으면 최소 1개 포지션을 언급하고 그 기준으로 행동 제안\n")
 	builder.WriteString("- 포지션에 손절/익절 가격이 있으면 해당 레벨을 반드시 언급\n\n")
+	builder.WriteString("- 사용자 메모/태그에 손절·익절·관망·진입·축소·정리 키워드가 있으면 그 판단과 일치/상충 여부를 1줄로 명시\n\n")
 	builder.WriteString("현재 상황:\n")
 	builder.WriteString(fmt.Sprintf("- 심볼: %s\n", strings.TrimSpace(req.Symbol)))
 	builder.WriteString(fmt.Sprintf("- 타임프레임: %s\n", strings.TrimSpace(req.Timeframe)))
@@ -859,8 +860,9 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("3) 리스크: 2줄 이내\n")
 		builder.WriteString("4) 유효/무효 조건: 2줄 이내\n")
 		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소 + 이유 1줄\n")
-		builder.WriteString("6) 체크리스트: 불릿 3개 이하\n")
-		builder.WriteString("7) 결론: 한 줄\n")
+		builder.WriteString("6) 사용자 판단 대비: 한 줄(일치/상충)\n")
+		builder.WriteString("7) 체크리스트: 불릿 3개 이하\n")
+		builder.WriteString("8) 결론: 한 줄\n")
 	case "technical":
 		builder.WriteString("\n출력 형식:\n")
 		builder.WriteString("1) 추세/모멘텀: 한 줄\n")
@@ -868,15 +870,17 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("3) 무효화 조건: 한 줄\n")
 		builder.WriteString("4) 시나리오: 상승/하락 각 1줄\n")
 		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소\n")
-		builder.WriteString("6) 추가 확인 데이터: 한 줄(애매할 때)\n")
-		builder.WriteString("7) 결론: 한 줄\n")
+		builder.WriteString("6) 사용자 판단 대비: 한 줄(일치/상충)\n")
+		builder.WriteString("7) 추가 확인 데이터: 한 줄(애매할 때)\n")
+		builder.WriteString("8) 결론: 한 줄\n")
 	default:
 		builder.WriteString("\n출력 형식:\n")
 		builder.WriteString("1) 상황: 한 줄\n")
 		builder.WriteString("2) 핵심 근거: 한 줄(증거 패킷 기준)\n")
 		builder.WriteString("3) 리스크: 한 줄\n")
 		builder.WriteString("4) 행동 제안: 포지션 있으면 유지/축소/정리/추가, 없으면 관망/진입/축소\n")
-		builder.WriteString("5) 결론: 한 줄\n")
+		builder.WriteString("5) 사용자 판단 대비: 한 줄(일치/상충)\n")
+		builder.WriteString("6) 결론: 한 줄\n")
 	}
 	return builder.String()
 }
@@ -889,22 +893,25 @@ func mockOneShotResponse(req OneShotAIRequest) string {
 3) 리스크: 변동성 확대 구간에서 역추세 진입은 손실 확률이 높습니다.
 4) 유효/무효 조건: 직전 고점 회복 실패 시 신중, 고점 회복 시 시나리오 재평가.
 5) 행동 제안: 보유 중이면 손절 기준 점검 후 축소 또는 정리 검토.
-6) 체크리스트: 손절 기준 확인 · 포지션 사이즈 축소 · 주요 뉴스/지표 확인
-7) 결론: 기준 레벨 확인 전까지 무리한 진입은 피하는 편이 안전합니다.`)
+6) 사용자 판단 대비: 손절 기준 점검 방향으로 일치.
+7) 체크리스트: 손절 기준 확인 · 포지션 사이즈 축소 · 주요 뉴스/지표 확인
+8) 결론: 기준 레벨 확인 전까지 무리한 진입은 피하는 편이 안전합니다.`)
 	case "technical":
 		return strings.TrimSpace(`1) 추세/모멘텀: 단기 모멘텀 약화, 방향성 불명확.
 2) 핵심 레벨: 지지 1개/저항 1개 기준만 확인.
 3) 무효화 조건: 직전 저점 이탈 시 하방 시나리오 강화.
 4) 시나리오: 상승—저항 돌파 후 눌림 확인 / 하락—지지 이탈 후 반등 실패.
 5) 행동 제안: 보유 중이면 리스크 축소, 신규 진입은 관망.
-6) 추가 확인 데이터: 거래량/뉴스 이벤트 확인.
-7) 결론: 레벨 확인 전까지 관망이 합리적.`)
+6) 사용자 판단 대비: 관망 판단과 일치.
+7) 추가 확인 데이터: 거래량/뉴스 이벤트 확인.
+8) 결론: 레벨 확인 전까지 관망이 합리적.`)
 	default:
 		return strings.TrimSpace(`1) 상황: 변동성 확대로 판단 구간이 빠르게 바뀌는 상태입니다.
 2) 핵심 근거: 변동폭 확대와 방향성 불확실 구간이 동시에 나타납니다.
 3) 리스크: 방향 확인 없이 추격 진입하면 손실 가능성이 높습니다.
 4) 행동 제안: 보유 중이면 축소 또는 정리 우선, 신규 진입은 관망.
-5) 결론: 신호 확인 전까지 관망 또는 소규모 대응이 적합합니다.`)
+5) 사용자 판단 대비: 관망/축소 쪽으로 일치.
+6) 결론: 신호 확인 전까지 관망 또는 소규모 대응이 적합합니다.`)
 	}
 }
 

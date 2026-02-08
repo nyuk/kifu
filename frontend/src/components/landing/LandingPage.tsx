@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
 type Candle = {
@@ -185,9 +185,329 @@ function MiniChartPreview() {
     )
 }
 
+const highlightStream = [
+    'Decision Layer',
+    'Evidence Packet',
+    'AI 비교',
+    '긴급 모드',
+    '포지션 상태',
+    '거래내역 자동 수집',
+    '버블 복기',
+    '리플레이',
+]
+
+const storyChapters = [
+    {
+        kicker: 'Snapshot',
+        title: '오늘의 판단 스냅샷',
+        desc: '한 화면에서 내 상태를 결정합니다. 손익, 포지션, 오늘의 루틴을 동시에 확인합니다.',
+        tags: ['한 화면 결론', '오늘의 루틴', '포지션 요약'],
+        accent: 'from-cyan-500/15 via-cyan-500/5',
+    },
+    {
+        kicker: 'Evidence',
+        title: '증거 패킷으로 맥락 전달',
+        desc: '최근 체결, 요약, 버블 기록을 묶어 AI에게 전달합니다. 원하는 범위를 직접 선택합니다.',
+        tags: ['범위 선택', '버블 필터', '요약 자동'],
+        accent: 'from-emerald-500/15 via-emerald-500/5',
+    },
+    {
+        kicker: 'AI Stack',
+        title: '멀티 AI 비교와 복기 저장',
+        desc: '한 번의 질문으로 다양한 모델을 비교하고, 응답은 자동으로 복기 카드로 저장됩니다.',
+        tags: ['AI 비교', '복기 카드', '자동 저장'],
+        accent: 'from-purple-500/15 via-purple-500/5',
+    },
+    {
+        kicker: 'Alert',
+        title: '긴급 상황은 한 화면에서',
+        desc: '알림이 울리면 바로 판단하고 기록합니다. 급변 구간에서 행동 로그가 남습니다.',
+        tags: ['긴급 모드', '행동 로그', '즉시 대응'],
+        accent: 'from-rose-500/15 via-rose-500/5',
+    },
+]
+
+const stackCards = [
+    {
+        title: 'Evidence Packet',
+        desc: '필요한 범위를 골라 AI에게 전달.',
+        badge: '범위 선택형',
+    },
+    {
+        title: 'Decision Layer',
+        desc: '오늘의 판단과 루틴을 한 장에.',
+        badge: '스냅샷 UI',
+    },
+    {
+        title: 'AI Compare',
+        desc: '모델별 의견을 나란히 비교.',
+        badge: '멀티 모델',
+    },
+]
+
+const integrations = [
+    'Binance',
+    'Upbit',
+    'Bybit',
+    'Bithumb',
+    'Hyperliquid',
+    'Jupiter',
+    'Uniswap',
+    'KIS',
+]
+
+const backgroundThemes: Record<string, string> = {
+    hero: 'from-[#05060a] via-[#0b0f14] to-[#05070d]',
+    features: 'from-[#061018] via-[#0b1320] to-[#05070d]',
+    stack: 'from-[#050713] via-[#0f1b2e] to-[#04070b]',
+    capabilities: 'from-[#080b14] via-[#111827] to-[#0b0f14]',
+    roadmap: 'from-[#0b0f14] via-[#1b130f] to-[#0b0f14]',
+    vision: 'from-[#0b0f14] via-[#0d1b1f] to-[#0b0f14]',
+    pricing: 'from-[#0b0f14] via-[#111827] to-[#07090d]',
+}
+
 export function LandingPage() {
+    const [activeSection, setActiveSection] = useState('hero')
+    const progressRef = useRef<HTMLDivElement | null>(null)
+    const storyRef = useRef<HTMLDivElement | null>(null)
+    const heroRef = useRef<HTMLElement | null>(null)
+    const featuresRef = useRef<HTMLElement | null>(null)
+    const [storyProgress, setStoryProgress] = useState(0)
+    const [storyVisible, setStoryVisible] = useState(false)
+    const [heroVisible, setHeroVisible] = useState(true)
+    const [scrollY, setScrollY] = useState(0)
+    const [featuresTop, setFeaturesTop] = useState(0)
+
+    useEffect(() => {
+        // handled by scroll-based detector below to avoid sticky overlap glitches
+    }, [])
+
+    useEffect(() => {
+        let rafId = 0
+        let ticking = false
+
+        const updateProgress = () => {
+            const scrollTop = window.scrollY
+            const viewportHeight = window.innerHeight
+            const docHeight = document.documentElement.scrollHeight
+            const maxScroll = Math.max(docHeight - viewportHeight, 1)
+            const progress = Math.min(scrollTop / maxScroll, 1)
+            setScrollY(scrollTop)
+            if (progressRef.current) {
+                progressRef.current.style.transform = `scaleX(${progress})`
+            }
+            const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-section]'))
+            const viewportCenter = window.innerHeight * 0.5
+            let nextSection = activeSection
+            for (const section of sections) {
+                const rect = section.getBoundingClientRect()
+                if (rect.top <= viewportCenter && rect.bottom >= viewportCenter) {
+                    const id = section.getAttribute('data-section')
+                    if (id) nextSection = id
+                }
+                if (rect.top < window.innerHeight * 0.85) {
+                    section.classList.add('is-visible')
+                }
+            }
+
+            if (featuresRef.current) {
+                const top = featuresRef.current.offsetTop
+                setFeaturesTop(top)
+                const visible = window.scrollY < top - 60
+                setHeroVisible(visible)
+                if (visible) {
+                    nextSection = 'hero'
+                }
+            }
+
+            if (nextSection !== activeSection) {
+                setActiveSection(nextSection)
+            }
+            ticking = false
+        }
+
+        const onScroll = () => {
+            if (!ticking) {
+                ticking = true
+                rafId = window.requestAnimationFrame(updateProgress)
+            }
+        }
+
+        updateProgress()
+        window.addEventListener('scroll', onScroll, { passive: true })
+        window.addEventListener('resize', onScroll)
+
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            window.removeEventListener('resize', onScroll)
+            window.cancelAnimationFrame(rafId)
+        }
+    }, [])
+
+    useEffect(() => {
+        const section = storyRef.current
+        if (!section) return
+        let rafId = 0
+        let ticking = false
+
+        const updateStory = () => {
+            const start = section.offsetTop
+            const end = section.offsetTop + section.offsetHeight - window.innerHeight * 0.2
+            const raw = (window.scrollY - start) / Math.max(end - start, 1)
+            const progress = Math.min(Math.max(raw, 0), 1)
+            const rect = section.getBoundingClientRect()
+            const visible = rect.top <= window.innerHeight * 0.2 && rect.bottom >= window.innerHeight * 0.8
+            setStoryProgress(progress)
+            setStoryVisible(visible)
+            ticking = false
+        }
+
+        const onScroll = () => {
+            if (ticking) return
+            ticking = true
+            rafId = window.requestAnimationFrame(updateStory)
+        }
+
+        updateStory()
+        window.addEventListener('scroll', onScroll, { passive: true })
+        window.addEventListener('resize', onScroll)
+
+        return () => {
+            window.removeEventListener('scroll', onScroll)
+            window.removeEventListener('resize', onScroll)
+            window.cancelAnimationFrame(rafId)
+        }
+    }, [])
+
+    const backgroundClass = backgroundThemes.hero
+    const heroActive = heroVisible
+    const totalSteps = storyChapters.length
+    const stepProgress = storyProgress * (totalSteps - 1)
+    const currentIndex = Math.min(totalSteps - 1, Math.max(0, Math.floor(stepProgress)))
+    const nextIndex = Math.min(totalSteps - 1, currentIndex + 1)
+    const stepOffset = currentIndex === nextIndex ? 0 : stepProgress - currentIndex
+    const storyActive = storyVisible
+    const enterStart = 0.85
+    const enterEnd = 0.995
+    const enterRaw = stepOffset <= enterStart ? 0 : stepOffset >= enterEnd ? 1 : (stepOffset - enterStart) / (enterEnd - enterStart)
+    const enterEase = enterRaw * enterRaw * (3 - 2 * enterRaw)
+
+    const currentLayerStyle = {
+        opacity: 1 - enterEase,
+        transform: `translateY(${-enterEase * 10}%) scale(${1 - enterEase * 0.02})`,
+        zIndex: 1,
+        pointerEvents: enterEase > 0.6 ? 'none' : 'auto',
+    } as React.CSSProperties
+
+    const nextLayerStyle = {
+        opacity: enterEase,
+        transform: `translateY(${(1 - enterEase) * 90}%)`,
+        zIndex: 2,
+        pointerEvents: enterEase < 0.4 ? 'none' : 'auto',
+    } as React.CSSProperties
+
+    const renderStoryVisual = (index: number) => {
+        if (index === 0) {
+            return (
+                <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        {[
+                            { label: '오늘 손익', value: '+3.2%', tone: 'text-emerald-300' },
+                            { label: '포지션', value: '2 Open', tone: 'text-cyan-300' },
+                            { label: '루틴', value: '1/1 완료', tone: 'text-amber-300' },
+                        ].map((stat, idx) => (
+                            <div
+                                key={stat.label}
+                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-neutral-300 animate-pulse-strong"
+                                style={{ animationDelay: `${idx * 0.4}s` }}
+                            >
+                                <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-500">{stat.label}</p>
+                                <p className={`mt-2 text-lg font-semibold ${stat.tone}`}>{stat.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-neutral-300">
+                        <div className="flex items-center justify-between">
+                            <span className="uppercase tracking-[0.2em] text-neutral-500">Snapshot</span>
+                            <span className="flex items-center gap-1 text-[10px] text-emerald-300">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-blink" />
+                                LIVE
+                            </span>
+                        </div>
+                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                            <div className="h-full w-1/3 bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-400 animate-progress-strong" />
+                        </div>
+                    </div>
+                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30 px-4 py-3 shimmer-bar">
+                        <p className="text-xs text-neutral-300">오늘의 판단 흐름이 요약됩니다.</p>
+                    </div>
+                </div>
+            )
+        }
+        if (index === 1) {
+            return (
+                <div className="space-y-3">
+                    {['최근 30일', '전체 심볼', '버블 태그 적용', '포지션 포함'].map((item, idx) => (
+                        <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-neutral-300 shimmer-strong" style={{ animationDelay: `${idx * 0.2}s` }}>
+                            {item}
+                        </div>
+                    ))}
+                    <div className="rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-xs text-neutral-400 shimmer-strong">
+                        Evidence Packet이 자동으로 생성됩니다.
+                    </div>
+                </div>
+            )
+        }
+        if (index === 2) {
+            return (
+                <div className="space-y-3">
+                    {['OpenAI', 'Claude', 'Gemini'].map((agent, idx) => (
+                        <div key={agent} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-neutral-300 shimmer-strong" style={{ animationDelay: `${idx * 0.3}s` }}>
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2 text-white">
+                                    <span className="h-2 w-2 rounded-full bg-cyan-300 animate-blink" />
+                                    {agent}
+                                </span>
+                                <span className="text-[10px] text-neutral-500">요약 카드</span>
+                            </div>
+                            <p className="mt-2 text-[11px] text-neutral-400">핵심 근거 + 행동 제안</p>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+        return (
+            <div className="space-y-3">
+                <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-200 animate-alert-strong">
+                    긴급 알림 발생 — 즉시 대응 모드
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-neutral-300 shimmer-strong">
+                    행동 로그가 자동 저장됩니다.
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="min-h-screen bg-[#0B0F14] text-neutral-300 selection:bg-cyan-500/30 font-sans">
+            <div className="fixed left-0 top-0 z-[60] h-[3px] w-full bg-white/5">
+                <div
+                    ref={progressRef}
+                    className="h-full origin-left scale-x-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-400"
+                />
+            </div>
+            <div className="fixed right-4 top-20 z-[70] rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-[11px] text-white/80 backdrop-blur">
+                <div>section: {activeSection}</div>
+                <div>heroVisible: {heroVisible ? 'true' : 'false'}</div>
+                <div>storyVisible: {storyVisible ? 'true' : 'false'}</div>
+                <div>scrollY: {Math.round(scrollY)}</div>
+                <div>featuresTop: {Math.round(featuresTop)}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+                    {heroVisible ? '복귀' : '전환'}
+                </div>
+            </div>
+            <div className={`pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b ${backgroundClass}`} />
+            <div className="pointer-events-none fixed inset-0 -z-10 opacity-60" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(56,189,248,0.15), transparent 45%), radial-gradient(circle at 80% 15%, rgba(16,185,129,0.12), transparent 40%)' }} />
             {/* Navigation */}
             <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0B0F14]/80 backdrop-blur-md">
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -195,7 +515,8 @@ export function LandingPage() {
                         KIFU
                     </div>
                     <div className="flex items-center gap-6 text-sm font-medium">
-                        <Link href="#features" className="hover:text-neutral-100 transition-colors">기능</Link>
+                        <Link href="#features" className="hover:text-neutral-100 transition-colors">결정 레이어</Link>
+                        <Link href="#stack" className="hover:text-neutral-100 transition-colors">스택</Link>
                         <Link href="#roadmap" className="hover:text-neutral-100 transition-colors">로드맵</Link>
                         <Link href="#pricing" className="hover:text-neutral-100 transition-colors">요금제</Link>
                         <Link
@@ -209,164 +530,313 @@ export function LandingPage() {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-16">
-                <CandlestickBackground />
-
-                <div className="relative z-30 mx-auto max-w-4xl px-6 text-center">
-                    <div className="inline-block rounded-full border border-neutral-700/60 bg-neutral-900/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 backdrop-blur-sm">
-                        AI 트레이딩 저널
-                    </div>
-                    <h1 className="mt-8 text-5xl font-bold leading-tight tracking-tight text-white md:text-7xl">
-                        기록하고, 복기하고, <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">성장하라.</span>
-                    </h1>
-                    <p className="mx-auto mt-6 max-w-2xl text-lg text-neutral-400">
-                        차트 위에 직접 생각을 기록하세요. AI의 의견을 수집하세요.
-                        과거를 복기해서 값비싼 실수를 없애세요.
-                    </p>
-                    <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
-                        <Link
-                            href="/guest"
-                            className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
-                        >
-                            게스트로 입장
-                        </Link>
-                        <Link
-                            href="/onboarding/start"
-                            className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-8 py-3 text-sm font-bold uppercase tracking-widest text-neutral-300 transition-all hover:border-neutral-500 hover:bg-white/5"
-                        >
-                            처음부터 시작
-                        </Link>
-                    </div>
+            <section ref={heroRef} data-section="hero" className="relative min-h-screen overflow-hidden pt-20 section-panel is-visible">
+                <div
+                    className="absolute inset-0 transition-opacity duration-700"
+                    style={{ opacity: heroActive ? 1 : 0 }}
+                >
+                    <CandlestickBackground />
                 </div>
-            </section>
+                <div className="section-overlay" />
 
-            {/* How it Works */}
-            <section className="py-24 border-t border-white/5 relative z-20 bg-[#0B0F14]">
-                <div className="mx-auto max-w-7xl px-6">
-                    <div className="mb-16 text-center">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">작동 방식</h2>
-                        <h3 className="mt-3 text-3xl font-bold text-white">3단계로 일관성을 만들다</h3>
-                    </div>
-                    <div className="grid gap-8 md:grid-cols-3">
-                        {[
-                            {
-                                step: '01',
-                                title: '캔들 선택',
-                                desc: '차트에서 원하는 캔들을 클릭하세요. 가격, 시간, 지표가 즉시 기록됩니다.'
-                            },
-                            {
-                                step: '02',
-                                title: '의견 수집',
-                                desc: 'AI 에이전트에게 객관적인 분석을 요청하세요. 리스크 매니저, FOMO 체커 등 다양한 관점을 얻을 수 있습니다.'
-                            },
-                            {
-                                step: '03',
-                                title: '복기 & 리플레이',
-                                desc: '"복기 모드"를 켜서 당신의 판단과 이후 가격 움직임을 비교하세요. 실수의 패턴을 발견하세요.'
-                            }
-                        ].map((item, i) => (
-                            <div key={i} className="group relative rounded-2xl border border-white/5 bg-white/5 p-8 transition-all hover:-translate-y-1 hover:border-cyan-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-cyan-900/10">
-                                <div className="text-6xl font-bold text-white/5 transition-colors group-hover:text-cyan-500/20">{item.step}</div>
-                                <h4 className="mt-4 text-xl font-bold text-white group-hover:text-cyan-400 transition-colors">{item.title}</h4>
-                                <p className="mt-2 text-sm text-neutral-400 leading-relaxed">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Proof / Demo */}
-            <section className="py-24 bg-neutral-900/30 border-t border-white/5 relative z-20">
-                <div className="mx-auto max-w-7xl px-6">
-                    <div className="mb-12 text-center">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">라이브 데모</h2>
-                        <h3 className="mt-3 text-3xl font-bold text-white">지금 바로 체험하세요</h3>
-                        <p className="mt-4 text-neutral-400 max-w-xl mx-auto">
-                            실제 차트에서 말풍선을 만들고, AI 의견을 수집해보세요. 로그인 없이 바로 시작할 수 있습니다.
-                        </p>
-                    </div>
-                    <div className="relative max-w-4xl mx-auto">
-                        <div className="aspect-video rounded-2xl border border-white/10 bg-neutral-900/80 overflow-hidden relative group">
-                            {/* Demo screenshot placeholder */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
-                                <div className="text-center">
-                                    <div className="w-20 h-20 mx-auto rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mb-4">
-                                        <span className="text-4xl">📊</span>
-                                    </div>
-                                    <p className="text-neutral-400 text-sm">차트 + 말풍선 + AI 의견 수집</p>
-                                </div>
-                            </div>
-                            {/* Hover overlay */}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Link
-                                    href="/home"
-                                    className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
-                                >
-                                    <span>🚀</span> 데모 시작하기
-                                </Link>
-                            </div>
+                <div
+                    className="relative z-30 mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 lg:grid-cols-[1.1fr_0.9fr] transition-opacity duration-700"
+                    style={{ opacity: heroActive ? 1 : 0, pointerEvents: heroActive ? 'auto' : 'none' }}
+                >
+                    <div>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/60 bg-neutral-900/60 px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-300">
+                            Decision Layer
+                            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
                         </div>
-                        {/* Feature pills */}
-                        <div className="flex flex-wrap justify-center gap-3 mt-6">
-                            {['캔들 클릭', '말풍선 생성', 'AI 의견 수집', '복기 모드', 'JSON 내보내기'].map((tag) => (
-                                <span key={tag} className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-neutral-400">
-                                    {tag}
+                        <h1 className="mt-6 text-4xl font-semibold leading-tight text-white md:text-6xl">
+                            오늘의 판단을<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-sky-300">
+                                한 화면으로 복원
+                            </span>
+                        </h1>
+                        <p className="mt-6 max-w-xl text-base text-neutral-400 md:text-lg">
+                            KIFU는 기록을 “판단 레이어”로 바꿉니다. 증거 패킷과 AI 비교를 통해
+                            당신의 결정 흐름을 즉시 재구성합니다.
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            {['Evidence Packet', 'AI 비교', '긴급 모드', '포지션 상태'].map((chip) => (
+                                <span key={chip} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-300">
+                                    {chip}
                                 </span>
+                            ))}
+                        </div>
+                        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+                            <Link
+                                href="/guest"
+                                className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
+                            >
+                                게스트로 입장
+                            </Link>
+                            <Link
+                                href="/onboarding/start"
+                                className="inline-flex items-center justify-center rounded-lg border border-neutral-700 px-8 py-3 text-sm font-bold uppercase tracking-widest text-neutral-200 transition-all hover:border-neutral-500 hover:bg-white/5"
+                            >
+                                처음부터 시작
+                            </Link>
+                        </div>
+                        <div className="mt-10 grid grid-cols-2 gap-4 text-xs text-neutral-400 sm:grid-cols-4">
+                            {[
+                                { label: 'Decision', value: '스냅샷' },
+                                { label: 'Evidence', value: '범위 선택' },
+                                { label: 'AI', value: '비교 응답' },
+                                { label: 'Review', value: '자동 저장' },
+                            ].map((item) => (
+                                <div key={item.label} className="rounded-xl border border-white/5 bg-white/5 px-3 py-3">
+                                    <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-500">{item.label}</p>
+                                    <p className="mt-2 text-sm font-semibold text-white">{item.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="relative" data-parallax="0.12">
+                        <div className="absolute -top-10 -left-12 h-40 w-40 rounded-full bg-cyan-500/30 blur-3xl" />
+                        <div className="absolute -bottom-10 -right-6 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
+                        <div className="space-y-4">
+                            {stackCards.map((card, idx) => (
+                                <div
+                                    key={card.title}
+                                    className={`parallax-card rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-900/80 to-black/80 p-5 shadow-2xl transition-all hover:-translate-y-1 ${idx === 1 ? 'translate-x-4' : ''} ${idx === 2 ? 'translate-x-8' : ''}`}
+                                    data-parallax={0.18 + idx * 0.03}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500">{card.badge}</span>
+                                        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-neutral-300">LIVE</span>
+                                    </div>
+                                    <h3 className="mt-3 text-lg font-semibold text-white">{card.title}</h3>
+                                    <p className="mt-2 text-sm text-neutral-400">{card.desc}</p>
+                                </div>
                             ))}
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Features Detail */}
-            <section id="features" className="py-24 bg-neutral-900/20 border-t border-white/5 relative z-20">
+            {/* Feature Stream */}
+            <section className="border-t border-white/5 bg-[#0B0F14] py-6">
+                <div className="overflow-hidden">
+                    <div className="flex w-[200%] items-center gap-6 text-xs font-semibold uppercase tracking-[0.3em] text-neutral-500 animate-marquee">
+                        {[...highlightStream, ...highlightStream].map((item, index) => (
+                            <span key={`${item}-${index}`} className="flex items-center gap-4">
+                                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400/70" />
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* How it Works */}
+            <section
+                ref={featuresRef}
+                id="features"
+                data-section="features"
+                className="border-t border-white/5 relative z-20 section-panel no-section-overlay"
+                style={{ backgroundColor: 'transparent' }}
+            >
+                <div className="section-overlay" style={{ opacity: 0 }} />
+                <div className="mx-auto max-w-7xl px-6">
+                    <div className="py-6">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-cyan-300">
+                            Decision Layer
+                        </div>
+                        <h2 className="mt-4 text-3xl font-semibold text-white md:text-4xl">
+                            스크롤할수록 화면이 바뀌는
+                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-emerald-300">
+                                판단 스토리
+                            </span>
+                        </h2>
+                        <p className="mt-3 max-w-2xl text-sm text-neutral-400">
+                            오늘의 스냅샷 → 증거 패킷 → AI 비교 → 긴급 대응 순서로
+                            화면 구성이 완전히 바뀝니다.
+                        </p>
+                    </div>
+
+                    <div
+                        ref={storyRef}
+                        className="relative"
+                        style={{ height: `${storyChapters.length * 95}vh` }}
+                    >
+                        <div className="sticky top-0 relative flex min-h-screen items-center overflow-hidden">
+                            <div className="absolute right-6 top-6 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-white/60">
+                                {String(currentIndex + 1).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
+                            </div>
+                            <div className="relative w-full min-h-[65vh] transition-opacity duration-500">
+                                {[currentIndex, nextIndex].map((index, layerIdx) => {
+                                    const item = storyChapters[index]
+                                    const style = layerIdx === 0 ? currentLayerStyle : nextLayerStyle
+                                    if (layerIdx === 1 && currentIndex === nextIndex) {
+                                        return null
+                                    }
+                                    return (
+                                        <div
+                                            key={`${item.title}-${layerIdx}`}
+                                            className="story-layer grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"
+                                            style={style}
+                                        >
+                                                <div>
+                                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/80">
+                                                        {item.kicker}
+                                                    </div>
+                                                    <h2 className="mt-4 text-3xl font-semibold text-white md:text-4xl">
+                                                        {item.title}
+                                                    </h2>
+                                                    <p className="mt-4 text-sm text-neutral-300 leading-relaxed">
+                                                        {item.desc}
+                                                    </p>
+                                                    <div className="mt-6 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.2em] text-white/70">
+                                                        {item.tags.map((tag) => (
+                                                            <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className={`rounded-[32px] border border-white/10 bg-gradient-to-br ${item.accent} to-black/70 p-10 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl`}>
+                                                        <div className="flex items-center justify-between text-xs text-neutral-400">
+                                                            <span className="uppercase tracking-[0.25em]">{item.kicker}</span>
+                                                            <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] text-neutral-300">Live</span>
+                                                        </div>
+                                                        <div className="mt-6">{renderStoryVisual(index)}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Stack / Evidence */}
+            <section id="stack" data-section="stack" className="py-24 border-t border-white/5 relative z-20 section-panel overflow-hidden no-section-overlay" style={{ backgroundColor: 'transparent' }}>
+                <div className="section-overlay" style={{ opacity: 0 }} />
+                <div className="mx-auto max-w-7xl px-6">
+                    <div className="mb-12 text-center">
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">STACK</h2>
+                        <h3 className="mt-3 text-3xl font-bold text-white">증거를 모으고, 비교하고, 저장한다</h3>
+                        <p className="mt-4 text-neutral-400 max-w-2xl mx-auto">
+                            Evidence Packet과 AI 비교는 복기의 핵심입니다. 필요한 범위를 고르고,
+                            응답은 자동으로 복기 카드에 저장됩니다.
+                        </p>
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <div className="parallax-card rounded-3xl border border-white/10 bg-neutral-950/70 p-8" data-parallax="0.1">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-xl font-semibold text-white">Evidence Packet</h4>
+                                <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300">range</span>
+                            </div>
+                            <p className="mt-3 text-sm text-neutral-400">기간/심볼/버블 태그를 직접 선택합니다.</p>
+                            <div className="mt-6 space-y-3">
+                                {[
+                                    '최근 7/30/90일 선택',
+                                    '현재 심볼 또는 전체 심볼',
+                                    '버블 태그로 필터링',
+                                    '포지션 포함 옵션',
+                                ].map((line) => (
+                                    <div key={line} className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-xs text-neutral-300">
+                                        {line}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="parallax-card rounded-3xl border border-white/10 bg-neutral-950/70 p-8" data-parallax="0.14">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-xl font-semibold text-white">AI Compare</h4>
+                                <span className="rounded-full bg-cyan-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-300">multi</span>
+                            </div>
+                            <p className="mt-3 text-sm text-neutral-400">모델별 의견을 나란히 보고 판단합니다.</p>
+                            <div className="mt-6 space-y-3">
+                                {['OpenAI', 'Claude', 'Gemini'].map((model) => (
+                                    <div key={model} className="rounded-xl border border-white/5 bg-white/5 px-4 py-3 text-xs text-neutral-300">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-white">{model}</span>
+                                            <span className="text-[10px] text-neutral-500">요약 카드</span>
+                                        </div>
+                                        <p className="mt-2 text-[11px] text-neutral-400">핵심 근거 + 리스크 + 행동 제안</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+                        {integrations.map((name) => (
+                            <span key={name} className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-neutral-400">
+                                {name}
+                            </span>
+                        ))}
+                    </div>
+
+                    <div className="mt-10 flex justify-center">
+                        <Link
+                            href="/guest"
+                            className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
+                        >
+                            <span>🚀</span> 데모 시작하기
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* Capabilities */}
+            <section data-section="capabilities" className="py-24 border-t border-white/5 relative z-20 section-panel overflow-hidden no-section-overlay" style={{ backgroundColor: 'transparent' }}>
+                <div className="section-overlay" style={{ opacity: 0 }} />
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="mb-16">
-                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">왜 KIFU인가?</h2>
-                        <h3 className="mt-3 text-4xl font-bold text-white">진지한 트레이더를 위한 <br /><span className="text-neutral-500">복기 도구</span></h3>
+                        <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-500">Capabilities</h2>
+                        <h3 className="mt-3 text-4xl font-bold text-white">행동을 기록하는 <br /><span className="text-neutral-500">UI 스택</span></h3>
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {/* Card 1 */}
-                        <div className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-black p-8 relative overflow-hidden group">
+                        <div className="parallax-card col-span-1 md:col-span-2 lg:col-span-2 row-span-1 rounded-3xl border border-white/10 bg-gradient-to-br from-neutral-900 to-black p-8 relative overflow-hidden group" data-parallax="0.12">
                             <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <div className="w-32 h-32 bg-cyan-500 blur-3xl rounded-full"></div>
                             </div>
-                            <h4 className="text-2xl font-bold text-white mb-2">시각적 말풍선 오버레이</h4>
-                            <p className="text-neutral-400 mb-6 max-w-md">스프레드시트는 이제 그만. 생각을 캔들 위에 직접 기록하세요.</p>
+                            <h4 className="text-2xl font-bold text-white mb-2">차트 위 판단 오버레이</h4>
+                            <p className="text-neutral-400 mb-6 max-w-md">스프레드시트 대신, 판단을 캔들 위에 남깁니다.</p>
                             <MiniChartPreview />
                         </div>
 
                         {/* Card 2 */}
-                        <div className="rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors group">
-                            <div className="w-10 h-10 rounded-full bg-cyan-900/30 flex items-center justify-center mb-4 text-cyan-400">
-                                <span className="text-xl">🤖</span>
+                        <div className="parallax-card rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors group" data-parallax="0.1">
+                            <div className="w-10 h-10 rounded-full bg-emerald-900/30 flex items-center justify-center mb-4 text-emerald-400">
+                                <span className="text-xl">🧭</span>
                             </div>
-                            <h4 className="text-xl font-bold text-white mb-2">멀티 AI 에이전트</h4>
-                            <p className="text-sm text-neutral-400">거래 전에 "리스크 매니저"나 "FOMO 체커" AI에게 조언을 구하세요.</p>
+                            <h4 className="text-xl font-bold text-white mb-2">포지션 상태 기록</h4>
+                            <p className="text-sm text-neutral-400">열린 포지션과 손절/익절 기준을 기록해 AI 판단의 기준점으로 사용합니다.</p>
                         </div>
 
                         {/* Card 3 */}
-                        <div className="rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors group">
-                            <div className="w-10 h-10 rounded-full bg-orange-900/30 flex items-center justify-center mb-4 text-orange-400">
-                                <span className="text-xl">📊</span>
+                        <div className="parallax-card rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors group" data-parallax="0.1">
+                            <div className="w-10 h-10 rounded-full bg-rose-900/30 flex items-center justify-center mb-4 text-rose-400">
+                                <span className="text-xl">🚨</span>
                             </div>
-                            <h4 className="text-xl font-bold text-white mb-2">CSV 가져오기</h4>
-                            <p className="text-sm text-neutral-400">업비트나 바이낸스에서 거래 내역을 가져와 실제 진입/청산 지점을 시각화하세요.</p>
+                            <h4 className="text-xl font-bold text-white mb-2">긴급 모드</h4>
+                            <p className="text-sm text-neutral-400">급등/급락 알림 이후 바로 판단하고 기록할 수 있습니다.</p>
                         </div>
 
                         {/* Card 4 */}
-                        <div className="md:col-span-2 lg:col-span-2 rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors flex flex-col md:flex-row items-center gap-8">
+                        <div className="parallax-card md:col-span-2 lg:col-span-2 rounded-3xl border border-white/10 bg-neutral-900/50 p-8 hover:bg-neutral-900 transition-colors flex flex-col md:flex-row items-center gap-8" data-parallax="0.14">
                             <div className="flex-1">
-                                <h4 className="text-2xl font-bold text-white mb-2">프라이버시 우선</h4>
+                                <h4 className="text-2xl font-bold text-white mb-2">거래내역 오버레이</h4>
                                 <p className="text-neutral-400">
-                                    트레이딩 저널은 민감한 데이터입니다. KIFU는 기본적으로 브라우저 로컬 저장소에 데이터를 저장합니다.
-                                    필요할 때 JSON으로 백업하세요.
+                                    거래내역(CSV/API)을 불러와 실제 진입/청산 흐름을 차트 위에 겹쳐 봅니다.
+                                    복기 흐름과 실행 결과를 한 화면에서 비교할 수 있습니다.
                                 </p>
                             </div>
                             <div className="w-full md:w-1/3 h-32 bg-neutral-800/30 rounded-xl border border-neutral-700/30 flex items-center justify-center">
-                                <span className="text-4xl">🔒</span>
+                                <span className="text-4xl">🔗</span>
                             </div>
                         </div>
                     </div>
@@ -374,7 +844,8 @@ export function LandingPage() {
             </section>
 
             {/* Mobile Roadmap */}
-            <section id="roadmap" className="py-24 border-t border-white/5 relative z-20 bg-[#0B0F14]">
+            <section id="roadmap" data-section="roadmap" className="py-24 border-t border-white/5 relative z-20 section-panel overflow-hidden no-section-overlay" style={{ backgroundColor: 'transparent' }}>
+                <div className="section-overlay" style={{ opacity: 0 }} />
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="grid md:grid-cols-2 gap-12 items-center">
                         {/* Text content */}
@@ -409,7 +880,7 @@ export function LandingPage() {
                         </div>
                         {/* Mobile mockup */}
                         <div className="flex justify-center">
-                            <div className="relative w-64 h-[500px] rounded-[3rem] border-4 border-neutral-700 bg-neutral-900 p-2 shadow-2xl">
+                            <div className="parallax-card relative w-64 h-[500px] rounded-[3rem] border-4 border-neutral-700 bg-neutral-900 p-2 shadow-2xl" data-parallax="0.2">
                                 {/* Notch */}
                                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-6 bg-neutral-800 rounded-full" />
                                 {/* Screen */}
@@ -454,7 +925,8 @@ export function LandingPage() {
             </section>
 
             {/* Vision */}
-            <section className="py-24 border-t border-white/5 relative z-20 bg-neutral-900/30">
+            <section data-section="vision" className="py-24 border-t border-white/5 relative z-20 section-panel overflow-hidden no-section-overlay" style={{ backgroundColor: 'transparent' }}>
+                <div className="section-overlay" style={{ opacity: 0 }} />
                 <div className="mx-auto max-w-7xl px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-500">비전</h2>
@@ -491,13 +963,14 @@ export function LandingPage() {
                         ].map((card, i) => (
                             <div
                                 key={i}
-                                className={`relative rounded-2xl border p-8 transition-all hover:-translate-y-1 ${
+                                className={`parallax-card relative rounded-2xl border p-8 transition-all hover:-translate-y-1 ${
                                     card.color === 'emerald'
                                         ? 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
                                         : card.color === 'cyan'
                                         ? 'border-cyan-500/30 bg-cyan-500/5 hover:border-cyan-500/50'
                                         : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/50'
                                 }`}
+                                data-parallax={0.12 + i * 0.04}
                             >
                                 <div className={`text-xs font-bold uppercase tracking-widest mb-4 ${
                                     card.color === 'emerald' ? 'text-emerald-400' : card.color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'
@@ -530,7 +1003,8 @@ export function LandingPage() {
             </section>
 
             {/* Pricing */}
-            <section id="pricing" className="py-24 border-t border-white/5">
+            <section id="pricing" data-section="pricing" className="py-24 border-t border-white/5 section-panel overflow-hidden no-section-overlay" style={{ backgroundColor: 'transparent' }}>
+                <div className="section-overlay" />
                 <div className="mx-auto max-w-4xl px-6 text-center">
                     <h2 className="text-3xl font-bold text-white">요금제</h2>
                     <div className="mt-12 grid gap-8 md:grid-cols-2">

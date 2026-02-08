@@ -53,10 +53,18 @@ export function BubbleCreateModal({
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
-  const [includeEvidence, setIncludeEvidence] = useState(false)
+  const [includeEvidence, setIncludeEvidence] = useState(true)
   const [includePositions, setIncludePositions] = useState(true)
   const [includeRecentTrades, setIncludeRecentTrades] = useState(true)
   const [includeSummary, setIncludeSummary] = useState(true)
+  const [includeBubbles, setIncludeBubbles] = useState(true)
+  const [evidenceScope, setEvidenceScope] = useState<'7d' | '30d' | '90d' | 'custom'>('7d')
+  const [evidenceFrom, setEvidenceFrom] = useState('')
+  const [evidenceTo, setEvidenceTo] = useState('')
+  const [evidenceSymbolScope, setEvidenceSymbolScope] = useState<'current' | 'all'>('current')
+  const [bubbleLimit, setBubbleLimit] = useState(6)
+  const [bubbleTagsInput, setBubbleTagsInput] = useState('')
+  const [bubbleTagsEdited, setBubbleTagsEdited] = useState(false)
   const [evidencePacket, setEvidencePacket] = useState<EvidencePacket | null>(null)
   const [evidencePreview, setEvidencePreview] = useState<string[]>([])
   const [evidenceLoading, setEvidenceLoading] = useState(false)
@@ -79,10 +87,18 @@ export function BubbleCreateModal({
     setAiResponse(null)
     setAiLoading(false)
     setPromptType('brief')
-    setIncludeEvidence(false)
+    setIncludeEvidence(true)
     setIncludePositions(true)
     setIncludeRecentTrades(true)
     setIncludeSummary(true)
+    setIncludeBubbles(true)
+    setEvidenceScope('7d')
+    setEvidenceFrom('')
+    setEvidenceTo('')
+    setEvidenceSymbolScope('current')
+    setBubbleLimit(6)
+    setBubbleTagsInput('')
+    setBubbleTagsEdited(false)
     setEvidencePacket(null)
     setEvidencePreview([])
     setEvidenceLoading(false)
@@ -94,6 +110,13 @@ export function BubbleCreateModal({
   }, [open, defaultPrice, defaultTimeframe, defaultTime])
 
   useEffect(() => {
+    if (!open) return
+    if (!bubbleTagsEdited) {
+      setBubbleTagsInput(tagsInput)
+    }
+  }, [open, tagsInput, bubbleTagsEdited])
+
+  useEffect(() => {
     if (!includeEvidence && !includePositions) {
       setEvidencePacket(null)
       setEvidencePreview([])
@@ -102,10 +125,16 @@ export function BubbleCreateModal({
   }, [includeEvidence, includePositions])
 
   useEffect(() => {
-    if (!includeEvidence && !includePositions) return
+    if (includeRecentTrades || includeSummary || includeBubbles) {
+      setIncludeEvidence(true)
+    }
+  }, [includeRecentTrades, includeSummary, includeBubbles])
+
+  useEffect(() => {
+    if (!includeEvidence && !includePositions && !includeBubbles) return
     setEvidencePacket(null)
     setEvidencePreview([])
-  }, [includeEvidence, includePositions, includeRecentTrades, includeSummary, symbol, timeframe])
+  }, [includeEvidence, includePositions, includeRecentTrades, includeSummary, includeBubbles, symbol, timeframe, evidenceScope, evidenceFrom, evidenceTo, evidenceSymbolScope, bubbleLimit, bubbleTagsInput])
 
   const tags = useMemo(() => {
     return tagsInput
@@ -113,6 +142,29 @@ export function BubbleCreateModal({
       .map((tag) => tag.trim())
       .filter(Boolean)
   }, [tagsInput])
+
+  const bubbleTags = useMemo(() => {
+    return bubbleTagsInput
+      .split(',')
+      .map((tag) => tag.trim().toLowerCase())
+      .filter(Boolean)
+  }, [bubbleTagsInput])
+
+  const evidenceRange = useMemo(() => {
+    if (evidenceScope !== 'custom') {
+      const days = evidenceScope === '30d' ? 30 : evidenceScope === '90d' ? 90 : 7
+      const to = new Date()
+      const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000)
+      return { from: from.toISOString(), to: to.toISOString() }
+    }
+    if (!evidenceFrom && !evidenceTo) return null
+    const from = evidenceFrom ? new Date(`${evidenceFrom}T00:00:00`) : null
+    const to = evidenceTo ? new Date(`${evidenceTo}T23:59:59`) : null
+    return {
+      from: from ? from.toISOString() : undefined,
+      to: to ? to.toISOString() : undefined,
+    }
+  }, [evidenceScope, evidenceFrom, evidenceTo])
 
   const createBubbleRemote = useBubbleStore((state) => state.createBubbleRemote)
   const updateBubble = useBubbleStore((state) => state.updateBubble)
@@ -127,16 +179,22 @@ export function BubbleCreateModal({
     setEvidenceError('')
     try {
       let packet: EvidencePacket | null = null
-      const shouldBuildPacket = includeEvidence || includePositions
+      const shouldBuildPacket = includeEvidence || includePositions || includeBubbles
       if (shouldBuildPacket) {
         setEvidenceLoading(true)
         try {
+          const symbolForEvidence = evidenceSymbolScope === 'current' ? symbol : ''
           packet = await buildEvidencePacket({
-            symbol,
+            symbol: symbolForEvidence,
             timeframe,
             includePositions,
             includeRecentTrades: includeEvidence ? includeRecentTrades : false,
             includeSummary: includeEvidence ? includeSummary : false,
+            includeBubbles: includeEvidence ? includeBubbles : false,
+            rangeFrom: evidenceRange?.from,
+            rangeTo: evidenceRange?.to,
+            bubbleLimit,
+            bubbleTags,
           })
           if (packet) {
             setEvidencePacket(packet)
@@ -149,7 +207,7 @@ export function BubbleCreateModal({
           setEvidenceLoading(false)
         }
       }
-      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType, packet)
+      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType, packet, { memo, tags })
       setAiResponse(response)
       // Auto-append recommendation to note if empty
       if (!memo) {
@@ -173,16 +231,22 @@ export function BubbleCreateModal({
       setEvidenceError('게스트 모드에서는 증거 패킷을 사용할 수 없습니다.')
       return
     }
-    if (!includeEvidence && !includePositions) return
+    if (!includeEvidence && !includePositions && !includeBubbles) return
     setEvidenceLoading(true)
     setEvidenceError('')
     try {
+      const symbolForEvidence = evidenceSymbolScope === 'current' ? symbol : ''
       const packet = await buildEvidencePacket({
-        symbol,
+        symbol: symbolForEvidence,
         timeframe,
         includePositions,
         includeRecentTrades: includeEvidence ? includeRecentTrades : false,
         includeSummary: includeEvidence ? includeSummary : false,
+        includeBubbles: includeEvidence ? includeBubbles : false,
+        rangeFrom: evidenceRange?.from,
+        rangeTo: evidenceRange?.to,
+        bubbleLimit,
+        bubbleTags,
       })
       if (packet) {
         setEvidencePacket(packet)
@@ -416,7 +480,21 @@ export function BubbleCreateModal({
               </div>
               <button
                 type="button"
-                onClick={() => setIncludeEvidence((prev) => !prev)}
+                onClick={() =>
+                  setIncludeEvidence((prev) => {
+                    const next = !prev
+                    if (!next) {
+                      setIncludeRecentTrades(false)
+                      setIncludeSummary(false)
+                      setIncludeBubbles(false)
+                    } else {
+                      setIncludeRecentTrades(true)
+                      setIncludeSummary(true)
+                      setIncludeBubbles(true)
+                    }
+                    return next
+                  })
+                }
                 disabled={disableAi}
                 className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
                   includeEvidence
@@ -424,7 +502,7 @@ export function BubbleCreateModal({
                     : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
                 } ${disableAi ? 'cursor-not-allowed opacity-60' : ''}`}
               >
-                {includeEvidence ? '거래/요약 포함' : '거래/요약 제외'}
+                {includeEvidence ? '패킷 데이터 포함' : '패킷 데이터 제외'}
               </button>
             </div>
 
@@ -447,7 +525,7 @@ export function BubbleCreateModal({
                     disabled={!includeEvidence}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
-                  최근 체결 10건
+                  체결 10건
                 </label>
                 <label className={`flex items-center gap-2 ${includeEvidence ? '' : 'opacity-50'}`}>
                   <input
@@ -457,15 +535,134 @@ export function BubbleCreateModal({
                     disabled={!includeEvidence}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
-                  최근 7일 요약
+                  기간 요약
+                </label>
+                <label className={`flex items-center gap-2 ${includeEvidence ? '' : 'opacity-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={includeBubbles}
+                    onChange={(event) => setIncludeBubbles(event.target.checked)}
+                    disabled={!includeEvidence}
+                    className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
+                  />
+                  최근 버블 포함
                 </label>
               </div>
+
+              <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">범위 설정</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: '7d', label: '최근 7일' },
+                      { value: '30d', label: '30일' },
+                      { value: '90d', label: '90일' },
+                      { value: 'custom', label: '직접 선택' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setEvidenceScope(option.value as any)}
+                        className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                          evidenceScope === option.value
+                            ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                            : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {evidenceScope === 'custom' && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <label className="text-[11px] text-neutral-400">
+                      From
+                      <input
+                        type="date"
+                        value={evidenceFrom}
+                        onChange={(event) => setEvidenceFrom(event.target.value)}
+                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                      />
+                    </label>
+                    <label className="text-[11px] text-neutral-400">
+                      To
+                      <input
+                        type="date"
+                        value={evidenceTo}
+                        onChange={(event) => setEvidenceTo(event.target.value)}
+                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                      />
+                    </label>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+                  <span>심볼 범위</span>
+                  <button
+                    type="button"
+                    onClick={() => setEvidenceSymbolScope('current')}
+                    className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                      evidenceSymbolScope === 'current'
+                        ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
+                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                    }`}
+                  >
+                    현재 심볼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEvidenceSymbolScope('all')}
+                    className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                      evidenceSymbolScope === 'all'
+                        ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
+                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                    }`}
+                  >
+                    전체 심볼
+                  </button>
+                </div>
+              </div>
+
+              {includeEvidence && includeBubbles && (
+                <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">버블 필터</p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1.2fr_0.8fr]">
+                    <label className="text-[11px] text-neutral-400">
+                      태그(쉼표 구분)
+                      <input
+                        type="text"
+                        value={bubbleTagsInput}
+                        onChange={(event) => {
+                          setBubbleTagsInput(event.target.value)
+                          setBubbleTagsEdited(true)
+                        }}
+                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                        placeholder="breakout, fomo"
+                      />
+                    </label>
+                    <label className="text-[11px] text-neutral-400">
+                      개수
+                      <select
+                        value={bubbleLimit}
+                        onChange={(event) => setBubbleLimit(Number(event.target.value))}
+                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                      >
+                        {[4, 6, 10, 20].map((value) => (
+                          <option key={value} value={value}>{value}개</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={handleBuildEvidencePreview}
-                  disabled={evidenceLoading || (!includeEvidence && !includePositions)}
+                  disabled={evidenceLoading || (!includeEvidence && !includePositions && !includeBubbles)}
                   className="rounded border border-neutral-700 px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-neutral-500 disabled:opacity-60"
                 >
                   {evidenceLoading ? '준비 중...' : '패킷 미리보기'}

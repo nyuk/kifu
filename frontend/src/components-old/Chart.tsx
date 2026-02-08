@@ -77,12 +77,12 @@ const chartThemes = {
 } as const
 
 const densityOptions = [
-  { value: 'all', label: 'All' },
-  { value: 'recent', label: 'Recent' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'smart', label: 'Smart' },
+  { value: 'smart', label: 'Auto' },
+  { value: 'recent', label: '최근' },
+  { value: 'daily', label: '일간' },
+  { value: 'weekly', label: '주간' },
+  { value: 'monthly', label: '월간' },
+  { value: 'all', label: '전체' },
 ] as const
 
 const actionOptions = ['ALL', 'BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'] as const
@@ -476,9 +476,9 @@ export function Chart() {
   const densityAdjustedPositions = useMemo(() => {
     if (overlayPositions.length === 0) return []
     const sorted = [...overlayPositions].sort((a, b) => a.candleTime - b.candleTime)
-    const mode = densityMode === 'smart' ? (sorted.length > 120 ? 'daily' : 'all') : densityMode
+    const mode = densityMode === 'smart' ? (sorted.length > 80 ? 'daily' : 'all') : densityMode
     if (mode === 'all') return sorted
-    if (mode === 'recent') return sorted.slice(Math.max(sorted.length - 80, 0))
+    if (mode === 'recent') return sorted.slice(Math.max(sorted.length - 60, 0))
     if (mode === 'weekly') {
       const grouped = new Map<string, typeof overlayPositions[number]>()
       sorted.forEach((item) => {
@@ -547,6 +547,28 @@ export function Chart() {
       return bubble.note.toLowerCase().includes(query) || (bubble.tags || []).some((tag) => tag.toLowerCase().includes(query))
     }).sort((a, b) => b.ts - a.ts)
   }, [activeBubbles, bubbleSearch, actionFilter])
+
+  const bubbleSummary = useMemo(() => {
+    const counts = {
+      total: activeBubbles.length,
+      buy: 0,
+      sell: 0,
+      hold: 0,
+      tp: 0,
+      sl: 0,
+      note: 0,
+    }
+    activeBubbles.forEach((bubble) => {
+      const action = (bubble.action || 'NOTE').toUpperCase()
+      if (action === 'BUY') counts.buy += 1
+      else if (action === 'SELL') counts.sell += 1
+      else if (action === 'HOLD') counts.hold += 1
+      else if (action === 'TP') counts.tp += 1
+      else if (action === 'SL') counts.sl += 1
+      else counts.note += 1
+    })
+    return counts
+  }, [activeBubbles])
 
   // 버블/트레이드 변경 시 위치 업데이트
   useEffect(() => {
@@ -978,16 +1000,6 @@ export function Chart() {
               </div>
             </FilterGroup>
 
-            <FilterGroup label="Density" tone="amber">
-              <FilterPills
-                options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
-                value={densityMode}
-                onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
-                tone="amber"
-                ariaLabel="Density filter"
-              />
-            </FilterGroup>
-
             <FilterGroup label="Style" tone="sky">
               <div className="relative">
                 <button
@@ -1288,6 +1300,36 @@ export function Chart() {
           {panelTab === 'summary' && (
             <>
               <div className="space-y-3">
+                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <span>말풍선 요약</span>
+                    <span>{bubbleSummary.total.toLocaleString()}개</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+                    <span className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-emerald-300">BUY {bubbleSummary.buy}</span>
+                    <span className="rounded-full border border-rose-500/40 px-2 py-0.5 text-rose-300">SELL {bubbleSummary.sell}</span>
+                    <span className="rounded-full border border-sky-500/40 px-2 py-0.5 text-sky-300">HOLD {bubbleSummary.hold}</span>
+                    <span className="rounded-full border border-emerald-400/40 px-2 py-0.5 text-emerald-200">TP {bubbleSummary.tp}</span>
+                    <span className="rounded-full border border-rose-400/40 px-2 py-0.5 text-rose-200">SL {bubbleSummary.sl}</span>
+                    <span className="rounded-full border border-neutral-600/60 px-2 py-0.5 text-neutral-300">NOTE {bubbleSummary.note}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[10px] text-neutral-500">
+                    <span>현재 밀도: {densityOptions.find((option) => option.value === densityMode)?.label}</span>
+                    <span>표시 {densityAdjustedPositions.length.toLocaleString()} / {overlayPositions.length.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-neutral-500">밀도 옵션</p>
+                  <FilterPills
+                    options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
+                    value={densityMode}
+                    onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
+                    tone="amber"
+                    ariaLabel="Density filter"
+                  />
+                </div>
+
                 <input
                   value={bubbleSearch}
                   onChange={(e) => setBubbleSearch(e.target.value)}
