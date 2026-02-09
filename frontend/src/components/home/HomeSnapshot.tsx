@@ -164,6 +164,7 @@ export function HomeSnapshot() {
   const prevPnlRef = useRef(0)
   const [currencyMode, setCurrencyMode] = useState<'auto' | 'usdt' | 'krw'>('auto')
   const [onboardingProfile, setOnboardingProfile] = useState<ReturnType<typeof readOnboardingProfile>>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
 
   useEffect(() => {
     let isActive = true
@@ -215,6 +216,8 @@ export function HomeSnapshot() {
         } else if (filters.period === '30d') {
           params.set('from', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         }
+        if (filters.venue) params.set('exchange', filters.venue)
+        if (filters.symbol) params.set('symbol', filters.symbol)
         const response = await api.get(`/v1/trades/summary?${params.toString()}`)
         if (isActive) setTradeSummary(normalizeTradeSummary(response.data))
       } catch {
@@ -225,7 +228,19 @@ export function HomeSnapshot() {
     return () => {
       isActive = false
     }
-  }, [filters.period])
+  }, [filters.period, filters.venue, filters.symbol, refreshTick])
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      setRefreshTick((prev) => prev + 1)
+      fetchStats()
+      fetchAccuracy()
+    }
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    }
+  }, [fetchStats, fetchAccuracy])
 
   useEffect(() => {
     const saved = localStorage.getItem('kifu-home-currency')

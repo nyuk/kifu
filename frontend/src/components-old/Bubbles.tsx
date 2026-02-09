@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
@@ -11,11 +11,26 @@ export function Bubbles() {
   const bubbles = useBubbleStore((state) => state.bubbles)
   const deleteBubble = useBubbleStore((state) => state.deleteBubble)
   const replaceAllBubbles = useBubbleStore((state) => state.replaceAllBubbles)
+  const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [actionFilter, setActionFilter] = useState<ActionType>('all')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    fetchBubblesFromServer().catch(() => null)
+  }, [fetchBubblesFromServer])
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchBubblesFromServer().catch(() => null)
+    }
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    }
+  }, [fetchBubblesFromServer])
 
   // 선택된 버블
   const selectedBubble = useMemo(

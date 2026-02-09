@@ -42,6 +42,7 @@ export interface Trade {
 interface BubbleState {
   bubbles: Bubble[];
   addBubble: (bubble: Bubble) => void;
+  fetchBubblesFromServer: (limit?: number) => Promise<{ count: number }>;
   createBubbleRemote: (payload: {
     symbol: string;
     timeframe: string;
@@ -78,6 +79,28 @@ export const useBubbleStore = create<BubbleState>()(
     (set, get) => ({
       bubbles: [],
       addBubble: (bubble) => set((state) => ({ bubbles: [...state.bubbles, bubble] })),
+      fetchBubblesFromServer: async (limit = 2000) => {
+        const params = new URLSearchParams({ page: '1', limit: String(limit), sort: 'desc' })
+        const response = await api.get(`/v1/bubbles?${params.toString()}`)
+        const items = response.data?.items || []
+        const mapped: Bubble[] = items.map((data: any) => ({
+          id: data.id,
+          symbol: data.symbol,
+          timeframe: data.timeframe,
+          ts: new Date(data.candle_time).getTime(),
+          price: Number(data.price),
+          note: data.memo || '',
+          tags: data.tags || [],
+          action: data.action,
+          agents: data.agents || [],
+          asset_class: data.asset_class,
+          venue_name: data.venue_name,
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString(),
+        }))
+        set({ bubbles: mapped })
+        return { count: mapped.length }
+      },
       createBubbleRemote: async (payload) => {
         const response = await api.post('/v1/bubbles', payload);
         const data = response.data;

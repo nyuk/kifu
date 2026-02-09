@@ -30,6 +30,7 @@ export default function ReviewPage() {
   const [aiNotes, setAiNotes] = useState<ReviewNote[]>([])
   const [aiNotesLoading, setAiNotesLoading] = useState(false)
   const [aiNotesError, setAiNotesError] = useState<string | null>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
   const {
     stats,
     accuracy,
@@ -87,6 +88,7 @@ export default function ReviewPage() {
           params.set('from', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         }
         if (filters.symbol) params.set('symbol', filters.symbol)
+        if (filters.venue) params.set('exchange', filters.venue)
         const response = await api.get(`/v1/trades/summary?${params.toString()}`)
         if (isActive) setTradeSummary(normalizeTradeSummary(response.data))
       } catch {
@@ -97,7 +99,21 @@ export default function ReviewPage() {
     return () => {
       isActive = false
     }
-  }, [filters.period, filters.symbol])
+  }, [filters.period, filters.symbol, filters.venue, refreshTick])
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      setRefreshTick((prev) => prev + 1)
+      fetchStats()
+      fetchAccuracy()
+      const { from, to } = getCurrentMonthRange()
+      fetchCalendar(from, to)
+    }
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    }
+  }, [fetchStats, fetchAccuracy, fetchCalendar])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

@@ -275,7 +275,6 @@ export function LandingPage() {
     const [storyProgress, setStoryProgress] = useState(0)
     const [storyVisible, setStoryVisible] = useState(false)
     const [heroVisible, setHeroVisible] = useState(true)
-    const [scrollY, setScrollY] = useState(0)
     const [featuresTop, setFeaturesTop] = useState(0)
 
     useEffect(() => {
@@ -292,7 +291,6 @@ export function LandingPage() {
             const docHeight = document.documentElement.scrollHeight
             const maxScroll = Math.max(docHeight - viewportHeight, 1)
             const progress = Math.min(scrollTop / maxScroll, 1)
-            setScrollY(scrollTop)
             if (progressRef.current) {
                 progressRef.current.style.transform = `scaleX(${progress})`
             }
@@ -495,16 +493,6 @@ export function LandingPage() {
                     ref={progressRef}
                     className="h-full origin-left scale-x-0 bg-gradient-to-r from-emerald-400 via-cyan-400 to-sky-400"
                 />
-            </div>
-            <div className="fixed right-4 top-20 z-[70] rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-[11px] text-white/80 backdrop-blur">
-                <div>section: {activeSection}</div>
-                <div>heroVisible: {heroVisible ? 'true' : 'false'}</div>
-                <div>storyVisible: {storyVisible ? 'true' : 'false'}</div>
-                <div>scrollY: {Math.round(scrollY)}</div>
-                <div>featuresTop: {Math.round(featuresTop)}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-emerald-300">
-                    {heroVisible ? '복귀' : '전환'}
-                </div>
             </div>
             <div className={`pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b ${backgroundClass}`} />
             <div className="pointer-events-none fixed inset-0 -z-10 opacity-60" style={{ background: 'radial-gradient(circle at 20% 20%, rgba(56,189,248,0.15), transparent 45%), radial-gradient(circle at 80% 15%, rgba(16,185,129,0.12), transparent 40%)' }} />

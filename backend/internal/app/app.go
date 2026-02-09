@@ -108,7 +108,10 @@ func Run() error {
 
 	app.Use(func(c *fiber.Ctx) error {
 		path := c.Path()
-		if path == "/health" || strings.HasPrefix(path, "/api/v1/auth/") || path == "/api/v1/webhook/telegram" {
+		if path == "/health" ||
+			strings.HasPrefix(path, "/api/v1/auth/") ||
+			path == "/api/v1/webhook/telegram" ||
+			path == "/api/v1/market/klines" {
 			return c.Next()
 		}
 

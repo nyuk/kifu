@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,12 +21,14 @@ import (
 
 const (
 	binanceFapiBaseURL = "https://fapi.binance.com"
+	upbitCandleBaseURL = "https://api.upbit.com/v1/candles"
 	defaultSymbol      = "BTCUSDT"
 	defaultTimeframe   = "1h"
 )
 
 var (
-	symbolPattern    = regexp.MustCompile(`^[A-Z0-9]{3,12}$`)
+	symbolPattern    = regexp.MustCompile(`^[A-Z0-9-]{3,20}$`)
+	upbitSymbolPattern = regexp.MustCompile(`^[A-Z]{3,5}-[A-Z0-9]{1,12}$`)
 	allowedIntervals = map[string]struct{}{
 		"1m":  {},
 		"15m": {},
@@ -181,6 +184,7 @@ func (h *MarketHandler) UpdateUserSymbols(c *fiber.Ctx) error {
 func (h *MarketHandler) GetKlines(c *fiber.Ctx) error {
 	symbol := strings.ToUpper(strings.TrimSpace(c.Query("symbol")))
 	interval := strings.ToLower(strings.TrimSpace(c.Query("interval")))
+	exchange := strings.ToLower(strings.TrimSpace(c.Query("exchange")))
 	limitStr := strings.TrimSpace(c.Query("limit"))
 
 	if symbol == "" || !symbolPattern.MatchString(symbol) {
@@ -212,8 +216,21 @@ func (h *MarketHandler) GetKlines(c *fiber.Ctx) error {
 		}
 	}
 
-	cacheKey := fmt.Sprintf("%s|%s|%d|%d", symbol, interval, limit, endTime)
+	cacheKey := fmt.Sprintf("%s|%s|%s|%d|%d", exchange, symbol, interval, limit, endTime)
 	if payload, ok := h.cache.get(cacheKey); ok {
+		c.Set("Content-Type", "application/json")
+		return c.Status(200).Send(payload)
+	}
+
+	if exchange == "upbit" {
+		if !upbitSymbolPattern.MatchString(symbol) {
+			return c.Status(400).JSON(fiber.Map{"code": "INVALID_SYMBOL", "message": "upbit symbol format is invalid"})
+		}
+		payload, err := fetchUpbitKlines(c.Context(), h.client, symbol, interval, limit, endTime)
+		if err != nil {
+			return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_REQUEST_FAILED", "message": err.Error()})
+		}
+		h.cache.set(cacheKey, payload, 30*time.Second)
 		c.Set("Content-Type", "application/json")
 		return c.Status(200).Send(payload)
 	}
@@ -308,6 +325,86 @@ func buildKlinesURL(symbol string, interval string, limit int, endTime int64) st
 		params.Set("endTime", strconv.FormatInt(endTime, 10))
 	}
 	return fmt.Sprintf("%s/fapi/v1/klines?%s", binanceFapiBaseURL, params.Encode())
+}
+
+type upbitKlineItem struct {
+	Timestamp    int64   `json:"timestamp"`
+	OpenPrice    float64 `json:"opening_price"`
+	HighPrice    float64 `json:"high_price"`
+	LowPrice     float64 `json:"low_price"`
+	ClosePrice   float64 `json:"trade_price"`
+	AccVolume    float64 `json:"candle_acc_trade_volume"`
+}
+
+func upbitIntervalPath(interval string) (string, bool) {
+	switch interval {
+	case "1m":
+		return "minutes/1", true
+	case "15m":
+		return "minutes/15", true
+	case "1h":
+		return "minutes/60", true
+	case "4h":
+		return "minutes/240", true
+	case "1d":
+		return "days", true
+	default:
+		return "", false
+	}
+}
+
+func fetchUpbitKlines(ctx context.Context, client *http.Client, symbol string, interval string, limit int, endTime int64) ([]byte, error) {
+	path, ok := upbitIntervalPath(interval)
+	if !ok {
+		return nil, fmt.Errorf("interval is invalid")
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	params := url.Values{}
+	params.Set("market", symbol)
+	params.Set("count", strconv.Itoa(limit))
+	if endTime > 0 {
+		params.Set("to", time.UnixMilli(endTime).UTC().Format(time.RFC3339))
+	}
+
+	requestURL := fmt.Sprintf("%s/%s?%s", upbitCandleBaseURL, path, params.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf(strings.TrimSpace(string(body)))
+	}
+
+	var raw []upbitKlineItem
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, err
+	}
+
+	items := make([]KlineItem, 0, len(raw))
+	for i := len(raw) - 1; i >= 0; i-- {
+		row := raw[i]
+		items = append(items, KlineItem{
+			Time:   row.Timestamp / 1000,
+			Open:   strconv.FormatFloat(row.OpenPrice, 'f', -1, 64),
+			High:   strconv.FormatFloat(row.HighPrice, 'f', -1, 64),
+			Low:    strconv.FormatFloat(row.LowPrice, 'f', -1, 64),
+			Close:  strconv.FormatFloat(row.ClosePrice, 'f', -1, 64),
+			Volume: strconv.FormatFloat(row.AccVolume, 'f', -1, 64),
+		})
+	}
+
+	return json.Marshal(items)
 }
 
 func (c *klineCache) get(key string) ([]byte, bool) {

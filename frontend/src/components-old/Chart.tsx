@@ -12,7 +12,8 @@ import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
 import { useToast } from '../components/ui/Toast'
 import { ChartReplay } from '../components/chart/ChartReplay'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
-import type { TradeItem, TradeListResponse } from '../types/trade'
+import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../types/trade'
+import type { ManualPosition } from '../types/position'
 
 type UserSymbolItem = {
   symbol: string
@@ -87,9 +88,37 @@ const densityOptions = [
 
 const actionOptions = ['ALL', 'BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'] as const
 
+const normalizeUpbitSymbol = (value: string) => {
+  const symbol = value.toUpperCase()
+  if (symbol.includes('-')) return symbol
+  if (symbol.endsWith('KRW') && symbol.length > 3) {
+    return `KRW-${symbol.slice(0, -3)}`
+  }
+  if (symbol.endsWith('BTC') && symbol.length > 3) {
+    return `BTC-${symbol.slice(0, -3)}`
+  }
+  if (symbol.startsWith('KRW') && symbol.length > 3) {
+    return `KRW-${symbol.slice(3)}`
+  }
+  return symbol
+}
+
 const isMarketSupported = (value: string) => {
   const symbol = value.toUpperCase()
+  if (
+    symbol.includes('-') ||
+    symbol.endsWith('KRW') ||
+    symbol.endsWith('BTC')
+  ) {
+    return true
+  }
   return symbol.endsWith('USDT') || symbol.endsWith('USDC') || symbol.endsWith('USD') || symbol.endsWith('BUSD')
+}
+
+const resolveExchange = (value: string) => {
+  const symbol = value.toUpperCase()
+  if (symbol.includes('-') || symbol.endsWith('KRW') || symbol.endsWith('BTC') || symbol.startsWith('KRW')) return 'upbit'
+  return 'binance'
 }
 
 const getWeekKey = (value: Date) => {
@@ -132,6 +161,7 @@ export function Chart() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [autoBubbleFromTrades, setAutoBubbleFromTrades] = useState(true)
   const [densityMode, setDensityMode] = useState<typeof densityOptions[number]['value']>('smart')
+  const [visibleRange, setVisibleRange] = useState<{ from: number; to: number } | null>(null)
   const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('noir')
   const [dataSource, setDataSource] = useState<'crypto' | 'stock'>('crypto')
   const [bubbleSearch, setBubbleSearch] = useState('')
@@ -142,13 +172,19 @@ export function Chart() {
   const [panelTab, setPanelTab] = useState<'summary' | 'detail'>('summary')
   const [showOnboardingGuide, setShowOnboardingGuide] = useState(false)
   const [guestMode, setGuestMode] = useState(false)
+  const [showPositions, setShowPositions] = useState(true)
+  const [selectedPosition, setSelectedPosition] = useState<ManualPosition | null>(null)
+  const [positionStackMode] = useState(true)
   const { toast } = useToast()
 
   const bubbles = useBubbleStore((state) => state.bubbles)
   const localTrades = useBubbleStore((state) => state.trades)
   const importTrades = useBubbleStore((state) => state.importTrades)
   const createBubblesFromTrades = useBubbleStore((state) => state.createBubblesFromTrades)
+  const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
   const [serverTrades, setServerTrades] = useState<OverlayTrade[]>([])
+  const [refreshTick, setRefreshTick] = useState(0)
+  const [manualPositions, setManualPositions] = useState<ManualPosition[]>([])
 
   const [overlayPositions, setOverlayPositions] = useState<Array<{
     candleTime: number
@@ -158,13 +194,28 @@ export function Chart() {
     trades: OverlayTrade[]
     avgPrice: number
   }>>([])
+  const [positionMarkers, setPositionMarkers] = useState<Array<{
+    id: string
+    candleTime: number
+    x: number
+    y: number
+    side: 'long' | 'short'
+    entryPrice?: number
+  }>>([])
+  const [positionLines, setPositionLines] = useState<Array<{
+    id: string
+    y: number
+    type: 'entry' | 'sl' | 'tp'
+    side: 'long' | 'short'
+    price?: number
+  }>>([])
 
   const [clickedCandle, setClickedCandle] = useState<{ time: number; price: number } | null>(null)
   const [mounted, setMounted] = useState(false)
   const [overlayRect, setOverlayRect] = useState({ left: 0, top: 0, width: 0, height: 0 })
 
   // 표시 옵션
-  const [showBubbles, setShowBubbles] = useState(false)
+  const [showBubbles, setShowBubbles] = useState(true)
   const [showTrades, setShowTrades] = useState(true)
 
   // 선택된 버블 그룹 (상세 보기용)
@@ -208,6 +259,28 @@ export function Chart() {
     return [...serverTrades, ...mappedLocal].filter((trade) => symbolSet.has(normalize(trade.symbol)))
   }, [localTrades, selectedSymbol, serverTrades])
 
+  const activeManualPositions = useMemo(() => {
+    if (!selectedSymbol) return []
+    const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    const symbol = selectedSymbol.toUpperCase()
+    const symbolSet = new Set<string>([normalize(symbol)])
+    if (symbol.includes('-')) {
+      const [quote, base] = symbol.split('-')
+      if (base && quote) symbolSet.add(normalize(`${base}${quote}`))
+    }
+    const filtered = manualPositions.filter((pos) => {
+      if (dataSource === 'crypto' && pos.asset_class !== 'crypto') return false
+      if (dataSource === 'stock' && pos.asset_class !== 'stock') return false
+      if (pos.status !== 'open') return false
+      return symbolSet.has(normalize(pos.symbol))
+    })
+    return filtered.sort((a, b) => {
+      const aTime = new Date(a.opened_at || a.created_at || 0).getTime()
+      const bTime = new Date(b.opened_at || b.created_at || 0).getTime()
+      return bTime - aTime
+    })
+  }, [manualPositions, selectedSymbol, dataSource])
+
   useEffect(() => {
     if (!selectedSymbol) return
     let isActive = true
@@ -240,7 +313,35 @@ export function Chart() {
     return () => {
       isActive = false
     }
-  }, [selectedSymbol])
+  }, [selectedSymbol, refreshTick])
+
+  useEffect(() => {
+    let isActive = true
+    const loadManualPositions = async () => {
+      try {
+        const response = await api.get('/v1/manual-positions?status=open')
+        if (!isActive) return
+        setManualPositions(response.data?.positions || [])
+      } catch {
+        if (isActive) setManualPositions([])
+      }
+    }
+    loadManualPositions()
+    return () => {
+      isActive = false
+    }
+  }, [refreshTick])
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      setRefreshTick((prev) => prev + 1)
+      fetchBubblesFromServer().catch(() => null)
+    }
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
+    }
+  }, [fetchBubblesFromServer])
 
   useEffect(() => {
     setMounted(true)
@@ -307,42 +408,97 @@ export function Chart() {
     })
   }, [])
 
-  // Load Symbols
-  useEffect(() => {
-    let active = true
-    const loadSymbols = async () => {
+  const loadSymbols = useCallback(async (isMounted?: { current: boolean }) => {
+    const canUpdate = () => !isMounted || isMounted.current
+    const merged = new Map<string, UserSymbolItem>()
+
+      const pushSymbols = (items: UserSymbolItem[]) => {
+        items.forEach((item) => {
+          const symbol = item.symbol.toUpperCase()
+          if (!merged.has(symbol)) {
+            merged.set(symbol, {
+              symbol,
+              timeframe_default: item.timeframe_default || '1d',
+            })
+          }
+        })
+      }
+
       try {
         const response = await api.get('/v1/users/me/symbols')
-        if (!active) return
+        if (!canUpdate()) return
         const data = response.data?.symbols || []
         if (data.length > 0) {
-          setSymbols(data)
-        } else {
-          // No symbols from API, use defaults
-          setSymbols(DEFAULT_SYMBOLS)
+          pushSymbols(data)
         }
       } catch (err: any) {
-        if (!active) return
-        // On error (including 401), use default symbols for guest mode
+        if (!canUpdate()) return
         console.warn('Failed to load user symbols, using defaults:', err?.message)
-        setSymbols(DEFAULT_SYMBOLS)
-        setError('') // Clear error - we have fallback
       }
-    }
-    loadSymbols()
-    return () => { active = false }
+
+      if (!isGuestSession()) {
+        try {
+          const response = await api.get<TradeSummaryResponse>('/v1/trades/summary')
+          if (!canUpdate()) return
+          const rows = response.data?.by_symbol || []
+          const sorted = [...rows].sort(
+            (a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0)
+          )
+          pushSymbols(
+            sorted.map((row) => ({
+              symbol: row.symbol,
+              timeframe_default: '1d',
+            }))
+          )
+        } catch (err: any) {
+          if (!canUpdate()) return
+          console.warn('Failed to load trade symbols:', err?.message)
+        }
+      }
+
+      if (merged.size === 0) {
+        pushSymbols(DEFAULT_SYMBOLS)
+      }
+
+      if (!canUpdate()) return
+      setSymbols(Array.from(merged.values()))
+      setError('') // Clear error - we have fallback
   }, [])
+
+  // Load Symbols
+  useEffect(() => {
+    const isMounted = { current: true }
+    loadSymbols(isMounted)
+    return () => {
+      isMounted.current = false
+    }
+  }, [loadSymbols])
+
+  // Reload symbols when trades/portfolio change
+  useEffect(() => {
+    const handleRefresh = () => {
+      loadSymbols()
+    }
+    window.addEventListener('kifu-portfolio-refresh', handleRefresh)
+    window.addEventListener('kifu-trades-refresh', handleRefresh)
+    return () => {
+      window.removeEventListener('kifu-portfolio-refresh', handleRefresh)
+      window.removeEventListener('kifu-trades-refresh', handleRefresh)
+    }
+  }, [loadSymbols])
 
   // Sync Symbol Param
   useEffect(() => {
     if (symbols.length === 0) return
-    const normalizedParam = Array.isArray(symbolParam) ? symbolParam[0]?.toUpperCase() : symbolParam?.toUpperCase() || ''
+    const rawParam = Array.isArray(symbolParam) ? symbolParam[0] : symbolParam
+    const normalizedParam = rawParam?.toUpperCase().trim() || ''
     const match = symbols.find((item) => item.symbol === normalizedParam)
-    const selected = match?.symbol || symbols[0].symbol
+    const fallback = normalizedParam && isMarketSupported(normalizedParam) ? normalizedParam : ''
+    const selected = match?.symbol || fallback || symbols[0].symbol
 
     setSelectedSymbol(selected)
     setTimeframe('1d')
-    if (!normalizedParam || !match) {
+    if (!normalizedParam || (!match && !fallback)) {
       router.replace(`/chart/${selected}`)
     }
   }, [router, symbolParam, symbols])
@@ -367,8 +523,10 @@ export function Chart() {
       setLoading(true)
       setError('')
       try {
+        const exchange = resolveExchange(selectedSymbol)
+        const symbol = exchange === 'upbit' ? normalizeUpbitSymbol(selectedSymbol) : selectedSymbol
         const response = await api.get('/v1/market/klines', {
-          params: { symbol: selectedSymbol, interval: timeframe, limit: 500 },
+          params: { symbol, interval: timeframe, limit: 500, exchange },
         })
         if (!active) return
         setKlines(response.data || [])
@@ -410,6 +568,21 @@ export function Chart() {
     if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
 
     const dataByCandle = new Map<number, { bubbles: Bubble[], trades: Trade[] }>()
+    const positionMarkers: Array<{
+      id: string
+      candleTime: number
+      x: number
+      y: number
+      side: 'long' | 'short'
+      entryPrice?: number
+    }> = []
+    const positionLines: Array<{
+      id: string
+      y: number
+      type: 'entry' | 'sl' | 'tp'
+      side: 'long' | 'short'
+      price?: number
+    }> = []
 
     const findMatchingCandleTime = (ts: number): number | null => {
       const itemTime = Math.floor(ts / 1000)
@@ -454,20 +627,94 @@ export function Chart() {
     }> = []
 
     const chart = chartRef.current
+    const candleMap = new Map<number, typeof chartData[number]>()
+    chartData.forEach((c) => candleMap.set(c.time as number, c))
+    const chartHeight = containerRef.current?.clientHeight ?? 0
+    const chartWidth = containerRef.current?.clientWidth ?? 0
+    const clampX = (value: number) => {
+      if (!chartWidth) return value
+      return Math.min(Math.max(value, 16), chartWidth - 16)
+    }
     dataByCandle.forEach((data, candleTime) => {
       const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
       if (x === null || x === undefined) return
+      const clampedX = clampX(x)
 
-      const candle = chartData.find(c => (c.time as number) === candleTime)
+      const candle = candleMap.get(candleTime)
       const avgPrice = candle ? candle.close : 0
       const y = seriesRef.current?.priceToCoordinate(avgPrice)
 
       if (y === null || y === undefined) return
-      positions.push({ candleTime, x, y, bubbles: data.bubbles, trades: data.trades, avgPrice })
+      if (chartHeight && (y < 0 || y > chartHeight)) return
+      positions.push({ candleTime, x: clampedX, y, bubbles: data.bubbles, trades: data.trades, avgPrice })
+    })
+
+    const visiblePositions = showPositions ? activeManualPositions.slice(0, 1) : []
+    visiblePositions.forEach((position) => {
+      const openedAt = position.opened_at || position.created_at
+      if (!openedAt) return
+      const candleTime = findMatchingCandleTime(new Date(openedAt).getTime())
+      if (candleTime === null) return
+      const x = chart.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+      if (x === null || x === undefined) return
+      const clampedX = clampX(x)
+      const entryPrice = position.entry_price ? Number(position.entry_price) : undefined
+      const reference = entryPrice ?? candleMap.get(candleTime)?.close
+      if (!reference) return
+      const y = seriesRef.current?.priceToCoordinate(reference)
+      if (y === null || y === undefined) return
+      if (chartHeight && (y < 0 || y > chartHeight)) return
+      positionMarkers.push({
+        id: position.id,
+        candleTime,
+        x: clampedX,
+        y,
+        side: position.position_side,
+        entryPrice,
+      })
+
+      const entryLine = entryPrice ? seriesRef.current?.priceToCoordinate(entryPrice) : y
+      if (entryLine !== null && entryLine !== undefined && (!chartHeight || (entryLine >= 0 && entryLine <= chartHeight))) {
+        positionLines.push({
+          id: `${position.id}-entry`,
+          y: entryLine,
+          type: 'entry',
+          side: position.position_side,
+          price: entryPrice ?? reference,
+        })
+      }
+      if (position.stop_loss) {
+        const slPrice = Number(position.stop_loss)
+        const slY = seriesRef.current?.priceToCoordinate(slPrice)
+        if (slY !== null && slY !== undefined && (!chartHeight || (slY >= 0 && slY <= chartHeight))) {
+          positionLines.push({
+            id: `${position.id}-sl`,
+            y: slY,
+            type: 'sl',
+            side: position.position_side,
+            price: slPrice,
+          })
+        }
+      }
+      if (position.take_profit) {
+        const tpPrice = Number(position.take_profit)
+        const tpY = seriesRef.current?.priceToCoordinate(tpPrice)
+        if (tpY !== null && tpY !== undefined && (!chartHeight || (tpY >= 0 && tpY <= chartHeight))) {
+          positionLines.push({
+            id: `${position.id}-tp`,
+            y: tpY,
+            type: 'tp',
+            side: position.position_side,
+            price: tpPrice,
+          })
+        }
+      }
     })
 
     setOverlayPositions(positions)
-  }, [chartData, activeBubbles, activeTrades, timeframe])
+    setPositionMarkers(positionMarkers)
+    setPositionLines(positionLines)
+  }, [chartData, activeBubbles, activeTrades, activeManualPositions, timeframe, showPositions])
 
   useEffect(() => {
     updatePositionsRef.current = updatePositions
@@ -477,8 +724,9 @@ export function Chart() {
     if (overlayPositions.length === 0) return []
     const sorted = [...overlayPositions].sort((a, b) => a.candleTime - b.candleTime)
     const mode = densityMode === 'smart' ? (sorted.length > 80 ? 'daily' : 'all') : densityMode
-    if (mode === 'all') return sorted
-    if (mode === 'recent') return sorted.slice(Math.max(sorted.length - 60, 0))
+    let filtered = sorted
+    if (mode === 'all') filtered = sorted
+    if (mode === 'recent') filtered = sorted.slice(Math.max(sorted.length - 60, 0))
     if (mode === 'weekly') {
       const grouped = new Map<string, typeof overlayPositions[number]>()
       sorted.forEach((item) => {
@@ -496,7 +744,7 @@ export function Chart() {
           avgPrice: item.avgPrice,
         })
       })
-      return Array.from(grouped.values())
+      filtered = Array.from(grouped.values())
     }
     if (mode === 'monthly') {
       const grouped = new Map<string, typeof overlayPositions[number]>()
@@ -515,7 +763,7 @@ export function Chart() {
           avgPrice: item.avgPrice,
         })
       })
-      return Array.from(grouped.values())
+      filtered = Array.from(grouped.values())
     }
     if (mode === 'daily') {
       const grouped = new Map<string, typeof overlayPositions[number]>()
@@ -534,10 +782,29 @@ export function Chart() {
           avgPrice: item.avgPrice,
         })
       })
-      return Array.from(grouped.values())
+      filtered = Array.from(grouped.values())
     }
-    return sorted
-  }, [overlayPositions, densityMode])
+    if (visibleRange) {
+      filtered = filtered.filter((item) => item.candleTime >= visibleRange.from && item.candleTime <= visibleRange.to)
+    }
+    const maxMarkers = 60
+    if (filtered.length > maxMarkers) {
+      const step = Math.ceil(filtered.length / maxMarkers)
+      filtered = filtered.filter((_, index) => index % step === 0)
+    }
+    // Additional pixel-based spacing to reduce overlap
+    const minSpacing = 12
+    const byX = [...filtered].sort((a, b) => a.x - b.x)
+    const spaced: typeof filtered = []
+    let lastX = -Infinity
+    for (const item of byX) {
+      if (item.x - lastX >= minSpacing) {
+        spaced.push(item)
+        lastX = item.x
+      }
+    }
+    return spaced
+  }, [overlayPositions, densityMode, visibleRange])
 
   const filteredBubbles = useMemo(() => {
     const query = bubbleSearch.trim().toLowerCase()
@@ -636,6 +903,11 @@ export function Chart() {
       updateOverlayPosition()
       if (updatePositionsRef.current) updatePositionsRef.current()
 
+      const timeRange = chart.timeScale().getVisibleRange()
+      if (timeRange && Number.isFinite(timeRange.from) && Number.isFinite(timeRange.to)) {
+        setVisibleRange({ from: Number(timeRange.from), to: Number(timeRange.to) })
+      }
+
       // 2. Continuous Scroll Logic
       const logicalRange = chart.timeScale().getVisibleLogicalRange()
       if (!logicalRange) return
@@ -696,8 +968,10 @@ export function Chart() {
 
     setLoading(true)
     try {
+      const exchange = resolveExchange(selectedSymbol)
+      const symbol = exchange === 'upbit' ? normalizeUpbitSymbol(selectedSymbol) : selectedSymbol
       const response = await api.get('/v1/market/klines', {
-        params: { symbol: selectedSymbol, interval: timeframe, limit: 500, endTime: endTimeMs },
+        params: { symbol, interval: timeframe, limit: 500, endTime: endTimeMs, exchange },
       })
 
       const newKlines = response.data || []
@@ -722,6 +996,44 @@ export function Chart() {
       setLoading(false)
     }
   }, [selectedSymbol, timeframe])
+
+  const loadMoreFuture = useCallback(async () => {
+    if (loadingRef.current || klinesRef.current.length === 0) return
+
+    const latestItem = klinesRef.current[klinesRef.current.length - 1]
+    const secondsPerCandle = getTimeframeSeconds(timeframe)
+    const endTimeMs = (latestItem.time as number) * 1000 + secondsPerCandle * 1000 * 500
+
+    setLoading(true)
+    try {
+      const exchange = resolveExchange(selectedSymbol)
+      const symbol = exchange === 'upbit' ? normalizeUpbitSymbol(selectedSymbol) : selectedSymbol
+      const response = await api.get('/v1/market/klines', {
+        params: { symbol, interval: timeframe, limit: 500, endTime: endTimeMs, exchange },
+      })
+
+      const newKlines = response.data || []
+      if (newKlines.length === 0) {
+        return
+      }
+
+      const merged = [...klinesRef.current, ...newKlines]
+      const uniqueDetails = new Map()
+      merged.forEach(k => uniqueDetails.set(k.time, k))
+      const deduplicated = Array.from(uniqueDetails.values()).sort((a, b) => a.time - b.time)
+      setKlines(deduplicated)
+    } catch (err: any) {
+      if (err?.response?.status !== 401) {
+        console.error('Failed to load future', err)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedSymbol, timeframe])
+
+  const jumpToTime = useCallback(() => {
+    return
+  }, [])
 
   // Update Data Effect
   useEffect(() => {
@@ -963,6 +1275,25 @@ export function Chart() {
               />
             </FilterGroup>
 
+            <FilterGroup label="Range" tone="rose">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadMoreHistory()}
+                  className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
+                >
+                  이전 구간
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loadMoreFuture()}
+                  className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
+                >
+                  다음 구간
+                </button>
+              </div>
+            </FilterGroup>
+
             <FilterGroup label="Display" tone="emerald">
               <div className="flex items-center gap-2">
                 <button
@@ -996,6 +1327,17 @@ export function Chart() {
                   className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-300/20"
                 >
                   Trade Focus
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPositions((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                    showPositions
+                      ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                      : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                  }`}
+                >
+                  Positions
                 </button>
               </div>
             </FilterGroup>
@@ -1116,7 +1458,7 @@ export function Chart() {
         {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
         {(dataSource === 'crypto' && !isMarketSupported(selectedSymbol)) && (
           <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-            현재 차트 데이터는 Binance(USDT/USDC/USD) 기반입니다. 주식/기타 심볼은 준비 중입니다.
+            현재 차트 데이터는 Binance(USDT/USDC/USD) 및 Upbit(KRW-*) 기반입니다. 기타 심볼은 준비 중입니다.
           </div>
         )}
         {(dataSource === 'stock') && (
@@ -1158,12 +1500,134 @@ export function Chart() {
         </div>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative" ref={wrapperRef}>
+      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative lg:pr-20" ref={wrapperRef}>
           <div className="h-[520px] w-full relative" ref={containerRef}>
             {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
             {mounted && (
-              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'visible' }}>
+                {showPositions && !positionStackMode && positionLines.map((line) => (
+                  <div
+                    key={line.id}
+                    className="absolute left-0 right-0 pointer-events-none"
+                    style={{ top: line.y }}
+                  >
+                    <div className={`h-px w-full ${
+                      line.type === 'sl'
+                        ? 'bg-rose-400/60'
+                        : line.type === 'tp'
+                          ? 'bg-emerald-300/60'
+                          : 'bg-cyan-300/40'
+                    }`} />
+                    {!positionStackMode && line.price !== undefined && (
+                      <div className={`absolute right-2 -top-3 rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.2em] ${
+                        line.type === 'sl'
+                          ? 'border-rose-300/40 text-rose-200 bg-rose-300/10'
+                          : line.type === 'tp'
+                            ? 'border-emerald-300/40 text-emerald-200 bg-emerald-300/10'
+                            : 'border-cyan-300/40 text-cyan-200 bg-cyan-300/10'
+                      }`}>
+                        {line.type.toUpperCase()} · {line.price}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {showPositions && positionStackMode && (
+                  <div className="absolute inset-0 pointer-events-none">
+                    {activeManualPositions.slice(0, 6).map((position) => {
+                      const openedAt = position.opened_at || position.created_at
+                      if (!openedAt) return null
+                      const secondsPerCandle = getTimeframeSeconds(timeframe)
+                      const candleTime = Math.floor(new Date(openedAt).getTime() / 1000 / secondsPerCandle) * secondsPerCandle
+                      const x = chartRef.current?.timeScale().timeToCoordinate(candleTime as UTCTimestamp)
+                      if (x === null || x === undefined) return null
+                      const chartWidth = containerRef.current?.clientWidth ?? 0
+                      const clampedX = chartWidth ? Math.min(Math.max(x, 16), chartWidth - 16) : x
+
+                      const referencePrice = position.entry_price ? Number(position.entry_price) : undefined
+                      const y = referencePrice ? seriesRef.current?.priceToCoordinate(referencePrice) : null
+                      if (y === null || y === undefined) return null
+                      const chartHeight = containerRef.current?.clientHeight ?? 0
+                      if (chartHeight && (y < 0 || y > chartHeight)) return null
+
+                      return (
+                        <div
+                          key={`${position.id}-entry-flag`}
+                          className="absolute"
+                          style={{
+                            left: clampedX,
+                            top: Math.max(40, y) - 40,
+                            transform: 'translateX(-50%)',
+                          }}
+                        >
+                          <div className={`rounded px-2 py-1 text-[10px] font-semibold shadow-md ${
+                            position.position_side === 'long'
+                              ? 'bg-emerald-600/80 text-emerald-100'
+                              : 'bg-rose-600/80 text-rose-100'
+                          }`}>
+                            P
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {showPositions && positionStackMode && (
+                  <div className="absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-neutral-800/70 bg-neutral-950/70 p-3 shadow-xl backdrop-blur pointer-events-auto">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Positions</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPositions(false)}
+                        className="text-[10px] text-neutral-500 hover:text-neutral-200"
+                      >
+                        hide
+                      </button>
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {activeManualPositions.slice(0, 3).map((position) => {
+                        const side = position.position_side
+                        const openedAt = position.opened_at || position.created_at
+                        const openedText = openedAt ? new Date(openedAt).toLocaleString() : '-'
+                        return (
+                          <button
+                            key={position.id}
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setSelectedPosition(position)
+                              setPanelTab('detail')
+                            }}
+                            className={`w-full rounded-xl border px-3 py-2 text-left text-xs ${
+                              side === 'long'
+                                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
+                                : 'border-rose-400/30 bg-rose-400/10 text-rose-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold uppercase tracking-[0.2em]">{side}</span>
+                              <span className="text-[10px] text-neutral-400">{position.symbol}</span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-neutral-200">
+                              Entry {position.entry_price || '-'}
+                            </div>
+                            <div className="mt-1 text-[10px] text-neutral-400">
+                              SL {position.stop_loss || '-'} · TP {position.take_profit || '-'}
+                            </div>
+                            <div className="mt-1 text-[10px] text-neutral-500">
+                              Opened {openedText}
+                            </div>
+                          </button>
+                        )
+                      })}
+                      {activeManualPositions.length === 0 && (
+                        <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/60 px-3 py-2 text-[11px] text-neutral-400">
+                          No open positions
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {densityAdjustedPositions.map((group) => {
             // 토글에 따라 필터링
             const visibleBubbles = showBubbles ? group.bubbles : []
@@ -1178,6 +1642,8 @@ export function Chart() {
 
             const hasBubbles = visibleBubbles.length > 0
             const hasTrades = visibleTrades.length > 0
+            const bubbleCount = visibleBubbles.length
+            const tradeCount = visibleTrades.length
 
             // Determine Marker Style
             let bgColor = 'bg-neutral-700'
@@ -1208,7 +1674,9 @@ export function Chart() {
                 style={{ left: group.x, top: Math.max(40, group.y) - 40, transform: 'translateX(-50%)', pointerEvents: 'auto' }}
                 onClick={(e) => {
                   e.stopPropagation()
-                  setSelectedGroup(isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades })
+                  const nextGroup = isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades }
+                  setSelectedGroup(nextGroup)
+                  // no jump; only select group
                 }}
               >
                 {/* Visual Connector Line */}
@@ -1216,16 +1684,24 @@ export function Chart() {
 
                 <div className={`relative rounded px-2 py-1 text-xs font-semibold shadow-md transition-transform hover:scale-110 ${bgColor} ${isSelected ? 'ring-2 ring-yellow-400' : ''} ${hasBubbles && hasTrades ? 'border border-yellow-500' : ''}`}>
                   <div className="flex items-center gap-1">
-                    {hasBubbles && <span className="text-white">💬{visibleBubbles.length}</span>}
-                    {hasTrades && <span className="text-xs">
-                      {visibleTrades.filter(t => t.side === 'buy').length > 0 && '↑'}
-                      {visibleTrades.filter(t => t.side === 'sell').length > 0 && '↓'}
-                    </span>}
+                    {hasBubbles && (
+                      <span className="text-white">{bubbleCount > 1 ? `💬${bubbleCount}` : '💬'}</span>
+                    )}
+                    {hasTrades && (
+                      <span className="text-xs">
+                        {tradeCount > 1 ? `↑${tradeCount}` : (
+                          <>
+                            {visibleTrades.some(t => t.side === 'buy') && '↑'}
+                            {visibleTrades.some(t => t.side === 'sell') && '↓'}
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Tooltip */}
-                <div className="absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] z-50">
+                <div className="absolute left-1/2 bottom-full mb-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50">
                   <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
                     {new Date(group.candleTime * 1000).toLocaleString()}
                   </div>
@@ -1239,7 +1715,9 @@ export function Chart() {
                             <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
                             <span>${b.price}</span>
                           </div>
-                          <div className="text-neutral-400 truncate">{b.note}</div>
+                          <div className="text-neutral-400 max-w-[240px] break-words line-clamp-2" title={b.note}>
+                            {b.note}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1386,9 +1864,62 @@ export function Chart() {
 
           {panelTab === 'detail' && (
             <div className="space-y-3">
-              {!selectedGroup && (
+              {!selectedGroup && !selectedPosition && (
                 <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-4 text-xs text-neutral-500">
                   차트에서 말풍선을 선택하면 상세가 표시됩니다.
+                </div>
+              )}
+              {selectedPosition && (
+                <div className="space-y-3 rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Position</p>
+                      <h3 className="mt-1 text-sm font-semibold text-neutral-100">
+                        {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
+                      </h3>
+                      <p className="mt-1 text-xs text-neutral-400">
+                        {selectedPosition.opened_at ? new Date(selectedPosition.opened_at).toLocaleString() : '시간 정보 없음'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedPosition(null)}
+                      className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  <div className="grid gap-2 text-xs text-neutral-300">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">Entry</span>
+                      <span>{selectedPosition.entry_price || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">SL</span>
+                      <span>{selectedPosition.stop_loss || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">TP</span>
+                      <span>{selectedPosition.take_profit || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">Size</span>
+                      <span>{selectedPosition.size || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-500">Leverage</span>
+                      <span>{selectedPosition.leverage || '-'}</span>
+                    </div>
+                    {selectedPosition.strategy && (
+                      <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-2 text-[11px] text-neutral-300">
+                        전략: {selectedPosition.strategy}
+                      </div>
+                    )}
+                    {selectedPosition.memo && (
+                      <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-2 text-[11px] text-neutral-300">
+                        메모: {selectedPosition.memo}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {selectedGroup && (

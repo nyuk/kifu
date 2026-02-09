@@ -327,7 +327,8 @@ export function BubbleCreateModal({
             {symbol} · {timeframe}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5 pr-4">
+        <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5 pr-4">
           {error && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
               {error}
@@ -688,21 +689,24 @@ export function BubbleCreateModal({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200"
-            >
-              취소
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? '저장 중...' : '버블 저장'}
-            </button>
+          </div>
+          <div className="border-t border-neutral-800 bg-neutral-950/95 px-6 py-4 backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200 hover:border-neutral-500"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmitting ? '저장 중...' : '버블 저장'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
