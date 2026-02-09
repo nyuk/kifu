@@ -1,6 +1,7 @@
 .mcp.json
 .env
 backend/.env
+frontend/.env
 .gocache/
 backend.log
 backend/backend.log
