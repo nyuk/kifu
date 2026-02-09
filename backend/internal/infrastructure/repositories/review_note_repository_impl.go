@@ -24,8 +24,9 @@ func (r *ReviewNoteRepositoryImpl) Create(ctx context.Context, note *entities.Re
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	note.ID = uuid.New()
-	note.CreatedAt = time.Now()
-	note.UpdatedAt = time.Now()
+	now := time.Now().UTC()
+	note.CreatedAt = now
+	note.UpdatedAt = now
 
 	_, err := r.pool.Exec(ctx, query,
 		note.ID, note.UserID, note.BubbleID, note.Title, note.Content,

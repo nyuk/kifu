@@ -60,9 +60,16 @@ export function CalendarView({ calendar, isLoading }: Props) {
   const dayNames = ['월', '화', '수', '목', '금', '토', '일']
   const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 
+  const formatLocalDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = `${date.getMonth() + 1}`.padStart(2, '0')
+    const day = `${date.getDate()}`.padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const getDayData = (date: Date) => {
     if (!calendar) return null
-    const key = date.toISOString().split('T')[0]
+    const key = formatLocalDateKey(date)
     return calendar.days[key]
   }
 

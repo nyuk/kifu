@@ -1031,6 +1031,32 @@ export function Chart() {
     }
   }, [selectedSymbol, timeframe])
 
+  const focusOnTimestamp = useCallback((tsMs: number, bubbleTimeframe?: string) => {
+    if (bubbleTimeframe && bubbleTimeframe !== timeframe) {
+      setTimeframe(bubbleTimeframe)
+    }
+    const secondsPerCandle = getTimeframeSeconds(bubbleTimeframe || timeframe)
+    const targetSec = Math.floor(tsMs / 1000)
+    const span = secondsPerCandle * 50
+    const oldest = klines.length > 0 ? (klines[0].time as number) : null
+    const latest = klines.length > 0 ? (klines[klines.length - 1].time as number) : null
+
+    if (oldest && targetSec < oldest) {
+      loadMoreHistory()
+      toast('이전 데이터를 불러오는 중입니다.', 'info')
+    } else if (latest && targetSec > latest) {
+      loadMoreFuture()
+      toast('이후 데이터를 불러오는 중입니다.', 'info')
+    }
+
+    if (chartRef.current) {
+      chartRef.current.timeScale().setVisibleRange({
+        from: (targetSec - span) as UTCTimestamp,
+        to: (targetSec + span) as UTCTimestamp,
+      })
+    }
+  }, [klines, timeframe, loadMoreHistory, loadMoreFuture, toast])
+
   const jumpToTime = useCallback(() => {
     return
   }, [])
@@ -1845,15 +1871,25 @@ export function Chart() {
                   {filteredBubbles.slice(0, 40).map((bubble) => (
                     <div key={bubble.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
                       <div className="flex items-center justify-between text-xs text-neutral-500">
-                        <span>{new Date(bubble.ts).toLocaleDateString()}</span>
+                        <span>{new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
                         <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
                           {bubble.action || 'NOTE'}
                         </span>
                       </div>
+                      <div className="mt-1 text-[10px] text-neutral-500">
+                        생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                      </div>
                       <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{bubble.note}</p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-neutral-500">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-500">
                         <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.symbol}</span>
                         <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.timeframe}</span>
+                        <button
+                          type="button"
+                          onClick={() => focusOnTimestamp(bubble.ts, bubble.timeframe)}
+                          className="rounded-full border border-cyan-400/40 px-2 py-0.5 text-cyan-200 hover:bg-cyan-400/10"
+                        >
+                          차트로 이동
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1928,7 +1964,7 @@ export function Chart() {
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
                       <h3 className="mt-1 text-sm font-semibold text-neutral-100">
-                        {new Date(selectedGroup.candleTime * 1000).toLocaleString()}
+                        {new Date(selectedGroup.candleTime * 1000).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                       </h3>
                     </div>
                     <button
@@ -1958,6 +1994,12 @@ export function Chart() {
                                 {bubble.action || 'NOTE'}
                               </span>
                               <span className="text-xs text-neutral-400">${bubble.price.toLocaleString()}</span>
+                            </div>
+                            <div className="mt-1 text-[10px] text-neutral-500">
+                              캔들 {new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-neutral-500">
+                              생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                             </div>
                             <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{bubble.note}</p>
                           </div>

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -63,8 +64,8 @@ func noteToResponse(note *entities.ReviewNote) NoteResponse {
 		Tags:          note.Tags,
 		LessonLearned: note.LessonLearned,
 		Emotion:       string(note.Emotion),
-		CreatedAt:     note.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:     note.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:     note.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:     note.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 	if note.BubbleID != nil {
 		bubbleStr := note.BubbleID.String()

@@ -153,7 +153,7 @@ export default function ReviewPage() {
     return () => {
       isActive = false
     }
-  }, [])
+  }, [refreshTick])
 
   const tradePnl = useMemo(() => Number(tradeSummary?.totals?.realized_pnl_total || 0), [tradeSummary])
   const tradeCount = tradeSummary?.totals?.total_trades || 0

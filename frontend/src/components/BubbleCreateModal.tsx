@@ -305,6 +305,12 @@ export function BubbleCreateModal({
         }
       }
 
+      try {
+        const stamp = new Date().toISOString()
+        localStorage.setItem('kifu-portfolio-refresh', stamp)
+        window.dispatchEvent(new CustomEvent('kifu-portfolio-refresh', { detail: { at: stamp } }))
+      } catch {}
+
       onCreated?.()
       onClose()
     } catch (err: any) {

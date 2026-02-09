@@ -149,7 +149,7 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
       <div className="flex justify-between mt-2 ml-12 text-xs text-gray-500">
         {recentData.map((point) => (
           <span key={point.date}>
-            {new Date(point.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+            {new Date(`${point.date}T00:00:00`).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
           </span>
         ))}
       </div>
