@@ -3,16 +3,19 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -35,6 +38,7 @@ type AIHandler struct {
 	subscriptionRepo repositories.SubscriptionRepository
 	encryptionKey    []byte
 	client           *http.Client
+	oneShotCache     *oneShotCache
 }
 
 func NewAIHandler(
@@ -55,7 +59,70 @@ func NewAIHandler(
 		client: &http.Client{
 			Timeout: 20 * time.Second,
 		},
+		oneShotCache: newOneShotCache(60 * time.Second),
 	}
+}
+
+type oneShotCacheEntry struct {
+	response  OneShotAIResponse
+	expiresAt time.Time
+}
+
+type oneShotCache struct {
+	mu    sync.Mutex
+	ttl   time.Duration
+	items map[string]oneShotCacheEntry
+}
+
+func newOneShotCache(ttl time.Duration) *oneShotCache {
+	return &oneShotCache{
+		ttl:   ttl,
+		items: make(map[string]oneShotCacheEntry),
+	}
+}
+
+func (c *oneShotCache) get(key string) (OneShotAIResponse, bool) {
+	if c == nil {
+		return OneShotAIResponse{}, false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry, ok := c.items[key]
+	if !ok {
+		return OneShotAIResponse{}, false
+	}
+	if time.Now().After(entry.expiresAt) {
+		delete(c.items, key)
+		return OneShotAIResponse{}, false
+	}
+	return entry.response, true
+}
+
+func (c *oneShotCache) set(key string, response OneShotAIResponse) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items[key] = oneShotCacheEntry{
+		response:  response,
+		expiresAt: time.Now().Add(c.ttl),
+	}
+}
+
+func buildOneShotCacheKey(userID uuid.UUID, req OneShotAIRequest) string {
+	parts := []string{
+		userID.String(),
+		strings.ToLower(strings.TrimSpace(req.Provider)),
+		strings.ToLower(strings.TrimSpace(req.PromptType)),
+		strings.ToUpper(strings.TrimSpace(req.Symbol)),
+		strings.ToLower(strings.TrimSpace(req.Timeframe)),
+		strings.TrimSpace(req.Price),
+		strings.TrimSpace(req.EvidenceText),
+	}
+	raw := strings.Join(parts, "|")
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
 }
 
 type AIOpinionRequest struct {
@@ -288,6 +355,11 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"code": "SUBSCRIPTION_NOT_FOUND", "message": "subscription not found"})
 	}
 
+	cacheKey := buildOneShotCacheKey(userID, req)
+	if cached, ok := h.oneShotCache.get(cacheKey); ok {
+		return c.Status(200).JSON(cached)
+	}
+
 	apiKey, err := h.resolveAPIKey(c.Context(), userID, provider)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
@@ -334,14 +406,17 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(200).JSON(OneShotAIResponse{
+	response := OneShotAIResponse{
 		Provider:   provider,
 		Model:      model,
 		PromptType: strings.TrimSpace(req.PromptType),
 		Response:   responseText,
 		TokensUsed: tokensUsed,
 		CreatedAt:  time.Now().UTC().Format(time.RFC3339),
-	})
+	}
+	h.oneShotCache.set(cacheKey, response)
+
+	return c.Status(200).JSON(response)
 }
 
 func (h *AIHandler) ListOpinions(c *fiber.Ctx) error {
