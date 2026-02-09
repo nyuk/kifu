@@ -75,7 +75,9 @@ func monthChanged(lastReset time.Time, now time.Time) bool {
 
 func applyTierReset(sub *entities.Subscription, tier string, now time.Time) {
 	sub.Tier = tier
-	sub.AIQuotaRemaining = quotaForTier(tier)
+	limit := quotaForTier(tier)
+	sub.AIQuotaLimit = limit
+	sub.AIQuotaRemaining = limit
 	sub.LastResetAt = now
 	if tier == "free" {
 		sub.ExpiresAt = nil

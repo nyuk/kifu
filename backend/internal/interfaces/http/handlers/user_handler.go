@@ -26,6 +26,7 @@ func NewUserHandler(
 type SubscriptionInfo struct {
 	Tier             string     `json:"tier"`
 	AIQuotaRemaining int        `json:"ai_quota_remaining"`
+	AIQuotaLimit     int        `json:"ai_quota_limit"`
 	LastResetAt      *time.Time `json:"last_reset_at,omitempty"`
 	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
 }
@@ -45,6 +46,7 @@ type UpdateProfileRequest struct {
 type SubscriptionResponse struct {
 	Tier             string     `json:"tier"`
 	AIQuotaRemaining int        `json:"ai_quota_remaining"`
+	AIQuotaLimit     int        `json:"ai_quota_limit"`
 	LastResetAt      *time.Time `json:"last_reset_at,omitempty"`
 	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
 }
@@ -74,6 +76,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 		subInfo = &SubscriptionInfo{
 			Tier:             subscription.Tier,
 			AIQuotaRemaining: subscription.AIQuotaRemaining,
+			AIQuotaLimit:     subscription.AIQuotaLimit,
 			LastResetAt:      &subscription.LastResetAt,
 			ExpiresAt:        subscription.ExpiresAt,
 		}
@@ -165,6 +168,7 @@ func (h *UserHandler) GetSubscription(c *fiber.Ctx) error {
 	response := SubscriptionResponse{
 		Tier:             subscription.Tier,
 		AIQuotaRemaining: subscription.AIQuotaRemaining,
+		AIQuotaLimit:     subscription.AIQuotaLimit,
 		LastResetAt:      &subscription.LastResetAt,
 		ExpiresAt:        subscription.ExpiresAt,
 	}

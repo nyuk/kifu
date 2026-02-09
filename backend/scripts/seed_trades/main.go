@@ -116,6 +116,7 @@ func ensureUser(ctx context.Context, userRepo domainrepos.UserRepository, subRep
 		UserID:           newUser.ID,
 		Tier:             "free",
 		AIQuotaRemaining: 20,
+		AIQuotaLimit:     20,
 		LastResetAt:      time.Now().UTC(),
 		ExpiresAt:        nil,
 	}); err != nil {

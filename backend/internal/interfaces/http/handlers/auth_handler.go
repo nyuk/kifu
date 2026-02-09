@@ -84,6 +84,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		UserID:           user.ID,
 		Tier:             "free",
 		AIQuotaRemaining: 20,
+		AIQuotaLimit:     20,
 		LastResetAt:      now,
 		ExpiresAt:        nil,
 	}
