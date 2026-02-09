@@ -1,10 +1,14 @@
 package http
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/handlers"
+	"github.com/moneyvessel/kifu/internal/interfaces/http/middleware"
+	"golang.org/x/time/rate"
 )
 
 func RegisterRoutes(
@@ -62,6 +66,8 @@ func RegisterRoutes(
 	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 
+	aiRateLimiter := middleware.NewUserRateLimiter(rate.Every(time.Minute/6), 2)
+
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
 
@@ -98,11 +104,11 @@ func RegisterRoutes(
 	bubbles.Get("/search", similarHandler.Search)
 
 	bubbleAI := api.Group("/bubbles")
-	bubbleAI.Post("/:id/ai-opinions", aiHandler.RequestOpinions)
+	bubbleAI.Post("/:id/ai-opinions", middleware.RateLimit(aiRateLimiter), aiHandler.RequestOpinions)
 	bubbleAI.Get("/:id/ai-opinions", aiHandler.ListOpinions)
 
 	ai := api.Group("/ai")
-	ai.Post("/one-shot", aiHandler.RequestOneShot)
+	ai.Post("/one-shot", middleware.RateLimit(aiRateLimiter), aiHandler.RequestOneShot)
 
 	trades := api.Group("/trades")
 	trades.Post("/import", tradeHandler.Import)
