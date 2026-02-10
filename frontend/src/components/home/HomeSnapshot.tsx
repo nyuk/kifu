@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { api } from '../../lib/api'
-import { readOnboardingProfile } from '../../lib/onboardingProfile'
+import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useReviewStore } from '../../stores/reviewStore'
@@ -277,7 +277,7 @@ export function HomeSnapshot() {
   useEffect(() => {
     setOnboardingProfile(readOnboardingProfile())
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'kifu-onboarding-profile-v1') {
+      if (event.key?.startsWith(onboardingProfileStoragePrefix)) {
         setOnboardingProfile(readOnboardingProfile())
       }
     }

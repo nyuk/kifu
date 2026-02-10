@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../../../src/stores/auth'
-import { buildOnboardingProfile, readOnboardingProfile, saveOnboardingProfile } from '../../../src/lib/onboardingProfile'
+import { buildOnboardingProfile, readOnboardingDraft, readOnboardingProfile, saveOnboardingDraft, saveOnboardingProfile } from '../../../src/lib/onboardingProfile'
 
 type Choice = 'long' | 'short' | 'hold'
 type Confidence = 1 | 2 | 3 | 4 | 5
@@ -61,14 +60,29 @@ export default function OnboardingTestPage() {
     if (!isComplete) return '진단 중'
     const profile = buildOnboardingProfile(answers, scenarios.length)
     return profile.tendency
-  }, [holdCount, isComplete, longCount, shortCount])
+  }, [answers, isComplete])
 
   useEffect(() => {
+    const draft = readOnboardingDraft<Record<number, Response>>()
+    if (draft?.answers && Object.keys(draft.answers).length > 0) {
+      setAnswers(draft.answers)
+      if (Number.isInteger(draft.current_index)) {
+        setCurrentIndex(Math.max(0, Math.min(scenarios.length - 1, draft.current_index)))
+      }
+    }
     const current = readOnboardingProfile()
     if (current?.completed_at) {
       setSavedAt(current.completed_at)
     }
   }, [])
+
+  useEffect(() => {
+    saveOnboardingDraft({
+      updated_at: new Date().toISOString(),
+      answers,
+      current_index: currentIndex,
+    })
+  }, [answers, currentIndex])
 
   useEffect(() => {
     if (!isComplete) return
@@ -133,8 +147,9 @@ export default function OnboardingTestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-4 py-10 text-neutral-100">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <div className="min-h-screen bg-neutral-950 px-4 text-neutral-100">
+      <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center">
+        <div className="w-full space-y-6">
         <header>
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Onboarding Test</p>
           <h1 className="mt-2 text-3xl font-semibold">초기 성향 테스트 (5문항 · 약 3분)</h1>
@@ -263,29 +278,19 @@ export default function OnboardingTestPage() {
           <p className="mt-1 text-xs text-neutral-500">
             {savedAt ? `저장됨: ${new Date(savedAt).toLocaleString('ko-KR')}` : '완료 시 자동 저장됩니다.'}
           </p>
+          <p className="mt-1 text-xs text-neutral-500">선택한 포지션/근거는 문항마다 자동 저장됩니다.</p>
           {saveFeedback && (
             <p className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
               {saveFeedback}
             </p>
           )}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {isAuthenticated ? (
-              <Link href="/home" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950">
-                서재로 이동
-              </Link>
-            ) : (
-              <Link href="/register?next=%2Fonboarding%2Ftest" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950">
-                회원가입 후 테스트 이어하기
-              </Link>
-            )}
-            <Link href="/alert" className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-200">
-              긴급 브리핑 미리보기
-            </Link>
-            <Link href="/chart" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
-              차트로 바로 가기
-            </Link>
-          </div>
+          {!isAuthenticated && (
+            <p className="mt-3 text-xs text-neutral-500">
+              완료 후 회원가입하면 결과를 이어서 사용할 수 있습니다.
+            </p>
+          )}
         </section>
+      </div>
       </div>
     </div>
   )

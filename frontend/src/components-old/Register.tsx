@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { clearGuestSession } from '../lib/guestSession'
+import { useBubbleStore } from '../lib/bubbleStore'
 
 export function Register() {
   const [name, setName] = useState('')
@@ -14,8 +15,28 @@ export function Register() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const setTokens = useAuthStore((state) => state.setTokens)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  const resolveNextPath = () => {
+    const nextRaw = searchParams?.get('next')?.trim() || ''
+    const fromRaw = searchParams?.get('from')?.trim() || ''
+    const candidate = nextRaw || fromRaw
+    if (candidate.startsWith('/onboarding/test')) return '/onboarding/test'
+    if (candidate.startsWith('/onboarding/import')) return '/onboarding/import'
+    if (candidate.startsWith('/onboarding/start')) return '/onboarding/start'
+    if (candidate.startsWith('/settings')) return '/settings'
+    if (candidate.startsWith('/home')) return '/home'
+    return '/onboarding/start'
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/home')
+    }
+  }, [isAuthenticated, router])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -24,12 +45,13 @@ export function Register() {
     try {
       await api.post('/v1/auth/register', { name, email, password })
       const loginResponse = await api.post('/v1/auth/login', { email, password })
+      resetSessionData()
       setTokens(loginResponse.data.access_token, loginResponse.data.refresh_token)
       clearGuestSession()
-      const next = searchParams?.get('next') || '/home'
-      router.replace(next)
+      const next = resolveNextPath()
+      window.location.replace(next)
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Registration failed. Please try again.')
+      setError(err?.response?.data?.message || '회원가입에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsLoading(false)
     }
@@ -39,19 +61,19 @@ export function Register() {
     <div className="min-h-screen bg-neutral-950 px-4 py-12 text-neutral-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Get Started</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">시작하기</p>
           <h1 className="text-3xl font-semibold text-neutral-100 lg:text-4xl">
-            Build your execution memory.
+            당신의 매매 기록을 쌓아보세요.
           </h1>
           <p className="text-base text-neutral-400">
-            Track setups, annotate entries, and compare outcome feedback across time.
+            진입 근거를 남기고, 결과를 복기하고, 다음 판단에 반영합니다.
           </p>
           <div className="mt-6 rounded-2xl border border-neutral-800/70 bg-neutral-900/50 p-5">
-            <p className="text-sm font-semibold text-neutral-200">Starter perks</p>
+            <p className="text-sm font-semibold text-neutral-200">시작 혜택</p>
             <ul className="mt-2 space-y-1 text-sm text-neutral-400">
-              <li>• 20 AI opinions in the free tier</li>
-              <li>• Outcome tracking at 1h, 4h, 1d</li>
-              <li>• Secure API key vault</li>
+              <li>• 무료 플랜에서 AI 의견 체험</li>
+              <li>• 1h, 4h, 1d 복기 결과 추적</li>
+              <li>• API 키 보관함 제공</li>
             </ul>
           </div>
         </div>
@@ -60,8 +82,8 @@ export function Register() {
           className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-8"
         >
           <div>
-            <h2 className="text-2xl font-semibold">Create account</h2>
-            <p className="mt-1 text-sm text-neutral-400">Start with a free tier account.</p>
+            <h2 className="text-2xl font-semibold">회원가입</h2>
+            <p className="mt-1 text-sm text-neutral-400">무료로 시작할 수 있습니다.</p>
           </div>
           {error && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
@@ -69,18 +91,18 @@ export function Register() {
             </div>
           )}
           <label className="text-sm text-neutral-300">
-            Name
+            이름
             <input
               type="text"
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
               className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-4 py-2 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none"
-              placeholder="Trader name"
+              placeholder="사용할 이름"
             />
           </label>
           <label className="text-sm text-neutral-300">
-            Email
+            이메일
             <input
               type="email"
               required
@@ -91,14 +113,14 @@ export function Register() {
             />
           </label>
           <label className="text-sm text-neutral-300">
-            Password
+            비밀번호
             <input
               type="password"
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-4 py-2 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none"
-              placeholder="Create a strong password"
+              placeholder="비밀번호를 입력하세요"
             />
           </label>
           <button
@@ -106,12 +128,12 @@ export function Register() {
             disabled={isLoading}
             className="mt-2 rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Creating...' : 'Create account'}
+            {isLoading ? '생성 중...' : '회원가입'}
           </button>
           <p className="text-sm text-neutral-400">
-            Already have an account?{' '}
+            이미 계정이 있나요?{' '}
             <Link href="/login" className="font-semibold text-neutral-100">
-              Login
+              로그인
             </Link>
           </p>
         </form>

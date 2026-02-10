@@ -21,6 +21,8 @@ api.interceptors.request.use((config) => {
 const GUEST_FRIENDLY_URLS = [
   '/v1/users/me/symbols',
   '/v1/market/klines',
+  '/v1/auth/login',
+  '/v1/auth/register',
 ]
 
 // Response interceptor - handle 401 errors

@@ -14,6 +14,7 @@ import { ChartReplay } from '../components/chart/ChartReplay'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../types/trade'
 import type { ManualPosition } from '../types/position'
+import { useAuthStore } from '../stores/auth'
 
 type UserSymbolItem = {
   symbol: string
@@ -183,6 +184,8 @@ export function Chart() {
   const importTrades = useBubbleStore((state) => state.importTrades)
   const createBubblesFromTrades = useBubbleStore((state) => state.createBubblesFromTrades)
   const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
+  const resetSessionData = useBubbleStore((state) => state.resetSessionData)
+  const accessToken = useAuthStore((state) => state.accessToken)
   const [serverTrades, setServerTrades] = useState<OverlayTrade[]>([])
   const [refreshTick, setRefreshTick] = useState(0)
   const [manualPositions, setManualPositions] = useState<ManualPosition[]>([])
@@ -360,6 +363,15 @@ export function Chart() {
     setMounted(true)
     setGuestMode(isGuestSession())
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (guestMode || !accessToken) {
+      resetSessionData()
+      return
+    }
+    fetchBubblesFromServer().catch(() => null)
+  }, [mounted, guestMode, accessToken, fetchBubblesFromServer, resetSessionData])
 
   useEffect(() => {
     if (selectedGroup) {

@@ -72,6 +72,7 @@ interface BubbleState {
   trades: Trade[];
   importTrades: (trades: Trade[]) => void;
   deleteAllTrades: () => void;
+  resetSessionData: () => void;
 }
 
 export const useBubbleStore = create<BubbleState>()(
@@ -253,6 +254,7 @@ export const useBubbleStore = create<BubbleState>()(
       trades: [],
       importTrades: (newTrades) => set((state) => ({ trades: [...state.trades, ...newTrades] })),
       deleteAllTrades: () => set({ trades: [] }),
+      resetSessionData: () => set({ bubbles: [], trades: [] }),
     }),
     {
       name: 'bubble-storage-v2',

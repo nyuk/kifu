@@ -7,10 +7,12 @@ import { useI18n } from '../lib/i18n'
 import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
+import { useBubbleStore } from '../lib/bubbleStore'
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
   const clearTokens = useAuthStore((state) => state.clearTokens)
+  const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const accessToken = useAuthStore((state) => state.accessToken)
   const router = useRouter()
   const pathname = usePathname()
@@ -57,6 +59,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     clearGuestSession()
+    resetSessionData()
     clearTokens()
     router.push('/login')
   }
