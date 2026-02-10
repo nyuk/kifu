@@ -23,6 +23,7 @@ type BubbleListItem = {
   id: string
   symbol: string
   timeframe: string
+  candle_time?: string
 }
 
 type BubbleListResponse = {
@@ -32,6 +33,7 @@ type BubbleListResponse = {
 type AINoteCard = ReviewNote & {
   symbol?: string
   timeframe?: string
+  candle_time?: string
 }
 
 export default function ReviewPage() {
@@ -174,6 +176,7 @@ export default function ReviewPage() {
             ...note,
             symbol: bubble?.symbol,
             timeframe: bubble?.timeframe,
+            candle_time: bubble?.candle_time,
           }
         })
         if (isActive) setAiNotes(enriched.slice(0, 30))
@@ -418,6 +421,14 @@ export default function ReviewPage() {
                     )}
                     {note.timeframe && (
                       <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300">{note.timeframe}</span>
+                    )}
+                    {note.symbol && note.candle_time && (
+                      <Link
+                        href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
+                        className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-emerald-200 hover:bg-emerald-500/10"
+                      >
+                        차트 이동
+                      </Link>
                     )}
                     {note.bubble_id && (
                       <Link

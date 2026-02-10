@@ -131,6 +131,18 @@ const getWeekKey = (value: Date) => {
   return `${date.getUTCFullYear()}-W${weekNo}`
 }
 
+const parseFocusTimestampMs = (raw: string | null) => {
+  if (!raw) return null
+  const numeric = Number(raw)
+  if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+    // treat small values as seconds, otherwise milliseconds
+    return numeric < 10_000_000_000 ? numeric * 1000 : numeric
+  }
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed.getTime()
+}
+
 // Helper to get timeframe duration in seconds
 function getTimeframeSeconds(tf: string): number {
   const map: Record<string, number> = {
@@ -222,6 +234,7 @@ export function Chart() {
   // 표시 옵션
   const [showBubbles, setShowBubbles] = useState(true)
   const [showTrades, setShowTrades] = useState(true)
+  const focusQueryRef = useRef<string | null>(null)
 
   // 선택된 버블 그룹 (상세 보기용)
   const [selectedGroup, setSelectedGroup] = useState<{
@@ -1126,6 +1139,26 @@ export function Chart() {
   const jumpToTime = useCallback(() => {
     return
   }, [])
+
+  useEffect(() => {
+    const focusRaw = searchParams?.get('focus_ts') || null
+    const focusMs = parseFocusTimestampMs(focusRaw)
+    if (!focusMs) return
+
+    const focusTf = (searchParams?.get('focus_tf') || '').trim()
+    const targetTf = focusTf || timeframe
+    const focusKey = `${selectedSymbol}|${focusMs}|${targetTf}`
+    if (focusQueryRef.current === focusKey) return
+
+    if (focusTf && focusTf !== timeframe) {
+      setTimeframe(focusTf)
+      return
+    }
+    if (chartData.length === 0) return
+
+    focusOnTimestamp(focusMs, targetTf)
+    focusQueryRef.current = focusKey
+  }, [searchParams, selectedSymbol, timeframe, chartData.length, focusOnTimestamp])
 
   // Update Data Effect
   useEffect(() => {

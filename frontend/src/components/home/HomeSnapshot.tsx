@@ -35,6 +35,7 @@ type BubbleListResponse = {
 type AINoteCard = ReviewNote & {
   symbol?: string
   timeframe?: string
+  candle_time?: string
 }
 
 const periodLabels: Record<string, string> = {
@@ -288,6 +289,7 @@ export function HomeSnapshot() {
             ...note,
             symbol: bubble?.symbol,
             timeframe: bubble?.timeframe,
+            candle_time: bubble?.candle_time,
           }
         })
         if (isActive) setAiNotes(enriched.slice(0, 20))
@@ -774,6 +776,17 @@ export function HomeSnapshot() {
                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
                       {note.symbol && <span>{note.symbol}</span>}
                       {note.timeframe && <span>· {note.timeframe}</span>}
+                      {note.symbol && note.candle_time && (
+                        <>
+                          <span>·</span>
+                          <Link
+                            href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
+                            className="text-emerald-300 hover:text-emerald-200"
+                          >
+                            차트 이동
+                          </Link>
+                        </>
+                      )}
                       {note.bubble_id && (
                         <>
                           <span>·</span>
