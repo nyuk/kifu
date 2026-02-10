@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
+import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { FilterGroup, FilterPills } from '../ui/FilterPills'
 import type { PositionItem, PositionsResponse, TimelineItem, TimelineResponse } from '../../types/portfolio'
 import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../../types/trade'
@@ -29,7 +30,8 @@ const formatDateTime = (value?: string) => {
 const buildParams = (filters: Filters, cursor?: string | null) => {
   const params = new URLSearchParams()
   if (filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
-  if (filters.venue.trim() !== '') params.set('venue', filters.venue.trim())
+    const venue = normalizeExchangeFilter(filters.venue)
+    if (venue) params.set('venue', venue)
   if (filters.source !== 'all') params.set('source', filters.source)
   if (filters.status !== 'all') params.set('status', filters.status)
   if (cursor) params.set('cursor', cursor)
@@ -131,9 +133,15 @@ export function PortfolioDashboard() {
   const fetchTradeSummary = useCallback(async () => {
     try {
       const params = new URLSearchParams()
-      if (filters.venue.trim() !== '') params.set('exchange', filters.venue.trim())
+      const exchange = normalizeExchangeFilter(filters.venue)
+      if (exchange) params.set('exchange', exchange)
       const response = await api.get(`/v1/trades/summary?${params}`)
-      setTradeSummary(normalizeTradeSummary(response.data))
+      let summary = normalizeTradeSummary(response.data)
+      if (summary.totals.total_trades === 0 && params.has('exchange')) {
+        const fallback = await api.get('/v1/trades/summary')
+        summary = normalizeTradeSummary(fallback.data)
+      }
+      setTradeSummary(summary)
     } catch {
       setTradeSummary(null)
     }

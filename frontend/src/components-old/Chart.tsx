@@ -150,6 +150,7 @@ export function Chart() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
+  const overlayRafRef = useRef<number | null>(null)
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
   const [symbols, setSymbols] = useState<UserSymbolItem[]>([])
   const [selectedSymbol, setSelectedSymbol] = useState('')
@@ -234,18 +235,35 @@ export function Chart() {
     overlayPositionsRef.current = overlayPositions
   }, [overlayPositions])
 
+  const buildSymbolSet = useCallback((symbol: string) => {
+    const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    const upper = symbol.toUpperCase()
+    const symbolSet = new Set<string>([normalize(upper)])
+    if (upper.includes('-')) {
+      const [quote, base] = upper.split('-')
+      if (base && quote) symbolSet.add(normalize(`${base}${quote}`))
+    } else {
+      const match = upper.match(/^(.*)(USDT|USDC|USD|KRW|BTC)$/)
+      if (match) {
+        const base = match[1]
+        const quote = match[2]
+        if (base && quote) symbolSet.add(normalize(`${quote}-${base}`))
+      }
+    }
+    return symbolSet
+  }, [])
+
   const activeBubbles = useMemo(() => {
-    return bubbles.filter(b => b.symbol === selectedSymbol)
-  }, [bubbles, selectedSymbol])
+    if (!selectedSymbol) return []
+    const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    const symbolSet = buildSymbolSet(selectedSymbol)
+    return bubbles.filter((b) => symbolSet.has(normalize(b.symbol)))
+  }, [bubbles, selectedSymbol, buildSymbolSet])
 
   const activeTrades = useMemo(() => {
+    if (!selectedSymbol) return []
     const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    const symbol = selectedSymbol.toUpperCase()
-    const symbolSet = new Set<string>([normalize(symbol)])
-    if (symbol.includes('-')) {
-      const [quote, base] = symbol.split('-')
-      if (base && quote) symbolSet.add(normalize(`${base}${quote}`))
-    }
+    const symbolSet = buildSymbolSet(selectedSymbol)
     const mappedLocal: OverlayTrade[] = localTrades.map((item) => ({
       id: item.id,
       exchange: item.exchange,
@@ -257,17 +275,12 @@ export function Chart() {
       raw: item,
     }))
     return [...serverTrades, ...mappedLocal].filter((trade) => symbolSet.has(normalize(trade.symbol)))
-  }, [localTrades, selectedSymbol, serverTrades])
+  }, [localTrades, selectedSymbol, serverTrades, buildSymbolSet])
 
   const activeManualPositions = useMemo(() => {
     if (!selectedSymbol) return []
     const normalize = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    const symbol = selectedSymbol.toUpperCase()
-    const symbolSet = new Set<string>([normalize(symbol)])
-    if (symbol.includes('-')) {
-      const [quote, base] = symbol.split('-')
-      if (base && quote) symbolSet.add(normalize(`${base}${quote}`))
-    }
+    const symbolSet = buildSymbolSet(selectedSymbol)
     const filtered = manualPositions.filter((pos) => {
       if (dataSource === 'crypto' && pos.asset_class !== 'crypto') return false
       if (dataSource === 'stock' && pos.asset_class !== 'stock') return false
@@ -279,7 +292,7 @@ export function Chart() {
       const bTime = new Date(b.opened_at || b.created_at || 0).getTime()
       return bTime - aTime
     })
-  }, [manualPositions, selectedSymbol, dataSource])
+  }, [manualPositions, selectedSymbol, dataSource, buildSymbolSet])
 
   useEffect(() => {
     if (!selectedSymbol) return
@@ -407,6 +420,14 @@ export function Chart() {
       height: rect.height
     })
   }, [])
+
+  const scheduleOverlayUpdate = useCallback(() => {
+    if (overlayRafRef.current != null) return
+    overlayRafRef.current = window.requestAnimationFrame(() => {
+      overlayRafRef.current = null
+      updateOverlayPosition()
+    })
+  }, [updateOverlayPosition])
 
   const loadSymbols = useCallback(async (isMounted?: { current: boolean }) => {
     const canUpdate = () => !isMounted || isMounted.current
@@ -1223,15 +1244,19 @@ export function Chart() {
   }
 
   useEffect(() => {
-    const handleResize = () => updateOverlayPosition()
-    const handleScroll = () => updateOverlayPosition()
+    const handleResize = () => scheduleOverlayUpdate()
+    const handleScroll = () => scheduleOverlayUpdate()
     window.addEventListener('resize', handleResize)
     window.addEventListener('scroll', handleScroll, true)
     return () => {
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('scroll', handleScroll, true)
+      if (overlayRafRef.current != null) {
+        window.cancelAnimationFrame(overlayRafRef.current)
+        overlayRafRef.current = null
+      }
     }
-  }, [updateOverlayPosition])
+  }, [scheduleOverlayUpdate])
 
   const generateDummyBubbles = () => {
     if (chartData.length === 0) return

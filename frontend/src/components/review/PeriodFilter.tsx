@@ -63,7 +63,7 @@ export function PeriodFilter({ filters, onFilterChange }: Props) {
         <input
           value={filters.venue ?? ''}
           onChange={(event) => onFilterChange({ venue: event.target.value })}
-          placeholder="binance, upbit"
+          placeholder="binance_futures / binance_spot / upbit"
           className="min-w-[140px] rounded-lg border border-fuchsia-400/40 bg-neutral-950/70 px-3 py-1.5 text-xs font-semibold text-fuchsia-100 placeholder:text-fuchsia-300/70"
         />
       </FilterGroup>

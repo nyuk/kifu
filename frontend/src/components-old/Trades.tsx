@@ -203,6 +203,19 @@ export function Trades() {
             placeholder="symbol 검색 (예: BTCUSDT, KRW-BTC)"
             className="rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500"
           />
+
+          <button
+            type="button"
+            onClick={() => {
+              setExchange('all')
+              setSide('all')
+              setSortOrder('desc')
+              setSymbol('')
+            }}
+            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-neutral-200 hover:border-neutral-500"
+          >
+            필터 초기화
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0">

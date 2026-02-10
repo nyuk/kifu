@@ -383,7 +383,7 @@ func fetchUpbitKlines(ctx context.Context, client *http.Client, symbol string, i
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf(strings.TrimSpace(string(body)))
+		return nil, fmt.Errorf("%s", strings.TrimSpace(string(body)))
 	}
 
 	var raw []upbitKlineItem

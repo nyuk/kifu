@@ -21,6 +21,7 @@ func (r *UserSymbolRepositoryImpl) Create(ctx context.Context, symbol *entities.
 	query := `
 		INSERT INTO user_symbols (id, user_id, symbol, timeframe_default, created_at)
 		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, symbol) DO NOTHING
 	`
 	_, err := r.pool.Exec(ctx, query,
 		symbol.ID, symbol.UserID, symbol.Symbol, symbol.TimeframeDefault, symbol.CreatedAt)

@@ -630,11 +630,20 @@ func parseTimeQuery(value string) (*time.Time, error) {
 	if trimmed == "" {
 		return nil, nil
 	}
-	parsed, err := time.Parse(time.RFC3339, trimmed)
-	if err != nil {
-		return nil, err
+	layouts := []string{
+		time.RFC3339,
+		time.RFC3339Nano,
+		"2006-01-02",
 	}
-	return &parsed, nil
+	var parsed time.Time
+	var err error
+	for _, layout := range layouts {
+		parsed, err = time.Parse(layout, trimmed)
+		if err == nil {
+			return &parsed, nil
+		}
+	}
+	return nil, err
 }
 
 func (h *TradeHandler) syncTradeEventFromCSV(ctx context.Context, userID uuid.UUID, payload csvTradePayload, trade *entities.Trade) error {

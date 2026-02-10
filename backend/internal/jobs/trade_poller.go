@@ -243,6 +243,8 @@ func (p *TradePoller) pollOnce(ctx context.Context, cred *entities.ExchangeCrede
 
 	if cred.Exchange == upbitExchangeID {
 		symbols = normalizeUpbitSymbols(symbols)
+	} else if cred.Exchange == binanceFuturesID || cred.Exchange == binanceSpotID {
+		symbols = normalizeBinanceSymbols(symbols, cred.Exchange)
 	}
 
 	if cred.Exchange == upbitExchangeID {
@@ -329,7 +331,9 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 			startTime = time.Now().Add(time.Duration(-historyDays) * 24 * time.Hour).UnixMilli()
 		}
 	} else if exchange == upbitExchangeID && state != nil {
-		startTime = state.LastSyncAt.Add(-1 * time.Minute).UnixMilli()
+		// Upbit closed orders can appear slightly earlier than the last sync timestamp.
+		// Use a wider overlap so recent market buys aren't skipped.
+		startTime = state.LastSyncAt.Add(-5 * time.Minute).UnixMilli()
 	} else if state != nil && state.LastTradeID > 0 {
 		fromID = state.LastTradeID + 1
 		useFromID = true
@@ -567,168 +571,239 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 		windowRawCount := 0
 
 		for page := 1; page <= 50; page++ {
-			params := url.Values{}
-			if !allKRW && !allMarkets {
-				params.Set("market", market)
-			}
-			params.Set("state", "done")
-			params.Set("order_by", "desc")
-			params.Set("limit", strconv.Itoa(upbitLimit))
-			params.Set("page", strconv.Itoa(page))
-			params.Set("start_time", strconv.FormatInt(windowStart, 10))
-			params.Set("end_time", strconv.FormatInt(windowEnd, 10))
+			pageHasFull := false
+			states := []string{"done", "cancel"}
+			for _, stateValue := range states {
+				params := url.Values{}
+				if !allKRW && !allMarkets {
+					params.Set("market", market)
+				}
+				params.Set("state", stateValue)
+				params.Set("order_by", "desc")
+				params.Set("limit", strconv.Itoa(upbitLimit))
+				params.Set("page", strconv.Itoa(page))
+				params.Set("start_time", strconv.FormatInt(windowStart, 10))
+				params.Set("end_time", strconv.FormatInt(windowEnd, 10))
 
-			token, err := signUpbitJWT(apiKey, apiSecret, params)
-			if err != nil {
-				return nil, 0, err
-			}
-
-			requestURL := fmt.Sprintf("%s/v1/orders/closed?%s", upbitAPIBaseURL, params.Encode())
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-			if err != nil {
-				return nil, 0, err
-			}
-			req.Header.Set("Authorization", "Bearer "+token)
-
-			var resp *http.Response
-			for attempt := 1; attempt <= 3; attempt++ {
-				resp, err = p.client.Do(req)
+				token, err := signUpbitJWT(apiKey, apiSecret, params)
 				if err != nil {
 					return nil, 0, err
 				}
-				if resp.StatusCode != http.StatusTooManyRequests {
+
+				requestURL := fmt.Sprintf("%s/v1/orders/closed?%s", upbitAPIBaseURL, params.Encode())
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+				if err != nil {
+					return nil, 0, err
+				}
+				req.Header.Set("Authorization", "Bearer "+token)
+
+				var resp *http.Response
+				for attempt := 1; attempt <= 3; attempt++ {
+					resp, err = p.client.Do(req)
+					if err != nil {
+						return nil, 0, err
+					}
+					if resp.StatusCode != http.StatusTooManyRequests {
+						break
+					}
+
+					retryAfter := strings.TrimSpace(resp.Header.Get("Retry-After"))
+					resp.Body.Close()
+					wait := 2 * time.Second
+					if retryAfter != "" {
+						if sec, parseErr := strconv.Atoi(retryAfter); parseErr == nil && sec > 0 {
+							wait = time.Duration(sec) * time.Second
+						}
+					}
+					log.Printf("trade poller: upbit rate limited, retrying in %s (attempt %d/3)", wait.String(), attempt)
+					time.Sleep(wait)
+				}
+				if resp == nil {
+					return nil, 0, fmt.Errorf("upbit closed orders failed: empty response")
+				}
+				if resp.StatusCode != http.StatusOK {
+					body, _ := io.ReadAll(resp.Body)
+					resp.Body.Close()
+					return nil, 0, fmt.Errorf("upbit closed orders failed %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+				}
+
+				var raw []upbitClosedOrder
+				if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+					resp.Body.Close()
+					return nil, 0, err
+				}
+				resp.Body.Close()
+
+				totalRaw += len(raw)
+				windowRawCount += len(raw)
+				if len(raw) > 0 {
+					for _, order := range raw {
+						if strings.EqualFold(order.Market, "KRW-ADA") || strings.EqualFold(order.Market, "ADA-KRW") {
+							log.Printf("trade poller: upbit ADA raw state=%s uuid=%s side=%s ord_type=%s execVol=%s price=%s avg=%s funds=%s",
+								stateValue, order.UUID, order.Side, order.OrdType, order.ExecutedVolume, order.Price, order.AvgPrice, order.Funds)
+							break
+						}
+					}
+				}
+				if len(raw) == 0 {
 					break
 				}
 
-				retryAfter := strings.TrimSpace(resp.Header.Get("Retry-After"))
-				resp.Body.Close()
-				wait := 2 * time.Second
-				if retryAfter != "" {
-					if sec, parseErr := strconv.Atoi(retryAfter); parseErr == nil && sec > 0 {
-						wait = time.Duration(sec) * time.Second
+				for _, order := range raw {
+					isAda := strings.EqualFold(order.Market, "KRW-ADA") || strings.EqualFold(order.Market, "ADA-KRW")
+					hasFill := strings.TrimSpace(order.ExecutedVolume) != "" && strings.TrimSpace(order.ExecutedVolume) != "0"
+					if !hasFill && len(order.Trades) > 0 {
+						hasFill = true
 					}
-				}
-				log.Printf("trade poller: upbit rate limited, retrying in %s (attempt %d/3)", wait.String(), attempt)
-				time.Sleep(wait)
-			}
-			if resp == nil {
-				return nil, 0, fmt.Errorf("upbit closed orders failed: empty response")
-			}
-			if resp.StatusCode != http.StatusOK {
-				body, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				return nil, 0, fmt.Errorf("upbit closed orders failed %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-			}
-
-			var raw []upbitClosedOrder
-			if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-				resp.Body.Close()
-				return nil, 0, err
-			}
-			resp.Body.Close()
-
-			totalRaw += len(raw)
-			windowRawCount += len(raw)
-			if len(raw) == 0 {
-				break
-			}
-
-			for _, order := range raw {
-				if !strings.EqualFold(order.State, "done") {
-					continue
-				}
-				createdAt, err := time.Parse(time.RFC3339, strings.TrimSpace(order.CreatedAt))
-				if err != nil {
-					skippedBadTime++
-					continue
-				}
-				if startTime > 0 && createdAt.UnixMilli() < startTime {
-					continue
-				}
-				isKRW := strings.HasPrefix(strings.ToUpper(order.Market), "KRW-")
-				if isKRW {
-					krwCount++
-				} else {
-					nonKRWCount++
-				}
-				if allKRW && !isKRW {
-					continue
-				}
-
-				qty := strings.TrimSpace(order.ExecutedVolume)
-				if qty == "" || qty == "0" {
-					skippedEmptyQty++
-					continue
-				}
-				price := strings.TrimSpace(order.Price)
-				if price == "" || price == "0" {
-					price = strings.TrimSpace(order.AvgPrice)
-				}
-				if (price == "" || price == "0") && order.ExecutedFunds != nil {
-					price = deriveAvgPrice(*order.ExecutedFunds, qty)
-				}
-				if (price == "" || price == "0") && order.ExecutedFund != nil {
-					price = deriveAvgPrice(*order.ExecutedFund, qty)
-				}
-				if price == "" || price == "0" {
-					price = deriveAvgPrice(order.Funds, qty)
-				}
-				if price == "" || price == "0" {
-					price = deriveAvgPriceFromUpbitTrades(order.Trades)
-				}
-				if price == "" || price == "0" {
-					skippedEmptyPrice++
-					if !loggedPriceSample {
-						firstFillPrice := ""
-						firstFillVolume := ""
-						if len(order.Trades) > 0 {
-							firstFillPrice = order.Trades[0].Price
-							firstFillVolume = order.Trades[0].Volume
+					if !hasFill && order.ExecutedFunds != nil && strings.TrimSpace(*order.ExecutedFunds) != "" {
+						hasFill = true
+					}
+					if !hasFill && order.ExecutedFund != nil && strings.TrimSpace(*order.ExecutedFund) != "" {
+						hasFill = true
+					}
+					if !strings.EqualFold(order.State, "done") && !(strings.EqualFold(order.State, "cancel") && hasFill) {
+						if isAda {
+							log.Printf("trade poller: upbit skip (state=%s, hasFill=%t) uuid=%s market=%s side=%s ord_type=%s",
+								order.State, hasFill, order.UUID, order.Market, order.Side, order.OrdType)
 						}
-						log.Printf(
-							"trade poller: upbit sample missing price uuid=%s market=%s ord_type=%s side=%s price=%q avg_price=%q funds=%q executed_fund=%v executed_funds=%v trades=%d first_fill_price=%q first_fill_volume=%q",
-							order.UUID, order.Market, order.OrdType, order.Side, order.Price, order.AvgPrice, order.Funds, order.ExecutedFund, order.ExecutedFunds, len(order.Trades), firstFillPrice, firstFillVolume,
-						)
-						loggedPriceSample = true
+						continue
 					}
-					continue
+					createdAt, err := time.Parse(time.RFC3339, strings.TrimSpace(order.CreatedAt))
+					if err != nil {
+						if isAda {
+							log.Printf("trade poller: upbit skip (bad time) uuid=%s market=%s created_at=%q",
+								order.UUID, order.Market, order.CreatedAt)
+						}
+						skippedBadTime++
+						continue
+					}
+					if startTime > 0 && createdAt.UnixMilli() < startTime {
+						if isAda {
+							log.Printf("trade poller: upbit skip (before startTime) uuid=%s market=%s created_at=%s startTime=%d",
+								order.UUID, order.Market, createdAt.Format(time.RFC3339), startTime)
+						}
+						continue
+					}
+					isKRW := strings.HasPrefix(strings.ToUpper(order.Market), "KRW-")
+					if isKRW {
+						krwCount++
+					} else {
+						nonKRWCount++
+					}
+					if allKRW && !isKRW {
+						if isAda {
+							log.Printf("trade poller: upbit skip (non-KRW) uuid=%s market=%s", order.UUID, order.Market)
+						}
+						continue
+					}
+
+					qty := strings.TrimSpace(order.ExecutedVolume)
+					if qty == "" || qty == "0" {
+						qty = deriveVolumeFromUpbitTrades(order.Trades)
+					}
+					price := strings.TrimSpace(order.Price)
+					if price == "" || price == "0" {
+						price = strings.TrimSpace(order.AvgPrice)
+					}
+					if (price == "" || price == "0") && order.ExecutedFunds != nil {
+						price = deriveAvgPrice(*order.ExecutedFunds, qty)
+					}
+					if (price == "" || price == "0") && order.ExecutedFund != nil {
+						price = deriveAvgPrice(*order.ExecutedFund, qty)
+					}
+					if price == "" || price == "0" {
+						price = deriveAvgPrice(order.Funds, qty)
+					}
+					if price == "" || price == "0" {
+						price = deriveAvgPriceFromUpbitTrades(order.Trades)
+					}
+					if (qty == "" || qty == "0") && price != "" && price != "0" {
+						if order.ExecutedFunds != nil {
+							qty = deriveQtyFromFunds(*order.ExecutedFunds, price)
+						}
+						if (qty == "" || qty == "0") && order.ExecutedFund != nil {
+							qty = deriveQtyFromFunds(*order.ExecutedFund, price)
+						}
+						if qty == "" || qty == "0" {
+							qty = deriveQtyFromFunds(order.Funds, price)
+						}
+					}
+					if qty == "" || qty == "0" {
+						if isAda {
+							log.Printf("trade poller: upbit skip (empty qty) uuid=%s market=%s side=%s ord_type=%s price=%q avg_price=%q funds=%q executed_fund=%v executed_funds=%v trades=%d",
+								order.UUID, order.Market, order.Side, order.OrdType, order.Price, order.AvgPrice, order.Funds, order.ExecutedFund, order.ExecutedFunds, len(order.Trades))
+						}
+						skippedEmptyQty++
+						continue
+					}
+					if price == "" || price == "0" {
+						if isAda {
+							log.Printf("trade poller: upbit skip (empty price) uuid=%s market=%s side=%s ord_type=%s qty=%q avg_price=%q funds=%q executed_fund=%v executed_funds=%v trades=%d",
+								order.UUID, order.Market, order.Side, order.OrdType, qty, order.AvgPrice, order.Funds, order.ExecutedFund, order.ExecutedFunds, len(order.Trades))
+						}
+						skippedEmptyPrice++
+						if !loggedPriceSample {
+							firstFillPrice := ""
+							firstFillVolume := ""
+							if len(order.Trades) > 0 {
+								firstFillPrice = order.Trades[0].Price
+								firstFillVolume = order.Trades[0].Volume
+							}
+							log.Printf(
+								"trade poller: upbit sample missing price uuid=%s market=%s ord_type=%s side=%s price=%q avg_price=%q funds=%q executed_fund=%v executed_funds=%v trades=%d first_fill_price=%q first_fill_volume=%q",
+								order.UUID, order.Market, order.OrdType, order.Side, order.Price, order.AvgPrice, order.Funds, order.ExecutedFund, order.ExecutedFunds, len(order.Trades), firstFillPrice, firstFillVolume,
+							)
+							loggedPriceSample = true
+						}
+						continue
+					}
+
+					sideRaw := strings.ToUpper(strings.TrimSpace(order.Side))
+					side := sideRaw
+					switch sideRaw {
+					case "BID":
+						side = "BUY"
+					case "ASK":
+						side = "SELL"
+					}
+					if side != "BUY" && side != "SELL" {
+						if isAda {
+							log.Printf("trade poller: upbit skip (invalid side) uuid=%s market=%s side=%q", order.UUID, order.Market, order.Side)
+						}
+						skippedInvalidSide++
+						continue
+					}
+
+					key := order.UUID + "|" + side
+					if _, exists := seen[key]; exists {
+						continue
+					}
+					seen[key] = struct{}{}
+
+					tradeID := hashStringToInt64(order.UUID + "|" + order.Market + "|" + side + "|" + createdAt.Format(time.RFC3339Nano))
+					if createdAt.UnixMilli() > lastID {
+						lastID = createdAt.UnixMilli()
+					}
+
+					trades = append(trades, normalizedTrade{
+						ID:        tradeID,
+						Symbol:    toInternalSymbol(order.Market),
+						Side:      side,
+						Quantity:  qty,
+						Price:     price,
+						TradeTime: createdAt.UnixMilli(),
+					})
+					if isAda {
+						log.Printf("trade poller: upbit ADA included uuid=%s side=%s qty=%s price=%s state=%s ord_type=%s",
+							order.UUID, side, qty, price, order.State, order.OrdType)
+					}
 				}
 
-				sideRaw := strings.ToUpper(strings.TrimSpace(order.Side))
-				side := sideRaw
-				switch sideRaw {
-				case "BID":
-					side = "BUY"
-				case "ASK":
-					side = "SELL"
+				if len(raw) >= upbitLimit {
+					pageHasFull = true
 				}
-				if side != "BUY" && side != "SELL" {
-					skippedInvalidSide++
-					continue
-				}
-
-				key := order.UUID + "|" + side
-				if _, exists := seen[key]; exists {
-					continue
-				}
-				seen[key] = struct{}{}
-
-				tradeID := hashStringToInt64(order.UUID + "|" + order.Market + "|" + side + "|" + createdAt.Format(time.RFC3339Nano))
-				if createdAt.UnixMilli() > lastID {
-					lastID = createdAt.UnixMilli()
-				}
-
-				trades = append(trades, normalizedTrade{
-					ID:        tradeID,
-					Symbol:    toInternalSymbol(order.Market),
-					Side:      side,
-					Quantity:  qty,
-					Price:     price,
-					TradeTime: createdAt.UnixMilli(),
-				})
 			}
-
-			if len(raw) < upbitLimit {
+			if !pageHasFull {
 				break
 			}
 		}
@@ -768,6 +843,32 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 }
 
 func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol, trades []normalizedTrade) error {
+	if p.userSymbolRepo != nil && len(trades) > 0 {
+		timeframe := "1d"
+		if symbol != nil && symbol.TimeframeDefault != "" {
+			timeframe = symbol.TimeframeDefault
+		}
+		uniqueSymbols := make(map[string]struct{}, len(trades))
+		for _, trade := range trades {
+			if trade.Symbol == "" {
+				continue
+			}
+			uniqueSymbols[strings.ToUpper(trade.Symbol)] = struct{}{}
+		}
+		for sym := range uniqueSymbols {
+			userSymbol := &entities.UserSymbol{
+				ID:               uuid.New(),
+				UserID:           userID,
+				Symbol:           sym,
+				TimeframeDefault: timeframe,
+				CreatedAt:        time.Now().UTC(),
+			}
+			if err := p.userSymbolRepo.Create(ctx, userSymbol); err != nil {
+				log.Printf("trade poller: failed to upsert user symbol (user=%s symbol=%s): %v", userID.String(), sym, err)
+			}
+		}
+	}
+
 	for _, trade := range trades {
 		tradeTime := time.UnixMilli(trade.TradeTime).UTC()
 		candleTime := floorToTimeframe(tradeTime, symbol.TimeframeDefault)
@@ -1187,6 +1288,66 @@ func normalizeUpbitSymbols(symbols []*entities.UserSymbol) []*entities.UserSymbo
 	return out
 }
 
+func normalizeBinanceSymbols(symbols []*entities.UserSymbol, exchange string) []*entities.UserSymbol {
+	out := make([]*entities.UserSymbol, 0, len(symbols))
+	seen := map[string]struct{}{}
+	userID := uuid.Nil
+	if len(symbols) > 0 {
+		userID = symbols[0].UserID
+	}
+
+	for _, symbol := range symbols {
+		market := strings.ToUpper(strings.TrimSpace(symbol.Symbol))
+		if !isSupportedBinanceSymbol(market, exchange) {
+			continue
+		}
+		if _, ok := seen[market]; ok {
+			continue
+		}
+		seen[market] = struct{}{}
+		copied := *symbol
+		copied.Symbol = market
+		out = append(out, &copied)
+	}
+
+	if len(out) == 0 {
+		out = append(out, &entities.UserSymbol{
+			ID:               uuid.New(),
+			UserID:           userID,
+			Symbol:           "BTCUSDT",
+			TimeframeDefault: "1h",
+			CreatedAt:        time.Now().UTC(),
+		})
+	}
+
+	return out
+}
+
+func isSupportedBinanceSymbol(symbol string, exchange string) bool {
+	market := strings.ToUpper(strings.TrimSpace(symbol))
+	if market == "" || strings.Contains(market, "-") || strings.Contains(market, "/") {
+		return false
+	}
+
+	// Prevent cross-exchange symbols like ADAKRW from being queried on Binance.
+	if strings.HasSuffix(market, "KRW") {
+		return false
+	}
+
+	quotes := []string{"USDT", "USDC", "BUSD"}
+	if exchange == binanceSpotID {
+		quotes = append(quotes, "FDUSD", "BTC", "ETH", "BNB", "TUSD", "EUR", "TRY", "BRL")
+	}
+
+	for _, quote := range quotes {
+		if strings.HasSuffix(market, quote) && len(market) > len(quote) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func toUpbitMarket(symbol string) string {
 	trimmed := strings.ToUpper(strings.TrimSpace(symbol))
 	if trimmed == "" {
@@ -1258,6 +1419,42 @@ func deriveAvgPrice(executedFund string, executedVolume string) string {
 		return ""
 	}
 	return strconv.FormatFloat(f/v, 'f', 8, 64)
+}
+
+func deriveQtyFromFunds(executedFund string, price string) string {
+	fund := strings.TrimSpace(executedFund)
+	p := strings.TrimSpace(price)
+	if fund == "" || p == "" || p == "0" {
+		return ""
+	}
+	f, err1 := strconv.ParseFloat(fund, 64)
+	px, err2 := strconv.ParseFloat(p, 64)
+	if err1 != nil || err2 != nil || px == 0 {
+		return ""
+	}
+	return strconv.FormatFloat(f/px, 'f', 8, 64)
+}
+
+func deriveVolumeFromUpbitTrades(trades []upbitOrderTrade) string {
+	if len(trades) == 0 {
+		return ""
+	}
+	total := 0.0
+	for _, fill := range trades {
+		vol := strings.TrimSpace(fill.Volume)
+		if vol == "" {
+			continue
+		}
+		v, err := strconv.ParseFloat(vol, 64)
+		if err != nil || v <= 0 {
+			continue
+		}
+		total += v
+	}
+	if total == 0 {
+		return ""
+	}
+	return strconv.FormatFloat(total, 'f', 8, 64)
 }
 
 func deriveAvgPriceFromUpbitTrades(trades []upbitOrderTrade) string {

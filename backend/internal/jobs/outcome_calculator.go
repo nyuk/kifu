@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,10 +25,21 @@ const (
 	outcomeKlineBaseURL = "https://fapi.binance.com"
 )
 
+var outcomeUpbitCandleBaseURL = upbitAPIBaseURL
+
+type outcomePriceSource string
+
+const (
+	outcomePriceSourceBinance outcomePriceSource = "binance"
+	outcomePriceSourceUpbit   outcomePriceSource = "upbit"
+)
+
 type OutcomeCalculator struct {
 	outcomeRepo repositories.OutcomeRepository
 	client      *http.Client
 	intervals   []outcomeInterval
+	mu                 sync.Mutex
+	upbitCooldownUntil time.Time
 }
 
 type outcomeInterval struct {
@@ -113,7 +125,40 @@ func (c *OutcomeCalculator) calculateForBubble(ctx context.Context, interval out
 }
 
 func (c *OutcomeCalculator) fetchOutcomePrice(ctx context.Context, symbol string, target time.Time) (string, bool, error) {
-	price, ok, err := c.requestKlineClose(ctx, symbol, target, target.Add(1*time.Minute), 1)
+	normalizedSymbol, source, ok := resolveOutcomeSymbolSource(symbol)
+	if !ok {
+		// Unsupported symbols should not fail the calculator loop.
+		return "", false, nil
+	}
+
+	if source == outcomePriceSourceUpbit {
+		if c.isUpbitCoolingDown() {
+			return "", false, nil
+		}
+
+		price, found, err := c.requestUpbitCandleClose(ctx, normalizedSymbol, target.Add(1*time.Minute), 1)
+		if err != nil {
+			return "", false, err
+		}
+		if found {
+			return price, true, nil
+		}
+
+		fallbackTo := target
+		if fallbackTo.IsZero() {
+			fallbackTo = time.Now().UTC()
+		}
+		price, found, err = c.requestUpbitCandleClose(ctx, normalizedSymbol, fallbackTo, 5)
+		if err != nil {
+			return "", false, err
+		}
+		if found {
+			return price, true, nil
+		}
+		return "", false, nil
+	}
+
+	price, ok, err := c.requestKlineClose(ctx, normalizedSymbol, target, target.Add(1*time.Minute), 1)
 	if err != nil {
 		return "", false, err
 	}
@@ -122,7 +167,7 @@ func (c *OutcomeCalculator) fetchOutcomePrice(ctx context.Context, symbol string
 	}
 
 	fallbackStart := target.Add(-5 * time.Minute)
-	price, ok, err = c.requestKlineClose(ctx, symbol, fallbackStart, target, 5)
+	price, ok, err = c.requestKlineClose(ctx, normalizedSymbol, fallbackStart, target, 5)
 	if err != nil {
 		return "", false, err
 	}
@@ -131,6 +176,117 @@ func (c *OutcomeCalculator) fetchOutcomePrice(ctx context.Context, symbol string
 	}
 
 	return "", false, nil
+}
+
+func (c *OutcomeCalculator) requestUpbitCandleClose(ctx context.Context, market string, to time.Time, count int) (string, bool, error) {
+	params := url.Values{}
+	params.Set("market", market)
+	params.Set("to", to.UTC().Format(time.RFC3339))
+	params.Set("count", fmt.Sprintf("%d", count))
+
+	requestURL := fmt.Sprintf("%s/v1/candles/minutes/1?%s", outcomeUpbitCandleBaseURL, params.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return "", false, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		c.applyUpbitCooldown(resp.Header.Get("Retry-After"))
+		return "", false, nil
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		// Upbit returns 404 "Code not found" for unsupported/delisted markets.
+		// Treat it as non-fatal so the calculator loop can continue.
+		return "", false, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		payload, _ := io.ReadAll(resp.Body)
+		return "", false, fmt.Errorf("upbit candles error %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
+	}
+
+	type upbitMinuteCandle struct {
+		TradePrice float64 `json:"trade_price"`
+	}
+
+	var candles []upbitMinuteCandle
+	if err := json.NewDecoder(resp.Body).Decode(&candles); err != nil {
+		return "", false, err
+	}
+	if len(candles) == 0 {
+		return "", false, nil
+	}
+
+	price := strings.TrimRight(strings.TrimRight(strconv.FormatFloat(candles[0].TradePrice, 'f', 8, 64), "0"), ".")
+	if price == "" {
+		price = "0"
+	}
+	return price, true, nil
+}
+
+func (c *OutcomeCalculator) isUpbitCoolingDown() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return time.Now().UTC().Before(c.upbitCooldownUntil)
+}
+
+func (c *OutcomeCalculator) applyUpbitCooldown(retryAfterHeader string) {
+	cooldown := parseRetryAfter(retryAfterHeader, 60*time.Second)
+	until := time.Now().UTC().Add(cooldown)
+
+	c.mu.Lock()
+	if until.After(c.upbitCooldownUntil) {
+		c.upbitCooldownUntil = until
+	}
+	c.mu.Unlock()
+}
+
+func parseRetryAfter(headerValue string, fallback time.Duration) time.Duration {
+	trimmed := strings.TrimSpace(headerValue)
+	if trimmed == "" {
+		return fallback
+	}
+
+	if seconds, err := strconv.Atoi(trimmed); err == nil {
+		if seconds <= 0 {
+			return fallback
+		}
+		return time.Duration(seconds) * time.Second
+	}
+
+	if parsed, err := http.ParseTime(trimmed); err == nil {
+		duration := time.Until(parsed)
+		if duration <= 0 {
+			return fallback
+		}
+		return duration
+	}
+
+	return fallback
+}
+
+func resolveOutcomeSymbolSource(symbol string) (string, outcomePriceSource, bool) {
+	trimmed := strings.ToUpper(strings.TrimSpace(symbol))
+	if trimmed == "" {
+		return "", "", false
+	}
+
+	if market := toUpbitMarket(trimmed); strings.HasPrefix(market, "KRW-") {
+		return market, outcomePriceSourceUpbit, true
+	}
+
+	if isSupportedBinanceSymbol(trimmed, binanceFuturesID) || isSupportedBinanceSymbol(trimmed, binanceSpotID) {
+		return trimmed, outcomePriceSourceBinance, true
+	}
+
+	return "", "", false
 }
 
 func (c *OutcomeCalculator) requestKlineClose(ctx context.Context, symbol string, start time.Time, end time.Time, limit int) (string, bool, error) {

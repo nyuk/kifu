@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { api } from '../../lib/api'
 import { readOnboardingProfile } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
+import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useReviewStore } from '../../stores/reviewStore'
 import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
@@ -216,12 +217,32 @@ export function HomeSnapshot() {
         } else if (filters.period === '30d') {
           params.set('from', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         }
-        if (filters.venue) params.set('exchange', filters.venue)
+        const exchange = normalizeExchangeFilter(filters.venue)
+        if (exchange) params.set('exchange', exchange)
         if (filters.symbol) params.set('symbol', filters.symbol)
         const response = await api.get(`/v1/trades/summary?${params.toString()}`)
-        if (isActive) setTradeSummary(normalizeTradeSummary(response.data))
+        let summary = normalizeTradeSummary(response.data)
+        const shouldRetry =
+          summary.totals.total_trades === 0 &&
+          (params.has('exchange') || params.has('symbol') || params.has('from'))
+        if (shouldRetry) {
+          const fallbackParams = new URLSearchParams()
+          if (filters.period === '7d') {
+            fallbackParams.set('from', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+          } else if (filters.period === '30d') {
+            fallbackParams.set('from', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          }
+          const fallback = await api.get(`/v1/trades/summary?${fallbackParams.toString()}`)
+          summary = normalizeTradeSummary(fallback.data)
+        }
+        if (isActive) setTradeSummary(summary)
       } catch {
-        if (isActive) setTradeSummary(null)
+        try {
+          const fallback = await api.get('/v1/trades/summary')
+          if (isActive) setTradeSummary(normalizeTradeSummary(fallback.data))
+        } catch {
+          if (isActive) setTradeSummary(null)
+        }
       }
     }
     loadTradeSummary()

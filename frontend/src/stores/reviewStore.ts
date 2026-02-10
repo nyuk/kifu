@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { api } from '../lib/api'
+import { normalizeExchangeFilter } from '../lib/exchangeFilters'
 import type {
   ReviewStats,
   AccuracyResponse,
@@ -105,7 +106,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
       if (filters.symbol) params.set('symbol', filters.symbol)
       if (filters.tag) params.set('tag', filters.tag)
       if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
-      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
+      const venue = normalizeExchangeFilter(filters.venue)
+      if (venue) params.set('venue', venue)
 
       const response = await api.get(`/v1/review/stats?${params}`)
       set({ stats: response.data, isLoading: false })
@@ -123,7 +125,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
         outcome_period: filters.outcomePeriod,
       })
       if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
-      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
+      const venue = normalizeExchangeFilter(filters.venue)
+      if (venue) params.set('venue', venue)
 
       console.log('[ReviewStore] Fetching accuracy with params:', params.toString())
       const response = await api.get(`/v1/review/accuracy?${params}`)
@@ -142,7 +145,8 @@ export const useReviewStore = create<ReviewStore>((set, get) => ({
     try {
       const params = new URLSearchParams({ from, to })
       if (filters.assetClass && filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
-      if (filters.venue && filters.venue.trim()) params.set('venue', filters.venue.trim())
+      const venue = normalizeExchangeFilter(filters.venue)
+      if (venue) params.set('venue', venue)
       const response = await api.get(`/v1/review/calendar?${params}`)
       set({ calendar: response.data, isLoading: false })
     } catch (error) {

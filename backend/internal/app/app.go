@@ -143,8 +143,13 @@ func Run() error {
 	quotaReset := jobs.NewQuotaResetJob(subscriptionRepo)
 	quotaReset.Start(context.Background())
 
-	outcomes := jobs.NewOutcomeCalculator(outcomeRepo)
-	outcomes.Start(context.Background())
+	outcomeCalcEnabled := !strings.EqualFold(strings.TrimSpace(os.Getenv("OUTCOME_CALC_ENABLED")), "false")
+	if outcomeCalcEnabled {
+		outcomes := jobs.NewOutcomeCalculator(outcomeRepo)
+		outcomes.Start(context.Background())
+	} else {
+		log.Println("outcome calc: disabled by OUTCOME_CALC_ENABLED=false")
+	}
 
 	accuracyCalc := jobs.NewAccuracyCalculator(outcomeRepo, aiOpinionRepo, accuracyRepo)
 	accuracyCalc.Start(context.Background())
