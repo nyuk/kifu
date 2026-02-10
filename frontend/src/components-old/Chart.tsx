@@ -171,6 +171,7 @@ export function Chart() {
   const [stockKlines, setStockKlines] = useState<KlineItem[]>([])
   const [showReplay, setShowReplay] = useState(false)
   const [showStyleMenu, setShowStyleMenu] = useState(false)
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false)
   const [panelTab, setPanelTab] = useState<'summary' | 'detail'>('summary')
   const [showOnboardingGuide, setShowOnboardingGuide] = useState(false)
   const [guestMode, setGuestMode] = useState(false)
@@ -825,18 +826,39 @@ export function Chart() {
       const step = Math.ceil(filtered.length / maxMarkers)
       filtered = filtered.filter((_, index) => index % step === 0)
     }
-    // Additional pixel-based spacing to reduce overlap
-    const minSpacing = 12
+    // Additional pixel-based clustering to reduce overlap while preserving counts.
+    const minSpacing = mode === 'all' ? 10 : mode === 'recent' ? 12 : 14
     const byX = [...filtered].sort((a, b) => a.x - b.x)
-    const spaced: typeof filtered = []
-    let lastX = -Infinity
+    const buckets = new Map<number, typeof filtered[number] & { _count: number }>()
+
     for (const item of byX) {
-      if (item.x - lastX >= minSpacing) {
-        spaced.push(item)
-        lastX = item.x
+      const bucketKey = Math.floor(item.x / minSpacing)
+      const existing = buckets.get(bucketKey)
+      if (!existing) {
+        buckets.set(bucketKey, { ...item, _count: 1 })
+        continue
       }
+
+      const nextCount = existing._count + 1
+      const merged = {
+        ...existing,
+        // Keep the latest candle as bucket representative for click/focus.
+        candleTime: Math.max(existing.candleTime, item.candleTime),
+        // Smooth out marker position within the same bucket.
+        x: (existing.x * existing._count + item.x) / nextCount,
+        y: (existing.y * existing._count + item.y) / nextCount,
+        // Preserve all aggregated data so marker tooltip/count stays accurate.
+        bubbles: [...existing.bubbles, ...item.bubbles],
+        trades: [...existing.trades, ...item.trades],
+        avgPrice: item.avgPrice,
+        _count: nextCount,
+      }
+      buckets.set(bucketKey, merged)
     }
-    return spaced
+
+    return Array.from(buckets.values())
+      .map(({ _count: _ignored, ...rest }) => rest)
+      .sort((a, b) => a.candleTime - b.candleTime)
   }, [overlayPositions, densityMode, visibleRange])
 
   const filteredBubbles = useMemo(() => {
@@ -869,6 +891,17 @@ export function Chart() {
     })
     return counts
   }, [activeBubbles])
+
+  const densitySummary = useMemo(() => {
+    const bubbleTotal = densityAdjustedPositions.reduce((acc, item) => acc + item.bubbles.length, 0)
+    const tradeTotal = densityAdjustedPositions.reduce((acc, item) => acc + item.trades.length, 0)
+    return {
+      markers: densityAdjustedPositions.length,
+      totalMarkers: overlayPositions.length,
+      bubbles: showBubbles ? bubbleTotal : 0,
+      trades: showTrades ? tradeTotal : 0,
+    }
+  }, [densityAdjustedPositions, overlayPositions.length, showBubbles, showTrades])
 
   // 버블/트레이드 변경 시 위치 업데이트
   useEffect(() => {
@@ -1293,229 +1326,254 @@ export function Chart() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+        <div className="flex flex-col gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Market</p>
-            <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Chart Overview <span className="text-xs text-green-500 ml-2">V2 (Fixed)</span></h2>
+            <h2 className="mt-2 text-2xl font-semibold text-neutral-100">Chart Overview</h2>
             <p className="mt-2 text-sm text-neutral-400">
               Live Chart with Bubble Journaling & Trade Overlay
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterGroup label="Market" tone="emerald">
-              <FilterPills
-                options={[
-                  { value: 'crypto', label: 'Crypto' },
-                  { value: 'stock', label: 'Stock' },
-                ]}
-                value={dataSource}
-                onChange={(value) => setDataSource(value as 'crypto' | 'stock')}
-                tone="emerald"
-                ariaLabel="Market source"
-              />
-            </FilterGroup>
+          <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/40 p-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <FilterGroup label="Market" tone="emerald">
+                <FilterPills
+                  options={[
+                    { value: 'crypto', label: 'Crypto' },
+                    { value: 'stock', label: 'Stock' },
+                  ]}
+                  value={dataSource}
+                  onChange={(value) => setDataSource(value as 'crypto' | 'stock')}
+                  tone="emerald"
+                  ariaLabel="Market source"
+                />
+              </FilterGroup>
 
-            <FilterGroup label="Symbol" tone="sky">
-              <select
-                value={selectedSymbol}
-                onChange={(e) => handleSymbolChange(e.target.value)}
-                className="rounded-md border border-sky-400/40 bg-neutral-950/70 px-2 py-1 text-xs font-semibold text-sky-100"
-              >
-                {symbols.map((item) => (
-                  <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
-                ))}
-              </select>
-            </FilterGroup>
+              <FilterGroup label="Symbol" tone="sky">
+                <select
+                  value={selectedSymbol}
+                  onChange={(e) => handleSymbolChange(e.target.value)}
+                  className="rounded-md border border-sky-400/40 bg-neutral-950/70 px-2 py-1 text-xs font-semibold text-sky-100"
+                >
+                  {symbols.map((item) => (
+                    <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
+                  ))}
+                </select>
+              </FilterGroup>
 
-            <FilterGroup label="Timeframe" tone="amber">
-              <FilterPills
-                options={intervals.map((interval) => ({ value: interval, label: interval }))}
-                value={timeframe}
-                onChange={(value) => setTimeframe(value)}
-                tone="amber"
-                ariaLabel="Timeframe filter"
-              />
-            </FilterGroup>
+              <FilterGroup label="Timeframe" tone="amber">
+                <FilterPills
+                  options={intervals.map((interval) => ({ value: interval, label: interval }))}
+                  value={timeframe}
+                  onChange={(value) => setTimeframe(value)}
+                  tone="amber"
+                  ariaLabel="Timeframe filter"
+                />
+              </FilterGroup>
 
-            <FilterGroup label="Range" tone="rose">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => loadMoreHistory()}
-                  className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
-                >
-                  이전 구간
-                </button>
-                <button
-                  type="button"
-                  onClick={() => loadMoreFuture()}
-                  className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
-                >
-                  다음 구간
-                </button>
-              </div>
-            </FilterGroup>
-
-            <FilterGroup label="Display" tone="emerald">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowBubbles((prev) => !prev)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                    showBubbles
-                      ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
-                      : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
-                  }`}
-                >
-                  Bubbles
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTrades((prev) => !prev)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                    showTrades
-                      ? 'border-sky-300 bg-sky-300/20 text-sky-200'
-                      : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
-                  }`}
-                >
-                  Trades
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTrades(true)
-                    setShowBubbles(false)
-                  }}
-                  className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-300/20"
-                >
-                  Trade Focus
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPositions((prev) => !prev)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                    showPositions
-                      ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
-                      : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
-                  }`}
-                >
-                  Positions
-                </button>
-              </div>
-            </FilterGroup>
-
-            <FilterGroup label="Style" tone="sky">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowStyleMenu((prev) => !prev)}
-                  className="rounded-full border border-sky-300/40 bg-sky-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200 hover:bg-sky-300/20"
-                >
-                  {chartThemes[themeMode].label}
-                </button>
-                {showStyleMenu && (
-                  <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl">
-                    {Object.entries(chartThemes).map(([value, item]) => (
-                      <button
-                        key={value}
-                        onClick={() => {
-                          setThemeMode(value as keyof typeof chartThemes)
-                          setShowStyleMenu(false)
-                        }}
-                        className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
-                          themeMode === value
-                            ? 'bg-sky-300/20 text-sky-200'
-                            : 'text-neutral-300 hover:bg-neutral-800/60'
-                        }`}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FilterGroup>
-
-            <FilterGroup label="Auto Bubble" tone="rose">
-              <button
-                type="button"
-                onClick={() => setAutoBubbleFromTrades((prev) => !prev)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                  autoBubbleFromTrades
-                    ? 'border-rose-300 bg-rose-300/20 text-rose-200'
-                    : 'border-neutral-700 text-neutral-400 hover:border-rose-300/40 hover:text-rose-200'
-                }`}
-              >
-                {autoBubbleFromTrades ? 'On' : 'Off'}
-              </button>
-            </FilterGroup>
-
-            <FilterGroup label="Actions" tone="fuchsia">
-              <div className="flex gap-2 flex-wrap">
+              <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setIsModalOpen(true)}
                   disabled={!selectedSymbol}
-                  className="mt-2 rounded-md bg-neutral-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-950 hover:bg-white disabled:opacity-60"
+                  className="rounded-md bg-neutral-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-950 hover:bg-white disabled:opacity-60"
                 >
                   Create Bubble
                 </button>
-                <button onClick={exportBubbles} className="mt-2 rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                  Export JSON
-                </button>
-                <button onClick={handleImportClick} className="mt-2 rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                  Import JSON
-                </button>
-                <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
-
-                <button onClick={handleTradeImportClick} disabled={guestMode} className="mt-2 rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50">
-                  Import CSV
-                </button>
-                <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
-
                 <button
-                  onClick={handleStockCsvClick}
-                  disabled={guestMode}
-                  className="mt-2 rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                  onClick={() => setShowReplay((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                    showReplay
+                      ? 'border-sky-300 bg-sky-300/20 text-sky-200'
+                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                  }`}
                 >
-                  Stock CSV
+                  {showReplay ? 'Hide Replay' : 'Replay'}
                 </button>
-                <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
-
-                <button onClick={generateDummyBubbles} disabled={!selectedSymbol} className="mt-2 rounded-md border border-yellow-500/50 px-3 py-1 text-[10px] text-yellow-400 hover:bg-yellow-500/10">
-                  + DUMMY
-                </button>
-                <button onClick={() => { if (confirm('Reset all?')) { localStorage.removeItem('bubble-storage'); window.location.reload(); } }} className="mt-2 rounded-md border border-red-500/50 px-3 py-1 text-[10px] text-red-400 hover:bg-red-500/10">
-                  RESET
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedControls((prev) => !prev)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition ${
+                    showAdvancedControls
+                      ? 'border-fuchsia-300 bg-fuchsia-300/20 text-fuchsia-100'
+                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                  }`}
+                >
+                  {showAdvancedControls ? '기능 숨기기' : '기능 더보기'}
                 </button>
               </div>
-            </FilterGroup>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-            <span className="uppercase tracking-[0.2em] text-neutral-500">Quick</span>
-            {quickPicks.map((item) => (
-              <button
-                key={item.value}
-                onClick={() => handleSymbolChange(item.value)}
-                className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
-                  selectedSymbol === item.value
-                    ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              onClick={() => setShowReplay((prev) => !prev)}
-              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
-                showReplay
-                  ? 'border-sky-300 bg-sky-300/20 text-sky-200'
-                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-              }`}
-            >
-              {showReplay ? 'Hide Replay' : 'Replay'}
-            </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
+              <span className="uppercase tracking-[0.2em] text-neutral-500">Quick</span>
+              {quickPicks.map((item) => (
+                <button
+                  key={item.value}
+                  onClick={() => handleSymbolChange(item.value)}
+                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                    selectedSymbol === item.value
+                      ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            {showAdvancedControls && (
+              <div className="mt-3 grid gap-3 border-t border-neutral-800/70 pt-3 lg:grid-cols-2 xl:grid-cols-3">
+                <FilterGroup label="Display" tone="emerald">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowBubbles((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                        showBubbles
+                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                      }`}
+                    >
+                      Bubbles
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTrades((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                        showTrades
+                          ? 'border-sky-300 bg-sky-300/20 text-sky-200'
+                          : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
+                      }`}
+                    >
+                      Trades
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowTrades(true)
+                        setShowBubbles(false)
+                      }}
+                      className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-300/20"
+                    >
+                      Trade Focus
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPositions((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                        showPositions
+                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                      }`}
+                    >
+                      Positions
+                    </button>
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup label="Range" tone="rose">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadMoreHistory()}
+                      className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
+                    >
+                      이전 구간
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => loadMoreFuture()}
+                      className="rounded-full border border-rose-300/40 bg-rose-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-rose-200 hover:bg-rose-300/20"
+                    >
+                      다음 구간
+                    </button>
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup label="Style" tone="sky">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowStyleMenu((prev) => !prev)}
+                      className="rounded-full border border-sky-300/40 bg-sky-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200 hover:bg-sky-300/20"
+                    >
+                      {chartThemes[themeMode].label}
+                    </button>
+                    {showStyleMenu && (
+                      <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl">
+                        {Object.entries(chartThemes).map(([value, item]) => (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              setThemeMode(value as keyof typeof chartThemes)
+                              setShowStyleMenu(false)
+                            }}
+                            className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
+                              themeMode === value
+                                ? 'bg-sky-300/20 text-sky-200'
+                                : 'text-neutral-300 hover:bg-neutral-800/60'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup label="Auto Bubble" tone="rose">
+                  <button
+                    type="button"
+                    onClick={() => setAutoBubbleFromTrades((prev) => !prev)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                      autoBubbleFromTrades
+                        ? 'border-rose-300 bg-rose-300/20 text-rose-200'
+                        : 'border-neutral-700 text-neutral-400 hover:border-rose-300/40 hover:text-rose-200'
+                    }`}
+                  >
+                    {autoBubbleFromTrades ? 'On' : 'Off'}
+                  </button>
+                </FilterGroup>
+
+                <FilterGroup label="Import / Export" tone="fuchsia">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={exportBubbles} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
+                      Export JSON
+                    </button>
+                    <button onClick={handleImportClick} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
+                      Import JSON
+                    </button>
+                    <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
+
+                    <button onClick={handleTradeImportClick} disabled={guestMode} className="rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50">
+                      Import CSV
+                    </button>
+                    <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
+
+                    <button
+                      onClick={handleStockCsvClick}
+                      disabled={guestMode}
+                      className="rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                    >
+                      Stock CSV
+                    </button>
+                    <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup label="Danger Zone" tone="rose">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={generateDummyBubbles} disabled={!selectedSymbol} className="rounded-md border border-yellow-500/50 px-3 py-1 text-[10px] text-yellow-400 hover:bg-yellow-500/10">
+                      + DUMMY
+                    </button>
+                    <button onClick={() => { if (confirm('Reset all?')) { localStorage.removeItem('bubble-storage'); window.location.reload(); } }} className="rounded-md border border-red-500/50 px-3 py-1 text-[10px] text-red-400 hover:bg-red-500/10">
+                      RESET
+                    </button>
+                  </div>
+                </FilterGroup>
+              </div>
+            )}
           </div>
         </div>
         {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
@@ -1707,6 +1765,9 @@ export function Chart() {
             const hasTrades = visibleTrades.length > 0
             const bubbleCount = visibleBubbles.length
             const tradeCount = visibleTrades.length
+            const buyTradeCount = visibleTrades.filter((t) => t.side === 'buy').length
+            const sellTradeCount = visibleTrades.filter((t) => t.side === 'sell').length
+            const tooltipBelow = group.y < 120
 
             // Determine Marker Style
             let bgColor = 'bg-neutral-700'
@@ -1721,10 +1782,8 @@ export function Chart() {
               else if (isSell) bgColor = 'bg-red-600'
               else bgColor = 'bg-neutral-600'
             } else if (hasTrades) {
-              const buyCount = visibleTrades.filter(t => t.side === 'buy').length
-              const sellCount = visibleTrades.filter(t => t.side === 'sell').length
-              if (buyCount > sellCount) bgColor = 'bg-green-900/80 text-green-200'
-              else if (sellCount > buyCount) bgColor = 'bg-red-900/80 text-red-200'
+              if (buyTradeCount > sellTradeCount) bgColor = 'bg-green-900/80 text-green-200'
+              else if (sellTradeCount > buyTradeCount) bgColor = 'bg-red-900/80 text-red-200'
               else bgColor = 'bg-blue-900/80 text-blue-200'
             }
 
@@ -1752,19 +1811,21 @@ export function Chart() {
                     )}
                     {hasTrades && (
                       <span className="text-xs">
-                        {tradeCount > 1 ? `↑${tradeCount}` : (
-                          <>
-                            {visibleTrades.some(t => t.side === 'buy') && '↑'}
-                            {visibleTrades.some(t => t.side === 'sell') && '↓'}
-                          </>
-                        )}
+                        {tradeCount > 1
+                          ? `${buyTradeCount > 0 ? `↑${buyTradeCount}` : ''}${buyTradeCount > 0 && sellTradeCount > 0 ? '/' : ''}${sellTradeCount > 0 ? `↓${sellTradeCount}` : ''}`
+                          : (
+                            <>
+                              {buyTradeCount > 0 && '↑'}
+                              {sellTradeCount > 0 && '↓'}
+                            </>
+                          )}
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Tooltip */}
-                <div className="absolute left-1/2 bottom-full mb-2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50">
+                <div className={`absolute left-1/2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50 ${tooltipBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
                   <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
                     {new Date(group.candleTime * 1000).toLocaleString()}
                   </div>
@@ -1856,7 +1917,13 @@ export function Chart() {
                   </div>
                   <div className="mt-3 flex items-center justify-between text-[10px] text-neutral-500">
                     <span>현재 밀도: {densityOptions.find((option) => option.value === densityMode)?.label}</span>
-                    <span>표시 {densityAdjustedPositions.length.toLocaleString()} / {overlayPositions.length.toLocaleString()}</span>
+                    <span>표시 {densitySummary.markers.toLocaleString()} / {densitySummary.totalMarkers.toLocaleString()}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-600">
+                    <span>집계</span>
+                    <span>
+                      💬 {densitySummary.bubbles.toLocaleString()} · ↕ {densitySummary.trades.toLocaleString()}
+                    </span>
                   </div>
                 </div>
 

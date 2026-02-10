@@ -1,13 +1,22 @@
 package handlers
 
 import (
+	"log"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+)
+
+const (
+	aiReviewNoteTitle     = "AI 복기 요약"
+	defaultAINoteKeepMax  = 200
+	aiReviewNoteKeepEnv   = "AI_REVIEW_NOTES_KEEP"
 )
 
 type NoteHandler struct {
@@ -108,6 +117,12 @@ func (h *NoteHandler) CreateNote(c *fiber.Ctx) error {
 
 	if err := h.noteRepo.Create(c.Context(), note); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+	if shouldPruneAINote(req.Title) {
+		keep := resolveAINoteKeepMax()
+		if err := h.noteRepo.PruneAIGeneratedByUser(c.Context(), userID, keep); err != nil {
+			log.Printf("note prune failed: user=%s keep=%d err=%v", userID.String(), keep, err)
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(noteToResponse(note))
@@ -254,4 +269,23 @@ func (h *NoteHandler) ListNotesByBubble(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"notes": noteResponses})
+}
+
+func shouldPruneAINote(title string) bool {
+	return strings.TrimSpace(title) == aiReviewNoteTitle
+}
+
+func resolveAINoteKeepMax() int {
+	raw := strings.TrimSpace(os.Getenv(aiReviewNoteKeepEnv))
+	if raw == "" {
+		return defaultAINoteKeepMax
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 1 {
+		return defaultAINoteKeepMax
+	}
+	if value > 2000 {
+		return 2000
+	}
+	return value
 }

@@ -30,6 +30,31 @@ const inferAssetClass = (value: string) => {
   return 'crypto' as const
 }
 
+function mapAiErrorMessage(err: any) {
+  const status = err?.response?.status
+  const detail = String(err?.response?.data?.message || err?.message || '').toLowerCase()
+
+  if (status === 401 || detail.includes('insufficient permissions') || detail.includes('missing scopes')) {
+    return 'AI 키 권한이 부족합니다. API 키 권한(scope)과 프로젝트 권한을 확인하세요.'
+  }
+  if (status === 429 || detail.includes('quota') || detail.includes('rate limit') || detail.includes('too many')) {
+    return '호출 한도에 도달했습니다. 잠시 후 다시 시도하거나 쿼터/요금제를 확인하세요.'
+  }
+  if (status === 502 || status === 503 || detail.includes('bad gateway') || detail.includes('temporar')) {
+    return 'AI 서버 응답이 불안정합니다. 잠시 후 다시 시도해주세요.'
+  }
+  if (detail.includes('network error') || status === 0) {
+    return '네트워크 연결 문제입니다. 백엔드 실행 상태와 API 주소를 확인하세요.'
+  }
+  if (status === 400) {
+    return `요청 형식 오류입니다. 입력값/패킷 범위를 확인하세요. (${err?.response?.data?.message || 'bad request'})`
+  }
+
+  const raw = err?.response?.data?.message
+  if (raw) return `AI 의견 요청 실패: ${raw}`
+  return 'AI 의견 요청에 실패했습니다. 다시 시도해주세요.'
+}
+
 export function BubbleCreateModal({
   open,
   symbol,
@@ -52,12 +77,15 @@ export function BubbleCreateModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
+  const [aiError, setAiError] = useState('')
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
   const [includeEvidence, setIncludeEvidence] = useState(true)
   const [includePositions, setIncludePositions] = useState(true)
   const [includeRecentTrades, setIncludeRecentTrades] = useState(true)
   const [includeSummary, setIncludeSummary] = useState(true)
   const [includeBubbles, setIncludeBubbles] = useState(true)
+  const [packetPreset, setPacketPreset] = useState<'lite' | 'balanced' | 'deep'>('balanced')
+  const [showPacketAdvanced, setShowPacketAdvanced] = useState(false)
   const [evidenceScope, setEvidenceScope] = useState<'7d' | '30d' | '90d' | 'custom'>('7d')
   const [evidenceFrom, setEvidenceFrom] = useState('')
   const [evidenceTo, setEvidenceTo] = useState('')
@@ -85,6 +113,7 @@ export function BubbleCreateModal({
     setVenueName('')
     setError('')
     setAiResponse(null)
+    setAiError('')
     setAiLoading(false)
     setPromptType('brief')
     setIncludeEvidence(true)
@@ -92,6 +121,8 @@ export function BubbleCreateModal({
     setIncludeRecentTrades(true)
     setIncludeSummary(true)
     setIncludeBubbles(true)
+    setPacketPreset('balanced')
+    setShowPacketAdvanced(false)
     setEvidenceScope('7d')
     setEvidenceFrom('')
     setEvidenceTo('')
@@ -131,6 +162,39 @@ export function BubbleCreateModal({
   }, [includeRecentTrades, includeSummary, includeBubbles])
 
   useEffect(() => {
+    if (packetPreset === 'lite') {
+      setIncludeEvidence(true)
+      setIncludePositions(true)
+      setIncludeRecentTrades(false)
+      setIncludeSummary(true)
+      setIncludeBubbles(false)
+      setEvidenceScope('7d')
+      setEvidenceSymbolScope('current')
+      setBubbleLimit(4)
+      return
+    }
+    if (packetPreset === 'balanced') {
+      setIncludeEvidence(true)
+      setIncludePositions(true)
+      setIncludeRecentTrades(true)
+      setIncludeSummary(true)
+      setIncludeBubbles(true)
+      setEvidenceScope('30d')
+      setEvidenceSymbolScope('current')
+      setBubbleLimit(6)
+      return
+    }
+    setIncludeEvidence(true)
+    setIncludePositions(true)
+    setIncludeRecentTrades(true)
+    setIncludeSummary(true)
+    setIncludeBubbles(true)
+    setEvidenceScope('90d')
+    setEvidenceSymbolScope('all')
+    setBubbleLimit(10)
+  }, [packetPreset])
+
+  useEffect(() => {
     if (!includeEvidence && !includePositions && !includeBubbles) return
     setEvidencePacket(null)
     setEvidencePreview([])
@@ -142,6 +206,18 @@ export function BubbleCreateModal({
       .map((tag) => tag.trim())
       .filter(Boolean)
   }, [tagsInput])
+
+  const packetSummaryText = useMemo(() => {
+    const parts: string[] = []
+    parts.push(packetPreset === 'lite' ? '라이트' : packetPreset === 'balanced' ? '균형' : '딥')
+    parts.push(evidenceScope === 'custom' ? '직접 선택' : evidenceScope)
+    parts.push(evidenceSymbolScope === 'current' ? '현재 심볼' : '전체 심볼')
+    if (includePositions) parts.push('포지션')
+    if (includeEvidence && includeRecentTrades) parts.push('체결')
+    if (includeEvidence && includeSummary) parts.push('요약')
+    if (includeEvidence && includeBubbles) parts.push(`버블 ${bubbleLimit}개`)
+    return parts.join(' · ')
+  }, [packetPreset, evidenceScope, evidenceSymbolScope, includePositions, includeEvidence, includeRecentTrades, includeSummary, includeBubbles, bubbleLimit])
 
   const bubbleTags = useMemo(() => {
     return bubbleTagsInput
@@ -171,11 +247,12 @@ export function BubbleCreateModal({
 
   const handleAskAi = async () => {
     if (disableAi) {
-      setError('게스트 모드에서는 AI 의견 요청이 비활성화됩니다.')
+      setAiError('게스트 모드에서는 AI 의견 요청이 비활성화됩니다.')
       return
     }
     if (!price || !symbol) return
     setAiLoading(true)
+    setAiError('')
     setEvidenceError('')
     try {
       let packet: EvidencePacket | null = null
@@ -214,13 +291,7 @@ export function BubbleCreateModal({
         setMemo(response.response)
       }
     } catch (e: any) {
-      const detail = e?.response?.data?.message
-      const hint = detail?.includes('openai error 502')
-        ? '일시적인 오류입니다. 잠시 후 다시 시도해주세요.'
-        : detail
-          ? `AI 의견을 가져오는데 실패했습니다. (${detail})`
-          : 'AI 의견을 가져오는데 실패했습니다.'
-      setError(hint)
+      setAiError(mapAiErrorMessage(e))
     } finally {
       setAiLoading(false)
     }
@@ -453,6 +524,21 @@ export function BubbleCreateModal({
                 </div>
               )}
             </div>
+            {aiError && (
+              <div className="mt-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-2">
+                <p className="text-[11px] text-rose-200">{aiError}</p>
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={handleAskAi}
+                    disabled={aiLoading || !price || disableAi}
+                    className="rounded border border-rose-300/50 px-2 py-1 text-[10px] font-semibold text-rose-200 hover:bg-rose-500/10 disabled:opacity-60"
+                  >
+                    {aiLoading ? '재시도 중...' : '다시 시도'}
+                  </button>
+                </div>
+              </div>
+            )}
             {disableAi && !aiResponse && (
               <p className="mt-2 text-[11px] text-neutral-500">
                 AI 분석 요청은 회원 전용 기능입니다.
@@ -514,6 +600,31 @@ export function BubbleCreateModal({
             </div>
 
             <div className="mt-3 space-y-2 text-xs text-neutral-300">
+              <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">패킷 프리셋</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[
+                    { value: 'lite', label: '라이트' },
+                    { value: 'balanced', label: '균형' },
+                    { value: 'deep', label: '딥' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setPacketPreset(option.value as 'lite' | 'balanced' | 'deep')}
+                      className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                        packetPreset === option.value
+                          ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                          : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-neutral-500">{packetSummaryText}</p>
+              </div>
+
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-2">
                   <input
@@ -556,7 +667,19 @@ export function BubbleCreateModal({
                 </label>
               </div>
 
-              <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+              <div className="flex items-center justify-between rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">세부 설정</p>
+                <button
+                  type="button"
+                  onClick={() => setShowPacketAdvanced((prev) => !prev)}
+                  className="rounded border border-neutral-700 px-2 py-1 text-[10px] font-semibold text-neutral-300 hover:border-neutral-500"
+                >
+                  {showPacketAdvanced ? '접기' : '펼치기'}
+                </button>
+              </div>
+
+              {showPacketAdvanced && (
+                <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">범위 설정</p>
                   <div className="flex flex-wrap gap-2">
@@ -631,6 +754,8 @@ export function BubbleCreateModal({
                   </button>
                 </div>
               </div>
+              </div>
+              )}
 
               {includeEvidence && includeBubbles && (
                 <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">

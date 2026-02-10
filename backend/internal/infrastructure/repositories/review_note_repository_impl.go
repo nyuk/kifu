@@ -162,3 +162,23 @@ func (r *ReviewNoteRepositoryImpl) ListByBubble(ctx context.Context, bubbleID uu
 
 	return notes, rows.Err()
 }
+
+func (r *ReviewNoteRepositoryImpl) PruneAIGeneratedByUser(ctx context.Context, userID uuid.UUID, keep int) error {
+	if keep <= 0 {
+		return nil
+	}
+	query := `
+		DELETE FROM review_notes
+		WHERE user_id = $1
+		  AND title = 'AI 복기 요약'
+		  AND id NOT IN (
+		    SELECT id FROM review_notes
+		    WHERE user_id = $1
+		      AND title = 'AI 복기 요약'
+		    ORDER BY created_at DESC
+		    LIMIT $2
+		  )
+	`
+	_, err := r.pool.Exec(ctx, query, userID, keep)
+	return err
+}

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
@@ -8,6 +9,7 @@ import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
 
 export function Bubbles() {
+  const searchParams = useSearchParams()
   const bubbles = useBubbleStore((state) => state.bubbles)
   const deleteBubble = useBubbleStore((state) => state.deleteBubble)
   const replaceAllBubbles = useBubbleStore((state) => state.replaceAllBubbles)
@@ -17,10 +19,29 @@ export function Bubbles() {
   const [actionFilter, setActionFilter] = useState<ActionType>('all')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [searchQuery, setSearchQuery] = useState('')
+  const listContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     fetchBubblesFromServer().catch(() => null)
   }, [fetchBubblesFromServer])
+
+  useEffect(() => {
+    const requestedBubbleID = searchParams.get('bubble_id')
+    if (!requestedBubbleID) return
+    const exists = bubbles.some((bubble) => bubble.id === requestedBubbleID)
+    if (exists) {
+      setSelectedId(requestedBubbleID)
+    }
+  }, [searchParams, bubbles])
+
+  useEffect(() => {
+    if (!selectedId) return
+    const container = listContainerRef.current
+    if (!container) return
+    const target = container.querySelector(`[data-bubble-id="${selectedId}"]`) as HTMLElement | null
+    if (!target) return
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [selectedId, bubbles.length, actionFilter, sortOrder, searchQuery])
 
   useEffect(() => {
     const handleRefresh = () => {
@@ -220,7 +241,7 @@ export function Bubbles() {
           </div>
 
           {/* 버블 목록 - 고정 스크롤 영역 */}
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-2">
+          <div ref={listContainerRef} className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-2">
             {filteredBubbles.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-neutral-500">
                 버블이 없습니다.
@@ -229,6 +250,7 @@ export function Bubbles() {
               filteredBubbles.map((bubble) => (
                 <button
                   key={bubble.id}
+                  data-bubble-id={bubble.id}
                   onClick={() => setSelectedId(bubble.id === selectedId ? null : bubble.id)}
                   className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
                     bubble.id === selectedId

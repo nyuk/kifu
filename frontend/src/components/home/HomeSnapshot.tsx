@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../lib/api'
 import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useReviewStore } from '../../stores/reviewStore'
-import type { AccuracyResponse } from '../../types/review'
+import { parseAiSections } from '../../lib/aiResponseFormat'
+import type { AccuracyResponse, NotesListResponse, ReviewNote } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
 import { PositionManager } from '../positions/PositionManager'
@@ -28,6 +30,11 @@ type BubbleListResponse = {
    limit: number
    total: number
    items: BubbleItem[]
+}
+
+type AINoteCard = ReviewNote & {
+  symbol?: string
+  timeframe?: string
 }
 
 const periodLabels: Record<string, string> = {
@@ -145,6 +152,8 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
 }
 
 export function HomeSnapshot() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const {
     stats,
     accuracy,
@@ -166,6 +175,11 @@ export function HomeSnapshot() {
   const [currencyMode, setCurrencyMode] = useState<'auto' | 'usdt' | 'krw'>('auto')
   const [onboardingProfile, setOnboardingProfile] = useState<ReturnType<typeof readOnboardingProfile>>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+  const [aiNotes, setAiNotes] = useState<AINoteCard[]>([])
+  const [aiNotesLoading, setAiNotesLoading] = useState(false)
+  const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
+  const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
+  const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
 
   useEffect(() => {
     let isActive = true
@@ -252,6 +266,44 @@ export function HomeSnapshot() {
   }, [filters.period, filters.venue, filters.symbol, refreshTick])
 
   useEffect(() => {
+    let isActive = true
+    const loadAiNotes = async () => {
+      setAiNotesLoading(true)
+      try {
+        const [notesResponse, bubblesResponse] = await Promise.all([
+          api.get<NotesListResponse>('/v1/notes?page=1&limit=80'),
+          api.get<BubbleListResponse>('/v1/bubbles?page=1&limit=200&sort=desc'),
+        ])
+        const notes = notesResponse.data?.notes || []
+        const bubbles = bubblesResponse.data?.items || []
+        const bubbleMap = new Map(bubbles.map((bubble) => [bubble.id, bubble]))
+        const aiOnly = notes.filter((note) => {
+          const title = note.title || ''
+          const hasTag = (note.tags || []).some((tag) => tag.toLowerCase() === 'ai')
+          return hasTag || title.includes('AI')
+        })
+        const enriched = aiOnly.map((note) => {
+          const bubble = note.bubble_id ? bubbleMap.get(note.bubble_id) : undefined
+          return {
+            ...note,
+            symbol: bubble?.symbol,
+            timeframe: bubble?.timeframe,
+          }
+        })
+        if (isActive) setAiNotes(enriched.slice(0, 20))
+      } catch {
+        if (isActive) setAiNotes([])
+      } finally {
+        if (isActive) setAiNotesLoading(false)
+      }
+    }
+    loadAiNotes()
+    return () => {
+      isActive = false
+    }
+  }, [refreshTick])
+
+  useEffect(() => {
     const handleRefresh = () => {
       setRefreshTick((prev) => prev + 1)
       fetchStats()
@@ -290,6 +342,47 @@ export function HomeSnapshot() {
   const topProvider = useMemo(() => getTopProvider(accuracy), [accuracy])
   const accuracyLabel = topProvider ? `${topProvider.provider} ${formatPercent(topProvider.accuracy)}` : '-'
   const totalOpinions = accuracy?.total_opinions ?? 0
+  const aiSymbolOptions = useMemo(() => {
+    const options = Array.from(new Set(aiNotes.map((note) => note.symbol).filter(Boolean)))
+    return ['ALL', ...options] as string[]
+  }, [aiNotes])
+  const aiTimeframeOptions = useMemo(() => {
+    const options = Array.from(new Set(aiNotes.map((note) => note.timeframe).filter(Boolean)))
+    return ['ALL', ...options] as string[]
+  }, [aiNotes])
+  const filteredAiNotes = useMemo(() => {
+    return aiNotes.filter((note) => {
+      if (aiSymbolFilter !== 'ALL' && note.symbol !== aiSymbolFilter) return false
+      if (aiTimeframeFilter !== 'ALL' && note.timeframe !== aiTimeframeFilter) return false
+      return true
+    })
+  }, [aiNotes, aiSymbolFilter, aiTimeframeFilter])
+
+  useEffect(() => {
+    const qSymbol = searchParams.get('ai_symbol')
+    const qTf = searchParams.get('ai_tf')
+    if (qSymbol && qSymbol.trim()) setAiSymbolFilter(qSymbol)
+    if (qTf && qTf.trim()) setAiTimeframeFilter(qTf)
+    setAiFilterHydrated(true)
+    // hydrate once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!aiFilterHydrated) return
+    const currentSymbol = searchParams.get('ai_symbol') || 'ALL'
+    const currentTf = searchParams.get('ai_tf') || 'ALL'
+    if (currentSymbol === aiSymbolFilter && currentTf === aiTimeframeFilter) return
+
+    const next = new URLSearchParams(searchParams.toString())
+    if (aiSymbolFilter === 'ALL') next.delete('ai_symbol')
+    else next.set('ai_symbol', aiSymbolFilter)
+    if (aiTimeframeFilter === 'ALL') next.delete('ai_tf')
+    else next.set('ai_tf', aiTimeframeFilter)
+
+    const query = next.toString()
+    router.replace(query ? `/home?${query}` : '/home', { scroll: false })
+  }, [aiFilterHydrated, aiSymbolFilter, aiTimeframeFilter, searchParams, router])
   const tradeTotals = tradeSummary?.totals
   const bySide = useMemo(() => {
     const source = tradeSummary?.by_side || []
@@ -648,8 +741,58 @@ export function HomeSnapshot() {
                <p className="text-xs text-neutral-500">
                 AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
               </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={aiSymbolFilter}
+                  onChange={(event) => setAiSymbolFilter(event.target.value)}
+                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[11px] text-neutral-200"
+                >
+                  {aiSymbolOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'ALL' ? '심볼 전체' : option}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={aiTimeframeFilter}
+                  onChange={(event) => setAiTimeframeFilter(event.target.value)}
+                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[11px] text-neutral-200"
+                >
+                  {aiTimeframeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'ALL' ? '타임프레임 전체' : option}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px] text-neutral-500">{filteredAiNotes.length}건</span>
+              </div>
+              {!aiNotesLoading && filteredAiNotes.slice(0, 2).map((note) => {
+                const sections = parseAiSections(note.content || '')
+                const body = sections[0]?.body || note.content
+                return (
+                  <div key={note.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
+                      {note.symbol && <span>{note.symbol}</span>}
+                      {note.timeframe && <span>· {note.timeframe}</span>}
+                      {note.bubble_id && (
+                        <>
+                          <span>·</span>
+                          <Link
+                            href={`/bubbles?bubble_id=${note.bubble_id}`}
+                            className="text-cyan-300 hover:text-cyan-200"
+                          >
+                            관련 버블
+                          </Link>
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-neutral-300">{body}</p>
+                  </div>
+                )
+              })}
             </div>
             {isLoadingAccuracy && <p className="mt-4 text-xs text-neutral-500">AI 통계를 불러오는 중...</p>}
+            {aiNotesLoading && <p className="mt-2 text-xs text-neutral-500">AI 요약 불러오는 중...</p>}
           </SummaryCard>
 
           <SummaryCard title="다음 행동">

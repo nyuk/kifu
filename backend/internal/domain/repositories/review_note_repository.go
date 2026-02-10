@@ -14,4 +14,5 @@ type ReviewNoteRepository interface {
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*entities.ReviewNote, error)
 	ListByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*entities.ReviewNote, int, error)
 	ListByBubble(ctx context.Context, bubbleID uuid.UUID) ([]*entities.ReviewNote, error)
+	PruneAIGeneratedByUser(ctx context.Context, userID uuid.UUID, keep int) error
 }

@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { api } from '../lib/api'
 import { clearGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
+import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -18,18 +19,6 @@ export function Login() {
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  const resolveNextPath = () => {
-    const fromRaw = searchParams?.get('from')?.trim() || ''
-    const nextRaw = searchParams?.get('next')?.trim() || ''
-    const candidate = fromRaw || nextRaw
-    if (candidate.startsWith('/onboarding/test')) return '/onboarding/test'
-    if (candidate.startsWith('/onboarding/import')) return '/onboarding/import'
-    if (candidate.startsWith('/onboarding/start')) return '/onboarding/start'
-    if (candidate.startsWith('/settings')) return '/settings'
-    if (candidate.startsWith('/home')) return '/home'
-    return '/home'
-  }
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -46,7 +35,11 @@ export function Login() {
       resetSessionData()
       setTokens(response.data.access_token, response.data.refresh_token)
       clearGuestSession()
-      const next = resolveNextPath()
+      const next = resolveAuthRedirectPath({
+        from: searchParams?.get('from'),
+        next: searchParams?.get('next'),
+        defaultPath: '/home',
+      })
       window.location.replace(next)
     } catch (err: any) {
       setError(err?.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.')

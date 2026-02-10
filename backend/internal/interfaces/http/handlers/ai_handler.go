@@ -28,6 +28,7 @@ const (
 	providerOpenAI = "openai"
 	providerClaude = "claude"
 	providerGemini = "gemini"
+	oneShotMaxTokens = 260
 )
 
 type AIHandler struct {
@@ -629,9 +630,10 @@ func (h *AIHandler) callProvider(ctx context.Context, provider string, model str
 
 func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
 	payload := map[string]interface{}{
-		"model":       model,
-		"input":       prompt,
-		"temperature": 0.4,
+		"model":             model,
+		"input":             prompt,
+		"temperature":       0.2,
+		"max_output_tokens": oneShotMaxTokens,
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -695,8 +697,8 @@ func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string,
 func (h *AIHandler) callClaude(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
 	payload := map[string]interface{}{
 		"model":       model,
-		"max_tokens":  512,
-		"temperature": 0.4,
+		"max_tokens":  oneShotMaxTokens,
+		"temperature": 0.2,
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},
 		},
@@ -750,6 +752,10 @@ func (h *AIHandler) callGemini(ctx context.Context, model string, apiKey string,
 	payload := map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{"parts": []map[string]string{{"text": prompt}}},
+		},
+		"generationConfig": map[string]interface{}{
+			"temperature":     0.2,
+			"maxOutputTokens": oneShotMaxTokens,
 		},
 	}
 	body, err := json.Marshal(payload)
@@ -907,19 +913,32 @@ func buildPrompt(bubble *entities.Bubble, candles []klineItem) string {
 func buildOneShotPrompt(req OneShotAIRequest) string {
 	builder := strings.Builder{}
 	builder.WriteString("당신은 트레이딩 복기 어시스턴트입니다.\n")
-	builder.WriteString("응답은 한국어로 간결하고 명확하게 작성하세요.\n")
-	builder.WriteString("출력은 지정된 포맷만 사용하며 불필요한 서론은 생략하세요.\n\n")
-	builder.WriteString("규칙:\n")
-	builder.WriteString("- 근거 없는 일반론 금지, 증거 패킷이 있으면 최소 1줄 이상 구체적으로 언급\n")
-	builder.WriteString("- 애매하면 '추가로 확인할 데이터'를 1줄 포함\n")
-	builder.WriteString("- 숫자/레벨/조건을 가능한 구체적으로 제시\n\n")
-	builder.WriteString("- 증거 패킷에 Open positions가 있으면 최소 1개 포지션을 언급하고 그 기준으로 행동 제안\n")
-	builder.WriteString("- 포지션에 손절/익절 가격이 있으면 해당 레벨을 반드시 언급\n\n")
-	builder.WriteString("- 사용자 메모/태그에 손절·익절·관망·진입·축소·정리 키워드가 있으면 그 판단과 일치/상충 여부를 1줄로 명시\n\n")
+	builder.WriteString("응답은 한국어로 작성하고, 실행 가능한 조치 중심으로 짧게 제시하세요.\n")
+	builder.WriteString("출력은 지정된 포맷만 사용하며 불필요한 서론/면책 문구는 금지합니다.\n\n")
+	builder.WriteString("포맷 강제 규칙:\n")
+	builder.WriteString("- 출력은 번호 항목만 작성(예: 1) ... 2) ...)\n")
+	builder.WriteString("- 항목 순서 변경/누락 금지\n")
+	builder.WriteString("- 각 항목은 최대 1문장\n")
+	builder.WriteString("- 마지막 결론에서 행동 제안과 다른 말을 하지 말 것\n\n")
+	builder.WriteString("핵심 규칙:\n")
+	builder.WriteString("- 근거 없는 일반론 금지. 증거 패킷이 있으면 반드시 그 안의 데이터(포지션/체결/버블/요약)를 직접 인용\n")
+	builder.WriteString("- 행동 제안은 반드시 하나의 방향으로 명확히 결정: 유지/축소/정리/추가/관망/진입 중 하나\n")
+	builder.WriteString("- 포지션이 존재할 때는 '관망' 남발 금지. 관망을 제시하려면 현재 리스크가 낮다는 근거 1줄을 함께 제시\n")
+	builder.WriteString("- 증거에 손절/익절/기준이 있으면 해당 기준의 준수/위반 여부를 1줄로 먼저 판정\n")
+	builder.WriteString("- 사용자 메모에 '손절/정리/관망/진입/축소/추가' 의도가 있으면 그 의도와 일치/상충을 명시\n")
+	builder.WriteString("- 숫자/레벨/조건은 가능하면 구체값으로 작성하고, 모르면 '데이터 부족'을 명시\n")
+	builder.WriteString("- 문장은 짧게. 각 항목 1~2줄 이내\n\n")
+	builder.WriteString("행동 제안 작성 규칙:\n")
+	builder.WriteString("- 첫 단어를 반드시 [유지|축소|정리|추가|관망|진입] 중 하나로 시작\n")
+	builder.WriteString("- 뒤에는 이유 1줄만 작성\n")
+	builder.WriteString("- 포지션 보유 + 기준 위반 정황이 있으면 우선순위는 정리 또는 축소\n\n")
 	builder.WriteString("현재 상황:\n")
 	builder.WriteString(fmt.Sprintf("- 심볼: %s\n", strings.TrimSpace(req.Symbol)))
 	builder.WriteString(fmt.Sprintf("- 타임프레임: %s\n", strings.TrimSpace(req.Timeframe)))
 	builder.WriteString(fmt.Sprintf("- 현재 가격: %s\n", strings.TrimSpace(req.Price)))
+	if intent := inferUserIntent(req.EvidenceText); intent != "" {
+		builder.WriteString(fmt.Sprintf("- 사용자 의도(추정): %s\n", intent))
+	}
 
 	if strings.TrimSpace(req.EvidenceText) != "" {
 		builder.WriteString("\n증거 패킷(요약):\n")
@@ -934,7 +953,7 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("2) 핵심 근거: 2줄 이내(증거 패킷 기준)\n")
 		builder.WriteString("3) 리스크: 2줄 이내\n")
 		builder.WriteString("4) 유효/무효 조건: 2줄 이내\n")
-		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소 + 이유 1줄\n")
+		builder.WriteString("5) 행동 제안: [유지|축소|정리|추가|관망|진입] + 이유 1줄\n")
 		builder.WriteString("6) 사용자 판단 대비: 한 줄(일치/상충)\n")
 		builder.WriteString("7) 체크리스트: 불릿 3개 이하\n")
 		builder.WriteString("8) 결론: 한 줄\n")
@@ -944,7 +963,7 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("2) 핵심 레벨: 지지/저항 1~2개씩\n")
 		builder.WriteString("3) 무효화 조건: 한 줄\n")
 		builder.WriteString("4) 시나리오: 상승/하락 각 1줄\n")
-		builder.WriteString("5) 행동 제안: 포지션 있으면 유지/축소/정리/추가 중 하나, 없으면 관망/진입/축소\n")
+		builder.WriteString("5) 행동 제안: [유지|축소|정리|추가|관망|진입] + 이유 1줄\n")
 		builder.WriteString("6) 사용자 판단 대비: 한 줄(일치/상충)\n")
 		builder.WriteString("7) 추가 확인 데이터: 한 줄(애매할 때)\n")
 		builder.WriteString("8) 결론: 한 줄\n")
@@ -953,11 +972,35 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("1) 상황: 한 줄\n")
 		builder.WriteString("2) 핵심 근거: 한 줄(증거 패킷 기준)\n")
 		builder.WriteString("3) 리스크: 한 줄\n")
-		builder.WriteString("4) 행동 제안: 포지션 있으면 유지/축소/정리/추가, 없으면 관망/진입/축소\n")
+		builder.WriteString("4) 행동 제안: [유지|축소|정리|추가|관망|진입] + 이유 1줄\n")
 		builder.WriteString("5) 사용자 판단 대비: 한 줄(일치/상충)\n")
 		builder.WriteString("6) 결론: 한 줄\n")
 	}
 	return builder.String()
+}
+
+func inferUserIntent(evidenceText string) string {
+	text := strings.ToLower(strings.TrimSpace(evidenceText))
+	if text == "" {
+		return ""
+	}
+
+	if strings.Contains(text, "손절") || strings.Contains(text, "정리") || strings.Contains(text, "청산") {
+		return "손실 제한/포지션 정리 우선"
+	}
+	if strings.Contains(text, "추가매수") || strings.Contains(text, "추가 진입") || strings.Contains(text, "add") {
+		return "기존 포지션에 추가 의도"
+	}
+	if strings.Contains(text, "관망") || strings.Contains(text, "기다") {
+		return "신규 행동 보류 의도"
+	}
+	if strings.Contains(text, "롱") || strings.Contains(text, "매수") {
+		return "상방 대응 의도"
+	}
+	if strings.Contains(text, "숏") || strings.Contains(text, "매도") {
+		return "하방 대응 의도"
+	}
+	return ""
 }
 
 func mockOneShotResponse(req OneShotAIRequest) string {
@@ -967,7 +1010,7 @@ func mockOneShotResponse(req OneShotAIRequest) string {
 2) 핵심 근거: 최근 변동성 확대와 거래량 증가 구간이 확인됩니다.
 3) 리스크: 변동성 확대 구간에서 역추세 진입은 손실 확률이 높습니다.
 4) 유효/무효 조건: 직전 고점 회복 실패 시 신중, 고점 회복 시 시나리오 재평가.
-5) 행동 제안: 보유 중이면 손절 기준 점검 후 축소 또는 정리 검토.
+5) 행동 제안: 축소 손절 기준 재확인 전까지 포지션 크기를 줄여 리스크를 먼저 낮추세요.
 6) 사용자 판단 대비: 손절 기준 점검 방향으로 일치.
 7) 체크리스트: 손절 기준 확인 · 포지션 사이즈 축소 · 주요 뉴스/지표 확인
 8) 결론: 기준 레벨 확인 전까지 무리한 진입은 피하는 편이 안전합니다.`)
@@ -976,7 +1019,7 @@ func mockOneShotResponse(req OneShotAIRequest) string {
 2) 핵심 레벨: 지지 1개/저항 1개 기준만 확인.
 3) 무효화 조건: 직전 저점 이탈 시 하방 시나리오 강화.
 4) 시나리오: 상승—저항 돌파 후 눌림 확인 / 하락—지지 이탈 후 반등 실패.
-5) 행동 제안: 보유 중이면 리스크 축소, 신규 진입은 관망.
+5) 행동 제안: 관망 레벨 돌파/이탈이 확인되기 전까지 신규 포지션 진입을 미루세요.
 6) 사용자 판단 대비: 관망 판단과 일치.
 7) 추가 확인 데이터: 거래량/뉴스 이벤트 확인.
 8) 결론: 레벨 확인 전까지 관망이 합리적.`)
@@ -984,7 +1027,7 @@ func mockOneShotResponse(req OneShotAIRequest) string {
 		return strings.TrimSpace(`1) 상황: 변동성 확대로 판단 구간이 빠르게 바뀌는 상태입니다.
 2) 핵심 근거: 변동폭 확대와 방향성 불확실 구간이 동시에 나타납니다.
 3) 리스크: 방향 확인 없이 추격 진입하면 손실 가능성이 높습니다.
-4) 행동 제안: 보유 중이면 축소 또는 정리 우선, 신규 진입은 관망.
+4) 행동 제안: 정리 기준이 불명확한 보유 포지션은 우선 정리해 손실 확산 가능성을 줄이세요.
 5) 사용자 판단 대비: 관망/축소 쪽으로 일치.
 6) 결론: 신호 확인 전까지 관망 또는 소규모 대응이 적합합니다.`)
 	}

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../../src/lib/api'
 import { normalizeTradeSummary } from '../../../src/lib/tradeAdapters'
 import { useReviewStore } from '../../../src/stores/reviewStore'
@@ -18,7 +19,24 @@ import { PerformanceTrendChart } from '../../../src/components/review/Performanc
 import type { TradeSummaryResponse } from '../../../src/types/trade'
 import type { SymbolStats, ReviewNote, NotesListResponse } from '../../../src/types/review'
 
+type BubbleListItem = {
+  id: string
+  symbol: string
+  timeframe: string
+}
+
+type BubbleListResponse = {
+  items: BubbleListItem[]
+}
+
+type AINoteCard = ReviewNote & {
+  symbol?: string
+  timeframe?: string
+}
+
 export default function ReviewPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [alertActions, setAlertActions] = useState<Array<{
     id: string
@@ -27,9 +45,12 @@ export default function ReviewPage() {
     note?: string
     created_at: string
   }>>([])
-  const [aiNotes, setAiNotes] = useState<ReviewNote[]>([])
+  const [aiNotes, setAiNotes] = useState<AINoteCard[]>([])
   const [aiNotesLoading, setAiNotesLoading] = useState(false)
   const [aiNotesError, setAiNotesError] = useState<string | null>(null)
+  const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
+  const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
+  const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const {
     stats,
@@ -135,14 +156,27 @@ export default function ReviewPage() {
       setAiNotesLoading(true)
       setAiNotesError(null)
       try {
-        const response = await api.get<NotesListResponse>('/v1/notes?page=1&limit=20')
-        const items = response.data?.notes || []
+        const [notesResponse, bubblesResponse] = await Promise.all([
+          api.get<NotesListResponse>('/v1/notes?page=1&limit=100'),
+          api.get<BubbleListResponse>('/v1/bubbles?page=1&limit=200&sort=desc'),
+        ])
+        const items = notesResponse.data?.notes || []
+        const bubbles = bubblesResponse.data?.items || []
+        const bubbleMap = new Map(bubbles.map((bubble) => [bubble.id, bubble]))
         const filtered = items.filter((note) => {
           const title = note.title || ''
           const hasTag = (note.tags || []).some((tag) => tag.toLowerCase() === 'ai')
           return hasTag || title.includes('AI')
         })
-        if (isActive) setAiNotes(filtered.slice(0, 6))
+        const enriched = filtered.map((note) => {
+          const bubble = note.bubble_id ? bubbleMap.get(note.bubble_id) : undefined
+          return {
+            ...note,
+            symbol: bubble?.symbol,
+            timeframe: bubble?.timeframe,
+          }
+        })
+        if (isActive) setAiNotes(enriched.slice(0, 30))
       } catch {
         if (isActive) setAiNotesError('AI 복기 요약을 불러오지 못했습니다.')
       } finally {
@@ -154,6 +188,50 @@ export default function ReviewPage() {
       isActive = false
     }
   }, [refreshTick])
+
+  const aiSymbolOptions = useMemo(() => {
+    const options = Array.from(new Set(aiNotes.map((note) => note.symbol).filter(Boolean)))
+    return ['ALL', ...options] as string[]
+  }, [aiNotes])
+
+  const aiTimeframeOptions = useMemo(() => {
+    const options = Array.from(new Set(aiNotes.map((note) => note.timeframe).filter(Boolean)))
+    return ['ALL', ...options] as string[]
+  }, [aiNotes])
+
+  const filteredAiNotes = useMemo(() => {
+    return aiNotes.filter((note) => {
+      if (aiSymbolFilter !== 'ALL' && note.symbol !== aiSymbolFilter) return false
+      if (aiTimeframeFilter !== 'ALL' && note.timeframe !== aiTimeframeFilter) return false
+      return true
+    })
+  }, [aiNotes, aiSymbolFilter, aiTimeframeFilter])
+
+  useEffect(() => {
+    const qSymbol = searchParams.get('ai_symbol')
+    const qTf = searchParams.get('ai_tf')
+    if (qSymbol && qSymbol.trim()) setAiSymbolFilter(qSymbol)
+    if (qTf && qTf.trim()) setAiTimeframeFilter(qTf)
+    setAiFilterHydrated(true)
+    // hydrate once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!aiFilterHydrated) return
+    const currentSymbol = searchParams.get('ai_symbol') || 'ALL'
+    const currentTf = searchParams.get('ai_tf') || 'ALL'
+    if (currentSymbol === aiSymbolFilter && currentTf === aiTimeframeFilter) return
+
+    const next = new URLSearchParams(searchParams.toString())
+    if (aiSymbolFilter === 'ALL') next.delete('ai_symbol')
+    else next.set('ai_symbol', aiSymbolFilter)
+    if (aiTimeframeFilter === 'ALL') next.delete('ai_tf')
+    else next.set('ai_tf', aiTimeframeFilter)
+
+    const query = next.toString()
+    router.replace(query ? `?${query}` : '/review', { scroll: false })
+  }, [aiFilterHydrated, aiSymbolFilter, aiTimeframeFilter, searchParams, router])
 
   const tradePnl = useMemo(() => Number(tradeSummary?.totals?.realized_pnl_total || 0), [tradeSummary])
   const tradeCount = tradeSummary?.totals?.total_trades || 0
@@ -288,17 +366,44 @@ export default function ReviewPage() {
             <h3 className="text-sm font-medium text-zinc-300">AI 복기 요약</h3>
             <span className="text-xs text-zinc-500">최근 요청 기준</span>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              value={aiSymbolFilter}
+              onChange={(event) => setAiSymbolFilter(event.target.value)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+            >
+              {aiSymbolOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option === 'ALL' ? '심볼 전체' : option}
+                </option>
+              ))}
+            </select>
+            <select
+              value={aiTimeframeFilter}
+              onChange={(event) => setAiTimeframeFilter(event.target.value)}
+              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+            >
+              {aiTimeframeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option === 'ALL' ? '타임프레임 전체' : option}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-zinc-500">
+              {filteredAiNotes.length} / {aiNotes.length}
+            </span>
+          </div>
           {aiNotesError && (
             <p className="mt-3 text-xs text-rose-300">{aiNotesError}</p>
           )}
           {aiNotesLoading && (
             <p className="mt-3 text-xs text-zinc-500">불러오는 중...</p>
           )}
-          {!aiNotesLoading && aiNotes.length === 0 && !aiNotesError && (
+          {!aiNotesLoading && filteredAiNotes.length === 0 && !aiNotesError && (
             <p className="mt-3 text-xs text-zinc-500">아직 AI 복기 요약이 없습니다.</p>
           )}
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {aiNotes.map((note) => {
+            {filteredAiNotes.map((note) => {
               const sections = parseAiSections(note.content || '')
               const header = sections.length > 0 ? sections[0].title : note.title
               return (
@@ -306,6 +411,22 @@ export default function ReviewPage() {
                   <div className="flex items-center justify-between text-xs text-zinc-400">
                     <span>{header || 'AI 요약'}</span>
                     <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                    {note.symbol && (
+                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300">{note.symbol}</span>
+                    )}
+                    {note.timeframe && (
+                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300">{note.timeframe}</span>
+                    )}
+                    {note.bubble_id && (
+                      <Link
+                        href={`/bubbles?bubble_id=${note.bubble_id}`}
+                        className="rounded-full border border-cyan-500/40 px-2 py-0.5 text-cyan-200 hover:bg-cyan-500/10"
+                      >
+                        관련 버블
+                      </Link>
+                    )}
                   </div>
                   <div className="mt-2 space-y-2">
                     {(sections.length > 0 ? sections : [{ title: '요약', body: note.content, tone: 'summary' as const }]).map((section) => (
