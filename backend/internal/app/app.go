@@ -82,6 +82,7 @@ func Run() error {
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
 	var tgSender *notification.TelegramSender
 	tgBotToken := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	tgBotUsername := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_USERNAME"))
 	if tgBotToken != "" {
 		tgSender = notification.NewTelegramSender(tgBotToken, channelRepo)
 	}
@@ -136,7 +137,7 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, portfolioRepo, manualPositionRepo, safetyRepo, poller, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, tgBotUsername, portfolioRepo, manualPositionRepo, safetyRepo, poller, encKey, jwtSecret)
 
 	go poller.Start(context.Background())
 

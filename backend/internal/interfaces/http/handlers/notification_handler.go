@@ -15,20 +15,23 @@ import (
 )
 
 type NotificationHandler struct {
-	channelRepo  repositories.NotificationChannelRepository
-	verifyRepo   repositories.TelegramVerifyCodeRepository
-	tgSender     *notification.TelegramSender
+	channelRepo    repositories.NotificationChannelRepository
+	verifyRepo     repositories.TelegramVerifyCodeRepository
+	tgSender       *notification.TelegramSender
+	tgBotUsername  string
 }
 
 func NewNotificationHandler(
 	channelRepo repositories.NotificationChannelRepository,
 	verifyRepo repositories.TelegramVerifyCodeRepository,
 	tgSender *notification.TelegramSender,
+	tgBotUsername string,
 ) *NotificationHandler {
 	return &NotificationHandler{
-		channelRepo: channelRepo,
-		verifyRepo:  verifyRepo,
-		tgSender:    tgSender,
+		channelRepo:   channelRepo,
+		verifyRepo:    verifyRepo,
+		tgSender:      tgSender,
+		tgBotUsername: tgBotUsername,
 	}
 }
 
@@ -36,6 +39,7 @@ type TelegramConnectResponse struct {
 	Code      string `json:"code"`
 	ExpiresIn int    `json:"expires_in"`
 	Message   string `json:"message"`
+	BotURL    string `json:"bot_url,omitempty"`
 }
 
 type TelegramWebhookRequest struct {
@@ -65,11 +69,15 @@ func (h *NotificationHandler) TelegramConnect(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
-	return c.JSON(TelegramConnectResponse{
+	resp := TelegramConnectResponse{
 		Code:      code,
 		ExpiresIn: 300,
 		Message:   fmt.Sprintf("Telegram Bot에게 /start %s 를 보내세요", code),
-	})
+	}
+	if h.tgBotUsername != "" {
+		resp.BotURL = fmt.Sprintf("https://t.me/%s?start=%s", h.tgBotUsername, code)
+	}
+	return c.JSON(resp)
 }
 
 func (h *NotificationHandler) TelegramWebhook(c *fiber.Ctx) error {

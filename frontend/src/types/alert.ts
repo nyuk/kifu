@@ -134,4 +134,5 @@ export type TelegramConnectResponse = {
   code: string
   expires_in: number
   message: string
+  bot_url?: string
 }
