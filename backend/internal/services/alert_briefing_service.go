@@ -64,6 +64,8 @@ func NewAlertBriefingService(
 
 // HandleTrigger is called by AlertMonitor when an alert fires
 func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entities.Alert, rule *entities.AlertRule) {
+	log.Printf("alert briefing: HandleTrigger called for alert %s (rule: %s, symbol: %s)", alert.ID, rule.Name, alert.Symbol)
+
 	// 1. Fetch market context
 	candles, err := s.fetchKlines(ctx, alert.Symbol, "1h", 50)
 	if err != nil {
@@ -82,14 +84,21 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 		log.Printf("alert briefing: list providers failed: %v", err)
 		return
 	}
+	log.Printf("alert briefing: found %d enabled providers", len(providers))
 
 	var briefingSummaries []string
 
 	for _, provider := range providers {
 		apiKey, err := s.resolveAPIKey(ctx, alert.UserID, provider.Name)
-		if err != nil || apiKey == "" {
+		if err != nil {
+			log.Printf("alert briefing: %s key resolve error: %v", provider.Name, err)
 			continue
 		}
+		if apiKey == "" {
+			log.Printf("alert briefing: %s skipped (no API key)", provider.Name)
+			continue
+		}
+		log.Printf("alert briefing: calling %s (model: %s, key: %s...)", provider.Name, provider.Model, apiKey[:min(8, len(apiKey))])
 
 		model := provider.Model
 		responseText, tokensUsed, err := s.callProvider(ctx, provider.Name, model, apiKey, prompt)
@@ -97,6 +106,7 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 			log.Printf("alert briefing: %s call failed: %v", provider.Name, err)
 			continue
 		}
+		log.Printf("alert briefing: %s responded (%d chars)", provider.Name, len(responseText))
 
 		briefing := &entities.AlertBriefing{
 			ID:        uuid.New(),
@@ -114,9 +124,7 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 			continue
 		}
 
-		// Extract first line as summary
-		summary := firstLine(responseText)
-		briefingSummaries = append(briefingSummaries, fmt.Sprintf("%s: %s", provider.Name, summary))
+		briefingSummaries = append(briefingSummaries, responseText)
 	}
 
 	// 5. Update alert status
@@ -131,10 +139,7 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 
 	body := fmt.Sprintf("현재: $%s\n%s", alert.TriggerPrice, positions)
 	if len(briefingSummaries) > 0 {
-		body += "\n\nAI 브리핑:\n"
-		for _, s := range briefingSummaries {
-			body += fmt.Sprintf("- %s\n", s)
-		}
+		body += "\n\n📊 AI 브리핑:\n" + briefingSummaries[0]
 	}
 
 	msg := notification.Message{

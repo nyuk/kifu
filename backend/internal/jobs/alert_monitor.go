@@ -252,6 +252,23 @@ func (m *AlertMonitor) evalPriceLevel(rule *entities.AlertRule, currentPrice str
 
 	isAbove := cur.Cmp(target) >= 0
 
+	// Simple threshold check (gte/lte) - no crossing detection needed
+	if cfg.Direction == "gte" {
+		if !isAbove {
+			return false, "", entities.AlertSeverityNormal
+		}
+		reason := fmt.Sprintf("%s $%s 이상 도달 (현재 $%s)", rule.Symbol, cfg.Price, currentPrice)
+		return true, reason, entities.AlertSeverityNormal
+	}
+	if cfg.Direction == "lte" {
+		if isAbove {
+			return false, "", entities.AlertSeverityNormal
+		}
+		reason := fmt.Sprintf("%s $%s 이하 도달 (현재 $%s)", rule.Symbol, cfg.Price, currentPrice)
+		return true, reason, entities.AlertSeverityNormal
+	}
+
+	// Crossing detection (above/below)
 	if prevState.WasAboveLevel == nil {
 		// First check, just record state
 		return false, "", entities.AlertSeverityNormal
