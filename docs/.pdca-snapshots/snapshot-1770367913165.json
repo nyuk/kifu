@@ -1,0 +1,327 @@
+{
+  "timestamp": "2026-02-06T08:51:53.163Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-06T08:27:00.237Z",
+    "activeFeatures": [
+      "entities",
+      "repositories",
+      "jobs",
+      "notification",
+      "backend",
+      "handlers",
+      "http"
+    ],
+    "primaryFeature": "entities",
+    "features": {
+      "entities": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:17:00.356Z",
+          "lastUpdated": "2026-02-06T08:17:17.807Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\domain\\entities\\notification.go"
+      },
+      "repositories": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:17:49.394Z",
+          "lastUpdated": "2026-02-06T08:27:00.237Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\infrastructure\\repositories\\alert_rule_repository_impl.go"
+      },
+      "jobs": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:20:12.334Z",
+          "lastUpdated": "2026-02-06T08:26:42.626Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\jobs\\alert_monitor.go"
+      },
+      "notification": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:20:27.746Z",
+          "lastUpdated": "2026-02-06T08:20:39.036Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\infrastructure\\notification\\telegram.go"
+      },
+      "backend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:21:39.956Z",
+          "lastUpdated": "2026-02-06T08:25:28.946Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\app\\app.go"
+      },
+      "handlers": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:22:46.205Z",
+          "lastUpdated": "2026-02-06T08:23:26.168Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\handlers\\notification_handler.go"
+      },
+      "http": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-06T08:24:11.356Z",
+          "lastUpdated": "2026-02-06T08:24:48.390Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\routes.go"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-06T07:22:44.138Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-06T08:27:00.237Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-06T08:17:00.356Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:17:11.013Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:17:17.807Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:17:49.394Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:17:54.962Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:17:58.477Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:18:18.843Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:18:46.808Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:19:00.359Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:19:06.673Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:19:11.661Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:20:12.334Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:20:27.746Z",
+        "feature": "notification",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:20:39.036Z",
+        "feature": "notification",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:21:39.956Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:22:00.199Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:22:46.205Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:23:07.220Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:23:26.168Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:23:52.880Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:00.020Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:11.356Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:22.109Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:28.663Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:36.499Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:24:48.391Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:25:00.952Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:25:09.691Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:25:16.876Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:25:28.946Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:26:24.213Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:26:42.626Z",
+        "feature": "jobs",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:26:52.188Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-06T08:27:00.237Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

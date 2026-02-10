@@ -8,3 +8,5 @@ backend/backend.log
 backend/backend_debug.log
 backend/backups/
 .claude/settings.local.json
+backend/cmd.exe
+nul

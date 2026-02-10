@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-02-03T06:03:18.673Z",
+  "lastUpdated": "2026-02-10T13:32:19.542Z",
   "activeFeatures": [
     "review-replay",
     "frontend",
@@ -16,7 +16,8 @@
     "review",
     "chart",
     "components-old",
-    "settings"
+    "settings",
+    "alerts"
   ],
   "primaryFeature": "review-replay",
   "features": {
@@ -51,9 +52,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T02:18:21.066Z",
-        "lastUpdated": "2026-02-03T04:22:19.572Z"
+        "lastUpdated": "2026-02-10T12:40:20.381Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/types/review.ts"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\lib\\i18n.ts"
     },
     "landing": {
       "phase": "do",
@@ -116,9 +117,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T13:17:54.976Z",
-        "lastUpdated": "2026-02-02T13:17:54.976Z"
+        "lastUpdated": "2026-02-10T12:39:48.912Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/jobs/accuracy_calculator.go"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\jobs\\alert_monitor.go"
     },
     "handlers": {
       "phase": "do",
@@ -129,9 +130,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T13:18:46.503Z",
-        "lastUpdated": "2026-02-03T06:03:18.673Z"
+        "lastUpdated": "2026-02-10T06:58:54.085Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/interfaces/http/handlers/export_handler.go"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\handlers\\notification_handler.go"
     },
     "http": {
       "phase": "do",
@@ -142,9 +143,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T13:20:01.852Z",
-        "lastUpdated": "2026-02-03T04:26:15.418Z"
+        "lastUpdated": "2026-02-10T07:10:07.629Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/interfaces/http/routes.go"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\routes.go"
     },
     "backend": {
       "phase": "do",
@@ -155,9 +156,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T13:20:31.312Z",
-        "lastUpdated": "2026-02-03T04:22:02.108Z"
+        "lastUpdated": "2026-02-10T13:27:58.066Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend/internal/app/app.go"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\services\\alert_briefing_service.go"
     },
     "stores": {
       "phase": "do",
@@ -207,9 +208,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-02T19:24:42.125Z",
-        "lastUpdated": "2026-02-02T19:43:46.658Z"
+        "lastUpdated": "2026-02-10T07:13:53.923Z"
       },
-      "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/components-old/Settings.tsx"
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components-old\\Settings.tsx"
     },
     "settings": {
       "phase": "do",
@@ -223,7 +224,20 @@
         "lastUpdated": "2026-02-02T19:43:32.245Z"
       },
       "lastFile": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend/src/components/settings/index.ts"
-    }
+    },
+    "alerts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-02-10T12:36:35.297Z",
+        "lastUpdated": "2026-02-10T12:40:04.061Z"
+      },
+      "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\alerts\\RuleConfigForm.tsx"
+    },
   },
   "pipeline": {
     "currentPhase": 1,
@@ -233,7 +247,7 @@
   "session": {
     "startedAt": "2026-02-02T02:18:02.465Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-02-03T06:03:18.673Z"
+    "lastActivity": "2026-02-10T13:32:19.542Z"
   },
   "history": [
     {
@@ -767,6 +781,162 @@
     {
       "timestamp": "2026-02-03T06:03:18.673Z",
       "feature": "handlers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T06:52:14.467Z",
+      "feature": "handlers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T06:58:30.917Z",
+      "feature": "handlers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T06:58:36.858Z",
+      "feature": "handlers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T06:58:54.085Z",
+      "feature": "handlers",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T06:59:19.956Z",
+      "feature": "backend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:10:01.062Z",
+      "feature": "http",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:10:07.629Z",
+      "feature": "http",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:13:26.987Z",
+      "feature": "backend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:13:33.256Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:13:53.923Z",
+      "feature": "components-old",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:14:07.029Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T07:15:27.072Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:36:35.297Z",
+      "feature": "alerts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:36:58.097Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:37:47.604Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:39:48.912Z",
+      "feature": "jobs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:40:04.062Z",
+      "feature": "alerts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:40:11.841Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T12:40:20.381Z",
+      "feature": "frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:06:59.526Z",
+      "feature": "backend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:13:53.417Z",
+      "feature": "seedtest",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:14:36.254Z",
+      "feature": "seedtest",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:27:19.601Z",
+      "feature": "backend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:27:58.066Z",
+      "feature": "backend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:30:16.820Z",
+      "feature": "tools",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-02-10T13:32:19.542Z",
+      "feature": "tools",
       "phase": "do",
       "action": "updated"
     }
