@@ -11,6 +11,7 @@ import { useReviewStore } from '../../stores/reviewStore'
 import { parseAiSections } from '../../lib/aiResponseFormat'
 import type { AccuracyResponse, NotesListResponse, ReviewNote } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
+import { HomeGuidedReviewCard } from './HomeGuidedReviewCard'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
 import { PositionManager } from '../positions/PositionManager'
 
@@ -698,6 +699,8 @@ export function HomeSnapshot() {
         )}
 
         <PositionManager />
+
+        <HomeGuidedReviewCard />
 
         <HomeSafetyCheckCard />
 

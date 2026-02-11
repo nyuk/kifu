@@ -38,6 +38,7 @@ func RegisterRoutes(
 	portfolioRepo repositories.PortfolioRepository,
 	manualPositionRepo repositories.ManualPositionRepository,
 	safetyRepo repositories.TradeSafetyReviewRepository,
+	guidedReviewRepo repositories.GuidedReviewRepository,
 	exchangeSyncer handlers.ExchangeSyncer,
 	encryptionKey []byte,
 	jwtSecret string,
@@ -65,6 +66,7 @@ func RegisterRoutes(
 	importHandler := handlers.NewImportHandler(portfolioRepo)
 	connectionHandler := handlers.NewConnectionHandler()
 	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
+	guidedReviewHandler := handlers.NewGuidedReviewHandler(guidedReviewRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 
 	aiRateLimiter := middleware.NewUserRateLimiter(rate.Every(time.Minute/6), 2)
@@ -200,4 +202,11 @@ func RegisterRoutes(
 	safety := api.Group("/safety")
 	safety.Get("/today", safetyHandler.ListDaily)
 	safety.Post("/reviews", safetyHandler.UpsertReview)
+
+	// Guided Review
+	guidedReviews := api.Group("/guided-reviews")
+	guidedReviews.Get("/today", guidedReviewHandler.GetToday)
+	guidedReviews.Post("/items/:id/submit", guidedReviewHandler.SubmitItem)
+	guidedReviews.Post("/:id/complete", guidedReviewHandler.CompleteReview)
+	guidedReviews.Get("/streak", guidedReviewHandler.GetStreak)
 }

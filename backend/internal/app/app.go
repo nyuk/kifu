@@ -77,6 +77,7 @@ func Run() error {
 	portfolioRepo := repositories.NewPortfolioRepository(pool)
 	manualPositionRepo := repositories.NewManualPositionRepository(pool)
 	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
+	guidedReviewRepo := repositories.NewGuidedReviewRepository(pool)
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
@@ -137,7 +138,7 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, tgBotUsername, portfolioRepo, manualPositionRepo, safetyRepo, poller, encKey, jwtSecret)
+	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, tgBotUsername, portfolioRepo, manualPositionRepo, safetyRepo, guidedReviewRepo, poller, encKey, jwtSecret)
 
 	go poller.Start(context.Background())
 
