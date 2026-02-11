@@ -8,6 +8,7 @@ import { api } from '../lib/api'
 import { clearGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
+import { isDemoMode } from '../lib/appMode'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -19,6 +20,23 @@ export function Login() {
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  if (isDemoMode) {
+    return (
+      <div className="min-h-screen bg-neutral-950 px-4 py-12 text-neutral-100">
+        <div className="mx-auto max-w-xl rounded-2xl border border-neutral-800/70 bg-neutral-900/60 p-8">
+          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Demo Mode</p>
+          <h1 className="mt-3 text-2xl font-semibold">로그인은 프로덕션 베타에서만 활성화됩니다.</h1>
+          <p className="mt-2 text-sm text-neutral-400">
+            현재 환경은 Deploy Preview 데모입니다. 게스트 체험으로 UI/흐름을 확인할 수 있습니다.
+          </p>
+          <Link href="/guest" className="mt-6 inline-flex rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950">
+            게스트 체험으로 이동
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (isAuthenticated) {

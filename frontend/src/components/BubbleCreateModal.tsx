@@ -6,6 +6,7 @@ import { fetchAiOpinion } from '../lib/mockAi'
 import { buildEvidencePacket, describeEvidencePacket, type EvidencePacket } from '../lib/evidencePacket'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { api } from '../lib/api'
+import { isDemoMode } from '../lib/appMode'
 
 
 type BubbleCreateModalProps = {
@@ -32,8 +33,15 @@ const inferAssetClass = (value: string) => {
 
 function mapAiErrorMessage(err: any) {
   const status = err?.response?.status
+  const code = String(err?.response?.data?.code || '').toUpperCase()
   const detail = String(err?.response?.data?.message || err?.message || '').toLowerCase()
 
+  if (status === 403 && code === 'ALLOWLIST_REQUIRED') {
+    return '현재 베타 초대 사용자(화이트리스트)만 AI 의견 수집을 사용할 수 있습니다.'
+  }
+  if (status === 429 && code === 'BETA_CAP_EXCEEDED') {
+    return '이번 달 베타 호출 상한에 도달했습니다. 다음 리셋 후 다시 시도해주세요.'
+  }
   if (status === 401 || detail.includes('insufficient permissions') || detail.includes('missing scopes')) {
     return 'AI 키 권한이 부족합니다. API 키 권한(scope)과 프로젝트 권한을 확인하세요.'
   }
@@ -244,9 +252,10 @@ export function BubbleCreateModal({
 
   const createBubbleRemote = useBubbleStore((state) => state.createBubbleRemote)
   const updateBubble = useBubbleStore((state) => state.updateBubble)
+  const aiDisabled = disableAi && !isDemoMode
 
   const handleAskAi = async () => {
-    if (disableAi) {
+    if (aiDisabled) {
       setAiError('게스트 모드에서는 AI 의견 요청이 비활성화됩니다.')
       return
     }
@@ -257,7 +266,7 @@ export function BubbleCreateModal({
     try {
       let packet: EvidencePacket | null = null
       const shouldBuildPacket = includeEvidence || includePositions || includeBubbles
-      if (shouldBuildPacket) {
+      if (shouldBuildPacket && !isDemoMode) {
         setEvidenceLoading(true)
         try {
           const symbolForEvidence = evidenceSymbolScope === 'current' ? symbol : ''
@@ -298,8 +307,12 @@ export function BubbleCreateModal({
   }
 
   const handleBuildEvidencePreview = async () => {
-    if (disableAi) {
+    if (aiDisabled) {
       setEvidenceError('게스트 모드에서는 증거 패킷을 사용할 수 없습니다.')
+      return
+    }
+    if (isDemoMode) {
+      setEvidenceError('데모 모드에서는 증거 패킷 미리보기가 비활성화됩니다.')
       return
     }
     if (!includeEvidence && !includePositions && !includeBubbles) return
@@ -516,10 +529,10 @@ export function BubbleCreateModal({
                   <button
                     type="button"
                     onClick={handleAskAi}
-                    disabled={aiLoading || !price || disableAi}
+                    disabled={aiLoading || !price || aiDisabled}
                     className="rounded px-2 py-1 text-xs font-semibold text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-50"
                   >
-                    {disableAi ? '멤버 전용' : aiLoading ? 'Analyzing...' : 'Ask AI'}
+                    {aiDisabled ? '멤버 전용' : aiLoading ? 'Analyzing...' : isDemoMode ? 'Ask AI (Demo)' : 'Ask AI'}
                   </button>
                 </div>
               )}
@@ -531,7 +544,7 @@ export function BubbleCreateModal({
                   <button
                     type="button"
                     onClick={handleAskAi}
-                    disabled={aiLoading || !price || disableAi}
+                    disabled={aiLoading || !price || aiDisabled}
                     className="rounded border border-rose-300/50 px-2 py-1 text-[10px] font-semibold text-rose-200 hover:bg-rose-500/10 disabled:opacity-60"
                   >
                     {aiLoading ? '재시도 중...' : '다시 시도'}
@@ -539,7 +552,12 @@ export function BubbleCreateModal({
                 </div>
               </div>
             )}
-            {disableAi && !aiResponse && (
+            {isDemoMode && !aiResponse && (
+              <p className="mt-2 text-[11px] text-cyan-300">
+                DEMO MODE: AI 실호출 없이 샘플 응답을 반환합니다.
+              </p>
+            )}
+            {aiDisabled && !aiResponse && (
               <p className="mt-2 text-[11px] text-neutral-500">
                 AI 분석 요청은 회원 전용 기능입니다.
               </p>
@@ -588,12 +606,12 @@ export function BubbleCreateModal({
                     return next
                   })
                 }
-                disabled={disableAi}
+                disabled={aiDisabled}
                 className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
                   includeEvidence
                     ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200'
                     : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                } ${disableAi ? 'cursor-not-allowed opacity-60' : ''}`}
+                } ${aiDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 {includeEvidence ? '패킷 데이터 포함' : '패킷 데이터 제외'}
               </button>

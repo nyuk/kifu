@@ -1,6 +1,8 @@
 package http
 
 import (
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,7 +55,7 @@ func RegisterRoutes(
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo, portfolioRepo)
-	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, subscriptionRepo, encryptionKey)
+	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
@@ -69,7 +71,15 @@ func RegisterRoutes(
 	guidedReviewHandler := handlers.NewGuidedReviewHandler(guidedReviewRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 
-	aiRateLimiter := middleware.NewUserRateLimiter(rate.Every(time.Minute/6), 2)
+	aiRPM := parseIntFromEnv("AI_RATE_LIMIT_RPM", 3)
+	if aiRPM < 1 {
+		aiRPM = 3
+	}
+	aiBurst := parseIntFromEnv("AI_RATE_LIMIT_BURST", 2)
+	if aiBurst < 1 {
+		aiBurst = 2
+	}
+	aiRateLimiter := middleware.NewUserRateLimiter(rate.Every(time.Minute/time.Duration(aiRPM)), aiBurst)
 
 	api := app.Group("/api/v1")
 	auth := api.Group("/auth")
@@ -209,4 +219,16 @@ func RegisterRoutes(
 	guidedReviews.Post("/items/:id/submit", guidedReviewHandler.SubmitItem)
 	guidedReviews.Post("/:id/complete", guidedReviewHandler.CompleteReview)
 	guidedReviews.Get("/streak", guidedReviewHandler.GetStreak)
+}
+
+func parseIntFromEnv(key string, fallback int) int {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return parsed
 }

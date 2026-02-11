@@ -1,4 +1,5 @@
 export type GuidedReviewStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+export const NO_TRADE_SYMBOL = '__NO_TRADE__'
 
 export type GuidedReview = {
   id: string
@@ -77,4 +78,20 @@ export const PATTERN_OPTIONS = [
   { value: 'reduce_size', label: '사이즈 축소' },
   { value: 'would_not_trade', label: '안 하겠다' },
   { value: 'change_sl_tp', label: 'SL/TP 변경' },
+] as const
+
+export const NO_TRADE_INTENT_OPTIONS = [
+  { value: 'no_trade_wait_setup', label: '기준 미충족(기다림)' },
+  { value: 'no_trade_risk_off', label: '리스크 회피' },
+  { value: 'no_trade_schedule', label: '시간/일정 이슈' },
+  { value: 'no_trade_emotion_control', label: '감정 통제 목적' },
+  { value: 'no_trade_other', label: '기타' },
+] as const
+
+export const NO_TRADE_PATTERN_OPTIONS = [
+  { value: 'watch_key_level', label: '핵심 레벨 모니터링' },
+  { value: 'wait_confirmation', label: '확인 후 진입' },
+  { value: 'size_down_first', label: '소액 테스트 진입' },
+  { value: 'stay_no_trade', label: '내일도 관망 가능' },
+  { value: 'rebuild_plan', label: '계획 재정비' },
 ] as const

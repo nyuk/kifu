@@ -6,6 +6,9 @@ import {
   INTENT_OPTIONS,
   EMOTION_OPTIONS,
   PATTERN_OPTIONS,
+  NO_TRADE_INTENT_OPTIONS,
+  NO_TRADE_PATTERN_OPTIONS,
+  NO_TRADE_SYMBOL,
 } from '../../types/guidedReview'
 import type { GuidedReviewItem } from '../../types/guidedReview'
 
@@ -18,6 +21,13 @@ const layerTitle: Record<Layer, string> = {
   emotions: '거래 시 감정은? (복수 선택)',
   pattern: '다시 한다면?',
   memo: '한 줄 메모',
+}
+
+const noTradeLayerTitle: Record<Layer, string> = {
+  intent: '오늘 거래를 하지 않은 가장 큰 이유는?',
+  emotions: '오늘 시장을 보며 느낀 감정은? (복수 선택)',
+  pattern: '내일은 어떤 기준으로 움직일까요?',
+  memo: '비거래일 메모',
 }
 
 const pnlTone = (pnl?: number | null) => {
@@ -50,6 +60,12 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
   const [submitting, setSubmitting] = useState(false)
 
   const layer = LAYERS[currentLayer]
+  const isNoTradeDayItem = item.symbol === NO_TRADE_SYMBOL || item.trade_count === 0
+  const isSupplementItem = (item.bundle_key || '').startsWith('SUPPLEMENT:')
+  const isRolloverItem = (item.bundle_key || '').startsWith('ROLLOVER:')
+  const intentOptions = isNoTradeDayItem ? NO_TRADE_INTENT_OPTIONS : INTENT_OPTIONS
+  const patternOptions = isNoTradeDayItem ? NO_TRADE_PATTERN_OPTIONS : PATTERN_OPTIONS
+  const resolvedLayerTitle = isNoTradeDayItem ? noTradeLayerTitle[layer] : layerTitle[layer]
 
   const toggleEmotion = useCallback((value: string) => {
     setEmotions((prev) =>
@@ -92,10 +108,28 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
       {/* Item header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-lg font-semibold text-neutral-100">{item.symbol}</p>
-          <p className="text-xs text-neutral-500">
-            {item.side ? item.side.toUpperCase() : '-'} · {item.trade_count}건
+          <p className="text-lg font-semibold text-neutral-100">
+            {isNoTradeDayItem ? '비거래일 복기' : item.symbol}
           </p>
+          <p className="text-xs text-neutral-500">
+            {isNoTradeDayItem
+              ? '오늘은 거래 없이 루틴을 이어갑니다'
+              : `${item.side ? item.side.toUpperCase() : '-'} · ${item.trade_count}건`}
+          </p>
+          {(isSupplementItem || isRolloverItem) && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {isSupplementItem && (
+                <span className="rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
+                  보강
+                </span>
+              )}
+              {isRolloverItem && (
+                <span className="rounded-full border border-violet-300/40 bg-violet-500/10 px-2 py-0.5 text-[10px] text-violet-200">
+                  이월
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-right">
           <p className={`text-xl font-semibold ${pnlTone(item.pnl)}`}>{formatPnl(item.pnl)}</p>
@@ -119,7 +153,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
         <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
           <p className="text-sm font-semibold text-emerald-200">답변 완료</p>
           <p className="mt-1 text-xs text-emerald-200/70">
-            {INTENT_OPTIONS.find((o) => o.value === item.intent)?.label}
+            {intentOptions.find((o) => o.value === item.intent)?.label}
             {item.emotions && item.emotions.length > 0 && (
               <> · {item.emotions.map((e) => EMOTION_OPTIONS.find((o) => o.value === e)?.label).filter(Boolean).join(', ')}</>
             )}
@@ -135,12 +169,12 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
       ) : (
         <>
           {/* Layer title */}
-          <p className="text-sm font-semibold text-neutral-200">{layerTitle[layer]}</p>
+          <p className="text-sm font-semibold text-neutral-200">{resolvedLayerTitle}</p>
 
           {/* Layer content */}
           {layer === 'intent' && (
             <div className="flex flex-wrap gap-2">
-              {INTENT_OPTIONS.map((option) => (
+              {intentOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -178,7 +212,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
 
           {layer === 'pattern' && (
             <div className="flex flex-wrap gap-2">
-              {PATTERN_OPTIONS.map((option) => (
+              {patternOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -199,7 +233,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              placeholder="오늘 이 거래에 대해 한 줄 남기기 (선택)"
+              placeholder={isNoTradeDayItem ? '오늘 비거래 선택이 맞았는지, 내일 체크할 조건을 남기기 (선택)' : '오늘 이 거래에 대해 한 줄 남기기 (선택)'}
               rows={3}
               className="w-full rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
             />
@@ -242,7 +276,7 @@ export function GuidedReviewFlow({ onClose }: { onClose: () => void }) {
   const answeredCount = items.filter((i) => i.intent).length
   const totalCount = items.length
   const allAnswered = answeredCount === totalCount && totalCount > 0
-  const isCompleted = review?.status === 'completed'
+  const isCompleted = review?.status === 'completed' && allAnswered
 
   const handleItemSubmitted = () => {
     if (currentStep < items.length - 1) {

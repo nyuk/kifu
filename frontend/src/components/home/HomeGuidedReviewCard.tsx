@@ -1,23 +1,65 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { api } from '../../lib/api'
+import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
+import { NO_TRADE_SYMBOL } from '../../types/guidedReview'
 import { GuidedReviewFlow } from '../guided-review/GuidedReviewFlow'
 
-export function HomeGuidedReviewCard() {
+type HomeGuidedReviewCardProps = {
+  forceOpen?: boolean
+  autoLoad?: boolean
+}
+
+export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: HomeGuidedReviewCardProps) {
   const { review, items, streak, isLoading, error, fetchToday, fetchStreak } =
     useGuidedReviewStore()
   const [isOpen, setIsOpen] = useState(false)
+  const [recentSymbols, setRecentSymbols] = useState<string[]>([])
 
   useEffect(() => {
-    fetchToday()
-    fetchStreak()
-  }, [fetchToday, fetchStreak])
+    if (autoLoad) {
+      fetchToday()
+      fetchStreak()
+    }
+    const loadRecentSymbols = async () => {
+      try {
+        const response = await api.get('/v1/trades/summary')
+        const normalized = normalizeTradeSummary(response.data)
+        const top = (normalized.by_symbol || [])
+          .slice()
+          .sort((a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0))
+          .map((row) => row.symbol)
+          .filter(Boolean)
+          .slice(0, 4)
+        setRecentSymbols(top)
+      } catch {
+        setRecentSymbols([])
+      }
+    }
+    loadRecentSymbols()
+  }, [autoLoad, fetchToday, fetchStreak])
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true)
+    }
+  }, [forceOpen])
 
   const answeredCount = items.filter((i) => i.intent).length
   const totalCount = items.length
-  const isCompleted = review?.status === 'completed'
+  const hasPendingItems = totalCount > answeredCount
+  const isCompleted = review?.status === 'completed' && !hasPendingItems
   const hasItems = totalCount > 0
+  const isNoTradeDay = hasItems && items.length === 1 && (items[0].symbol === NO_TRADE_SYMBOL || items[0].trade_count === 0)
+  const supplementPending = items.filter(
+    (item) => !item.intent && (item.bundle_key || '').startsWith('SUPPLEMENT:')
+  ).length
+  const rolloverPending = items.filter(
+    (item) => !item.intent && (item.bundle_key || '').startsWith('ROLLOVER:')
+  ).length
 
   return (
     <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
@@ -64,10 +106,41 @@ export function HomeGuidedReviewCard() {
         </div>
       )}
 
-      {error && (
-        <p className="mt-3 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
-          {error}
-        </p>
+      {!isOpen && (supplementPending > 0 || rolloverPending > 0) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {supplementPending > 0 && (
+            <span className="rounded-full border border-amber-300/40 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
+              보강 {supplementPending}건
+            </span>
+          )}
+          {rolloverPending > 0 && (
+            <span className="rounded-full border border-violet-300/40 bg-violet-500/10 px-2.5 py-1 text-[11px] text-violet-200">
+              이월 {rolloverPending}건
+            </span>
+          )}
+        </div>
+      )}
+
+      {isNoTradeDay && !isOpen && (
+        <div className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3">
+          <p className="text-xs font-semibold text-cyan-100">오늘은 비거래일 복기입니다.</p>
+          <p className="mt-1 text-xs text-cyan-100/80">
+            왜 거래하지 않았는지 기록하고, 내일 볼 심볼을 정리해 연속 루틴을 유지하세요.
+          </p>
+          {recentSymbols.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {recentSymbols.map((symbol) => (
+                <Link
+                  key={symbol}
+                  href={`/chart/${encodeURIComponent(symbol)}`}
+                  className="rounded-full border border-cyan-300/30 bg-cyan-900/20 px-2.5 py-1 text-[11px] text-cyan-100/90 hover:bg-cyan-800/30"
+                >
+                  {symbol}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Flow area */}
@@ -79,6 +152,17 @@ export function HomeGuidedReviewCard() {
         <div className="mt-4">
           {isLoading ? (
             <p className="text-xs text-neutral-500">불러오는 중...</p>
+          ) : error ? (
+            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3">
+              <p className="text-xs text-rose-200">{error}</p>
+              <button
+                type="button"
+                onClick={() => fetchToday()}
+                className="mt-2 rounded-md border border-rose-300/40 px-2.5 py-1 text-[11px] font-medium text-rose-100 hover:bg-rose-500/10"
+              >
+                다시 불러오기
+              </button>
+            </div>
           ) : isCompleted ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
               <span className="text-lg">&#10003;</span>
@@ -97,13 +181,17 @@ export function HomeGuidedReviewCard() {
               onClick={() => setIsOpen(true)}
               className="w-full rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
             >
-              {answeredCount > 0
+              {rolloverPending > 0
+                ? `이월 복기 시작 (${answeredCount}/${totalCount})`
+                : review?.status === 'completed' && hasPendingItems
+                ? `보강 복기 시작 (${answeredCount}/${totalCount})`
+                : answeredCount > 0
                 ? `복기 이어하기 (${answeredCount}/${totalCount})`
                 : '오늘의 복기 시작'}
             </button>
           ) : (
             <p className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-4 py-3 text-xs text-neutral-500">
-              오늘 거래 기록이 없습니다. 거래소를 연결하고 동기화해보세요.
+              오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.
             </p>
           )}
         </div>

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,21 +26,28 @@ import (
 )
 
 const (
-	providerOpenAI = "openai"
-	providerClaude = "claude"
-	providerGemini = "gemini"
+	providerOpenAI   = "openai"
+	providerClaude   = "claude"
+	providerGemini   = "gemini"
 	oneShotMaxTokens = 260
 )
 
+var (
+	errAIAllowlistRequired = errors.New("allowlist required")
+)
+
 type AIHandler struct {
-	bubbleRepo       repositories.BubbleRepository
-	opinionRepo      repositories.AIOpinionRepository
-	providerRepo     repositories.AIProviderRepository
-	userAIKeyRepo    repositories.UserAIKeyRepository
-	subscriptionRepo repositories.SubscriptionRepository
-	encryptionKey    []byte
-	client           *http.Client
-	oneShotCache     *oneShotCache
+	bubbleRepo        repositories.BubbleRepository
+	opinionRepo       repositories.AIOpinionRepository
+	providerRepo      repositories.AIProviderRepository
+	userAIKeyRepo     repositories.UserAIKeyRepository
+	userRepo          repositories.UserRepository
+	subscriptionRepo  repositories.SubscriptionRepository
+	encryptionKey     []byte
+	client            *http.Client
+	oneShotCache      *oneShotCache
+	requireAllowlist  bool
+	serviceMonthlyCap int
 }
 
 func NewAIHandler(
@@ -47,20 +55,30 @@ func NewAIHandler(
 	opinionRepo repositories.AIOpinionRepository,
 	providerRepo repositories.AIProviderRepository,
 	userAIKeyRepo repositories.UserAIKeyRepository,
+	userRepo repositories.UserRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
 	encryptionKey []byte,
 ) *AIHandler {
+	requireAllowlist := envBoolWithDefault("AI_REQUIRE_ALLOWLIST", isProductionEnv())
+	serviceMonthlyCap := envIntWithDefault("AI_SERVICE_MONTHLY_CAP", 0)
+	if serviceMonthlyCap < 0 {
+		serviceMonthlyCap = 0
+	}
+
 	return &AIHandler{
 		bubbleRepo:       bubbleRepo,
 		opinionRepo:      opinionRepo,
 		providerRepo:     providerRepo,
 		userAIKeyRepo:    userAIKeyRepo,
+		userRepo:         userRepo,
 		subscriptionRepo: subscriptionRepo,
 		encryptionKey:    encryptionKey,
 		client: &http.Client{
 			Timeout: 20 * time.Second,
 		},
-		oneShotCache: newOneShotCache(60 * time.Second),
+		oneShotCache:      newOneShotCache(60 * time.Second),
+		requireAllowlist:  requireAllowlist,
+		serviceMonthlyCap: serviceMonthlyCap,
 	}
 }
 
@@ -124,6 +142,66 @@ func buildOneShotCacheKey(userID uuid.UUID, req OneShotAIRequest) string {
 	raw := strings.Join(parts, "|")
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
+}
+
+func envBoolWithDefault(key string, fallback bool) bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if raw == "" {
+		return fallback
+	}
+	switch raw {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func envIntWithDefault(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func isProductionEnv() bool {
+	env := strings.TrimSpace(strings.ToLower(os.Getenv("APP_ENV")))
+	if env == "" {
+		env = strings.TrimSpace(strings.ToLower(os.Getenv("ENV")))
+	}
+	return env == "production" || env == "prod"
+}
+
+func (h *AIHandler) enforceAllowlist(ctx context.Context, userID uuid.UUID) error {
+	if !h.requireAllowlist {
+		return nil
+	}
+	user, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil || !user.AIAllowlisted {
+		return errAIAllowlistRequired
+	}
+	return nil
+}
+
+func (h *AIHandler) exceedsServiceMonthlyCap(subscription *entities.Subscription, serviceUsage int) bool {
+	if subscription == nil || serviceUsage <= 0 || h.serviceMonthlyCap <= 0 {
+		return false
+	}
+	used := subscription.AIQuotaLimit - subscription.AIQuotaRemaining
+	if used < 0 {
+		used = 0
+	}
+	return used+serviceUsage > h.serviceMonthlyCap
 }
 
 type AIOpinionRequest struct {
@@ -190,6 +268,12 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
 	}
+	if err := h.enforceAllowlist(c.Context(), userID); err != nil {
+		if errors.Is(err, errAIAllowlistRequired) {
+			return c.Status(403).JSON(fiber.Map{"code": "ALLOWLIST_REQUIRED", "message": "beta allowlist required"})
+		}
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
 
 	bubbleID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -254,6 +338,9 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 	if serviceUsage > 0 && subscription.AIQuotaRemaining < serviceUsage {
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 	}
+	if h.exceedsServiceMonthlyCap(subscription, serviceUsage) {
+		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+	}
 
 	opinions := make([]AIOpinionItem, 0, len(providers))
 	errorsList := make([]AIOpinionError, 0)
@@ -306,6 +393,9 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 	}
 
 	if successfulServiceUsage > 0 {
+		if h.exceedsServiceMonthlyCap(subscription, successfulServiceUsage) {
+			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+		}
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, successfulServiceUsage)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
@@ -326,6 +416,12 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 	userID, err := ExtractUserID(c)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+	if err := h.enforceAllowlist(c.Context(), userID); err != nil {
+		if errors.Is(err, errAIAllowlistRequired) {
+			return c.Status(403).JSON(fiber.Map{"code": "ALLOWLIST_REQUIRED", "message": "beta allowlist required"})
+		}
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
 	var req OneShotAIRequest
@@ -377,6 +473,9 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 	if usesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 	}
+	if usesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
+		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+	}
 
 	prompt := buildOneShotPrompt(req)
 	responseText := ""
@@ -398,6 +497,9 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 	}
 
 	if usesServiceKey(provider, apiKey) {
+		if h.exceedsServiceMonthlyCap(subscription, 1) {
+			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+		}
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})

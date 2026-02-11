@@ -32,11 +32,12 @@ type SubscriptionInfo struct {
 }
 
 type UserProfileResponse struct {
-	ID           uuid.UUID         `json:"id"`
-	Email        string            `json:"email"`
-	Name         string            `json:"name"`
-	CreatedAt    time.Time         `json:"created_at"`
-	Subscription *SubscriptionInfo `json:"subscription,omitempty"`
+	ID            uuid.UUID         `json:"id"`
+	Email         string            `json:"email"`
+	Name          string            `json:"name"`
+	AIAllowlisted bool              `json:"ai_allowlisted"`
+	CreatedAt     time.Time         `json:"created_at"`
+	Subscription  *SubscriptionInfo `json:"subscription,omitempty"`
 }
 
 type UpdateProfileRequest struct {
@@ -83,11 +84,12 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 	}
 
 	response := UserProfileResponse{
-		ID:           user.ID,
-		Email:        user.Email,
-		Name:         user.Name,
-		CreatedAt:    user.CreatedAt,
-		Subscription: subInfo,
+		ID:            user.ID,
+		Email:         user.Email,
+		Name:          user.Name,
+		AIAllowlisted: user.AIAllowlisted,
+		CreatedAt:     user.CreatedAt,
+		Subscription:  subInfo,
 	}
 
 	return c.Status(200).JSON(response)
@@ -140,11 +142,12 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 	}
 
 	response := UserProfileResponse{
-		ID:           user.ID,
-		Email:        user.Email,
-		Name:         user.Name,
-		CreatedAt:    user.CreatedAt,
-		Subscription: subInfo,
+		ID:            user.ID,
+		Email:         user.Email,
+		Name:          user.Name,
+		AIAllowlisted: user.AIAllowlisted,
+		CreatedAt:     user.CreatedAt,
+		Subscription:  subInfo,
 	}
 
 	return c.Status(200).JSON(response)

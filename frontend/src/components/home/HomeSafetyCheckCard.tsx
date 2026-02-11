@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import type {
   SafetyItem,
+  SafetyMemberTarget,
   SafetyReviewResponse,
   SafetyTodayResponse,
   SafetyVerdict,
@@ -49,6 +50,11 @@ const formatCompactNumber = (value?: number) => {
   return value.toLocaleString('ko-KR')
 }
 
+type GroupedSafetyItem = SafetyItem & {
+  member_targets: SafetyMemberTarget[]
+  group_size: number
+}
+
 export function HomeSafetyCheckCard() {
   const [safety, setSafety] = useState<SafetyTodayResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -85,51 +91,55 @@ export function HomeSafetyCheckCard() {
 
   const venueOptions = useMemo(() => {
     if (!safety) return []
-    const values = Array.from(new Set(safety.items.map((item) => item.venue).filter(Boolean)))
+    const values = Array.from(new Set(safety.items.map((item) => (item.venue || '').toLowerCase()).filter(Boolean)))
     values.sort((a, b) => a.localeCompare(b))
     return values
   }, [safety])
 
-  const onSubmitVerdict = async (item: SafetyItem, verdict: SafetyVerdict) => {
+  const groupedItems = useMemo<GroupedSafetyItem[]>(() => {
+    if (!safety) return []
+    return safety.items.map((item) => ({
+      ...item,
+      venue: (item.venue || '').toLowerCase(),
+      member_targets:
+        item.member_targets && item.member_targets.length > 0
+          ? item.member_targets
+          : [
+              {
+                target_type: item.target_type,
+                target_id: item.target_id,
+                reviewed: item.reviewed,
+                verdict: item.verdict,
+              },
+            ],
+      group_size: item.group_size && item.group_size > 0 ? item.group_size : 1,
+    }))
+  }, [safety])
+
+  const groupedSummary = useMemo(() => {
+    const total = groupedItems.length
+    const reviewed = groupedItems.filter((item) => item.reviewed).length
+    return {
+      total,
+      reviewed,
+      pending: Math.max(total - reviewed, 0),
+    }
+  }, [groupedItems])
+
+  const onSubmitVerdict = async (item: GroupedSafetyItem, verdict: SafetyVerdict) => {
     setSubmittingTarget(item.target_id)
     setError(null)
 
-    const payload: UpsertSafetyReviewPayload = {
-      target_type: item.target_type,
-      target_id: item.target_id,
-      verdict,
-    }
-
     try {
-      const response = await api.post<SafetyReviewResponse>('/v1/safety/reviews', payload)
-      const saved = response.data
-
-      setSafety((prev) => {
-        if (!prev) return prev
-
-        const nextItems = prev.items.map((existing) => {
-          if (existing.target_id !== item.target_id || existing.target_type !== item.target_type) {
-            return existing
-          }
-          return {
-            ...existing,
-            reviewed: true,
-            verdict: saved.verdict,
-            note: saved.note,
-            reviewed_at: saved.updated_at,
-          }
-        })
-
-        const wasReviewed = item.reviewed
-        const reviewed = wasReviewed ? prev.reviewed : prev.reviewed + 1
-
-        return {
-          ...prev,
-          reviewed,
-          pending: Math.max(prev.total - reviewed, 0),
-          items: nextItems,
+      for (const target of item.member_targets) {
+        const payload: UpsertSafetyReviewPayload = {
+          target_type: target.target_type,
+          target_id: target.target_id,
+          verdict,
         }
-      })
+        await api.post<SafetyReviewResponse>('/v1/safety/reviews', payload)
+      }
+      await loadSafety()
     } catch {
       setError('라벨 저장에 실패했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
@@ -137,7 +147,7 @@ export function HomeSafetyCheckCard() {
     }
   }
 
-  const pendingTone = (safety?.pending ?? 0) > 0 ? 'text-amber-200' : 'text-emerald-200'
+  const pendingTone = (groupedSummary.pending ?? 0) > 0 ? 'text-amber-200' : 'text-emerald-200'
 
   return (
     <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
@@ -169,15 +179,15 @@ export function HomeSafetyCheckCard() {
       <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
         <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Total</p>
-          <p className="mt-1 text-lg font-semibold text-neutral-100">{formatCompactNumber(safety?.total)}</p>
+          <p className="mt-1 text-lg font-semibold text-neutral-100">{formatCompactNumber(groupedSummary.total)}</p>
         </div>
         <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Reviewed</p>
-          <p className="mt-1 text-lg font-semibold text-emerald-200">{formatCompactNumber(safety?.reviewed)}</p>
+          <p className="mt-1 text-lg font-semibold text-emerald-200">{formatCompactNumber(groupedSummary.reviewed)}</p>
         </div>
         <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Pending</p>
-          <p className={`mt-1 text-lg font-semibold ${pendingTone}`}>{formatCompactNumber(safety?.pending)}</p>
+          <p className={`mt-1 text-lg font-semibold ${pendingTone}`}>{formatCompactNumber(groupedSummary.pending)}</p>
         </div>
       </div>
 
@@ -239,13 +249,13 @@ export function HomeSafetyCheckCard() {
       {!isCollapsed && (
         <div className="mt-4 space-y-2">
           {isLoading && !safety && <p className="text-xs text-neutral-500">불러오는 중...</p>}
-          {!isLoading && safety?.items.length === 0 && (
+          {!isLoading && groupedItems.length === 0 && (
             <p className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-500">
               오늘 기록된 거래가 없습니다.
             </p>
           )}
 
-          {safety?.items.map((item) => {
+          {groupedItems.map((item) => {
             const isSubmitting = submittingTarget === item.target_id
             const itemVerdict = item.verdict
 
@@ -270,6 +280,9 @@ export function HomeSafetyCheckCard() {
                     <p className="text-xs text-neutral-500">
                       {formatDateTime(item.executed_at)} · {item.side ? item.side.toUpperCase() : '-'} {item.qty ?? '-'} @ {item.price ?? '-'}
                     </p>
+                    {item.group_size > 1 && (
+                      <p className="mt-1 text-[11px] text-neutral-500">유사 체결 {item.group_size}건 묶음</p>
+                    )}
                   </div>
 
                   {itemVerdict ? (

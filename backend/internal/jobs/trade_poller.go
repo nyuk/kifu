@@ -1298,6 +1298,10 @@ func normalizeBinanceSymbols(symbols []*entities.UserSymbol, exchange string) []
 
 	for _, symbol := range symbols {
 		market := strings.ToUpper(strings.TrimSpace(symbol.Symbol))
+		// If user tracks KRW pairs (e.g., XRPKRW from Upbit), try USDT equivalent on Binance.
+		if strings.HasSuffix(market, "KRW") && len(market) > 3 {
+			market = strings.TrimSuffix(market, "KRW") + "USDT"
+		}
 		if !isSupportedBinanceSymbol(market, exchange) {
 			continue
 		}

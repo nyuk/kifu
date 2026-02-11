@@ -1,5 +1,12 @@
 export type SafetyVerdict = 'intended' | 'mistake' | 'unsure'
 
+export type SafetyMemberTarget = {
+  target_type: 'trade' | 'trade_event'
+  target_id: string
+  reviewed: boolean
+  verdict?: SafetyVerdict
+}
+
 export type SafetyItem = {
   target_type: 'trade' | 'trade_event'
   target_id: string
@@ -16,6 +23,8 @@ export type SafetyItem = {
   verdict?: SafetyVerdict
   note?: string
   reviewed_at?: string
+  group_size?: number
+  member_targets?: SafetyMemberTarget[]
 }
 
 export type SafetyTodayResponse = {

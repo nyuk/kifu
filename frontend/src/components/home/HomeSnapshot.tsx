@@ -7,6 +7,7 @@ import { api } from '../../lib/api'
 import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
+import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import { useReviewStore } from '../../stores/reviewStore'
 import { parseAiSections } from '../../lib/aiResponseFormat'
 import type { AccuracyResponse, NotesListResponse, ReviewNote } from '../../types/review'
@@ -156,6 +157,10 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
 export function HomeSnapshot() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const guidedReview = useGuidedReviewStore((state) => state.review)
+  const guidedLoading = useGuidedReviewStore((state) => state.isLoading)
+  const fetchGuidedToday = useGuidedReviewStore((state) => state.fetchToday)
+  const fetchGuidedStreak = useGuidedReviewStore((state) => state.fetchStreak)
   const {
     stats,
     accuracy,
@@ -182,6 +187,11 @@ export function HomeSnapshot() {
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
   const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
+
+  useEffect(() => {
+    fetchGuidedToday()
+    fetchGuidedStreak()
+  }, [fetchGuidedToday, fetchGuidedStreak])
 
   useEffect(() => {
     let isActive = true
@@ -489,6 +499,18 @@ export function HomeSnapshot() {
     return () => cancelAnimationFrame(frame)
   }, [totalPnlNumeric])
 
+  const shouldForceGuidedModal =
+    Boolean(guidedReview) && !guidedLoading && guidedReview?.status !== 'completed'
+
+  useEffect(() => {
+    if (!shouldForceGuidedModal) return
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [shouldForceGuidedModal])
+
   return (
     <div className={`min-h-screen text-neutral-100 p-4 md:p-8 ${stateTone} transition-colors duration-700 ease-out`}>
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
@@ -700,9 +722,9 @@ export function HomeSnapshot() {
 
         <PositionManager />
 
-        <HomeGuidedReviewCard />
-
         <HomeSafetyCheckCard />
+
+        {guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <SummaryCard title="내 기록 요약">
@@ -916,8 +938,22 @@ export function HomeSnapshot() {
                </Link>
              </div>
            </div>
-         </section>
-       </div>
-     </div>
-   )
- }
+        </section>
+      </div>
+
+      {shouldForceGuidedModal && (
+        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm">
+          <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8">
+            <div className="w-full rounded-2xl border border-sky-300/30 bg-neutral-950/95 p-4 shadow-[0_30px_120px_rgba(0,0,0,0.7)] md:p-6">
+              <p className="mb-3 text-xs uppercase tracking-[0.24em] text-sky-200">Daily Guided Review</p>
+              <p className="mb-4 text-sm text-neutral-300">
+                홈에서는 오늘 복기를 먼저 완료해야 다음 확인이 가능합니다.
+              </p>
+              <HomeGuidedReviewCard forceOpen autoLoad={false} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

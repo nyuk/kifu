@@ -21,23 +21,23 @@ func NewUserRepository(pool *pgxpool.Pool) repositories.UserRepository {
 
 func (r *UserRepositoryImpl) Create(ctx context.Context, user *entities.User) error {
 	query := `
-		INSERT INTO users (id, email, password_hash, name, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, email, password_hash, name, ai_allowlisted, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	_, err := r.pool.Exec(ctx, query,
-		user.ID, user.Email, user.PasswordHash, user.Name, user.CreatedAt, user.UpdatedAt)
+		user.ID, user.Email, user.PasswordHash, user.Name, user.AIAllowlisted, user.CreatedAt, user.UpdatedAt)
 	return err
 }
 
 func (r *UserRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*entities.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, created_at, updated_at
+		SELECT id, email, password_hash, name, ai_allowlisted, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
 	var user entities.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.CreatedAt, &user.UpdatedAt)
+		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.AIAllowlisted, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -49,13 +49,13 @@ func (r *UserRepositoryImpl) GetByID(ctx context.Context, id uuid.UUID) (*entiti
 
 func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*entities.User, error) {
 	query := `
-		SELECT id, email, password_hash, name, created_at, updated_at
+		SELECT id, email, password_hash, name, ai_allowlisted, created_at, updated_at
 		FROM users
 		WHERE LOWER(email) = LOWER($1)
 	`
 	var user entities.User
 	err := r.pool.QueryRow(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.CreatedAt, &user.UpdatedAt)
+		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.AIAllowlisted, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -68,11 +68,11 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 func (r *UserRepositoryImpl) Update(ctx context.Context, user *entities.User) error {
 	query := `
 		UPDATE users
-		SET email = $2, password_hash = $3, name = $4, updated_at = $5
+		SET email = $2, password_hash = $3, name = $4, ai_allowlisted = $5, updated_at = $6
 		WHERE id = $1
 	`
 	_, err := r.pool.Exec(ctx, query,
-		user.ID, user.Email, user.PasswordHash, user.Name, user.UpdatedAt)
+		user.ID, user.Email, user.PasswordHash, user.Name, user.AIAllowlisted, user.UpdatedAt)
 	return err
 }
 
