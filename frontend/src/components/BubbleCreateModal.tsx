@@ -754,7 +754,6 @@ export function BubbleCreateModal({
                   </button>
                 </div>
               </div>
-              </div>
               )}
 
               {includeEvidence && includeBubbles && (
