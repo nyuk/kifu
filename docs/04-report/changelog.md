@@ -1,5 +1,25 @@
 # Report Changelog
 
+## [2026-02-12] - Dark Leather Texture & Unified Surface Update
+
+### Changed
+- CSS-only dark leather + metal texture background system (no image files)
+- Shell panels changed to transparent glass (bg-white/[0.03]) with backdrop-blur
+- 38 component files unified: opaque backgrounds → transparent glass surfaces
+- Page root backgrounds (alert, review, portfolio) removed
+- Base color warmed from #0a0a0c to #120e08
+
+### Design Decisions
+- DALL-E image approach rejected (resolution limit, loading cost)
+- CSS-only chosen for resolution independence and zero loading overhead
+- Key discovery: Shell.tsx opaque panels were hiding all background effects
+
+### Deliverables
+- `docs/04-report/features/2026-02-12-library-bg-home-surface-update.md` - Full design report
+- `docs/CHANGELOG.md` - Updated with 2026-02-12 entry
+
+---
+
 ## [2026-02-12] - Pre-Deploy QA Completion Report
 
 ### Added

@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-02-12
+
+### Added
+- CSS-only dark leather + metal texture background system (`app-shell::before`, `app-shell::after`).
+- Warm candle glow, amber center fill, green accent, brushed metal grain, leather vertical grain layers.
+- Vignette overlay with subtle edge darkening.
+
+### Changed
+- **Shell panels**: Sidebar and main content area changed from opaque (`bg-zinc-900/70`, `bg-zinc-900/45`) to transparent glass (`bg-white/[0.03]`, `bg-white/[0.02]`) with `backdrop-blur-xl`.
+- **All (app) page backgrounds unified**: Removed solid `bg-neutral-950`, `bg-zinc-900` from page root containers (alert, review, portfolio).
+- **38 component files updated**: Replaced opaque card/section backgrounds with transparent alternatives:
+  - `bg-neutral-900/60`, `/50`, `/40` → `bg-white/[0.04]`
+  - `bg-neutral-950/40` → `bg-black/20`
+  - `bg-neutral-950/60` → `bg-black/25`
+  - `bg-neutral-900` (inputs/selects) → `bg-white/[0.06]`
+  - `border-neutral-800` → `border-white/[0.08]`
+- Body base color changed from `#0a0a0c` to `#120e08` (warm leather tone).
+- Base gradient strengthened: `#1a1510` → `#2a1f14` for visible warmth.
+
+### Files Affected
+- `frontend/src/index.css` - Background texture system
+- `frontend/src/components/Shell.tsx` - Transparent panels
+- `frontend/app/layout.tsx` - Body color
+- `frontend/app/(app)/alert/page.tsx` - Page background removed
+- `frontend/app/(app)/review/page.tsx` - Page background removed
+- `frontend/app/(app)/alerts/**` - Card backgrounds unified
+- `frontend/src/components/portfolio/PortfolioDashboard.tsx` - Page + cards
+- `frontend/src/components/home/HomeSnapshot.tsx` - Cards
+- `frontend/src/components-old/Trades.tsx`, `Bubbles.tsx`, `Chart.tsx` - Cards
+- `frontend/src/components/alerts/*` - All alert components
+- `frontend/src/components/review/*` - All review components
+- `frontend/src/components/settings/*` - Settings components
+- `frontend/src/components/positions/PositionManager.tsx`
+- `frontend/src/components/chart/ChartReplay.tsx`, `ReplayControls.tsx`
+- `frontend/src/components/guided-review/GuidedReviewFlow.tsx`
+- `frontend/src/components/BubbleCreateModal.tsx`
+- `frontend/src/components/ui/FilterPills.tsx`
+
 ## 2026-02-10
 
 ### Added

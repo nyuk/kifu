@@ -1,72 +1,130 @@
-# Library Background & Home Surface Update (2026-02-12)
+# Dark Leather Texture & Unified Surface Update (2026-02-12)
 
 ## Summary
 
-홈 화면의 과도한 검은 배경 덮임을 줄이고, `app-shell` 기반의 서재 느낌 배경(따뜻한 톤 + 텍스처 + 비네팅)이 드러나도록 스타일을 조정했다.
+전체 앱의 배경을 CSS-only 다크 레더 + 메탈 텍스쳐로 통일하고, 모든 페이지의 카드/섹션 배경을 투명 유리(glass) 스타일로 변경하여 텍스쳐가 모든 탭에서 일관되게 비쳐 보이도록 했다.
+
+## Background & Decision
+
+### 시도한 접근법
+1. **DALL-E 이미지** - 서재 배경 이미지 생성 → 해상도 한계 (1536x1024 max), 로딩 시간/데이터 비용 문제
+2. **WebP 변환** - PNG → WebP (2MB → 108KB) → 여전히 해상도 부족
+3. **CSS-only 다크 레더 + 메탈 텍스쳐** (최종 선택) - 해상도 무관, 경량, 스케일링 자유
+
+### 핵심 발견
+- `Shell.tsx`의 사이드바(`bg-zinc-900/70`)와 메인 영역(`bg-zinc-900/45`)이 거의 불투명하여 모든 배경 효과를 가렸음
+- 각 페이지 컴포넌트도 `bg-neutral-950`, `bg-zinc-900` 등 불투명 배경을 가지고 있어 이중으로 가림
+- 해결: 모든 패널을 `bg-white/[0.03]` 수준의 투명 유리로 변경
 
 ## Implemented Changes
 
-### 1) App Shell Background Layering
+### 1) CSS-only Background System (`index.css`)
 
-- Added noise texture asset:
-  - `frontend/public/textures/noise.png` (128x128)
-- Added `.app-shell` layered background styles in:
-  - `frontend/src/index.css`
-- Layer 구성:
-  - warm radial gradient (`::before`)
-  - vignette + noise overlay (`::after`)
+`.app-shell::before` (Layer 1 - 텍스쳐):
+- Warm candle glow (좌상단, rgba 220/140/50, 0.50)
+- Secondary warm glow (우하단, rgba 180/100/30, 0.30)
+- Green accent (우측, rgba 60/140/70, 0.22)
+- Amber center fill (중앙, rgba 160/100/40, 0.28)
+- Brushed metal grain (수평 반복, rgba 255/255/255, 0.06)
+- Leather vertical grain (수직 반복, rgba 200/150/90, 0.08)
+- Base leather gradient (#2a1f14 → #120e08 → #1e1812)
 
-### 2) Shell Wrapper Integration
+`.app-shell::after` (Layer 2 - 비네트):
+- Subtle edge vignette (0.55 max, 기존 0.80에서 약화)
 
-- Updated shell root wrapper to use `app-shell`:
-  - `frontend/src/components/Shell.tsx`
-- 콘텐츠는 `relative z-10`으로 유지하여 레이어 위에 렌더링되도록 구성.
+### 2) Shell Panel Transparency (`Shell.tsx`)
 
-### 3) Home Root Wrapper / Tone Alignment
+| Element | Before | After |
+|---------|--------|-------|
+| Sidebar (mounted) | `bg-black/40 backdrop-blur-xl` | `bg-white/[0.03] backdrop-blur-xl` |
+| Sidebar (SSR) | `bg-zinc-900/70 backdrop-blur-md` | `bg-white/[0.03] backdrop-blur-xl` |
+| Main content (mounted) | `bg-black/30 backdrop-blur-sm` | `bg-white/[0.02] backdrop-blur-sm` |
+| Main content (SSR) | `bg-zinc-900/45 backdrop-blur-sm` | `bg-white/[0.02] backdrop-blur-sm` |
+| Session card | `bg-zinc-900/75` | `bg-white/[0.04]` |
+| Sidebar border | `border-white/[0.08]` | `border-amber-900/20` |
 
-- Home root wrapper 배경이 shell 배경을 덮지 않도록 조정:
-  - `bg-neutral-950` 계열 제거
-  - `bg-transparent` 적용
-- text tone을 zinc 계열로 통일:
-  - `text-neutral-100` -> `text-zinc-100`
-- File:
-  - `frontend/src/components/home/HomeSnapshot.tsx`
+### 3) Page Root Backgrounds Removed
 
-### 4) Home Surface Color Replacement
+| Page | Before | After |
+|------|--------|-------|
+| alert/page.tsx | `bg-neutral-950` | removed |
+| review/page.tsx | `bg-zinc-900` | removed |
+| PortfolioDashboard.tsx | `bg-neutral-950` | removed |
 
-아래 치환 규칙을 Home 영역 컴포넌트에 일괄 적용:
+### 4) Unified Card/Section Surface (38 files)
 
-- `bg-neutral-950/80` -> `bg-zinc-900/60`
-- `bg-neutral-950/60` -> `bg-zinc-900/50`
-- `bg-neutral-900/70` -> `bg-zinc-900/55`
-- `bg-neutral-900/60` -> `bg-zinc-900/50`
+일괄 치환 규칙:
 
-Applied files:
+| Old Pattern | New Pattern | Usage |
+|---|---|---|
+| `bg-neutral-900/60`, `/50`, `/40` | `bg-white/[0.04]` | Cards, sections |
+| `bg-neutral-900/30` | `bg-white/[0.03]` | Subtle containers |
+| `bg-neutral-900` (on inputs) | `bg-white/[0.06]` | Select, input fields |
+| `bg-neutral-950/40` | `bg-black/20` | Inner items |
+| `bg-neutral-950/60` | `bg-black/25` | Textarea, code blocks |
+| `bg-neutral-950/70` | `bg-black/30` | Modals footer |
+| `bg-neutral-800/40` | `bg-white/[0.04]` | Skeleton loaders |
+| `bg-neutral-800` (tags) | `bg-white/[0.08]` | Badge/pill backgrounds |
+| `border-neutral-800/60` | `border-white/[0.08]` | Card borders |
+| `border-neutral-800` | `border-white/[0.08]` | Section borders |
+| `border-neutral-800/70` | `border-white/[0.06]` | Inner item borders |
 
+### 5) Base Color Alignment
+
+| Element | Before | After |
+|---------|--------|-------|
+| `body` (layout.tsx) | `#0a0a0c` | `#120e08` |
+| `.app-shell` background | `#0a0a0c` | `#120e08` |
+
+## Files Modified (39 total)
+
+### Core
+- `frontend/src/index.css`
+- `frontend/src/components/Shell.tsx`
+- `frontend/app/layout.tsx`
+
+### App Pages
+- `frontend/app/(app)/alert/page.tsx`
+- `frontend/app/(app)/alerts/page.tsx`
+- `frontend/app/(app)/alerts/[id]/page.tsx`
+- `frontend/app/(app)/alerts/rules/page.tsx`
+- `frontend/app/(app)/review/page.tsx`
+
+### Components
 - `frontend/src/components/home/HomeSnapshot.tsx`
-- `frontend/src/components/home/HomeSafetyCheckCard.tsx`
 - `frontend/src/components/home/HomeGuidedReviewCard.tsx`
+- `frontend/src/components/home/HomeSafetyCheckCard.tsx`
+- `frontend/src/components/portfolio/PortfolioDashboard.tsx`
+- `frontend/src/components/positions/PositionManager.tsx`
+- `frontend/src/components/alerts/AlertCard.tsx`
+- `frontend/src/components/alerts/AlertBriefings.tsx`
+- `frontend/src/components/alerts/AlertOutcomes.tsx`
+- `frontend/src/components/alerts/DecisionForm.tsx`
+- `frontend/src/components/alerts/RuleList.tsx`
+- `frontend/src/components/alerts/RuleEditor.tsx`
+- `frontend/src/components/alerts/RuleConfigForm.tsx`
+- `frontend/src/components/review/NoteList.tsx`
+- `frontend/src/components/review/NoteEditor.tsx`
+- `frontend/src/components/review/StatsOverview.tsx`
+- `frontend/src/components/review/BubbleAccuracy.tsx`
+- `frontend/src/components/settings/ExchangeConnectionManager.tsx`
+- `frontend/src/components/settings/AIKeyManager.tsx`
+- `frontend/src/components/chart/ChartReplay.tsx`
+- `frontend/src/components/chart/ReplayControls.tsx`
+- `frontend/src/components/guided-review/GuidedReviewFlow.tsx`
+- `frontend/src/components/BubbleCreateModal.tsx`
+- `frontend/src/components/ui/FilterPills.tsx`
 
-### 5) Login Guest Continue Fix
+### Components-old
+- `frontend/src/components-old/Trades.tsx`
+- `frontend/src/components-old/Bubbles.tsx`
+- `frontend/src/components-old/Chart.tsx`
+- `frontend/src/components-old/Login.tsx`
+- `frontend/src/components-old/Register.tsx`
+- `frontend/src/components-old/NotFound.tsx`
 
-- 로그인 페이지의 `게스트로 계속하기` 버튼 동작 보완:
-  - 게스트 계정 로그인 시도 -> 성공 시 `/home`
-  - 실패 시 폴백으로 `/guest`
-- File:
-  - `frontend/src/components-old/Login.tsx`
-
-## Validation
-
-Executed:
-
-```bash
-cd frontend
-npm run typecheck
-npm run build
-```
-
-Result:
-
-- TypeScript check passed
-- Next.js build passed
-
+## Intentionally Not Changed
+- `LandingPage.tsx` - Shell 밖 공개 페이지
+- `Toast.tsx` - 오버레이는 가독성을 위해 불투명 유지
+- Accent 버튼 (`bg-neutral-100 text-neutral-950`) - CTA 버튼 대비 유지
+- Checkbox/radio 입력 요소 - 인터랙션 요소 유지
