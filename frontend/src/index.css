@@ -15,12 +15,12 @@ body {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  background: #120e08;
+  background: #0c0f13;
   color: #f4f4f5;
   overflow: clip;
 }
 
-/* Layer 1: dark leather + metal texture */
+/* Layer 1 default (neutral) */
 .app-shell::before {
   content: "";
   position: fixed;
@@ -28,30 +28,57 @@ body {
   pointer-events: none;
   z-index: 0;
   background:
-    /* warm candle glow top-left */
-    radial-gradient(900px 500px at 8% 3%,
-      rgba(220, 140, 50, 0.50) 0%,
-      transparent 55%),
-    /* secondary warm glow bottom-right */
-    radial-gradient(700px 450px at 88% 82%,
-      rgba(180, 100, 30, 0.30) 0%,
-      transparent 55%),
-    /* green accent right */
-    radial-gradient(550px 380px at 92% 20%,
-      rgba(60, 140, 70, 0.22) 0%,
+    /* cool steel glow top-left */
+    radial-gradient(950px 540px at 10% 5%,
+      rgba(132, 156, 194, 0.20) 0%,
+      transparent 58%),
+    /* moss accent right-bottom */
+    radial-gradient(760px 480px at 86% 78%,
+      rgba(88, 128, 102, 0.18) 0%,
       transparent 50%),
-    /* amber center fill */
-    radial-gradient(1600px 900px at 50% 45%,
-      rgba(160, 100, 40, 0.28) 0%,
+    /* restrained warm center hint */
+    radial-gradient(1400px 860px at 52% 42%,
+      rgba(152, 118, 76, 0.10) 0%,
       transparent 60%),
     /* brushed metal grain */
     repeating-linear-gradient(90deg,
-      transparent, rgba(255,255,255,0.06) 1px, transparent 2px, transparent 5px),
-    /* leather vertical grain */
+      transparent, rgba(255,255,255,0.045) 1px, transparent 2px, transparent 6px),
+    /* subtle vertical grain */
     repeating-linear-gradient(180deg,
-      transparent, rgba(200,150,90,0.08) 1px, transparent 2px, rgba(0,0,0,0.08) 4px, transparent 6px),
-    /* base leather gradient */
-    linear-gradient(160deg, #2a1f14 0%, #1a1208 30%, #120e08 55%, #15100a 80%, #1e1812 100%);
+      transparent, rgba(148,160,178,0.035) 1px, transparent 2px, rgba(0,0,0,0.07) 4px, transparent 7px),
+    /* graphite base */
+    linear-gradient(160deg, #1a1e26 0%, #12161d 34%, #0c0f13 58%, #0f1319 78%, #171c24 100%);
+}
+
+.app-shell.theme-forest::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(920px 520px at 14% 4%, rgba(104, 142, 126, 0.24) 0%, transparent 58%),
+    radial-gradient(720px 460px at 86% 76%, rgba(72, 120, 88, 0.22) 0%, transparent 55%),
+    radial-gradient(1200px 760px at 50% 40%, rgba(118, 116, 88, 0.10) 0%, transparent 62%),
+    repeating-linear-gradient(90deg, transparent, rgba(255,255,255,0.04) 1px, transparent 2px, transparent 6px),
+    repeating-linear-gradient(180deg, transparent, rgba(158,172,148,0.03) 1px, transparent 2px, rgba(0,0,0,0.07) 4px, transparent 7px),
+    linear-gradient(160deg, #14201d 0%, #101915 34%, #0d1411 58%, #111813 78%, #1a2420 100%);
+}
+
+.app-shell.theme-warm::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(900px 500px at 8% 3%, rgba(220, 140, 50, 0.24) 0%, transparent 55%),
+    radial-gradient(700px 450px at 88% 82%, rgba(180, 100, 30, 0.18) 0%, transparent 55%),
+    radial-gradient(550px 380px at 92% 20%, rgba(60, 140, 70, 0.14) 0%, transparent 50%),
+    radial-gradient(1500px 860px at 52% 45%, rgba(160, 100, 40, 0.12) 0%, transparent 60%),
+    repeating-linear-gradient(90deg, transparent, rgba(255,255,255,0.045) 1px, transparent 2px, transparent 6px),
+    repeating-linear-gradient(180deg, transparent, rgba(180,150,108,0.038) 1px, transparent 2px, rgba(0,0,0,0.08) 4px, transparent 7px),
+    linear-gradient(160deg, #23180f 0%, #17120b 34%, #120f0a 58%, #17120b 78%, #21180f 100%);
 }
 
 /* Layer 2: vignette (subtle - let texture breathe) */
@@ -64,9 +91,9 @@ body {
   background:
     radial-gradient(ellipse 80% 70% at 48% 45%,
       transparent 0%,
-      rgba(0, 0, 0, 0.15) 55%,
-      rgba(0, 0, 0, 0.40) 85%,
-      rgba(0, 0, 0, 0.55) 100%);
+      rgba(0, 0, 0, 0.12) 56%,
+      rgba(0, 0, 0, 0.34) 86%,
+      rgba(0, 0, 0, 0.50) 100%);
 }
 
 @layer utilities {

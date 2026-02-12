@@ -10,6 +10,9 @@ import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes } from 'lucide-react'
 
+type ShellTheme = 'neutral' | 'forest' | 'warm'
+const SHELL_THEME_KEY = 'kifu-shell-theme-v1'
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
   const clearTokens = useAuthStore((state) => state.clearTokens)
@@ -20,11 +23,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
+  const [shellTheme, setShellTheme] = useState<ShellTheme>('neutral')
 
   useEffect(() => {
     setMounted(true)
     setGuestSessionId(readGuestSession()?.id || null)
+    try {
+      const saved = localStorage.getItem(SHELL_THEME_KEY)
+      if (saved === 'neutral' || saved === 'forest' || saved === 'warm') {
+        setShellTheme(saved)
+      }
+    } catch {
+      // no-op
+    }
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    try {
+      localStorage.setItem(SHELL_THEME_KEY, shellTheme)
+    } catch {
+      // no-op
+    }
+  }, [mounted, shellTheme])
 
   useEffect(() => {
     let isActive = true
@@ -68,7 +89,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // Prevent hydration mismatch by rendering a simplified version during SSR
   if (!mounted) {
     return (
-      <div className="app-shell h-screen overflow-hidden">
+      <div className="app-shell theme-neutral h-screen overflow-hidden">
         <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
           <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 lg:w-64 flex-shrink-0 backdrop-blur-xl">
             <div>
@@ -107,7 +128,28 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="app-shell h-screen overflow-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white">
+    <div className={`app-shell theme-${shellTheme} h-screen overflow-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white`}>
+      <div className="pointer-events-none absolute right-6 top-4 z-30 hidden md:block">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/[0.12] bg-black/35 p-1 backdrop-blur-md">
+          {([
+            { key: 'neutral', label: 'Neutral' },
+            { key: 'forest', label: 'Forest' },
+            { key: 'warm', label: 'Warm' },
+          ] as const).map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setShellTheme(item.key)}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${shellTheme === item.key
+                ? 'bg-white text-black'
+                : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+                }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
         <aside className="relative flex flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.03] backdrop-blur-xl p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
