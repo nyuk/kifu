@@ -31,7 +31,7 @@ export default function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Monitoring</p>
@@ -61,7 +61,7 @@ export default function AlertsPage() {
               }}
               className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${isActive
                   ? 'bg-neutral-200 text-neutral-950'
-                  : 'bg-neutral-900/40 text-neutral-400 hover:bg-neutral-800/60'
+                  : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06]'
                 }`}
             >
               {t[tab.labelKey]}
@@ -79,11 +79,11 @@ export default function AlertsPage() {
       {isLoadingAlerts && alerts.length === 0 ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-neutral-800/40" />
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/[0.04]" />
           ))}
         </div>
       ) : alerts.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-10 text-center">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-10 text-center">
           <p className="text-sm text-zinc-400">{t.noAlerts}</p>
         </div>
       ) : (

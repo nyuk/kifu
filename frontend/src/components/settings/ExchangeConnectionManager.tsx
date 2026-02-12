@@ -225,7 +225,7 @@ export function ExchangeConnectionManager() {
           게스트 모드에서는 거래소 API 연결/동기화 기능이 비활성화됩니다.
         </div>
       )}
-      <div className="rounded-xl border border-white/5 bg-neutral-900/50 p-5 backdrop-blur-md">
+      <div className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md">
         <p className="text-sm font-bold text-neutral-100">거래소 API 연결</p>
         <p className="mt-1 text-xs text-neutral-500">연결 후 테스트, 동기화를 바로 실행할 수 있습니다.</p>
 
@@ -273,7 +273,7 @@ export function ExchangeConnectionManager() {
         {error && <p className="mt-3 text-xs text-rose-300">{error}</p>}
       </div>
 
-      <div className="rounded-xl border border-white/5 bg-neutral-900/50 p-5 backdrop-blur-md">
+      <div className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-neutral-100">연결된 거래소</p>
           <button
@@ -291,7 +291,7 @@ export function ExchangeConnectionManager() {
 
         <div className="mt-3 space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="rounded-xl border border-white/5 bg-neutral-900/30 p-4 transition hover:bg-neutral-900/50">
+            <div key={item.id} className="rounded-xl border border-white/5 bg-white/[0.03] p-4 transition hover:bg-white/[0.04]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-neutral-100">
@@ -343,7 +343,7 @@ export function ExchangeConnectionManager() {
 
               {syncingMap[item.id] && (
                 <div className="mt-3">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800/50">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.04]">
                     <div className="h-full w-1/3 animate-[pulse_1.2s_ease-in-out_infinite] rounded-full bg-sky-300/80" />
                   </div>
                   <p className="mt-1 text-[11px] text-sky-200">

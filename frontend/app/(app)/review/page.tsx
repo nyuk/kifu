@@ -273,7 +273,7 @@ export default function ReviewPage() {
   }, [stats?.by_symbol, tradeSummary])
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white p-4 md:p-8">
+    <div className="min-h-screen text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -374,7 +374,7 @@ export default function ReviewPage() {
             <select
               value={aiSymbolFilter}
               onChange={(event) => setAiSymbolFilter(event.target.value)}
-              className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
             >
               {aiSymbolOptions.map((option) => (
                 <option key={option} value={option}>
@@ -385,7 +385,7 @@ export default function ReviewPage() {
             <select
               value={aiTimeframeFilter}
               onChange={(event) => setAiTimeframeFilter(event.target.value)}
-              className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
+              className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
             >
               {aiTimeframeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -418,10 +418,10 @@ export default function ReviewPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
                     {note.symbol && (
-                      <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-neutral-300">{note.symbol}</span>
+                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.symbol}</span>
                     )}
                     {note.timeframe && (
-                      <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
+                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
                     )}
                     {note.symbol && note.candle_time && (
                       <Link
@@ -480,7 +480,7 @@ export default function ReviewPage() {
           <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Period Performance</h3>
-              <div className="flex p-1 space-x-1 bg-zinc-950/50 rounded-lg border border-white/[0.05]">
+              <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
                 {['1h', '4h', '1d'].map((p) => (
                   <button
                     key={p}

@@ -1359,7 +1359,7 @@ export function Chart() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
         <div className="flex flex-col gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Market</p>
@@ -1368,7 +1368,7 @@ export function Chart() {
               Live Chart with Bubble Journaling & Trade Overlay
             </p>
           </div>
-          <div className="rounded-xl border border-neutral-800/60 bg-neutral-950/40 p-3">
+          <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
             <div className="flex flex-wrap items-end gap-2">
               <FilterGroup label="Market" tone="emerald">
                 <FilterPills
@@ -1455,7 +1455,7 @@ export function Chart() {
             </div>
 
             {showAdvancedControls && (
-              <div className="mt-3 grid gap-3 border-t border-neutral-800/70 pt-3 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-3 grid gap-3 border-t border-white/[0.06] pt-3 lg:grid-cols-2 xl:grid-cols-3">
                 <FilterGroup label="Display" tone="emerald">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -1533,7 +1533,7 @@ export function Chart() {
                       {chartThemes[themeMode].label}
                     </button>
                     {showStyleMenu && (
-                      <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 p-2 shadow-xl">
+                      <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-white/[0.08] bg-neutral-950/95 p-2 shadow-xl">
                         {Object.entries(chartThemes).map(([value, item]) => (
                           <button
                             key={value}
@@ -1544,7 +1544,7 @@ export function Chart() {
                             className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
                               themeMode === value
                                 ? 'bg-sky-300/20 text-sky-200'
-                                : 'text-neutral-300 hover:bg-neutral-800/60'
+                                : 'text-neutral-300 hover:bg-white/[0.06]'
                             }`}
                           >
                             {item.label}
@@ -1645,7 +1645,7 @@ export function Chart() {
       </header>
 
       {showReplay && (
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-4">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
           <ChartReplay
             klines={klines}
             onFilteredKlines={handleReplayFilteredKlines}
@@ -1655,7 +1655,7 @@ export function Chart() {
       )}
 
       <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/20 p-4 relative lg:pr-20" ref={wrapperRef}>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 relative lg:pr-20" ref={wrapperRef}>
           <div className="h-[520px] w-full relative" ref={containerRef}>
             {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
             {mounted && (
@@ -1727,7 +1727,7 @@ export function Chart() {
                   </div>
                 )}
                 {showPositions && positionStackMode && (
-                  <div className="absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-neutral-800/70 bg-neutral-950/70 p-3 shadow-xl backdrop-blur pointer-events-auto">
+                  <div className="absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-white/[0.06] bg-black/30 p-3 shadow-xl backdrop-blur pointer-events-auto">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Positions</span>
                       <button
@@ -1775,7 +1775,7 @@ export function Chart() {
                         )
                       })}
                       {activeManualPositions.length === 0 && (
-                        <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/60 px-3 py-2 text-[11px] text-neutral-400">
+                        <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[11px] text-neutral-400">
                           No open positions
                         </div>
                       )}
@@ -1858,7 +1858,7 @@ export function Chart() {
                 </div>
 
                 {/* Tooltip */}
-                <div className={`absolute left-1/2 hidden -translate-x-1/2 rounded-lg bg-neutral-900 border border-neutral-700 p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50 ${tooltipBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
+                <div className={`absolute left-1/2 hidden -translate-x-1/2 rounded-lg bg-white/[0.06] border border-white/[0.08] p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50 ${tooltipBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
                   <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
                     {new Date(group.candleTime * 1000).toLocaleString()}
                   </div>
@@ -1867,7 +1867,7 @@ export function Chart() {
                     <div className="mb-2">
                       <div className="text-[10px] uppercase text-neutral-500 mb-1">Bubbles</div>
                       {visibleBubbles.map(b => (
-                        <div key={b.id} className="mb-1 last:mb-0 p-1 bg-neutral-800 rounded">
+                        <div key={b.id} className="mb-1 last:mb-0 p-1 bg-white/[0.08] rounded">
                           <div className="flex justify-between">
                             <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
                             <span>${b.price}</span>
@@ -1884,7 +1884,7 @@ export function Chart() {
                     <div>
                       <div className="text-[10px] uppercase text-neutral-500 mb-1">Trades</div>
                       {visibleTrades.map(t => (
-                        <div key={t.id} className="mb-1 last:mb-0 p-1 bg-neutral-800/50 rounded flex justify-between">
+                        <div key={t.id} className="mb-1 last:mb-0 p-1 bg-white/[0.04] rounded flex justify-between">
                           <span className={t.side === 'buy' ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{t.side.toUpperCase()}</span>
                           <span>{t.qty} @ {t.price}</span>
                         </div>
@@ -1900,7 +1900,7 @@ export function Chart() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col gap-4">
+        <aside className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble Board</p>
             <h3 className="mt-2 text-lg font-semibold text-neutral-100">말풍선 컨트롤</h3>
@@ -1935,7 +1935,7 @@ export function Chart() {
           {panelTab === 'summary' && (
             <>
               <div className="space-y-3">
-                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                   <div className="flex items-center justify-between text-xs text-neutral-500">
                     <span>말풍선 요약</span>
                     <span>{bubbleSummary.total.toLocaleString()}개</span>
@@ -2001,12 +2001,12 @@ export function Chart() {
                 </div>
                 <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2">
                   {filteredBubbles.length === 0 && (
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-4 text-xs text-neutral-500">
+                    <div className="rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500">
                       표시할 버블이 없습니다.
                     </div>
                   )}
                   {filteredBubbles.slice(0, 40).map((bubble) => (
-                    <div key={bubble.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                    <div key={bubble.id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                       <div className="flex items-center justify-between text-xs text-neutral-500">
                         <span>{new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
                         <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
@@ -2038,12 +2038,12 @@ export function Chart() {
           {panelTab === 'detail' && (
             <div className="space-y-3">
               {!selectedGroup && !selectedPosition && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-950/40 p-4 text-xs text-neutral-500">
+                <div className="rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500">
                   차트에서 말풍선을 선택하면 상세가 표시됩니다.
                 </div>
               )}
               {selectedPosition && (
-                <div className="space-y-3 rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/20 p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Position</p>
@@ -2083,12 +2083,12 @@ export function Chart() {
                       <span>{selectedPosition.leverage || '-'}</span>
                     </div>
                     {selectedPosition.strategy && (
-                      <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-2 text-[11px] text-neutral-300">
+                      <div className="rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300">
                         전략: {selectedPosition.strategy}
                       </div>
                     )}
                     {selectedPosition.memo && (
-                      <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-2 text-[11px] text-neutral-300">
+                      <div className="rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300">
                         메모: {selectedPosition.memo}
                       </div>
                     )}
@@ -2119,7 +2119,7 @@ export function Chart() {
                       </p>
                       <div className="max-h-[220px] overflow-y-auto space-y-2 pr-2">
                         {selectedGroup.bubbles.map((bubble) => (
-                          <div key={bubble.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                          <div key={bubble.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-bold ${
                                 bubble.action === 'BUY' ? 'text-green-400' :
@@ -2152,7 +2152,7 @@ export function Chart() {
                       </p>
                       <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
                         {selectedGroup.trades.map((trade) => (
-                          <div key={trade.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-3">
+                          <div key={trade.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <div className="flex items-center justify-between text-xs text-neutral-500">
                               <span className={trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}>
                                 {trade.side.toUpperCase()}

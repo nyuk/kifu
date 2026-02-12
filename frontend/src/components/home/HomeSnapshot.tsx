@@ -139,7 +139,7 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
       {segments.map((segment) => (
         <span
           key={segment.key}
-          className={`h-2 w-8 rounded-full border border-neutral-800/80 ${segment.active ? glow : 'bg-neutral-800/80'
+          className={`h-2 w-8 rounded-full border border-white/[0.06] ${segment.active ? glow : 'bg-white/[0.06]'
             }`}
         />
       ))}
@@ -508,7 +508,7 @@ export function HomeSnapshot() {
             <p className="text-sm text-stone-400">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
             <p className="text-xs text-stone-600">기간 기준: 캔들 시간</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900/55 p-2 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-2 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]">
             <div className="home-chip-group">
               {(['7d', '30d', 'all'] as const).map((period) => (
                 <button
@@ -593,7 +593,7 @@ export function HomeSnapshot() {
           </div>
         </section>
 
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-3 text-xs text-zinc-300">
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-xs text-zinc-300">
           <span className="text-zinc-500">무드 미리보기:</span>
           {([
             { key: 'auto', label: '자동' },
@@ -616,7 +616,7 @@ export function HomeSnapshot() {
           ))}
         </section>
 
-        <section className="rounded-3xl border border-neutral-800/60 bg-gradient-to-br from-neutral-950 via-neutral-900/80 to-lime-900/30 p-6 lg:p-8">
+        <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-black/20 via-white/[0.04] to-lime-900/30 p-6 lg:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Focus Memory</p>
@@ -626,10 +626,10 @@ export function HomeSnapshot() {
               <p className="text-sm text-neutral-300">결과와 AI 의견을 한 장에 모아둡니다.</p>
               <StatusGauge mode={resolvedMode} />
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-neutral-700/80 bg-zinc-900/55 px-3 py-1 text-xs text-neutral-300">
+                <span className="rounded-full border border-neutral-700/80 bg-white/[0.05] px-3 py-1 text-xs text-neutral-300">
                   최근 버블 {formatNumber(stats?.total_bubbles ?? 0)}개
                 </span>
-                <span className="rounded-full border border-neutral-700/80 bg-zinc-900/55 px-3 py-1 text-xs text-neutral-300">
+                <span className="rounded-full border border-neutral-700/80 bg-white/[0.05] px-3 py-1 text-xs text-neutral-300">
                   AI 의견 {formatNumber(totalOpinions)}개
                 </span>
                 {topProvider && (
@@ -639,9 +639,9 @@ export function HomeSnapshot() {
                 )}
               </div>
             </div>
-            <div className="rounded-2xl border border-neutral-800/70 bg-zinc-900/60 p-5 text-center lg:min-w-[220px]">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5 text-center lg:min-w-[220px]">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">핵심 PnL</p>
-              <div className="relative mt-3 rounded-xl border border-neutral-800/80 bg-zinc-900/60 px-4 py-3">
+              <div className="relative mt-3 rounded-xl border border-white/[0.06] bg-white/[0.05] px-4 py-3">
                 <div className="pointer-events-none absolute inset-0 rounded-xl bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.06)_50%,transparent_100%)] opacity-50" />
                 <div className="pointer-events-none absolute inset-0 rounded-xl bg-[repeating-linear-gradient(transparent,transparent_6px,rgba(255,255,255,0.04)_7px)] opacity-40" />
                 <p className={`relative text-4xl font-semibold tracking-widest ${pnlTone} ${pnlGlow} font-mono`}>
@@ -654,23 +654,23 @@ export function HomeSnapshot() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">실거래</p>
             <p className="mt-2 text-2xl font-semibold text-sky-300">{tradesCount.toLocaleString()}건</p>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">매수/매도</p>
             <p className="mt-2 text-sm font-semibold text-zinc-100">
               BUY {bySide.buyCount.toLocaleString()} · SELL {bySide.sellCount.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 거래소</p>
             <p className="mt-2 text-sm font-semibold text-amber-200">
               {topExchange ? `${topExchange.exchange} · ${(topExchange.total_trades || topExchange.trade_count || 0).toLocaleString()}건` : '-'}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 심볼</p>
             <p className="mt-2 text-sm font-semibold text-emerald-200">
               {topSymbol ? `${topSymbol.symbol} · ${(topSymbol.total_trades || topSymbol.trade_count || 0).toLocaleString()}건` : '-'}
@@ -755,7 +755,7 @@ export function HomeSnapshot() {
                 <select
                   value={aiSymbolFilter}
                   onChange={(event) => setAiSymbolFilter(event.target.value)}
-                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[11px] text-neutral-200"
+                  className="rounded border border-white/[0.08] bg-white/[0.06] px-2 py-1 text-[11px] text-neutral-200"
                 >
                   {aiSymbolOptions.map((option) => (
                     <option key={option} value={option}>
@@ -766,7 +766,7 @@ export function HomeSnapshot() {
                 <select
                   value={aiTimeframeFilter}
                   onChange={(event) => setAiTimeframeFilter(event.target.value)}
-                  className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[11px] text-neutral-200"
+                  className="rounded border border-white/[0.08] bg-white/[0.06] px-2 py-1 text-[11px] text-neutral-200"
                 >
                   {aiTimeframeOptions.map((option) => (
                     <option key={option} value={option}>
@@ -780,7 +780,7 @@ export function HomeSnapshot() {
                 const sections = parseAiSections(note.content || '')
                 const body = sections[0]?.body || note.content
                 return (
-                  <div key={note.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
+                  <div key={note.id} className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
                       {note.symbol && <span>{note.symbol}</span>}
                       {note.timeframe && <span>· {note.timeframe}</span>}
@@ -820,21 +820,21 @@ export function HomeSnapshot() {
             <div className="space-y-3">
               <Link
                 href="/chart"
-                className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-zinc-900/55 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
+                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
               >
                 버블 기록하기
                 <span className="text-xs text-zinc-500">현재 판단 저장</span>
               </Link>
               <Link
                 href="/review"
-                className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-zinc-900/55 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
+                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
               >
                 복기 대시보드
                 <span className="text-xs text-zinc-500">성과 확인</span>
               </Link>
               <Link
                 href="/bubbles"
-                className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-zinc-900/55 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
+                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
               >
                 버블 라이브러리
                 <span className="text-xs text-zinc-500">패턴 비교</span>
@@ -844,7 +844,7 @@ export function HomeSnapshot() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-zinc-900/50 p-5">
+          <div className="lg:col-span-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">최근 버블</p>
               <Link href="/bubbles" className="text-xs text-neutral-400 hover:text-neutral-200">
@@ -862,7 +862,7 @@ export function HomeSnapshot() {
                 recentBubbles.map((bubble) => (
                   <div
                     key={bubble.id}
-                    className="flex flex-col gap-2 rounded-xl border border-neutral-800/40 bg-neutral-950/40 p-4 md:flex-row md:items-center md:justify-between"
+                    className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-black/20 p-4 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
                       <p className="text-sm font-semibold">{bubble.symbol}</p>
@@ -881,7 +881,7 @@ export function HomeSnapshot() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-neutral-800/60 bg-zinc-900/50 p-5">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">오늘의 기억</p>
             <div className="mt-4 space-y-4 text-sm text-neutral-300">
               <div>

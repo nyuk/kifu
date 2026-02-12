@@ -409,8 +409,8 @@ export function BubbleCreateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-xl">
-        <div className="border-b border-neutral-800 px-6 py-4">
+      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/[0.08] bg-neutral-950/95 backdrop-blur-md text-neutral-100 shadow-xl">
+        <div className="border-b border-white/[0.08] px-6 py-4">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble</p>
           <h3 className="mt-2 text-xl font-semibold">새 말풍선 기록</h3>
           <p className="mt-1 text-sm text-neutral-400">
@@ -430,7 +430,7 @@ export function BubbleCreateModal({
               <select
                 value={timeframe}
                 onChange={(event) => setTimeframe(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               >
                 {timeframes.map((item) => (
                   <option key={item} value={item}>
@@ -445,7 +445,7 @@ export function BubbleCreateModal({
                 type="datetime-local"
                 value={candleTime}
                 onChange={(event) => setCandleTime(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               />
             </label>
           </div>
@@ -455,7 +455,7 @@ export function BubbleCreateModal({
               type="text"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               placeholder="예: 104800"
             />
           </label>
@@ -465,7 +465,7 @@ export function BubbleCreateModal({
               value={memo}
               onChange={(event) => setMemo(event.target.value)}
               rows={3}
-              className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               placeholder="진입 근거, 심리 상태 등을 기록하세요."
             />
           </label>
@@ -475,13 +475,13 @@ export function BubbleCreateModal({
               type="text"
               value={tagsInput}
               onChange={(event) => setTagsInput(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               placeholder="breakout, fomo"
             />
             {tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-400">
                 {tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-neutral-700 px-2 py-0.5">
+                  <span key={tag} className="rounded-full border border-white/[0.08] px-2 py-0.5">
                     {tag}
                   </span>
                 ))}
@@ -494,7 +494,7 @@ export function BubbleCreateModal({
               <select
                 value={assetClass}
                 onChange={(event) => setAssetClass(event.target.value as 'crypto' | 'stock')}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               >
                 <option value="crypto">Crypto</option>
                 <option value="stock">Stock</option>
@@ -506,12 +506,12 @@ export function BubbleCreateModal({
                 type="text"
                 value={venueName}
                 onChange={(event) => setVenueName(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
                 placeholder="binance, upbit, kis"
               />
             </label>
           </div>
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI Insight</span>
               {!aiResponse && (
@@ -520,7 +520,7 @@ export function BubbleCreateModal({
                     value={promptType}
                     onChange={(e) => setPromptType(e.target.value as any)}
                     disabled={aiLoading}
-                    className="rounded bg-neutral-950 border border-neutral-700 px-2 py-1 text-xs text-neutral-300"
+                    className="rounded bg-white/[0.06] border border-white/[0.08] px-2 py-1 text-xs text-neutral-300"
                   >
                     <option value="brief">Brief</option>
                     <option value="detailed">Detailed</option>
@@ -575,14 +575,14 @@ export function BubbleCreateModal({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                  <div className="rounded-lg border border-white/[0.06] bg-black/30 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
                     {aiResponse.response}
                   </div>
                 )}
               </div>
             )}
           </div>
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evidence Packet</p>
@@ -610,7 +610,7 @@ export function BubbleCreateModal({
                 className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
                   includeEvidence
                     ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200'
-                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                    : 'border-white/[0.08] text-neutral-300 hover:border-white/[0.12]'
                 } ${aiDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
               >
                 {includeEvidence ? '패킷 데이터 포함' : '패킷 데이터 제외'}
@@ -618,7 +618,7 @@ export function BubbleCreateModal({
             </div>
 
             <div className="mt-3 space-y-2 text-xs text-neutral-300">
-              <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+              <div className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">패킷 프리셋</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {[
@@ -633,7 +633,7 @@ export function BubbleCreateModal({
                       className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
                         packetPreset === option.value
                           ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                          : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                          : 'border-white/[0.08] text-neutral-300 hover:border-white/[0.12]'
                       }`}
                     >
                       {option.label}
@@ -685,19 +685,19 @@ export function BubbleCreateModal({
                 </label>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">세부 설정</p>
                 <button
                   type="button"
                   onClick={() => setShowPacketAdvanced((prev) => !prev)}
-                  className="rounded border border-neutral-700 px-2 py-1 text-[10px] font-semibold text-neutral-300 hover:border-neutral-500"
+                  className="rounded border border-white/[0.08] px-2 py-1 text-[10px] font-semibold text-neutral-300 hover:border-white/[0.12]"
                 >
                   {showPacketAdvanced ? '접기' : '펼치기'}
                 </button>
               </div>
 
               {showPacketAdvanced && (
-                <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                <div className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">범위 설정</p>
                   <div className="flex flex-wrap gap-2">
@@ -714,7 +714,7 @@ export function BubbleCreateModal({
                         className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
                           evidenceScope === option.value
                             ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                            : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                            : 'border-white/[0.08] text-neutral-300 hover:border-white/[0.12]'
                         }`}
                       >
                         {option.label}
@@ -731,7 +731,7 @@ export function BubbleCreateModal({
                         type="date"
                         value={evidenceFrom}
                         onChange={(event) => setEvidenceFrom(event.target.value)}
-                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                        className="mt-2 w-full rounded-md border border-white/[0.08] bg-black/30 px-2 py-1 text-xs text-neutral-200"
                       />
                     </label>
                     <label className="text-[11px] text-neutral-400">
@@ -740,7 +740,7 @@ export function BubbleCreateModal({
                         type="date"
                         value={evidenceTo}
                         onChange={(event) => setEvidenceTo(event.target.value)}
-                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                        className="mt-2 w-full rounded-md border border-white/[0.08] bg-black/30 px-2 py-1 text-xs text-neutral-200"
                       />
                     </label>
                   </div>
@@ -754,7 +754,7 @@ export function BubbleCreateModal({
                     className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
                       evidenceSymbolScope === 'current'
                         ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
-                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                        : 'border-white/[0.08] text-neutral-300 hover:border-white/[0.12]'
                     }`}
                   >
                     현재 심볼
@@ -765,7 +765,7 @@ export function BubbleCreateModal({
                     className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
                       evidenceSymbolScope === 'all'
                         ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
-                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                        : 'border-white/[0.08] text-neutral-300 hover:border-white/[0.12]'
                     }`}
                   >
                     전체 심볼
@@ -775,7 +775,7 @@ export function BubbleCreateModal({
               )}
 
               {includeEvidence && includeBubbles && (
-                <div className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 p-3">
+                <div className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">버블 필터</p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-[1.2fr_0.8fr]">
                     <label className="text-[11px] text-neutral-400">
@@ -787,7 +787,7 @@ export function BubbleCreateModal({
                           setBubbleTagsInput(event.target.value)
                           setBubbleTagsEdited(true)
                         }}
-                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                        className="mt-2 w-full rounded-md border border-white/[0.08] bg-black/30 px-2 py-1 text-xs text-neutral-200"
                         placeholder="breakout, fomo"
                       />
                     </label>
@@ -796,7 +796,7 @@ export function BubbleCreateModal({
                       <select
                         value={bubbleLimit}
                         onChange={(event) => setBubbleLimit(Number(event.target.value))}
-                        className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-200"
+                        className="mt-2 w-full rounded-md border border-white/[0.08] bg-black/30 px-2 py-1 text-xs text-neutral-200"
                       >
                         {[4, 6, 10, 20].map((value) => (
                           <option key={value} value={value}>{value}개</option>
@@ -812,7 +812,7 @@ export function BubbleCreateModal({
                   type="button"
                   onClick={handleBuildEvidencePreview}
                   disabled={evidenceLoading || (!includeEvidence && !includePositions && !includeBubbles)}
-                  className="rounded border border-neutral-700 px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-neutral-500 disabled:opacity-60"
+                  className="rounded border border-white/[0.08] px-2 py-1 text-[11px] font-semibold text-neutral-200 hover:border-white/[0.12] disabled:opacity-60"
                 >
                   {evidenceLoading ? '준비 중...' : '패킷 미리보기'}
                 </button>
@@ -828,7 +828,7 @@ export function BubbleCreateModal({
               )}
 
               {evidencePreview.length > 0 && (
-                <div className="rounded border border-neutral-800/70 bg-neutral-950/70 px-3 py-2 text-[11px] text-neutral-400">
+                <div className="rounded border border-white/[0.06] bg-black/30 px-3 py-2 text-[11px] text-neutral-400">
                   {evidencePreview.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
@@ -838,12 +838,12 @@ export function BubbleCreateModal({
           </div>
 
           </div>
-          <div className="border-t border-neutral-800 bg-neutral-950/95 px-6 py-4 backdrop-blur">
+          <div className="border-t border-white/[0.08] bg-black/30 px-6 py-4 backdrop-blur">
             <div className="flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200 hover:border-neutral-500"
+                className="rounded-lg border border-white/[0.08] px-4 py-2 text-sm font-semibold text-neutral-200 hover:border-white/[0.12]"
               >
                 취소
               </button>

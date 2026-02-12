@@ -29,9 +29,9 @@ export default function AlertDetailPage() {
   if (isLoadingDetail && !alertDetail) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="h-32 animate-pulse rounded-2xl bg-neutral-800/40" />
-        <div className="h-48 animate-pulse rounded-2xl bg-neutral-800/40" />
-        <div className="h-48 animate-pulse rounded-2xl bg-neutral-800/40" />
+        <div className="h-32 animate-pulse rounded-2xl bg-white/[0.04]" />
+        <div className="h-48 animate-pulse rounded-2xl bg-white/[0.04]" />
+        <div className="h-48 animate-pulse rounded-2xl bg-white/[0.04]" />
       </div>
     )
   }
@@ -60,7 +60,7 @@ export default function AlertDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <div className="flex items-center gap-2 text-xs text-neutral-500 mb-3">
           <Link href="/alerts" className="hover:text-neutral-300 transition">
             {t.alertsTitle}

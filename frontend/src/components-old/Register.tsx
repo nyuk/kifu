@@ -31,7 +31,7 @@ export function Register() {
   if (isDemoMode) {
     return (
       <div className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
-        <div className="mx-auto max-w-xl rounded-2xl border border-zinc-800/70 bg-zinc-900/60 p-8">
+        <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8">
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Demo Mode</p>
           <h1 className="mt-3 text-2xl font-semibold">회원가입은 프로덕션 베타에서만 활성화됩니다.</h1>
           <p className="mt-2 text-sm text-zinc-400">
@@ -79,7 +79,7 @@ export function Register() {
           <p className="text-base text-zinc-400">
             진입 근거를 남기고, 결과를 복기하고, 다음 판단에 반영합니다.
           </p>
-          <div className="mt-6 rounded-2xl border border-zinc-800/70 bg-zinc-900/50 p-5">
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
             <p className="text-sm font-semibold text-zinc-200">시작 혜택</p>
             <ul className="mt-2 space-y-1 text-sm text-zinc-400">
               <li>• 무료 플랜에서 AI 의견 체험</li>
@@ -90,7 +90,7 @@ export function Register() {
         </div>
         <form
           onSubmit={handleSubmit}
-          className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-8"
+          className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8"
         >
           <div>
             <h2 className="text-2xl font-semibold">회원가입</h2>
@@ -108,7 +108,7 @@ export function Register() {
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
               placeholder="사용할 이름"
             />
           </label>
@@ -119,7 +119,7 @@ export function Register() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
               placeholder="you@trader.com"
             />
           </label>
@@ -130,7 +130,7 @@ export function Register() {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
+              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
               placeholder="비밀번호를 입력하세요"
             />
           </label>

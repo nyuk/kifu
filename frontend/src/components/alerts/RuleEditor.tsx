@@ -92,8 +92,8 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-      <div className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-xl">
-        <div className="border-b border-neutral-800 px-6 py-4">
+      <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] bg-neutral-950 text-neutral-100 shadow-xl">
+        <div className="border-b border-white/[0.08] px-6 py-4">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Alert Rule</p>
           <h3 className="mt-2 text-xl font-semibold">{isEdit ? t.editRule : t.createRule}</h3>
         </div>
@@ -111,7 +111,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
                 placeholder="BTC 5% drop alert"
               />
             </label>
@@ -121,7 +121,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 type="text"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
                 placeholder="BTCUSDT"
               />
             </label>
@@ -133,7 +133,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
               <select
                 value={ruleType}
                 onChange={(e) => handleRuleTypeChange(e.target.value as RuleType)}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               >
                 {RULE_TYPES.map((rt) => (
                   <option key={rt.value} value={rt.value}>
@@ -149,12 +149,12 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 value={cooldown}
                 onChange={(e) => setCooldown(parseInt(e.target.value) || 60)}
                 min={1}
-                className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               />
             </label>
           </div>
 
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">Configuration</p>
             <RuleConfigForm ruleType={ruleType} config={config} onChange={setConfig} />
           </div>

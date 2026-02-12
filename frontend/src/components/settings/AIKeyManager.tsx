@@ -98,7 +98,7 @@ export function AIKeyManager() {
     return (
       <div className="animate-pulse space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 bg-neutral-800 rounded-lg" />
+          <div key={i} className="h-16 bg-white/[0.06] rounded-lg" />
         ))}
       </div>
     )
@@ -124,7 +124,7 @@ export function AIKeyManager() {
         return (
           <div
             key={provider.id}
-            className="rounded-xl border border-white/5 bg-neutral-900/50 p-5 backdrop-blur-md transition hover:border-white/10"
+            className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md transition hover:border-white/10"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -222,7 +222,7 @@ export function AIKeyManager() {
         )
       })}
 
-      <div className="mt-4 rounded-lg border border-white/5 bg-neutral-900/30 p-4">
+      <div className="mt-4 rounded-lg border border-white/5 bg-white/[0.03] p-4">
         <p className="text-xs text-neutral-500">
           AI 키를 등록하면 버블 생성 시 각 AI의 의견을 받을 수 있습니다.
           <br />

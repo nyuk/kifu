@@ -182,7 +182,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                     intent === option.value
                       ? 'border-sky-400 bg-sky-500/20 text-sky-200'
-                      : 'border-neutral-700/60 bg-neutral-900/60 text-neutral-300 hover:border-neutral-500'
+                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
                   }`}
                 >
                   {option.label}
@@ -201,7 +201,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                     emotions.includes(option.value)
                       ? 'border-violet-400 bg-violet-500/20 text-violet-200'
-                      : 'border-neutral-700/60 bg-neutral-900/60 text-neutral-300 hover:border-neutral-500'
+                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
                   }`}
                 >
                   {option.label}
@@ -220,7 +220,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                     pattern === option.value
                       ? 'border-amber-400 bg-amber-500/20 text-amber-200'
-                      : 'border-neutral-700/60 bg-neutral-900/60 text-neutral-300 hover:border-neutral-500'
+                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
                   }`}
                 >
                   {option.label}
@@ -235,7 +235,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
               onChange={(e) => setMemo(e.target.value)}
               placeholder={isNoTradeDayItem ? '오늘 비거래 선택이 맞았는지, 내일 체크할 조건을 남기기 (선택)' : '오늘 이 거래에 대해 한 줄 남기기 (선택)'}
               rows={3}
-              className="w-full rounded-xl border border-neutral-700/60 bg-neutral-900/60 px-4 py-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              className="w-full rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
             />
           )}
 
@@ -245,7 +245,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
               type="button"
               onClick={handleBack}
               disabled={currentLayer === 0}
-              className="rounded-lg border border-neutral-700/60 px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-white/[0.06] px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               이전
             </button>

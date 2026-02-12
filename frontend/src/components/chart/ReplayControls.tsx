@@ -82,7 +82,7 @@ export function ReplayControls({
       </button>
 
       {/* Speed Selector */}
-      <div className="ml-2 flex rounded-lg border border-white/5 bg-neutral-900/50 p-1">
+      <div className="ml-2 flex rounded-lg border border-white/5 bg-white/[0.04] p-1">
         {speeds.map((s) => (
           <button
             key={s}

@@ -13,11 +13,11 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
   const { t } = useI18n()
 
   const inputClass =
-    'w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-blue-500'
+    'w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-blue-500'
   const selectClass = inputClass
   const labelClass = 'block text-xs text-neutral-400 mb-1'
   const hintClass = 'mt-1 text-[11px] text-neutral-500'
-  const descClass = 'mb-4 rounded-lg bg-neutral-800/40 px-3 py-2.5 text-xs text-neutral-400 leading-relaxed'
+  const descClass = 'mb-4 rounded-lg bg-white/[0.04] px-3 py-2.5 text-xs text-neutral-400 leading-relaxed'
 
   if (ruleType === 'price_change') {
     const c = config as { direction?: string; threshold_type?: string; threshold_value?: string; reference?: string }

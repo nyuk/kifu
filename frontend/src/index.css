@@ -15,42 +15,58 @@ body {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  background: #09090b;
+  background: #120e08;
   color: #f4f4f5;
-  overflow-x: hidden;
+  overflow: clip;
 }
 
+/* Layer 1: dark leather + metal texture */
 .app-shell::before {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(1200px 700px at 40% 0%,
-      rgba(255, 214, 160, 0.10) 0%,
-      rgba(9, 9, 11, 0.00) 55%),
-    radial-gradient(900px 600px at 85% 35%,
-      rgba(120, 180, 140, 0.08) 0%,
-      rgba(9, 9, 11, 0.00) 60%);
+    /* warm candle glow top-left */
+    radial-gradient(900px 500px at 8% 3%,
+      rgba(220, 140, 50, 0.50) 0%,
+      transparent 55%),
+    /* secondary warm glow bottom-right */
+    radial-gradient(700px 450px at 88% 82%,
+      rgba(180, 100, 30, 0.30) 0%,
+      transparent 55%),
+    /* green accent right */
+    radial-gradient(550px 380px at 92% 20%,
+      rgba(60, 140, 70, 0.22) 0%,
+      transparent 50%),
+    /* amber center fill */
+    radial-gradient(1600px 900px at 50% 45%,
+      rgba(160, 100, 40, 0.28) 0%,
+      transparent 60%),
+    /* brushed metal grain */
+    repeating-linear-gradient(90deg,
+      transparent, rgba(255,255,255,0.06) 1px, transparent 2px, transparent 5px),
+    /* leather vertical grain */
+    repeating-linear-gradient(180deg,
+      transparent, rgba(200,150,90,0.08) 1px, transparent 2px, rgba(0,0,0,0.08) 4px, transparent 6px),
+    /* base leather gradient */
+    linear-gradient(160deg, #2a1f14 0%, #1a1208 30%, #120e08 55%, #15100a 80%, #1e1812 100%);
 }
 
+/* Layer 2: vignette (subtle - let texture breathe) */
 .app-shell::after {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
   background:
-    radial-gradient(1200px 900px at 50% 45%,
-      rgba(0, 0, 0, 0.00) 0%,
-      rgba(0, 0, 0, 0.55) 75%,
-      rgba(0, 0, 0, 0.78) 100%),
-    url("/textures/noise.png");
-  background-repeat: no-repeat, repeat;
-  background-size: cover, 128px 128px;
-  opacity: 0.45;
-  mix-blend-mode: overlay;
+    radial-gradient(ellipse 80% 70% at 48% 45%,
+      transparent 0%,
+      rgba(0, 0, 0, 0.15) 55%,
+      rgba(0, 0, 0, 0.40) 85%,
+      rgba(0, 0, 0, 0.55) 100%);
 }
 
 @layer utilities {

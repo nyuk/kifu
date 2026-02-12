@@ -30,7 +30,7 @@ export default function AlertRulesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <Link href="/alerts" className="hover:text-neutral-300 transition">
             {t.alertsTitle}
@@ -61,11 +61,11 @@ export default function AlertRulesPage() {
       {isLoadingRules && rules.length === 0 ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-neutral-800/40" />
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/[0.04]" />
           ))}
         </div>
       ) : rules.length === 0 ? (
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-10 text-center">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-10 text-center">
           <p className="text-sm text-neutral-500">{t.noRules}</p>
           <button
             type="button"

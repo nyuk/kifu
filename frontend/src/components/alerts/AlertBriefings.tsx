@@ -16,7 +16,7 @@ export function AlertBriefings({ briefings }: AlertBriefingsProps) {
 
   if (briefings.length === 0) {
     return (
-      <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.aiBriefings}</p>
         <p className="mt-3 text-sm text-neutral-500">{t.noBriefings}</p>
       </div>
@@ -24,7 +24,7 @@ export function AlertBriefings({ briefings }: AlertBriefingsProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.aiBriefings}</p>
       <div className="mt-4 space-y-3">
         {briefings.map((b) => {
@@ -32,7 +32,7 @@ export function AlertBriefings({ briefings }: AlertBriefingsProps) {
           return (
             <div
               key={b.id}
-              className="rounded-lg border border-neutral-800 bg-neutral-900/60"
+              className="rounded-lg border border-white/[0.08] bg-white/[0.04]"
             >
               <button
                 type="button"
@@ -51,7 +51,7 @@ export function AlertBriefings({ briefings }: AlertBriefingsProps) {
                 </div>
               </button>
               {isExpanded && (
-                <div className="border-t border-neutral-800 px-4 pb-4 pt-3">
+                <div className="border-t border-white/[0.08] px-4 pb-4 pt-3">
                   <div className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-300">
                     {b.response}
                   </div>

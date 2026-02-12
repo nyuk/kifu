@@ -173,7 +173,7 @@ export function Bubbles() {
   return (
     <div className="flex flex-col gap-6 h-full">
       {/* 헤더 */}
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6 flex-shrink-0">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 flex-shrink-0">
         <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Journal</p>
         <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Bubble Library</h2>
         <p className="mt-2 text-sm text-neutral-400">
@@ -189,7 +189,7 @@ export function Bubbles() {
             onClick={() => setActionFilter(actionFilter === action ? 'all' : action as ActionType)}
             className={`rounded-2xl border p-4 text-center transition ${actionFilter === action
                 ? 'border-neutral-100 bg-neutral-100/10'
-                : 'border-neutral-800/60 bg-neutral-900/40 hover:border-neutral-700'
+                : 'border-white/[0.08] bg-white/[0.04] hover:border-neutral-700'
               }`}
           >
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{action}</p>
@@ -203,7 +203,7 @@ export function Bubbles() {
       {/* 메인 컨텐츠 */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr] flex-1 min-h-0">
         {/* 버블 리스트 */}
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col min-h-0">
           {/* 검색/필터 */}
           <div className="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
             <FilterGroup label="SEARCH" tone="cyan">
@@ -253,7 +253,7 @@ export function Bubbles() {
                   onClick={() => setSelectedId(bubble.id === selectedId ? null : bubble.id)}
                   className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition ${bubble.id === selectedId
                       ? 'border-neutral-100 bg-neutral-100/10'
-                      : 'border-neutral-800 bg-neutral-950/40 hover:border-neutral-600'
+                      : 'border-white/[0.08] bg-black/20 hover:border-neutral-600'
                     }`}
                 >
                   <div className="flex items-center justify-between">
@@ -283,7 +283,7 @@ export function Bubbles() {
         </section>
 
         {/* 상세 보기 */}
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col min-h-0">
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col min-h-0">
           {selectedBubble ? (
             <>
               <div className="flex items-start justify-between mb-4 flex-shrink-0">
@@ -314,25 +314,25 @@ export function Bubbles() {
 
               <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2">
                 {/* 가격 & 노트 */}
-                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-2">Price</p>
                   <p className="text-2xl font-semibold text-neutral-100">
                     ${selectedBubble.price.toLocaleString()}
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-2">Note</p>
                   <p className="text-sm text-neutral-200 whitespace-pre-wrap">{selectedBubble.note}</p>
                 </div>
 
                 {/* 태그 */}
                 {selectedBubble.tags && selectedBubble.tags.length > 0 && (
-                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
                       {selectedBubble.tags.map(tag => (
-                        <span key={tag} className="rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-300">
+                        <span key={tag} className="rounded-full bg-white/[0.08] px-3 py-1 text-xs text-neutral-300">
                           {tag}
                         </span>
                       ))}
@@ -342,13 +342,13 @@ export function Bubbles() {
 
                 {/* AI 에이전트 조언 */}
                 {selectedBubble.agents && selectedBubble.agents.length > 0 && (
-                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-3">
                       AI Analysis ({selectedBubble.agents.length})
                     </p>
                     <div className="space-y-3">
                       {selectedBubble.agents.map((agent, idx) => (
-                        <div key={idx} className="rounded-lg bg-neutral-900/60 p-3 border border-neutral-800">
+                        <div key={idx} className="rounded-lg bg-white/[0.04] p-3 border border-white/[0.08]">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-sm font-semibold text-neutral-200">{agent.provider}</span>
                             <span className="text-xs text-zinc-400">{agent.model}</span>
@@ -385,24 +385,24 @@ export function Bubbles() {
 
                 {/* 유사 패턴 분석 */}
                 {similarAnalysis && (
-                  <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
+                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-3">
                       Similar Patterns ({similarAnalysis.count})
                     </p>
 
                     {/* 통계 카드 */}
                     <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                      <div className="rounded-lg bg-white/[0.04] p-3 text-center">
                         <p className="text-xs text-zinc-400">Win Rate</p>
                         <p className={`text-xl font-bold ${similarAnalysis.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
                           {similarAnalysis.winRate}%
                         </p>
                       </div>
-                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                      <div className="rounded-lg bg-white/[0.04] p-3 text-center">
                         <p className="text-xs text-zinc-400">Wins</p>
                         <p className="text-xl font-bold text-green-400">{similarAnalysis.wins}</p>
                       </div>
-                      <div className="rounded-lg bg-neutral-900/60 p-3 text-center">
+                      <div className="rounded-lg bg-white/[0.04] p-3 text-center">
                         <p className="text-xs text-zinc-400">Losses</p>
                         <p className="text-xl font-bold text-red-400">{similarAnalysis.losses}</p>
                       </div>
@@ -416,7 +416,7 @@ export function Bubbles() {
                           {similarAnalysis.samples.map(sample => (
                             <div
                               key={sample.id}
-                              className="rounded-lg bg-neutral-800/50 p-2 flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-800"
+                              className="rounded-lg bg-white/[0.04] p-2 flex items-center justify-between text-xs cursor-pointer hover:bg-white/[0.08]"
                               onClick={() => setSelectedId(sample.id)}
                             >
                               <div className="flex items-center gap-2">

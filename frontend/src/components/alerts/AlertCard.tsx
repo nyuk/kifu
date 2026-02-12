@@ -16,7 +16,7 @@ const STATUS_STYLES: Record<AlertStatus, string> = {
 }
 
 const SEVERITY_STYLES: Record<AlertSeverity, string> = {
-  normal: 'bg-neutral-800 text-neutral-400',
+  normal: 'bg-white/[0.08] text-neutral-400',
   urgent: 'bg-red-500/20 text-red-400',
 }
 
@@ -44,7 +44,7 @@ export function AlertCard({ alert }: AlertCardProps) {
   return (
     <Link
       href={`/alerts/${alert.id}`}
-      className="block rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 transition hover:border-neutral-700"
+      className="block rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 transition hover:border-neutral-700"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

@@ -13,7 +13,7 @@ const emptyForm: ManualPositionRequest = {
 
 // Unified input style constant
 const INPUT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-neutral-100 placeholder:text-zinc-400 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
-const SELECT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+const SELECT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-sm text-neutral-100 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
 
 const toIso = (value?: string) => {
   if (!value) return undefined
@@ -159,7 +159,7 @@ export function PositionManager() {
   const sortedPositions = useMemo(() => positions, [positions])
 
   return (
-    <section className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+    <section className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Position</p>
@@ -167,7 +167,7 @@ export function PositionManager() {
           <p className="text-xs text-zinc-400">직접 입력한 포지션을 기준으로 AI가 판단합니다.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-white/10 bg-neutral-900/50 p-1 text-xs">
+          <div className="flex rounded-lg border border-white/10 bg-white/[0.04] p-1 text-xs">
             {(['open', 'closed', 'all'] as const).map((option) => (
               <button
                 key={option}
@@ -199,12 +199,12 @@ export function PositionManager() {
       <div className="mt-4 space-y-3">
         {isLoading && <p className="text-xs text-zinc-400">불러오는 중...</p>}
         {!isLoading && sortedPositions.length === 0 && (
-          <p className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 px-3 py-2 text-xs text-zinc-400">
+          <p className="rounded-lg border border-white/[0.06] bg-black/25 px-3 py-2 text-xs text-zinc-400">
             현재 등록된 포지션이 없습니다.
           </p>
         )}
         {sortedPositions.map((position) => (
-          <div key={position.id} className="rounded-xl border border-white/5 bg-neutral-900/30 px-5 py-4 hover:border-white/10 transition-colors">
+          <div key={position.id} className="rounded-xl border border-white/5 bg-white/[0.03] px-5 py-4 hover:border-white/10 transition-colors">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -265,8 +265,8 @@ export function PositionManager() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 py-8">
-          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-neutral-950 text-neutral-100 shadow-2xl">
-            <div className="border-b border-neutral-800 px-6 py-4">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-md text-neutral-100 shadow-2xl">
+            <div className="border-b border-white/[0.08] px-6 py-4">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Position</p>
               <h3 className="mt-2 text-xl font-semibold">포지션 상태 입력</h3>
             </div>
@@ -343,7 +343,7 @@ export function PositionManager() {
                   <select
                     value={form.status}
                     onChange={(event) => setForm({ ...form, status: event.target.value as 'open' | 'closed' })}
-                    className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200"
+                    className="ml-2 rounded-lg border border-white/[0.08] bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-200"
                   >
                     <option value="open">보유중</option>
                     <option value="closed">종료</option>

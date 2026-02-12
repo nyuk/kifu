@@ -84,8 +84,8 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/5 bg-neutral-900 p-5">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur-md shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/5 bg-neutral-950/95 p-5">
           <h2 className="text-xl font-bold text-neutral-100">
             {note ? '노트 수정' : '새 복기 노트'}
           </h2>
@@ -208,7 +208,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 border-t border-white/5 bg-neutral-900/50 p-5">
+          <div className="flex justify-end gap-3 border-t border-white/5 bg-white/[0.04] p-5">
             <button
               type="button"
               onClick={onClose}

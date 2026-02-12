@@ -37,7 +37,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
   if (existingDecision) {
     const actionLabel = ACTIONS.find((a) => a.value === existingDecision.action)
     return (
-      <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.decisionTitle}</p>
         <div className="mt-4 space-y-2">
           <div className="flex items-center gap-3">
@@ -71,7 +71,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.decisionTitle}</p>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <div>
@@ -85,7 +85,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   action === a.value
                     ? 'bg-neutral-200 text-neutral-950'
-                    : 'bg-neutral-800/60 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.08]'
                 }`}
               >
                 {t[a.labelKey]}
@@ -105,7 +105,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   confidence === c.value
                     ? 'bg-neutral-200 text-neutral-950'
-                    : 'bg-neutral-800/60 text-neutral-400 hover:bg-neutral-800'
+                    : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.08]'
                 }`}
               >
                 {t[c.labelKey]}
@@ -120,7 +120,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-blue-500"
             placeholder="판단 근거를 기록하세요..."
           />
         </div>

@@ -73,11 +73,11 @@ export function NoteList({ bubbleId }: NoteListProps) {
 
   if (isLoading && notes.length === 0) {
     return (
-      <div className="rounded-xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+      <div className="rounded-xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 w-1/4 rounded bg-neutral-800"></div>
-          <div className="h-20 rounded bg-neutral-800"></div>
-          <div className="h-20 rounded bg-neutral-800"></div>
+          <div className="h-4 w-1/4 rounded bg-white/[0.06]"></div>
+          <div className="h-20 rounded bg-white/[0.06]"></div>
+          <div className="h-20 rounded bg-white/[0.06]"></div>
         </div>
       </div>
     )
@@ -119,7 +119,7 @@ export function NoteList({ bubbleId }: NoteListProps) {
           {notes.map((note) => (
             <div
               key={note.id}
-              className="rounded-xl border border-white/5 bg-neutral-900/30 p-5 transition-colors hover:border-white/10 hover:bg-neutral-900/50"
+              className="rounded-xl border border-white/5 bg-white/[0.03] p-5 transition-colors hover:border-white/10 hover:bg-white/[0.04]"
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">

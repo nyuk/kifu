@@ -12,9 +12,9 @@ export function StatsOverview({ stats, isLoading }: Props) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-zinc-800 rounded-lg p-4 animate-pulse">
-            <div className="h-4 bg-zinc-700 rounded w-20 mb-2" />
-            <div className="h-8 bg-zinc-700 rounded w-16" />
+          <div key={i} className="bg-white/[0.06] rounded-lg p-4 animate-pulse">
+            <div className="h-4 bg-white/[0.08] rounded w-20 mb-2" />
+            <div className="h-8 bg-white/[0.08] rounded w-16" />
           </div>
         ))}
       </div>
@@ -55,7 +55,7 @@ export function StatsOverview({ stats, isLoading }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {cards.map((card) => (
-        <div key={card.label} className="rounded-xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-5 transition-colors hover:bg-neutral-900/60">
+        <div key={card.label} className="rounded-xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-5 transition-colors hover:bg-white/[0.05]">
           <div className="text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">{card.label}</div>
           <div className={`text-2xl font-bold ${card.color || 'text-neutral-100'} font-mono tracking-tight`}>
             {card.value}

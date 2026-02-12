@@ -31,7 +31,7 @@ export function Login() {
   if (isDemoMode) {
     return (
       <div className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
-        <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.08] bg-zinc-900/60 p-8">
+        <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8">
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-300">Demo Mode</p>
           <h1 className="mt-3 text-2xl font-semibold">로그인은 프로덕션 베타에서만 활성화됩니다.</h1>
           <p className="mt-2 text-sm text-zinc-400">
@@ -98,7 +98,7 @@ export function Login() {
           <p className="text-base text-zinc-400">
             오늘의 판단을 확인하고, 복기 흐름을 이어서 진행하세요.
           </p>
-          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-5 backdrop-blur-md">
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 backdrop-blur-md">
             <p className="text-sm font-semibold text-zinc-200">베타 안내</p>
             <p className="mt-2 text-sm text-zinc-400">
               AI 의견은 복기 지표와 함께 기록됩니다. 근거를 구체적으로 남길수록 정확도가 높아집니다.
@@ -107,7 +107,7 @@ export function Login() {
         </div>
         <form
           onSubmit={handleSubmit}
-          className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-8 shadow-2xl backdrop-blur-md"
+          className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8 shadow-2xl backdrop-blur-md"
         >
           <div className="mb-2 text-center">
             <h1 className="text-3xl font-bold tracking-tight text-white mb-2">로그인</h1>
@@ -130,7 +130,7 @@ export function Login() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-zinc-900/50 border border-white/[0.08] text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+                className="w-full h-10 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
                 placeholder="hello@example.com"
               />
             </div>
@@ -143,7 +143,7 @@ export function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-zinc-900/50 border border-white/[0.08] text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
+                className="w-full h-10 px-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
                 placeholder="••••••••"
               />
             </div>

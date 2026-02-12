@@ -112,7 +112,7 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
 
   if (!replay.isActive || klines.length === 0) {
     return (
-      <div className="rounded-xl border border-white/5 bg-neutral-900/50 p-3 backdrop-blur-md">
+      <div className="rounded-xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md">
         <button
           onClick={() => {
             if (klines.length > 0) {
@@ -133,7 +133,7 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/5 bg-neutral-900/50 p-3 backdrop-blur-md">
+    <div className="space-y-3 rounded-xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs">
           <span className="text-neutral-400">리플레이 모드</span>

@@ -54,18 +54,18 @@ export function RuleList({ rules, onEdit }: RuleListProps) {
       {rules.map((rule) => (
         <div
           key={rule.id}
-          className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5"
+          className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-neutral-200 truncate">{rule.name}</h3>
-                <span className="shrink-0 rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-400">
+                <span className="shrink-0 rounded bg-white/[0.08] px-2 py-0.5 text-xs text-neutral-400">
                   {rule.symbol}
                 </span>
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-                <span className="rounded bg-neutral-800/60 px-2 py-0.5">
+                <span className="rounded bg-white/[0.06] px-2 py-0.5">
                   {t[RULE_TYPE_LABELS[rule.rule_type]]}
                 </span>
                 <span>{formatRuleConfig(rule)}</span>

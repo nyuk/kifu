@@ -136,33 +136,33 @@ export function Trades() {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-6 backdrop-blur flex-shrink-0">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.05] backdrop-blur-sm p-6 backdrop-blur flex-shrink-0">
         <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Insights</p>
         <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Trade History</h2>
         <p className="mt-2 text-sm text-neutral-400">서버 동기화 거래 내역 ({total}개)</p>
       </header>
 
       <section className="grid gap-4 lg:grid-cols-4 flex-shrink-0">
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Total Trades</p>
           <p className="mt-3 text-2xl font-semibold text-neutral-100">{stats.total}</p>
           <p className="mt-2 text-xs text-neutral-500">Buy: {stats.buys} / Sell: {stats.sells}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Futures Trades</p>
           <p className="mt-3 text-2xl font-semibold text-indigo-300">{stats.futuresCount}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Total Buy Value</p>
           <p className="mt-3 text-2xl font-semibold text-green-400">${stats.totalBuyValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         </div>
-        <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5">
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Total Sell Value</p>
           <p className="mt-3 text-2xl font-semibold text-red-400">${stats.totalSellValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 flex flex-col flex-1 min-h-0">
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col flex-1 min-h-0">
         <div className="flex flex-wrap items-center gap-4 mb-4 flex-shrink-0">
           <FilterGroup label="EXCHANGE" tone="sky">
             <select
@@ -212,7 +212,7 @@ export function Trades() {
               setSortOrder('desc')
               setSymbol('')
             }}
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-neutral-200 hover:border-neutral-500"
+            className="rounded-lg border border-neutral-700 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-neutral-200 hover:border-neutral-500"
           >
             필터 초기화
           </button>
@@ -228,7 +228,7 @@ export function Trades() {
           {!loading && !error && items.length > 0 && (
             <div className="space-y-2 pr-2">
               {items.map((trade) => (
-                <div key={trade.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4 text-sm hover:border-neutral-700 transition">
+                <div key={trade.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-4 text-sm hover:border-neutral-700 transition">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-bold ${trade.side.toUpperCase() === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>

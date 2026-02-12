@@ -130,7 +130,7 @@ export function BubbleAccuracy({ bubbleId, compact = false }: Props) {
         {data.map((item, idx) => (
           <div
             key={idx}
-            className="flex items-center justify-between text-xs bg-zinc-900/50 rounded px-3 py-2"
+            className="flex items-center justify-between text-xs bg-white/[0.04] rounded px-3 py-2"
           >
             <div className="flex items-center gap-2">
               <span className="text-zinc-400">{item.provider}</span>
