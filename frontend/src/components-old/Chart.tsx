@@ -614,7 +614,7 @@ export function Chart() {
   const updatePositions = useCallback(() => {
     if (!seriesRef.current || !chartRef.current || chartData.length === 0) return
 
-    const dataByCandle = new Map<number, { bubbles: Bubble[], trades: Trade[] }>()
+    const dataByCandle = new Map<number, { bubbles: Bubble[], trades: OverlayTrade[] }>()
     const positionMarkers: Array<{
       id: string
       candleTime: number
@@ -669,7 +669,7 @@ export function Chart() {
       x: number
       y: number
       bubbles: Bubble[]
-      trades: Trade[]
+      trades: OverlayTrade[]
       avgPrice: number
     }> = []
 
