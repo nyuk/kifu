@@ -107,7 +107,7 @@ export function AIKeyManager() {
   return (
     <div className="space-y-4">
       {guestMode && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
           게스트 모드에서는 AI 키 관리 기능이 비활성화됩니다.
         </div>
       )}
@@ -124,7 +124,7 @@ export function AIKeyManager() {
         return (
           <div
             key={provider.id}
-            className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-lg"
+            className="rounded-xl border border-white/5 bg-neutral-900/50 p-5 backdrop-blur-md transition hover:border-white/10"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -152,21 +152,21 @@ export function AIKeyManager() {
                         setNewKey('')
                       }}
                       disabled={guestMode}
-                      className="px-3 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition"
+                      className="rounded px-3 py-1.5 text-xs text-neutral-400 transition hover:bg-white/5 hover:text-neutral-200"
                     >
                       변경
                     </button>
                     <button
                       onClick={() => handleDeleteKey(provider.id)}
                       disabled={saving || guestMode}
-                      className="px-3 py-1 text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
+                      className="rounded px-3 py-1.5 text-xs text-red-400 transition hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
                     >
                       삭제
                     </button>
                   </>
                 ) : (
                   <>
-                    <span className="px-2 py-1 text-xs bg-neutral-800 text-neutral-500 rounded">
+                    <span className="rounded bg-white/5 px-2 py-1 text-xs text-neutral-500">
                       미설정
                     </span>
                     <button
@@ -176,7 +176,7 @@ export function AIKeyManager() {
                         setNewKey('')
                       }}
                       disabled={guestMode}
-                      className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+                      className="rounded bg-blue-600 px-3 py-1.5 text-xs text-white transition hover:bg-blue-500"
                     >
                       추가
                     </button>
@@ -186,14 +186,14 @@ export function AIKeyManager() {
             </div>
 
             {isEditing && (
-              <div className="mt-4 pt-4 border-t border-neutral-800">
+              <div className="mt-4 border-t border-white/5 pt-4">
                 <div className="flex gap-2">
                   <input
                     type="password"
                     value={newKey}
                     onChange={(e) => setNewKey(e.target.value)}
                     placeholder={`${provider.name} API Key 입력`}
-                    className="flex-1 px-3 py-2 bg-neutral-950 border border-neutral-700 rounded-lg text-sm text-neutral-200 placeholder-neutral-600 focus:outline-none focus:border-blue-500"
+                    className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-200 placeholder-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
                   />
                   <button
                     onClick={() => handleSaveKey(provider.id)}
@@ -208,7 +208,7 @@ export function AIKeyManager() {
                       setNewKey('')
                       setError(null)
                     }}
-                    className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm rounded-lg transition"
+                    className="rounded-lg bg-white/5 px-4 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white"
                   >
                     취소
                   </button>
@@ -222,7 +222,7 @@ export function AIKeyManager() {
         )
       })}
 
-      <div className="mt-4 p-4 bg-neutral-900/40 border border-neutral-800/60 rounded-lg">
+      <div className="mt-4 rounded-lg border border-white/5 bg-neutral-900/30 p-4">
         <p className="text-xs text-neutral-500">
           AI 키를 등록하면 버블 생성 시 각 AI의 의견을 받을 수 있습니다.
           <br />

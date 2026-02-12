@@ -17,21 +17,21 @@ import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
 import { PositionManager } from '../positions/PositionManager'
 
 type BubbleItem = {
-   id: string
-   symbol: string
-   timeframe: string
-   candle_time: string
-   price: string
-   bubble_type: string
-   memo?: string | null
-   tags?: string[]
+  id: string
+  symbol: string
+  timeframe: string
+  candle_time: string
+  price: string
+  bubble_type: string
+  memo?: string | null
+  tags?: string[]
 }
 
 type BubbleListResponse = {
-   page: number
-   limit: number
-   total: number
-   items: BubbleItem[]
+  page: number
+  limit: number
+  total: number
+  items: BubbleItem[]
 }
 
 type AINoteCard = ReviewNote & {
@@ -41,15 +41,15 @@ type AINoteCard = ReviewNote & {
 }
 
 const periodLabels: Record<string, string> = {
-   '7d': '최근 7일',
-   '30d': '최근 30일',
-   all: '전체 기간',
+  '7d': '최근 7일',
+  '30d': '최근 30일',
+  all: '전체 기간',
 }
 
 const formatNumber = (value?: number | string) => {
-   if (value === undefined || value === null) return '-'
-   if (typeof value === 'number') return value.toLocaleString()
-   return value
+  if (value === undefined || value === null) return '-'
+  if (typeof value === 'number') return value.toLocaleString()
+  return value
 }
 
 const formatPercent = (value?: number | string) => {
@@ -84,12 +84,7 @@ const toneByNumber = (value: number) => {
   return 'text-neutral-200'
 }
 
-const toneByPercent = (value?: string | number) => {
-  const numeric = parsePercent(value)
-  if (numeric > 0) return 'text-lime-300'
-  if (numeric < 0) return 'text-rose-300'
-  return 'text-neutral-200'
-}
+
 
 const getCurrency = (summary: TradeSummaryResponse | null) => {
   const exchanges = (summary?.by_exchange || [])
@@ -119,9 +114,9 @@ const getTopProvider = (accuracy: AccuracyResponse | null) => {
 }
 
 const SummaryCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-    <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">{title}</p>
-    <div className="mt-4">{children}</div>
+  <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+    <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">{title}</p>
+    <div className="mt-5">{children}</div>
   </div>
 )
 
@@ -133,20 +128,19 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
   ]
   const glow =
     mode === 'good'
-      ? 'bg-lime-400/90 shadow-[0_0_12px_rgba(163,230,53,0.9)]'
+      ? 'bg-lime-400/90 shadow-lg shadow-lime-500/20'
       : mode === 'bad'
-        ? 'bg-rose-400/90 shadow-[0_0_12px_rgba(244,63,94,0.9)]'
+        ? 'bg-rose-400/90 shadow-lg shadow-rose-500/20'
         : mode === 'ok'
-          ? 'bg-emerald-300/90 shadow-[0_0_12px_rgba(52,211,153,0.8)]'
-          : 'bg-slate-500/70'
+          ? 'bg-emerald-300/90 shadow-lg shadow-emerald-500/20'
+          : 'bg-neutral-700'
   return (
     <div className="flex items-center gap-1.5">
       {segments.map((segment) => (
         <span
           key={segment.key}
-          className={`h-2 w-8 rounded-full border border-neutral-800/80 ${
-            segment.active ? glow : 'bg-neutral-800/80'
-          }`}
+          className={`h-2 w-8 rounded-full border border-neutral-800/80 ${segment.active ? glow : 'bg-neutral-800/80'
+            }`}
         />
       ))}
       <span className="ml-2 text-[10px] uppercase tracking-[0.3em] text-neutral-400">State</span>
@@ -164,11 +158,11 @@ export function HomeSnapshot() {
   const {
     stats,
     accuracy,
-     isLoading,
-     isLoadingAccuracy,
-     filters,
-     setFilters,
-     fetchStats,
+    isLoading,
+    isLoadingAccuracy,
+    filters,
+    setFilters,
+    fetchStats,
     fetchAccuracy,
   } = useReviewStore()
   const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
@@ -195,42 +189,42 @@ export function HomeSnapshot() {
 
   useEffect(() => {
     let isActive = true
-     const load = async () => {
-       await Promise.all([fetchStats(), fetchAccuracy()])
-       if (isActive) {
-         setLastUpdated(new Date())
-       }
-     }
-     load()
-     return () => {
-       isActive = false
-     }
-   }, [fetchStats, fetchAccuracy, filters.period, filters.outcomePeriod])
+    const load = async () => {
+      await Promise.all([fetchStats(), fetchAccuracy()])
+      if (isActive) {
+        setLastUpdated(new Date())
+      }
+    }
+    load()
+    return () => {
+      isActive = false
+    }
+  }, [fetchStats, fetchAccuracy, filters.period, filters.outcomePeriod])
 
-   useEffect(() => {
-     let isActive = true
-     const loadBubbles = async () => {
-       setBubblesLoading(true)
-       setBubblesError(null)
-       try {
-         const response = await api.get<BubbleListResponse>('/v1/bubbles?page=1&limit=5&sort=desc')
-         if (isActive) {
-           setRecentBubbles(response.data.items)
-         }
-       } catch (error) {
-         if (isActive) {
-           setBubblesError('최근 버블을 불러오지 못했습니다.')
-         }
-       } finally {
-         if (isActive) {
-           setBubblesLoading(false)
-         }
-       }
-     }
-     loadBubbles()
-     return () => {
-       isActive = false
-     }
+  useEffect(() => {
+    let isActive = true
+    const loadBubbles = async () => {
+      setBubblesLoading(true)
+      setBubblesError(null)
+      try {
+        const response = await api.get<BubbleListResponse>('/v1/bubbles?page=1&limit=5&sort=desc')
+        if (isActive) {
+          setRecentBubbles(response.data.items)
+        }
+      } catch (error) {
+        if (isActive) {
+          setBubblesError('최근 버블을 불러오지 못했습니다.')
+        }
+      } finally {
+        if (isActive) {
+          setBubblesLoading(false)
+        }
+      }
+    }
+    loadBubbles()
+    return () => {
+      isActive = false
+    }
   }, [])
 
   useEffect(() => {
@@ -421,7 +415,7 @@ export function HomeSnapshot() {
   const currency = currencyMode === 'auto' ? getCurrency(tradeSummary) : currencyPreset(currencyMode)
   const totalPnlNumeric = Number(tradeTotals?.realized_pnl_total || 0)
   const pnlTone = toneByNumber(totalPnlNumeric)
-  const pnlGlow = totalPnlNumeric >= 0 ? 'shadow-[0_0_24px_rgba(163,230,53,0.35)]' : 'shadow-[0_0_24px_rgba(244,63,94,0.35)]'
+  const pnlGlow = totalPnlNumeric >= 0 ? 'shadow-lg shadow-lime-500/20' : 'shadow-lg shadow-rose-500/20'
   const bubbleCount = stats?.total_bubbles ?? 0
   const tradesCount = tradeTotals?.total_trades ?? 0
   const isNoAction = bubbleCount === 0 && tradesCount === 0
@@ -436,12 +430,12 @@ export function HomeSnapshot() {
     : visualMode
   const stateTone =
     resolvedMode === 'good'
-      ? 'bg-gradient-to-b from-neutral-950 via-lime-900/80 to-amber-900/30'
+      ? 'bg-neutral-950' // Removing gradients for cleaner look
       : resolvedMode === 'bad'
-        ? 'bg-gradient-to-b from-neutral-950 via-rose-900/80 to-red-950/30'
+        ? 'bg-neutral-950'
         : resolvedMode === 'ok'
-          ? 'bg-gradient-to-b from-neutral-950 via-emerald-900/60 to-cyan-950/20'
-          : 'bg-gradient-to-b from-slate-950 via-indigo-950/60 to-slate-950'
+          ? 'bg-neutral-950'
+          : 'bg-neutral-950'
   const heroText =
     resolvedMode === 'good'
       ? '오늘의 리듬이 선명합니다. 이 느낌을 기록하세요.'
@@ -528,11 +522,10 @@ export function HomeSnapshot() {
                   key={period}
                   type="button"
                   onClick={() => setFilters({ period })}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                    filters.period === period
-                      ? 'bg-neutral-100 text-neutral-950'
-                      : 'text-neutral-400 hover:text-neutral-100'
-                  }`}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${filters.period === period
+                    ? 'bg-neutral-100 text-neutral-950'
+                    : 'text-neutral-400 hover:text-neutral-100'
+                    }`}
                 >
                   {periodLabels[period]}
                 </button>
@@ -548,11 +541,10 @@ export function HomeSnapshot() {
                   key={item.key}
                   type="button"
                   onClick={() => setCurrencyMode(item.key)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${
-                    currencyMode === item.key
-                      ? 'bg-neutral-100 text-neutral-950'
-                      : 'text-neutral-400 hover:text-neutral-100'
-                  }`}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full transition ${currencyMode === item.key
+                    ? 'bg-neutral-100 text-neutral-950'
+                    : 'text-neutral-400 hover:text-neutral-100'
+                    }`}
                 >
                   {item.label}
                 </button>
@@ -564,27 +556,26 @@ export function HomeSnapshot() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Quiet Routine</p>
-            <h2 className="mt-2 text-xl font-semibold text-neutral-100">오늘의 3가지 질문</h2>
-            <div className="mt-4 space-y-2">
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">Quiet Routine</p>
+            <h2 className="mt-2 text-xl font-bold text-white/90">오늘의 3가지 질문</h2>
+            <div className="mt-5 space-y-2">
               {routineItems.map((item) => (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className="flex items-center justify-between rounded-xl border border-neutral-800/70 bg-neutral-950/40 px-4 py-3 transition hover:border-neutral-600"
+                  className="group flex items-center justify-between rounded-xl border border-white/5 bg-neutral-800/30 px-5 py-3.5 transition hover:bg-white/5 hover:border-white/10"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-neutral-100">{item.title}</p>
+                    <p className="text-sm font-semibold text-neutral-200 group-hover:text-white transition-colors">{item.title}</p>
                     <p className="text-xs text-neutral-500">{item.hint}</p>
                   </div>
                   <span
-                    className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
-                      item.done
-                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                        : 'border-amber-400/40 bg-amber-500/10 text-amber-200'
-                    }`}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${item.done
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                      : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                      }`}
                   >
                     {item.done ? '완료' : '대기'}
                   </span>
@@ -592,17 +583,17 @@ export function HomeSnapshot() {
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Closing Note</p>
-            <h2 className="mt-2 text-xl font-semibold text-neutral-100">오늘의 마감</h2>
-            <p className="mt-2 text-sm text-neutral-400">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">Closing Note</p>
+            <h2 className="mt-2 text-xl font-bold text-white/90">오늘의 마감</h2>
+            <p className="mt-2 text-sm text-neutral-400 leading-relaxed">
               긴급 대응과 판단 흐름을 한 장으로 정리합니다.
             </p>
-            <div className="mt-4 space-y-2">
-              <Link href="/alert" className="block rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200">
+            <div className="mt-5 space-y-2">
+              <Link href="/alert" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white text-center">
                 긴급 브리핑 다시보기
               </Link>
-              <Link href="/review" className="block rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200">
+              <Link href="/review" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white text-center">
                 복기 노트 남기기
               </Link>
             </div>
@@ -622,11 +613,10 @@ export function HomeSnapshot() {
               key={item.key}
               type="button"
               onClick={() => setVisualMode(item.key)}
-              className={`rounded-full border px-3 py-1 transition ${
-                visualMode === item.key
-                  ? 'border-neutral-200 bg-neutral-100 text-neutral-950'
-                  : 'border-neutral-700/70 bg-neutral-900/60 text-neutral-300 hover:border-neutral-500'
-              }`}
+              className={`rounded-full border px-3 py-1 transition text-[11px] font-medium ${visualMode === item.key
+                ? 'border-white bg-white text-black'
+                : 'border-white/10 bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-neutral-200'
+                }`}
             >
               {item.label}
             </button>
@@ -732,11 +722,11 @@ export function HomeSnapshot() {
               <div>
                 <p className="text-xs text-neutral-500">총 버블</p>
                 <p className="text-2xl font-semibold">{formatNumber(stats?.total_bubbles ?? 0)}</p>
-               </div>
-               <div>
-                 <p className="text-xs text-neutral-500">결과 있음</p>
-                 <p className="text-2xl font-semibold">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
-               </div>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">결과 있음</p>
+                <p className="text-2xl font-semibold">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
+              </div>
               <div>
                 <p className="text-xs text-neutral-500">승률</p>
                 <p className={`text-xl font-semibold ${summary && summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
@@ -761,11 +751,11 @@ export function HomeSnapshot() {
                 <p className="text-xs text-neutral-500">요청된 의견</p>
                 <p className="text-2xl font-semibold">{formatNumber(totalOpinions)}</p>
               </div>
-               <div>
-                 <p className="text-xs text-neutral-500">현재 1위 정확도</p>
-                 <p className="text-xl font-semibold">{accuracyLabel}</p>
-               </div>
-               <p className="text-xs text-neutral-500">
+              <div>
+                <p className="text-xs text-neutral-500">현재 1위 정확도</p>
+                <p className="text-xl font-semibold">{accuracyLabel}</p>
+              </div>
+              <p className="text-xs text-neutral-500">
                 AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -860,47 +850,47 @@ export function HomeSnapshot() {
           </SummaryCard>
         </section>
 
-         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-           <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-             <div className="flex items-center justify-between">
-               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">최근 버블</p>
-               <Link href="/bubbles" className="text-xs text-neutral-400 hover:text-neutral-200">
-                 전체 보기
-               </Link>
-             </div>
-             <div className="mt-4 space-y-3">
-               {bubblesLoading && <p className="text-xs text-neutral-500">불러오는 중...</p>}
-               {bubblesError && <p className="text-xs text-red-300">{bubblesError}</p>}
-               {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
-                 <p className="text-xs text-neutral-500">아직 기록된 버블이 없습니다.</p>
-               )}
-               {!bubblesLoading &&
-                 !bubblesError &&
-                 recentBubbles.map((bubble) => (
-                   <div
-                     key={bubble.id}
-                     className="flex flex-col gap-2 rounded-xl border border-neutral-800/40 bg-neutral-950/40 p-4 md:flex-row md:items-center md:justify-between"
-                   >
-                     <div>
-                       <p className="text-sm font-semibold">{bubble.symbol}</p>
-                       <p className="text-xs text-neutral-500">
-                         {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
-                       </p>
-                     </div>
-                     <div className="text-right">
-                       <p className="text-sm font-semibold">{bubble.price}</p>
-                       <p className="text-xs text-neutral-500">
-                         {bubble.memo ? bubble.memo : bubble.tags?.slice(0, 2).join(', ') || '메모 없음'}
-                       </p>
-                     </div>
-                   </div>
-                 ))}
-             </div>
-           </div>
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">최근 버블</p>
+              <Link href="/bubbles" className="text-xs text-neutral-400 hover:text-neutral-200">
+                전체 보기
+              </Link>
+            </div>
+            <div className="mt-4 space-y-3">
+              {bubblesLoading && <p className="text-xs text-neutral-500">불러오는 중...</p>}
+              {bubblesError && <p className="text-xs text-red-300">{bubblesError}</p>}
+              {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
+                <p className="text-xs text-neutral-500">아직 기록된 버블이 없습니다.</p>
+              )}
+              {!bubblesLoading &&
+                !bubblesError &&
+                recentBubbles.map((bubble) => (
+                  <div
+                    key={bubble.id}
+                    className="flex flex-col gap-2 rounded-xl border border-neutral-800/40 bg-neutral-950/40 p-4 md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{bubble.symbol}</p>
+                      <p className="text-xs text-neutral-500">
+                        {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">{bubble.price}</p>
+                      <p className="text-xs text-neutral-500">
+                        {bubble.memo ? bubble.memo : bubble.tags?.slice(0, 2).join(', ') || '메모 없음'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
 
-           <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">오늘의 기억</p>
-             <div className="mt-4 space-y-4 text-sm text-neutral-300">
+          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">오늘의 기억</p>
+            <div className="mt-4 space-y-4 text-sm text-neutral-300">
               <div>
                 <p className="text-xs text-neutral-500">순 손익</p>
                 <p className={`text-2xl font-semibold ${toneByNumber(totalPnlNumeric)}`}>
@@ -927,17 +917,17 @@ export function HomeSnapshot() {
                   </span>
                 </div>
               </div>
-               <p className="text-xs text-neutral-500">
-                 스냅샷이 흐려지기 전에 한 줄이라도 복기 노트를 남겨보세요.
-               </p>
-               <Link
-                 href="/review"
-                 className="inline-flex items-center justify-center rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-950"
-               >
-                 복기 노트 작성
-               </Link>
-             </div>
-           </div>
+              <p className="text-xs text-neutral-500">
+                스냅샷이 흐려지기 전에 한 줄이라도 복기 노트를 남겨보세요.
+              </p>
+              <Link
+                href="/review"
+                className="inline-flex items-center justify-center rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-950"
+              >
+                복기 노트 작성
+              </Link>
+            </div>
+          </div>
         </section>
       </div>
 

@@ -30,8 +30,8 @@ const formatDateTime = (value?: string) => {
 const buildParams = (filters: Filters, cursor?: string | null) => {
   const params = new URLSearchParams()
   if (filters.assetClass !== 'all') params.set('asset_class', filters.assetClass)
-    const venue = normalizeExchangeFilter(filters.venue)
-    if (venue) params.set('venue', venue)
+  const venue = normalizeExchangeFilter(filters.venue)
+  if (venue) params.set('venue', venue)
   if (filters.source !== 'all') params.set('source', filters.source)
   if (filters.status !== 'all') params.set('status', filters.status)
   if (cursor) params.set('cursor', cursor)
@@ -316,7 +316,7 @@ export function PortfolioDashboard() {
           <p className="text-sm text-neutral-400">실거래(API) 타임라인을 기본으로 코인/주식/DEX 흐름을 묶습니다.</p>
         </header>
 
-        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
           <FilterGroup label="자산군" tone="amber">
             <FilterPills
               options={assetOptions}
@@ -332,7 +332,7 @@ export function PortfolioDashboard() {
               value={filters.venue}
               onChange={(event) => setFilters((prev) => ({ ...prev, venue: event.target.value }))}
               placeholder="binance, upbit"
-              className="rounded-lg border border-sky-400/40 bg-neutral-950/80 px-3 py-1 text-xs font-semibold text-sky-100 placeholder:text-sky-300/60"
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 placeholder:text-neutral-500 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 transition-all"
             />
           </FilterGroup>
 
@@ -363,25 +363,25 @@ export function PortfolioDashboard() {
           </div>
         )}
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+        <section className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Timeline</p>
             <p className="mt-2 text-2xl font-semibold text-neutral-100">{timeline.length}</p>
             <p className="text-xs text-neutral-500">이벤트 수</p>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Open Positions</p>
             <p className="mt-2 text-2xl font-semibold text-lime-300">{stats.openPositions}</p>
             <p className="text-xs text-neutral-500">보유 포지션</p>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Coverage</p>
             <p className="mt-2 text-2xl font-semibold text-sky-300">{stats.venueCount}</p>
             <p className="text-xs text-neutral-500">거래소 · 자산군 {stats.assetCount}</p>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+        <section className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Trade Sync Summary</p>
             <p className="text-sm font-semibold text-emerald-300">
@@ -426,8 +426,8 @@ export function PortfolioDashboard() {
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+        <section className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Timeline</p>
               <span className="text-xs text-neutral-500">{timeline.length} events</span>
@@ -450,7 +450,7 @@ export function PortfolioDashboard() {
 
                 const timelineKey = `${item.id || 'evt'}-${item.executed_at || 'time'}-${index}`
                 return (
-                  <div key={timelineKey} className="rounded-xl border border-neutral-800/60 bg-neutral-950/50 p-4">
+                  <div key={timelineKey} className="rounded-xl border border-white/5 bg-neutral-900/30 p-5 hover:bg-neutral-900/50 transition-colors">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -486,7 +486,7 @@ export function PortfolioDashboard() {
                   type="button"
                   onClick={loadMoreTimeline}
                   disabled={loadingTimeline}
-                  className="w-full rounded-lg border border-neutral-800/60 bg-neutral-900/70 px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-neutral-600 disabled:opacity-60"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-neutral-300 transition hover:bg-white/10 hover:text-white disabled:opacity-60"
                 >
                   {loadingTimeline ? '불러오는 중...' : '더 불러오기'}
                 </button>
@@ -494,7 +494,7 @@ export function PortfolioDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Positions</p>
               <span className="text-xs text-neutral-500">{positions.length} items</span>
@@ -505,7 +505,7 @@ export function PortfolioDashboard() {
                 <p className="text-xs text-neutral-500">포지션 요약이 없습니다.</p>
               )}
               {positions.map((position) => (
-                <div key={position.key} className="rounded-xl border border-neutral-800/60 bg-neutral-950/50 p-4">
+                <div key={position.key} className="rounded-xl border border-white/5 bg-neutral-900/30 p-5 hover:bg-neutral-900/50 transition-colors">
                   <p className="text-sm font-semibold">{position.instrument}</p>
                   <p className="text-xs text-neutral-500">
                     {position.venue_name} · {position.status.toUpperCase()} · {formatDateTime(position.last_executed_at)}

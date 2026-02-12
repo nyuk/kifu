@@ -31,7 +31,7 @@ export function ReplayControls({
       <button
         onClick={onStepBack}
         disabled={disabled || isPlaying}
-        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="rounded-lg border border-white/10 bg-white/5 p-2 text-neutral-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         title="이전 캔들"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@ export function ReplayControls({
       <button
         onClick={onTogglePlay}
         disabled={disabled}
-        className="p-3 rounded-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="rounded-full bg-neutral-100 p-3 text-neutral-950 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
         title={isPlaying ? '일시정지' : '재생'}
       >
         {isPlaying ? (
@@ -61,7 +61,7 @@ export function ReplayControls({
       <button
         onClick={onStepForward}
         disabled={disabled || isPlaying}
-        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="rounded-lg border border-white/10 bg-white/5 p-2 text-neutral-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         title="다음 캔들"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +73,7 @@ export function ReplayControls({
       <button
         onClick={onStop}
         disabled={disabled}
-        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="rounded-lg border border-white/10 bg-white/5 p-2 text-neutral-300 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
         title="리플레이 종료"
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -82,17 +82,16 @@ export function ReplayControls({
       </button>
 
       {/* Speed Selector */}
-      <div className="flex rounded-lg bg-zinc-800 p-1 ml-2">
+      <div className="ml-2 flex rounded-lg border border-white/5 bg-neutral-900/50 p-1">
         {speeds.map((s) => (
           <button
             key={s}
             onClick={() => onSpeedChange(s)}
             disabled={disabled}
-            className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
-              speed === s
-                ? 'bg-blue-600 text-white'
-                : 'text-zinc-400 hover:text-white'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${speed === s
+                ? 'bg-white/10 text-white shadow-sm'
+                : 'text-neutral-500 hover:text-neutral-300'
+              } disabled:cursor-not-allowed disabled:opacity-50`}
           >
             {s}x
           </button>

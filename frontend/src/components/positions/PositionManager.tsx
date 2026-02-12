@@ -11,6 +11,10 @@ const emptyForm: ManualPositionRequest = {
   status: 'open',
 }
 
+// Unified input style constant
+const INPUT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+const SELECT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+
 const toIso = (value?: string) => {
   if (!value) return undefined
   const parsed = new Date(value)
@@ -155,7 +159,7 @@ export function PositionManager() {
   const sortedPositions = useMemo(() => positions, [positions])
 
   return (
-    <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+    <section className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Position</p>
@@ -163,17 +167,16 @@ export function PositionManager() {
           <p className="text-xs text-neutral-500">직접 입력한 포지션을 기준으로 AI가 판단합니다.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-1 text-xs">
+          <div className="flex rounded-lg border border-white/10 bg-neutral-900/50 p-1 text-xs">
             {(['open', 'closed', 'all'] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setStatusFilter(option)}
-                className={`rounded-md px-2.5 py-1 font-semibold transition ${
-                  statusFilter === option
-                    ? 'bg-neutral-100 text-neutral-900'
-                    : 'text-neutral-300 hover:text-neutral-100'
-                }`}
+                className={`rounded-md px-3 py-1.5 font-semibold transition ${statusFilter === option
+                  ? 'bg-neutral-100 text-neutral-900 shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+                  }`}
               >
                 {option === 'open' ? '보유중' : option === 'closed' ? '종료' : '전체'}
               </button>
@@ -182,7 +185,7 @@ export function PositionManager() {
           <button
             type="button"
             onClick={handleOpenNew}
-            className="rounded-lg border border-neutral-700/70 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500"
+            className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white hover:border-white/20"
           >
             포지션 추가
           </button>
@@ -201,7 +204,7 @@ export function PositionManager() {
           </p>
         )}
         {sortedPositions.map((position) => (
-          <div key={position.id} className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-4 py-3">
+          <div key={position.id} className="rounded-xl border border-white/5 bg-neutral-900/30 px-5 py-4 hover:border-white/10 transition-colors">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -228,7 +231,7 @@ export function PositionManager() {
                 <button
                   type="button"
                   onClick={() => handleEdit(position)}
-                  className="rounded-lg border border-neutral-700 px-2.5 py-1 text-neutral-200 hover:border-neutral-500"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
                 >
                   수정
                 </button>
@@ -261,8 +264,8 @@ export function PositionManager() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 py-8">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-neutral-950 text-neutral-100 shadow-2xl">
             <div className="border-b border-neutral-800 px-6 py-4">
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Position</p>
               <h3 className="mt-2 text-xl font-semibold">포지션 상태 입력</h3>
@@ -275,7 +278,7 @@ export function PositionManager() {
                     type="text"
                     value={form.symbol}
                     onChange={(event) => setForm({ ...form, symbol: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                    className={INPUT_STYLE}
                     placeholder="BTCUSDT"
                   />
                 </label>
@@ -284,7 +287,7 @@ export function PositionManager() {
                   <select
                     value={form.position_side}
                     onChange={(event) => setForm({ ...form, position_side: event.target.value as 'long' | 'short' })}
-                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                    className={SELECT_STYLE}
                   >
                     <option value="long">Long</option>
                     <option value="short">Short</option>
@@ -298,7 +301,7 @@ export function PositionManager() {
                   <select
                     value={form.asset_class}
                     onChange={(event) => setForm({ ...form, asset_class: event.target.value as 'crypto' | 'stock' })}
-                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                    className={SELECT_STYLE}
                   >
                     <option value="crypto">Crypto</option>
                     <option value="stock">Stock</option>
@@ -310,7 +313,7 @@ export function PositionManager() {
                     type="text"
                     value={form.venue || ''}
                     onChange={(event) => setForm({ ...form, venue: event.target.value })}
-                    className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                    className={INPUT_STYLE}
                     placeholder="binance, upbit, kis"
                   />
                 </label>
@@ -322,7 +325,7 @@ export function PositionManager() {
                   type="text"
                   value={form.entry_price || ''}
                   onChange={(event) => setForm({ ...form, entry_price: event.target.value })}
-                  className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                  className={INPUT_STYLE}
                   placeholder="예: 78000"
                 />
               </label>
@@ -340,7 +343,7 @@ export function PositionManager() {
                   <select
                     value={form.status}
                     onChange={(event) => setForm({ ...form, status: event.target.value as 'open' | 'closed' })}
-                    className="ml-2 rounded border border-neutral-700 bg-neutral-950/60 px-2 py-1 text-xs text-neutral-200"
+                    className="ml-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-200"
                   >
                     <option value="open">보유중</option>
                     <option value="closed">종료</option>
@@ -357,7 +360,7 @@ export function PositionManager() {
                         type="text"
                         value={form.size || ''}
                         onChange={(event) => setForm({ ...form, size: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                        className={INPUT_STYLE}
                       />
                     </label>
                     <label className="text-sm text-neutral-300">
@@ -366,7 +369,7 @@ export function PositionManager() {
                         type="text"
                         value={form.leverage || ''}
                         onChange={(event) => setForm({ ...form, leverage: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                        className={INPUT_STYLE}
                         placeholder="예: 3"
                       />
                     </label>
@@ -378,7 +381,7 @@ export function PositionManager() {
                         type="text"
                         value={form.stop_loss || ''}
                         onChange={(event) => setForm({ ...form, stop_loss: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                        className={INPUT_STYLE}
                       />
                     </label>
                     <label className="text-sm text-neutral-300">
@@ -387,7 +390,7 @@ export function PositionManager() {
                         type="text"
                         value={form.take_profit || ''}
                         onChange={(event) => setForm({ ...form, take_profit: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                        className={INPUT_STYLE}
                       />
                     </label>
                   </div>
@@ -397,7 +400,7 @@ export function PositionManager() {
                       type="text"
                       value={form.strategy || ''}
                       onChange={(event) => setForm({ ...form, strategy: event.target.value })}
-                      className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                      className={INPUT_STYLE}
                       placeholder="예: 손절 -2% / 추세 이탈"
                     />
                   </label>
@@ -407,7 +410,7 @@ export function PositionManager() {
                       value={form.memo || ''}
                       onChange={(event) => setForm({ ...form, memo: event.target.value })}
                       rows={2}
-                      className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                      className={INPUT_STYLE}
                     />
                   </label>
                   <label className="text-sm text-neutral-300">
@@ -416,7 +419,7 @@ export function PositionManager() {
                       type="datetime-local"
                       value={openedAtInput}
                       onChange={(event) => setOpenedAtInput(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100"
+                      className={INPUT_STYLE}
                     />
                   </label>
                 </div>
@@ -429,7 +432,7 @@ export function PositionManager() {
                     setIsModalOpen(false)
                     resetForm()
                   }}
-                  className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200"
+                  className="rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-300 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   취소
                 </button>
@@ -437,7 +440,7 @@ export function PositionManager() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 shadow-lg shadow-white/10 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? '저장 중...' : '저장'}
                 </button>

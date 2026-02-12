@@ -55,13 +55,13 @@ export function StatsOverview({ stats, isLoading }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {cards.map((card) => (
-        <div key={card.label} className="bg-zinc-800 rounded-lg p-4">
-          <div className="text-sm text-zinc-400 mb-1">{card.label}</div>
-          <div className={`text-2xl font-bold ${card.color || 'text-white'}`}>
+        <div key={card.label} className="rounded-xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-5 transition-colors hover:bg-neutral-900/60">
+          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">{card.label}</div>
+          <div className={`text-2xl font-bold ${card.color || 'text-neutral-100'} font-mono tracking-tight`}>
             {card.value}
           </div>
           {card.subtext && (
-            <div className="text-xs text-zinc-500 mt-1">{card.subtext}</div>
+            <div className="text-xs text-neutral-400 mt-1">{card.subtext}</div>
           )}
         </div>
       ))}

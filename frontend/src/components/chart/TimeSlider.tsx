@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
 type Props = {
   startTime: number  // epoch ms
@@ -40,9 +40,9 @@ export function TimeSlider({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
+      <div className="mb-1 flex items-center justify-between text-xs text-neutral-500">
         <span>{formatTime(startTime)}</span>
-        <span className="text-zinc-300 font-medium">{formatTime(currentTime)}</span>
+        <span className="font-medium text-neutral-300">{formatTime(currentTime)}</span>
         <span>{formatTime(endTime)}</span>
       </div>
       <div className="relative">
@@ -54,24 +54,9 @@ export function TimeSlider({
           value={currentTime}
           onChange={handleChange}
           disabled={disabled}
-          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer
-            disabled:opacity-50 disabled:cursor-not-allowed
-            [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:w-4
-            [&::-webkit-slider-thumb]:h-4
-            [&::-webkit-slider-thumb]:rounded-full
-            [&::-webkit-slider-thumb]:bg-blue-500
-            [&::-webkit-slider-thumb]:cursor-pointer
-            [&::-webkit-slider-thumb]:shadow-lg
-            [&::-webkit-slider-thumb]:hover:bg-blue-400
-            [&::-moz-range-thumb]:w-4
-            [&::-moz-range-thumb]:h-4
-            [&::-moz-range-thumb]:rounded-full
-            [&::-moz-range-thumb]:bg-blue-500
-            [&::-moz-range-thumb]:border-none
-            [&::-moz-range-thumb]:cursor-pointer"
+          className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/10 disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-neutral-100 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-neutral-100 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:hover:bg-white [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:w-4"
           style={{
-            background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${progress}%, #3f3f46 ${progress}%, #3f3f46 100%)`,
+            background: `linear-gradient(to right, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.2) ${progress}%, rgba(255,255,255,0.05) ${progress}%, rgba(255,255,255,0.05) 100%)`,
           }}
         />
       </div>

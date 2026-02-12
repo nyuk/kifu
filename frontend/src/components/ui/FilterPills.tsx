@@ -73,7 +73,7 @@ export function FilterPills({
 }: FilterPillsProps) {
   return (
     <div
-      className="flex rounded-full border border-neutral-800/60 bg-neutral-950/60 p-1"
+      className="flex rounded-full border border-white/10 bg-neutral-900/50 p-1 backdrop-blur-sm"
       role="group"
       aria-label={ariaLabel}
     >
@@ -84,9 +84,8 @@ export function FilterPills({
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`px-3 py-1 text-xs font-semibold rounded-full transition ${
-              isActive ? toneActive[tone] : `text-neutral-300 ${toneHover[tone]}`
-            }`}
+            className={`px-3 py-1 text-xs font-semibold rounded-full transition ${isActive ? toneActive[tone] : `text-neutral-300 ${toneHover[tone]}`
+              }`}
           >
             {option.label}
           </button>

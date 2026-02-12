@@ -83,17 +83,17 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-4 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/5 bg-neutral-900 p-5">
+          <h2 className="text-xl font-bold text-neutral-100">
             {note ? '노트 수정' : '새 복기 노트'}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="rounded p-1 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
           >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -102,14 +102,14 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              제목 *
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
+              제목 <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="노트 제목을 입력하세요"
               required
             />
@@ -117,13 +117,13 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              내용 *
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
+              내용 <span className="text-rose-400">*</span>
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 min-h-[150px]"
+              className="min-h-[150px] w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="매매에 대한 분석과 복기 내용을 작성하세요"
               required
             />
@@ -131,7 +131,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
 
           {/* Emotion */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="mb-2 block text-sm font-medium text-neutral-300">
               매매 당시 감정
             </label>
             <div className="flex flex-wrap gap-2">
@@ -140,11 +140,10 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                   key={opt.value}
                   type="button"
                   onClick={() => setEmotion(opt.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    emotion === opt.value
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-all ${emotion === opt.value
+                      ? 'border-white/20 bg-neutral-100 text-neutral-900 shadow-sm font-semibold'
+                      : 'border-transparent bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-neutral-200'
+                    }`}
                 >
                   {opt.emoji} {opt.label}
                 </button>
@@ -154,20 +153,20 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
 
           {/* Lesson Learned */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
               교훈/배운 점
             </label>
             <textarea
               value={lessonLearned}
               onChange={(e) => setLessonLearned(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 min-h-[80px]"
+              className="min-h-[80px] w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
               placeholder="이 매매에서 배운 점을 기록하세요"
             />
           </div>
 
           {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
               태그
             </label>
             <div className="flex gap-2 mb-2">
@@ -176,13 +175,13 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
                 placeholder="태그 입력 후 Enter"
               />
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
               >
                 추가
               </button>
@@ -192,13 +191,13 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm"
+                    className="inline-flex items-center gap-1.5 rounded bg-sky-500/10 px-2 py-1 text-sm text-sky-300"
                   >
                     #{tag}
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-red-400"
+                      className="text-sky-300/60 hover:text-sky-300"
                     >
                       &times;
                     </button>
@@ -209,18 +208,18 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-700">
+          <div className="flex justify-end gap-3 border-t border-white/5 bg-neutral-900/50 p-5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-300 hover:bg-white/5 hover:text-white transition-colors"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={isLoading || !title.trim() || !content.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg bg-neutral-100 px-6 py-2.5 text-sm font-bold text-neutral-950 shadow-lg shadow-white/5 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? '저장 중...' : note ? '수정' : '저장'}
             </button>

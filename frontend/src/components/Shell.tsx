@@ -19,7 +19,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
-  
+
   useEffect(() => {
     setMounted(true)
     setGuestSessionId(readGuestSession()?.id || null)
@@ -44,17 +44,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       isActive = false
     }
   }, [accessToken])
-  
+
   const navItems = [
-    { label: t.navHome, to: '/home' },
-    { label: t.navPortfolio, to: '/portfolio' },
-    { label: t.navChart, to: '/chart' },
-    { label: t.navAlert, to: '/alert' },
-    { label: t.navBubbles, to: '/bubbles' },
-    { label: t.navTrades, to: '/trades' },
-    { label: t.navReview, to: '/review' },
-    { label: t.navAlerts, to: '/alerts' },
-    { label: t.navSettings, to: '/settings' },
+    { icon: '🏠', label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
+    { icon: '📊', label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
+    { icon: '📈', label: t.navChart, href: '/chart', color: 'text-sky-400', activeColor: 'bg-sky-400/10 text-sky-300' },
+    { icon: '🔔', label: t.navAlert, href: '/alert', color: 'text-orange-400', activeColor: 'bg-orange-400/10 text-orange-300' },
+    { icon: '🫧', label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
+    { icon: '⚡', label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
+    { icon: '📝', label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
+    { icon: '📢', label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
+    { icon: '⚙️', label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]
 
   const handleLogout = () => {
@@ -77,8 +77,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => (
                 <Link
-                  key={item.to}
-                  href={item.to}
+                  key={item.href}
+                  href={item.href}
                   className="rounded-lg px-4 py-2 text-sm font-medium transition text-neutral-300 hover:bg-neutral-800/80"
                 >
                   {item.label}
@@ -106,61 +106,82 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden">
+    <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden font-sans selection:bg-neutral-700 selection:text-white">
       <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64 flex-shrink-0 overflow-y-auto">
+        <aside className="relative flex flex-col gap-6 rounded-2xl border border-white/5 bg-neutral-950 p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
-            <h1 className="mt-3 text-2xl font-semibold text-neutral-100">{t.appTagline}</h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">KIFU</p>
+            <h1 className="mt-3 text-2xl font-bold text-white/90 tracking-tight">{t.appTagline}</h1>
           </div>
-          <nav className="flex flex-col gap-2">
+          <nav className="flex flex-col gap-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.to || pathname?.startsWith(item.to + '/')
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+
+              // Determine accent color for the indicator based on route
+              let accentClass = 'bg-neutral-500'
+              if (item.href.includes('home')) accentClass = 'bg-fuchsia-500'
+              else if (item.href.includes('portfolio')) accentClass = 'bg-violet-500'
+              else if (item.href.includes('chart')) accentClass = 'bg-sky-500'
+              else if (item.href.includes('alert')) accentClass = 'bg-orange-500'
+              else if (item.href.includes('bubbles')) accentClass = 'bg-amber-500' // Fixed for bubbles
+              else if (item.href.includes('trades')) accentClass = 'bg-rose-500'
+              else if (item.href.includes('review')) accentClass = 'bg-emerald-500'
+              else if (item.href.includes('settings')) accentClass = 'bg-neutral-500'
+
               return (
                 <Link
-                  key={item.to}
-                  href={item.to}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-neutral-200 text-neutral-950'
-                      : 'text-neutral-300 hover:bg-neutral-800/80'
-                  }`}
+                  key={item.href}
+                  href={item.href}
+                  className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${isActive
+                    ? item.activeColor || 'bg-white/10 text-white'
+                    : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+                    } ${item.color || ''}`}
                 >
-                  {item.label}
+                  {isActive && (
+                    <div className={`absolute left-0 h-full w-[3px] rounded-r-full ${accentClass} shadow-[0_0_12px_rgba(255,255,255,0.3)]`} />
+                  )}
+                  <span className={`text-lg transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                  <span className={isActive ? 'translate-x-1 transition-transform' : 'transition-transform group-hover:translate-x-1'}>
+                    {item.label}
+                  </span>
                 </Link>
               )
             })}
           </nav>
-          <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+          <div className="mt-auto rounded-xl border border-white/5 bg-neutral-900/30 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.sessionLabel}</p>
             <p className="mt-2 text-sm text-neutral-300">
               {t.sessionText}
             </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               {guestSessionId ? (
-                <span className="rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
-                  Guest Session · {guestSessionId}
+                <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-200">
+                  Guest · {guestSessionId}
                 </span>
               ) : (
-                <span className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-200">
-                  Member Session
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200">
+                  Member
                 </span>
               )}
-              <span className="text-[11px] text-neutral-500">
-                {profileEmail ? `현재 계정: ${profileEmail}` : '현재 계정 불러오는 중...'}
+              <span className="text-[10px] text-neutral-600 truncate max-w-[120px]">
+                {profileEmail || 'Loading...'}
               </span>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-3 w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-200 transition hover:border-neutral-500"
+              className="mt-4 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/10 hover:text-white"
             >
               {t.logout}
             </button>
           </div>
         </aside>
-        <main className="flex-1 overflow-y-auto min-h-0">
-          {children}
+        <main className="flex-1 overflow-y-auto min-h-0 rounded-2xl border border-white/5 bg-neutral-900/20 shadow-inner relative">
+          {/* Top Gradient Fade moved to individual pages or could be here globally */}
+          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          <div className="relative z-10 h-full overflow-y-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

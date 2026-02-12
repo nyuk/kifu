@@ -112,7 +112,7 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
 
   if (!replay.isActive || klines.length === 0) {
     return (
-      <div className="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-3">
+      <div className="rounded-xl border border-white/5 bg-neutral-900/50 p-3 backdrop-blur-md">
         <button
           onClick={() => {
             if (klines.length > 0) {
@@ -133,15 +133,15 @@ export function ChartReplay({ klines, onFilteredKlines, timeframeSeconds }: Prop
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800/60 bg-neutral-900/40 p-3 space-y-3">
+    <div className="space-y-3 rounded-xl border border-white/5 bg-neutral-900/50 p-3 backdrop-blur-md">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-zinc-400">리플레이 모드</span>
+          <span className="text-neutral-400">리플레이 모드</span>
           <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-300">
             {replay.isPlaying ? '재생 중' : '일시정지'}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+        <div className="flex items-center gap-3 text-[10px] text-neutral-500">
           <span>표시 {visibleCandles}개</span>
           <span>숨김 {hiddenCandles}개</span>
         </div>
