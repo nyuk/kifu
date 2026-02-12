@@ -49,6 +49,7 @@ export default function ReviewPage() {
   }>>([])
   const [aiNotes, setAiNotes] = useState<AINoteCard[]>([])
   const [aiNotesLoading, setAiNotesLoading] = useState(false)
+  const [selectedPeriod, setSelectedPeriod] = useState<'1h' | '4h' | '1d'>('1h')
   const [aiNotesError, setAiNotesError] = useState<string | null>(null)
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
@@ -297,41 +298,41 @@ export default function ReviewPage() {
           <StatsOverview stats={stats} isLoading={isLoading} />
         </div>
 
-        <div className="mb-6 rounded-lg border border-zinc-700 bg-zinc-800/70 p-4">
+        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-zinc-300">거래내역 반영 요약</h3>
+            <h3 className="text-sm font-medium text-neutral-200">거래내역 반영 요약</h3>
             <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
               실현손익 {tradePnl >= 0 ? '+' : ''}{tradePnl.toLocaleString()}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {(tradeSummary?.by_exchange || []).map((item, index) => {
               const exchangeName = item.exchange || 'unknown'
               const tradeCount = Number(item.total_trades || item.trade_count || 0)
               const chipKey = `${exchangeName}-${tradeCount}-${index}`
               return (
-                <span key={chipKey} className="rounded-full border border-zinc-600 bg-zinc-900 px-3 py-1 text-xs text-zinc-300">
+                <span key={chipKey} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">
                   {exchangeName} · {tradeCount.toLocaleString()}건
                 </span>
               )
             })}
             {(!tradeSummary || tradeSummary.by_exchange.length === 0) && (
-              <span className="text-xs text-zinc-500">표시할 거래 요약이 없습니다.</span>
+              <span className="text-xs text-zinc-400">표시할 거래 요약이 없습니다.</span>
             )}
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">실거래 건수</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-400">실거래 건수</p>
               <p className="mt-1 text-base font-semibold text-sky-300">{tradeCount.toLocaleString()}건</p>
             </div>
-            <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">TOP 심볼</p>
+            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-400">TOP 심볼</p>
               <p className="mt-1 text-base font-semibold text-emerald-300">
                 {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()})` : '-'}
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">TOP 거래소</p>
+            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-400">TOP 거래소</p>
               <p className="mt-1 text-base font-semibold text-amber-300">
                 {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()})` : '-'}
               </p>
@@ -339,41 +340,41 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-zinc-700 bg-zinc-800/70 p-4">
+        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-zinc-300">긴급 대응 기록</h3>
-            <Link href="/alert" className="text-xs text-zinc-400 hover:text-zinc-200">
+            <h3 className="text-sm font-medium text-neutral-200">긴급 대응 기록</h3>
+            <Link href="/alert" className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">
               긴급 모드로 이동
             </Link>
           </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 space-y-2">
             {alertActions.length === 0 && (
-              <p className="text-xs text-zinc-500">아직 긴급 대응 기록이 없습니다.</p>
+              <p className="text-xs text-zinc-400">아직 긴급 대응 기록이 없습니다.</p>
             )}
             {alertActions.slice(0, 6).map((entry) => (
-              <div key={entry.id} className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
-                <div className="flex items-center justify-between text-xs text-zinc-400">
-                  <span>{entry.symbol} · {entry.action}</span>
+              <div key={entry.id} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2.5">
+                <div className="flex items-center justify-between text-xs text-neutral-400">
+                  <span className="font-medium text-neutral-300">{entry.symbol} · {entry.action}</span>
                   <span>{new Date(entry.created_at).toLocaleString('ko-KR')}</span>
                 </div>
                 {entry.note && (
-                  <p className="mt-1 text-xs text-zinc-300">{entry.note}</p>
+                  <p className="mt-1 text-xs text-neutral-400">{entry.note}</p>
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="mb-6 rounded-lg border border-zinc-700 bg-zinc-800/70 p-4">
+        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-zinc-300">AI 복기 요약</h3>
-            <span className="text-xs text-zinc-500">최근 요청 기준</span>
+            <h3 className="text-sm font-medium text-neutral-200">AI 복기 요약</h3>
+            <span className="text-xs text-zinc-400">최근 요청 기준</span>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <select
               value={aiSymbolFilter}
               onChange={(event) => setAiSymbolFilter(event.target.value)}
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+              className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
             >
               {aiSymbolOptions.map((option) => (
                 <option key={option} value={option}>
@@ -384,7 +385,7 @@ export default function ReviewPage() {
             <select
               value={aiTimeframeFilter}
               onChange={(event) => setAiTimeframeFilter(event.target.value)}
-              className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300"
+              className="rounded-lg border border-white/10 bg-neutral-900 px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
             >
               {aiTimeframeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -392,7 +393,7 @@ export default function ReviewPage() {
                 </option>
               ))}
             </select>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-zinc-400 ml-1">
               {filteredAiNotes.length} / {aiNotes.length}
             </span>
           </div>
@@ -400,32 +401,32 @@ export default function ReviewPage() {
             <p className="mt-3 text-xs text-rose-300">{aiNotesError}</p>
           )}
           {aiNotesLoading && (
-            <p className="mt-3 text-xs text-zinc-500">불러오는 중...</p>
+            <p className="mt-3 text-xs text-zinc-400">불러오는 중...</p>
           )}
           {!aiNotesLoading && filteredAiNotes.length === 0 && !aiNotesError && (
-            <p className="mt-3 text-xs text-zinc-500">아직 AI 복기 요약이 없습니다.</p>
+            <p className="mt-3 text-xs text-zinc-400">아직 AI 복기 요약이 없습니다.</p>
           )}
-          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {filteredAiNotes.map((note) => {
               const sections = parseAiSections(note.content || '')
               const header = sections.length > 0 ? sections[0].title : note.title
               return (
-                <div key={note.id} className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
-                  <div className="flex items-center justify-between text-xs text-zinc-400">
-                    <span>{header || 'AI 요약'}</span>
+                <div key={note.id} className="rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-white/10">
+                  <div className="flex items-center justify-between text-xs text-neutral-400">
+                    <span className="font-medium text-neutral-300">{header || 'AI 요약'}</span>
                     <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
                     {note.symbol && (
-                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300">{note.symbol}</span>
+                      <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-neutral-300">{note.symbol}</span>
                     )}
                     {note.timeframe && (
-                      <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-300">{note.timeframe}</span>
+                      <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
                     )}
                     {note.symbol && note.candle_time && (
                       <Link
                         href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
-                        className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-emerald-200 hover:bg-emerald-500/10"
+                        className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-emerald-300 hover:bg-emerald-500/10 transition-colors"
                       >
                         차트 이동
                       </Link>
@@ -433,20 +434,20 @@ export default function ReviewPage() {
                     {note.bubble_id && (
                       <Link
                         href={`/bubbles?bubble_id=${note.bubble_id}`}
-                        className="rounded-full border border-cyan-500/40 px-2 py-0.5 text-cyan-200 hover:bg-cyan-500/10"
+                        className="rounded-full border border-cyan-500/30 px-2 py-0.5 text-cyan-300 hover:bg-cyan-500/10 transition-colors"
                       >
                         관련 버블
                       </Link>
                     )}
                   </div>
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-3 space-y-2">
                     {(sections.length > 0 ? sections : [{ title: '요약', body: note.content, tone: 'summary' as const }]).map((section) => (
                       <div
                         key={`${note.id}-${section.title}`}
                         className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
                       >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
-                        <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-90 mb-1">{section.title}</p>
+                        <p className="text-current opacity-90">{section.body}</p>
                       </div>
                     ))}
                   </div>
@@ -476,45 +477,59 @@ export default function ReviewPage() {
 
         {/* Period Stats */}
         {stats?.by_period && Object.keys(stats.by_period).length > 0 && (
-          <div className="mt-6 bg-zinc-800 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-zinc-400 mb-4">기간별 성과</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['1h', '4h', '1d'].map((period) => {
-                const data = stats.by_period[period]
-                if (!data) return null
-                const pnl = parseFloat(data.avg_pnl)
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Period Performance</h3>
+              <div className="flex p-1 space-x-1 bg-zinc-950/50 rounded-lg border border-white/[0.05]">
+                {['1h', '4h', '1d'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setSelectedPeriod(p as any)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${selectedPeriod === p
+                      ? 'bg-zinc-700 text-white shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                return (
-                  <div key={period} className="bg-zinc-700/50 rounded-lg p-4">
-                    <div className="text-lg font-bold text-zinc-300 mb-2">
-                      {period === '1h' ? '1시간' : period === '4h' ? '4시간' : '1일'} 후
+            {(() => {
+              const data = stats.by_period[selectedPeriod]
+              if (!data) return <p className="text-sm text-zinc-500">No data for this period.</p>
+              const pnl = parseFloat(data.avg_pnl)
+              return (
+                <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-lg font-bold text-zinc-200">
+                      {selectedPeriod === '1h' ? '1시간' : selectedPeriod === '4h' ? '4시간' : '1일'} 후 결과
+                    </span>
+                    <span className={`text-xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      승률 {data.win_rate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                      <p className="text-xs text-zinc-500 mb-1">평균 PnL</p>
+                      <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs text-zinc-500">승률</div>
-                        <div className={`text-lg font-bold ${data.win_rate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
-                          {data.win_rate.toFixed(1)}%
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-zinc-500">평균 PnL</div>
-                        <div className={`text-lg font-bold ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-zinc-500">거래 수</div>
-                        <div className="text-lg font-bold text-zinc-300">
-                          {data.count}
-                        </div>
-                      </div>
+                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                      <p className="text-xs text-zinc-500 mb-1">샘플 수</p>
+                      <p className="text-lg font-semibold text-zinc-200">
+                        {data.count}개
+                      </p>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )
+            })()}
           </div>
         )}
+
 
         {/* Performance Trend */}
         <div className="mt-6">
@@ -529,7 +544,7 @@ export default function ReviewPage() {
           {/* Export */}
           <ExportButtons period={filters.period} outcomePeriod={filters.outcomePeriod} />
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

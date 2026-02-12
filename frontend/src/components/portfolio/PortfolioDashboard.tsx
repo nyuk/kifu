@@ -311,7 +311,7 @@ export function PortfolioDashboard() {
     <div className="min-h-screen bg-neutral-950 text-neutral-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Portfolio</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Portfolio</p>
           <h1 className="text-3xl font-semibold">통합 포트폴리오</h1>
           <p className="text-sm text-neutral-400">실거래(API) 타임라인을 기본으로 코인/주식/DEX 흐름을 묶습니다.</p>
         </header>
@@ -332,7 +332,7 @@ export function PortfolioDashboard() {
               value={filters.venue}
               onChange={(event) => setFilters((prev) => ({ ...prev, venue: event.target.value }))}
               placeholder="binance, upbit"
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 placeholder:text-neutral-500 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 transition-all"
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 placeholder:text-zinc-400 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 transition-all"
             />
           </FilterGroup>
 
@@ -365,25 +365,25 @@ export function PortfolioDashboard() {
 
         <section className="grid gap-6 md:grid-cols-3">
           <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Timeline</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Timeline</p>
             <p className="mt-2 text-2xl font-semibold text-neutral-100">{timeline.length}</p>
-            <p className="text-xs text-neutral-500">이벤트 수</p>
+            <p className="text-xs text-zinc-400">이벤트 수</p>
           </div>
           <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Open Positions</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Open Positions</p>
             <p className="mt-2 text-2xl font-semibold text-lime-300">{stats.openPositions}</p>
-            <p className="text-xs text-neutral-500">보유 포지션</p>
+            <p className="text-xs text-zinc-400">보유 포지션</p>
           </div>
           <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Coverage</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Coverage</p>
             <p className="mt-2 text-2xl font-semibold text-sky-300">{stats.venueCount}</p>
-            <p className="text-xs text-neutral-500">거래소 · 자산군 {stats.assetCount}</p>
+            <p className="text-xs text-zinc-400">거래소 · 자산군 {stats.assetCount}</p>
           </div>
         </section>
 
         <section className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Trade Sync Summary</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Trade Sync Summary</p>
             <p className="text-sm font-semibold text-emerald-300">
               총 {(tradeSummary?.totals?.total_trades ?? 0).toLocaleString()}건
             </p>
@@ -421,7 +421,7 @@ export function PortfolioDashboard() {
               )
             })}
             {(!tradeSummary || tradeSummary.by_exchange.length === 0) && (
-              <span className="text-xs text-neutral-500">거래소 동기화 통계 없음</span>
+              <span className="text-xs text-zinc-400">거래소 동기화 통계 없음</span>
             )}
           </div>
         </section>
@@ -429,13 +429,13 @@ export function PortfolioDashboard() {
         <section className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Timeline</p>
-              <span className="text-xs text-neutral-500">{timeline.length} events</span>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Timeline</p>
+              <span className="text-xs text-zinc-400">{timeline.length} events</span>
             </div>
             <div className="mt-4 space-y-3">
-              {loadingTimeline && timeline.length === 0 && <p className="text-xs text-neutral-500">불러오는 중...</p>}
+              {loadingTimeline && timeline.length === 0 && <p className="text-xs text-zinc-400">불러오는 중...</p>}
               {!loadingTimeline && timeline.length === 0 && (
-                <p className="text-xs text-neutral-500">아직 타임라인 데이터가 없습니다.</p>
+                <p className="text-xs text-zinc-400">아직 타임라인 데이터가 없습니다.</p>
               )}
               {timeline.map((item, index) => {
                 const sideTone =
@@ -465,7 +465,7 @@ export function PortfolioDashboard() {
                             {item.venue_name}
                           </span>
                         </div>
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-xs text-zinc-400">
                           <span className="text-neutral-300">{item.event_type}</span> · {formatDateTime(item.executed_at)}
                         </p>
                       </div>
@@ -473,7 +473,7 @@ export function PortfolioDashboard() {
                         <p className={`text-sm font-semibold ${sideTone}`}>
                           {item.side ? item.side.toUpperCase() : '-'} {item.qty ?? '-'}
                         </p>
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-xs text-zinc-400">
                           Price <span className="text-neutral-200">{item.price ?? '-'}</span>
                         </p>
                       </div>
@@ -496,32 +496,32 @@ export function PortfolioDashboard() {
 
           <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Positions</p>
-              <span className="text-xs text-neutral-500">{positions.length} items</span>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Positions</p>
+              <span className="text-xs text-zinc-400">{positions.length} items</span>
             </div>
             <div className="mt-4 space-y-3">
-              {loadingPositions && positions.length === 0 && <p className="text-xs text-neutral-500">불러오는 중...</p>}
+              {loadingPositions && positions.length === 0 && <p className="text-xs text-zinc-400">불러오는 중...</p>}
               {!loadingPositions && positions.length === 0 && (
-                <p className="text-xs text-neutral-500">포지션 요약이 없습니다.</p>
+                <p className="text-xs text-zinc-400">포지션 요약이 없습니다.</p>
               )}
               {positions.map((position) => (
                 <div key={position.key} className="rounded-xl border border-white/5 bg-neutral-900/30 p-5 hover:bg-neutral-900/50 transition-colors">
                   <p className="text-sm font-semibold">{position.instrument}</p>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-zinc-400">
                     {position.venue_name} · {position.status.toUpperCase()} · {formatDateTime(position.last_executed_at)}
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral-300">
                     <div>
-                      <span className="text-neutral-500">Net</span> {position.net_qty}
+                      <span className="text-zinc-400">Net</span> {position.net_qty}
                     </div>
                     <div>
-                      <span className="text-neutral-500">Avg</span> {position.avg_entry || '-'}
+                      <span className="text-zinc-400">Avg</span> {position.avg_entry || '-'}
                     </div>
                     <div>
-                      <span className="text-neutral-500">Buy</span> {position.buy_qty}
+                      <span className="text-zinc-400">Buy</span> {position.buy_qty}
                     </div>
                     <div>
-                      <span className="text-neutral-500">Sell</span> {position.sell_qty}
+                      <span className="text-zinc-400">Sell</span> {position.sell_qty}
                     </div>
                   </div>
                 </div>

@@ -12,7 +12,7 @@ const emptyForm: ManualPositionRequest = {
 }
 
 // Unified input style constant
-const INPUT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
+const INPUT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-neutral-100 placeholder:text-zinc-400 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
 const SELECT_STYLE = "mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
 
 const toIso = (value?: string) => {
@@ -162,9 +162,9 @@ export function PositionManager() {
     <section className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Position</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Position</p>
           <h2 className="mt-1 text-lg font-semibold text-neutral-100">현재 포지션 상태</h2>
-          <p className="text-xs text-neutral-500">직접 입력한 포지션을 기준으로 AI가 판단합니다.</p>
+          <p className="text-xs text-zinc-400">직접 입력한 포지션을 기준으로 AI가 판단합니다.</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-white/10 bg-neutral-900/50 p-1 text-xs">
@@ -197,9 +197,9 @@ export function PositionManager() {
       )}
 
       <div className="mt-4 space-y-3">
-        {isLoading && <p className="text-xs text-neutral-500">불러오는 중...</p>}
+        {isLoading && <p className="text-xs text-zinc-400">불러오는 중...</p>}
         {!isLoading && sortedPositions.length === 0 && (
-          <p className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-500">
+          <p className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 px-3 py-2 text-xs text-zinc-400">
             현재 등록된 포지션이 없습니다.
           </p>
         )}
@@ -216,12 +216,12 @@ export function PositionManager() {
                     {position.status}
                   </span>
                 </div>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-zinc-400">
                   {position.entry_price ? `Entry ${position.entry_price}` : 'Entry -'} ·
                   {position.stop_loss ? ` SL ${position.stop_loss}` : ' SL -'} ·
                   {position.take_profit ? ` TP ${position.take_profit}` : ' TP -'}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-zinc-400">
                   {position.size ? `Size ${position.size}` : 'Size -'} ·
                   {position.leverage ? ` Lev ${position.leverage}x` : ' Lev -'} ·
                   {position.venue ? ` ${position.venue}` : ''}
@@ -267,7 +267,7 @@ export function PositionManager() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 py-8">
           <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-neutral-950 text-neutral-100 shadow-2xl">
             <div className="border-b border-neutral-800 px-6 py-4">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Position</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Position</p>
               <h3 className="mt-2 text-xl font-semibold">포지션 상태 입력</h3>
             </div>
             <div className="space-y-4 px-6 py-5">

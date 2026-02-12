@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 body {
-  @apply bg-neutral-950 text-neutral-100 font-sans;
+  @apply bg-zinc-950 text-zinc-200 font-sans;
 }
 
 #root {
@@ -47,9 +47,9 @@ body {
   .section-overlay {
     position: absolute;
     inset: -20% 0 0 0;
-    background: radial-gradient(circle at 20% 20%, rgba(56,189,248,0.18), transparent 45%),
-      radial-gradient(circle at 80% 10%, rgba(16,185,129,0.18), transparent 40%),
-      radial-gradient(circle at 50% 60%, rgba(168,85,247,0.1), transparent 55%);
+    background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.18), transparent 45%),
+      radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.18), transparent 40%),
+      radial-gradient(circle at 50% 60%, rgba(168, 85, 247, 0.1), transparent 55%);
     opacity: 0;
     transform: translateY(40px) scale(0.95);
     transition: opacity 0.8s ease, transform 0.8s ease;
@@ -198,6 +198,7 @@ body {
 }
 
 @keyframes pulse-strong {
+
   0%,
   100% {
     transform: scale(1);
@@ -227,6 +228,7 @@ body {
 }
 
 @keyframes blink {
+
   0%,
   100% {
     opacity: 0.2;
@@ -257,6 +259,7 @@ body {
 }
 
 @keyframes alert-strong {
+
   0%,
   100% {
     box-shadow: 0 0 0 rgba(244, 63, 94, 0);
@@ -375,6 +378,7 @@ body {
 }
 
 @keyframes float-candle {
+
   0%,
   100% {
     transform: translateY(0);
@@ -410,6 +414,7 @@ body {
 }
 
 @keyframes pulse-candle {
+
   0%,
   100% {
     filter: brightness(1);
@@ -487,6 +492,7 @@ body {
 }
 
 @keyframes fade-in-out {
+
   0%,
   100% {
     opacity: 0;

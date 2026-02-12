@@ -84,10 +84,10 @@ export function NoteList({ bubbleId }: NoteListProps) {
   }
 
   return (
-    <div className="rounded-xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-neutral-100">
-          복기 노트 {notes.length > 0 && <span className="ml-1 text-sm font-normal text-neutral-500">({pagination.total})</span>}
+          복기 노트 {notes.length > 0 && <span className="ml-1 text-sm font-normal text-zinc-400">({pagination.total})</span>}
         </h3>
         <button
           onClick={handleNewNote}
@@ -107,7 +107,7 @@ export function NoteList({ bubbleId }: NoteListProps) {
       )}
 
       {notes.length === 0 ? (
-        <div className="py-12 text-center text-neutral-500">
+        <div className="py-12 text-center text-zinc-400">
           <svg className="mx-auto mb-3 h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
@@ -183,7 +183,7 @@ export function NoteList({ bubbleId }: NoteListProps) {
           >
             이전
           </button>
-          <span className="px-3 py-1.5 text-sm text-neutral-500">
+          <span className="px-3 py-1.5 text-sm text-zinc-400">
             {pagination.page} / {pagination.totalPages}
           </span>
           <button

@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
+import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, LogOut, TrendingUp, Boxes } from 'lucide-react'
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
@@ -46,15 +47,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [accessToken])
 
   const navItems = [
-    { icon: '🏠', label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
-    { icon: '📊', label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
-    { icon: '📈', label: t.navChart, href: '/chart', color: 'text-sky-400', activeColor: 'bg-sky-400/10 text-sky-300' },
-    { icon: '🔔', label: t.navAlert, href: '/alert', color: 'text-orange-400', activeColor: 'bg-orange-400/10 text-orange-300' },
-    { icon: '🫧', label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
-    { icon: '⚡', label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
-    { icon: '📝', label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
-    { icon: '📢', label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
-    { icon: '⚙️', label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
+    { icon: Home, label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
+    { icon: PieChart, label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
+    { icon: LineChart, label: t.navChart, href: '/chart', color: 'text-sky-400', activeColor: 'bg-sky-400/10 text-sky-300' },
+    { icon: Bell, label: t.navAlert, href: '/alert', color: 'text-orange-400', activeColor: 'bg-orange-400/10 text-orange-300' },
+    { icon: Boxes, label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
+    { icon: Zap, label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
+    { icon: FileText, label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
+    { icon: TrendingUp, label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
+    { icon: Settings, label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]
 
   const handleLogout = () => {
@@ -106,12 +107,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden font-sans selection:bg-neutral-700 selection:text-white">
+    <div className="h-screen bg-zinc-950 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.06)_0%,_rgba(9,9,11,0)_55%)] text-zinc-100 overflow-hidden font-sans selection:bg-zinc-700 selection:text-white">
       <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="relative flex flex-col gap-6 rounded-2xl border border-white/5 bg-neutral-950 p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
+        <aside className="relative flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-zinc-950/90 backdrop-blur-md p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">KIFU</p>
-            <h1 className="mt-3 text-2xl font-bold text-white/90 tracking-tight">{t.appTagline}</h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
+            <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">{t.appTagline}</h1>
           </div>
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => {
@@ -123,7 +124,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               else if (item.href.includes('portfolio')) accentClass = 'bg-violet-500'
               else if (item.href.includes('chart')) accentClass = 'bg-sky-500'
               else if (item.href.includes('alert')) accentClass = 'bg-orange-500'
-              else if (item.href.includes('bubbles')) accentClass = 'bg-amber-500' // Fixed for bubbles
+              else if (item.href.includes('bubbles')) accentClass = 'bg-amber-500'
               else if (item.href.includes('trades')) accentClass = 'bg-rose-500'
               else if (item.href.includes('review')) accentClass = 'bg-emerald-500'
               else if (item.href.includes('settings')) accentClass = 'bg-neutral-500'
@@ -132,15 +133,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${isActive
-                    ? item.activeColor || 'bg-white/10 text-white'
-                    : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200'
+                  className={`group relative flex items-center gap-3 rounded-lg h-9 px-3 text-sm font-medium transition-all duration-200 ${isActive
+                    ? item.activeColor || 'bg-white/[0.1] text-white'
+                    : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
                     } ${item.color || ''}`}
                 >
                   {isActive && (
                     <div className={`absolute left-0 h-full w-[3px] rounded-r-full ${accentClass} shadow-[0_0_12px_rgba(255,255,255,0.3)]`} />
                   )}
-                  <span className={`text-lg transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>{item.icon}</span>
+                  <item.icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                   <span className={isActive ? 'translate-x-1 transition-transform' : 'transition-transform group-hover:translate-x-1'}>
                     {item.label}
                   </span>
@@ -148,9 +149,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
-          <div className="mt-auto rounded-xl border border-white/5 bg-neutral-900/30 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.sessionLabel}</p>
-            <p className="mt-2 text-sm text-neutral-300">
+          <div className="mt-auto rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{t.sessionLabel}</p>
+            <p className="mt-2 text-sm text-zinc-300">
               {t.sessionText}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">

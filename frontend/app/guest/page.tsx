@@ -80,38 +80,37 @@ export default function GuestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-4 py-10 text-neutral-100">
+    <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
       <div className="mx-auto max-w-6xl space-y-6">
         <header className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Guest Mode</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Guest Mode</p>
           <h1 className="text-3xl font-semibold">게스트 대시보드 미리보기</h1>
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-zinc-400">
             더미 데이터로 전체 탭 흐름을 체험하고, 서비스가 어떤 느낌으로 돌아가는지 빠르게 확인할 수 있습니다.
           </p>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {demoCards.map((card) => (
-            <article key={card.title} className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{card.title}</p>
+            <article key={card.title} className="rounded-2xl border border-zinc-800/60 bg-zinc-900/60 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{card.title}</p>
               <p className="mt-2 text-2xl font-semibold text-emerald-300">{card.value}</p>
-              <p className="mt-1 text-xs text-neutral-400">{card.desc}</p>
+              <p className="mt-1 text-xs text-zinc-400">{card.desc}</p>
             </article>
           ))}
         </section>
 
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-5">
+        <section className="rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-5">
           <div className="flex flex-wrap gap-2">
             {(Object.keys(tabMeta) as GuestTab[]).map((key) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                  tab === key
-                    ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                }`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${tab === key
+                  ? 'border-zinc-100 bg-zinc-100 text-zinc-950'
+                  : 'border-zinc-700 text-zinc-300 hover:border-zinc-500'
+                  }`}
               >
                 {tabMeta[key].label}
               </button>
@@ -119,12 +118,12 @@ export default function GuestPage() {
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-            <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/50 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{tabMeta[tab].title}</p>
-              <p className="mt-1 text-sm text-neutral-300">{tabMeta[tab].summary}</p>
+            <div className="rounded-xl border border-zinc-800/70 bg-zinc-950/50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{tabMeta[tab].title}</p>
+              <p className="mt-1 text-sm text-zinc-300">{tabMeta[tab].summary}</p>
 
               {tab === 'chart' && (
-                <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/70 p-3">
                   <div className="flex h-20 items-end gap-1">
                     {[10, 26, 18, 34, 22, 45, 30, 38, 24, 41].map((h, idx) => (
                       <span
@@ -143,9 +142,9 @@ export default function GuestPage() {
               )}
 
               {tab !== 'chart' && (
-                <div className="mt-4 space-y-2 text-xs text-neutral-300">
+                <div className="mt-4 space-y-2 text-xs text-zinc-300">
                   {tabMeta[tab].bullets.map((item) => (
-                    <div key={item} className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2">
+                    <div key={item} className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
                       {item}
                     </div>
                   ))}
@@ -153,8 +152,8 @@ export default function GuestPage() {
               )}
             </div>
 
-            <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/40 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">체험 시나리오</p>
+            <div className="rounded-xl border border-zinc-800/70 bg-zinc-950/40 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">체험 시나리오</p>
               <p className="mt-2 text-sm text-amber-200">{scenario}</p>
               <div className="mt-4 flex gap-2">
                 {[0, 1, 2].map((idx) => (
@@ -162,26 +161,25 @@ export default function GuestPage() {
                     key={idx}
                     type="button"
                     onClick={() => setScenarioIndex(idx)}
-                    className={`rounded-md border px-2 py-1 text-xs ${
-                      scenarioIndex === idx
-                        ? 'border-amber-300 bg-amber-300/15 text-amber-200'
-                        : 'border-neutral-700 text-neutral-300'
-                    }`}
+                    className={`rounded-md border px-2 py-1 text-xs ${scenarioIndex === idx
+                      ? 'border-amber-300 bg-amber-300/15 text-amber-200'
+                      : 'border-zinc-700 text-zinc-300'
+                      }`}
                   >
                     {idx + 1}
                   </button>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-neutral-500">
+              <p className="mt-4 text-xs text-zinc-500">
                 게스트 체험은 저장되지 않지만, 실제 사용자 흐름과 같은 화면 구조를 사용합니다.
               </p>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-5">
+        <section className="rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-5">
           <h2 className="text-lg font-semibold">다음 단계</h2>
-          <p className="mt-2 text-sm text-neutral-400">
+          <p className="mt-2 text-sm text-zinc-400">
             실제 사용을 시작하려면 회원가입 후 거래내역 불러오기 또는 초기 성향 테스트를 진행하세요.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -189,11 +187,11 @@ export default function GuestPage() {
               type="button"
               onClick={handleGuestStart}
               disabled={starting}
-              className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-60"
+              className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
             >
               {starting ? '게스트 세션 시작 중...' : '게스트 세션 시작'}
             </button>
-            <Link href="/onboarding/start" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950">
+            <Link href="/onboarding/start" className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
               처음부터 시작
             </Link>
           </div>
@@ -202,7 +200,7 @@ export default function GuestPage() {
               {startError}
             </p>
           )}
-          <p className="mt-3 text-xs text-neutral-500">
+          <p className="mt-3 text-xs text-zinc-500">
             게스트 세션에서는 API/CSV/AI 설정 기능이 비활성화됩니다.
           </p>
         </section>

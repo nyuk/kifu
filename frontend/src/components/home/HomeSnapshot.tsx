@@ -114,8 +114,8 @@ const getTopProvider = (accuracy: AccuracyResponse | null) => {
 }
 
 const SummaryCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-    <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">{title}</p>
+  <div className="rounded-2xl border border-[#d6d3d1]/[0.08] bg-[#e7e5e4]/[0.02] p-6 backdrop-blur-md">
+    <p className="text-xs uppercase tracking-[0.3em] text-[#a8a29e] font-bold font-serif">{title}</p>
     <div className="mt-5">{children}</div>
   </div>
 )
@@ -510,13 +510,13 @@ export function HomeSnapshot() {
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Library Ritual</p>
-            <h1 className="text-3xl font-semibold">서재 모드</h1>
-            <p className="text-sm text-neutral-400">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
-            <p className="text-xs text-neutral-500">기간 기준: 캔들 시간</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-[#a8a29e] font-serif">Library Ritual</p>
+            <h1 className="text-3xl font-semibold font-serif text-[#f5f5f4]">서재 모드</h1>
+            <p className="text-sm text-[#d6d3d1] font-serif italic">최근 30일 장면을 조용히 다시 읽습니다</p>
+            <p className="text-xs text-[#78716c]">기간 기준: 캔들 시간</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex rounded-full bg-neutral-900/70 p-1">
+            <div className="flex rounded-full bg-zinc-900/55 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] p-1">
               {(['7d', '30d', 'all'] as const).map((period) => (
                 <button
                   key={period}
@@ -531,7 +531,7 @@ export function HomeSnapshot() {
                 </button>
               ))}
             </div>
-            <div className="flex rounded-full bg-neutral-900/70 p-1">
+            <div className="flex rounded-full bg-zinc-900/55 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] p-1">
               {([
                 { key: 'auto', label: '자동' },
                 { key: 'usdt', label: 'USDT' },
@@ -550,26 +550,26 @@ export function HomeSnapshot() {
                 </button>
               ))}
             </div>
-            <div className="text-xs text-neutral-500">
+            <div className="text-xs text-zinc-500">
               업데이트: {lastUpdated ? lastUpdated.toLocaleString('ko-KR') : '불러오는 중...'}
             </div>
           </div>
         </header>
 
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">Quiet Routine</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/45 backdrop-blur-sm p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">Quiet Routine</p>
             <h2 className="mt-2 text-xl font-bold text-white/90">오늘의 3가지 질문</h2>
             <div className="mt-5 space-y-2">
               {routineItems.map((item) => (
                 <Link
                   key={item.key}
                   href={item.href}
-                  className="group flex items-center justify-between rounded-xl border border-white/5 bg-neutral-800/30 px-5 py-3.5 transition hover:bg-white/5 hover:border-white/10"
+                  className="group flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-3.5 transition hover:bg-white/[0.05] hover:border-white/[0.1]"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-neutral-200 group-hover:text-white transition-colors">{item.title}</p>
-                    <p className="text-xs text-neutral-500">{item.hint}</p>
+                    <p className="text-sm font-semibold text-zinc-200 group-hover:text-white transition-colors">{item.title}</p>
+                    <p className="text-xs text-zinc-500">{item.hint}</p>
                   </div>
                   <span
                     className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${item.done
@@ -583,25 +583,25 @@ export function HomeSnapshot() {
               ))}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-neutral-900/50 backdrop-blur-md p-6">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500 font-bold">Closing Note</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/45 backdrop-blur-sm p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">Closing Note</p>
             <h2 className="mt-2 text-xl font-bold text-white/90">오늘의 마감</h2>
-            <p className="mt-2 text-sm text-neutral-400 leading-relaxed">
+            <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
               긴급 대응과 판단 흐름을 한 장으로 정리합니다.
             </p>
             <div className="mt-5 space-y-2">
-              <Link href="/alert" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white text-center">
+              <Link href="/alert" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/10 hover:text-white text-center">
                 긴급 브리핑 다시보기
               </Link>
-              <Link href="/review" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white text-center">
+              <Link href="/review" className="block rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-zinc-200 transition hover:bg-white/10 hover:text-white text-center">
                 복기 노트 남기기
               </Link>
             </div>
           </div>
         </section>
 
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-3 text-xs text-neutral-300">
-          <span className="text-neutral-500">무드 미리보기:</span>
+        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-3 text-xs text-zinc-300">
+          <span className="text-zinc-500">무드 미리보기:</span>
           {([
             { key: 'auto', label: '자동' },
             { key: 'good', label: '좋음' },
@@ -647,7 +647,7 @@ export function HomeSnapshot() {
               </div>
             </div>
             <div className="rounded-2xl border border-neutral-800/70 bg-neutral-950/80 p-5 text-center lg:min-w-[220px]">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">핵심 PnL</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">핵심 PnL</p>
               <div className="relative mt-3 rounded-xl border border-neutral-800/80 bg-neutral-950/80 px-4 py-3">
                 <div className="pointer-events-none absolute inset-0 rounded-xl bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.06)_50%,transparent_100%)] opacity-50" />
                 <div className="pointer-events-none absolute inset-0 rounded-xl bg-[repeating-linear-gradient(transparent,transparent_6px,rgba(255,255,255,0.04)_7px)] opacity-40" />
@@ -655,30 +655,30 @@ export function HomeSnapshot() {
                   {formatCurrency(animatedPnl, currency.symbol)}
                 </p>
               </div>
-              <p className="mt-2 text-xs text-neutral-500">오늘 흐름을 한 눈에</p>
+              <p className="mt-2 text-xs text-zinc-500">오늘 흐름을 한 눈에</p>
             </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">실거래</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">실거래</p>
             <p className="mt-2 text-2xl font-semibold text-sky-300">{tradesCount.toLocaleString()}건</p>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">매수/매도</p>
-            <p className="mt-2 text-sm font-semibold text-neutral-100">
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">매수/매도</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-100">
               BUY {bySide.buyCount.toLocaleString()} · SELL {bySide.sellCount.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">주요 거래소</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 거래소</p>
             <p className="mt-2 text-sm font-semibold text-amber-200">
               {topExchange ? `${topExchange.exchange} · ${(topExchange.total_trades || topExchange.trade_count || 0).toLocaleString()}건` : '-'}
             </p>
           </div>
-          <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">주요 심볼</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 심볼</p>
             <p className="mt-2 text-sm font-semibold text-emerald-200">
               {topSymbol ? `${topSymbol.symbol} · ${(topSymbol.total_trades || topSymbol.trade_count || 0).toLocaleString()}건` : '-'}
             </p>
@@ -720,21 +720,21 @@ export function HomeSnapshot() {
           <SummaryCard title="내 기록 요약">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-neutral-500">총 버블</p>
+                <p className="text-xs text-zinc-500">총 버블</p>
                 <p className="text-2xl font-semibold">{formatNumber(stats?.total_bubbles ?? 0)}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">결과 있음</p>
+                <p className="text-xs text-zinc-500">결과 있음</p>
                 <p className="text-2xl font-semibold">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">승률</p>
+                <p className="text-xs text-zinc-500">승률</p>
                 <p className={`text-xl font-semibold ${summary && summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
                   {formatPercent(summary?.win_rate)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">평균 손익</p>
+                <p className="text-xs text-zinc-500">평균 손익</p>
                 <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? totalPnlNumeric / tradesCount : 0)}`}>
                   {tradesCount
                     ? formatCurrency(totalPnlNumeric / tradesCount, currency.symbol)
@@ -742,20 +742,20 @@ export function HomeSnapshot() {
                 </p>
               </div>
             </div>
-            {isLoading && <p className="mt-4 text-xs text-neutral-500">통계를 불러오는 중...</p>}
+            {isLoading && <p className="mt-4 text-xs text-zinc-500">통계를 불러오는 중...</p>}
           </SummaryCard>
 
           <SummaryCard title="AI 의견 요약">
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-neutral-500">요청된 의견</p>
+                <p className="text-xs text-zinc-500">요청된 의견</p>
                 <p className="text-2xl font-semibold">{formatNumber(totalOpinions)}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">현재 1위 정확도</p>
+                <p className="text-xs text-zinc-500">현재 1위 정확도</p>
                 <p className="text-xl font-semibold">{accuracyLabel}</p>
               </div>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-zinc-500">
                 AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -781,14 +781,14 @@ export function HomeSnapshot() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[11px] text-neutral-500">{filteredAiNotes.length}건</span>
+                <span className="text-[11px] text-zinc-500">{filteredAiNotes.length}건</span>
               </div>
               {!aiNotesLoading && filteredAiNotes.slice(0, 2).map((note) => {
                 const sections = parseAiSections(note.content || '')
                 const body = sections[0]?.body || note.content
                 return (
                   <div key={note.id} className="rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-neutral-500">
+                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
                       {note.symbol && <span>{note.symbol}</span>}
                       {note.timeframe && <span>· {note.timeframe}</span>}
                       {note.symbol && note.candle_time && (
@@ -819,8 +819,8 @@ export function HomeSnapshot() {
                 )
               })}
             </div>
-            {isLoadingAccuracy && <p className="mt-4 text-xs text-neutral-500">AI 통계를 불러오는 중...</p>}
-            {aiNotesLoading && <p className="mt-2 text-xs text-neutral-500">AI 요약 불러오는 중...</p>}
+            {isLoadingAccuracy && <p className="mt-4 text-xs text-zinc-500">AI 통계를 불러오는 중...</p>}
+            {aiNotesLoading && <p className="mt-2 text-xs text-zinc-500">AI 요약 불러오는 중...</p>}
           </SummaryCard>
 
           <SummaryCard title="다음 행동">
@@ -830,21 +830,21 @@ export function HomeSnapshot() {
                 className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-neutral-900/70 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
               >
                 버블 기록하기
-                <span className="text-xs text-neutral-500">현재 판단 저장</span>
+                <span className="text-xs text-zinc-500">현재 판단 저장</span>
               </Link>
               <Link
                 href="/review"
                 className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-neutral-900/70 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
               >
                 복기 대시보드
-                <span className="text-xs text-neutral-500">성과 확인</span>
+                <span className="text-xs text-zinc-500">성과 확인</span>
               </Link>
               <Link
                 href="/bubbles"
                 className="flex items-center justify-between rounded-xl border border-neutral-800/60 bg-neutral-900/70 px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-900/90"
               >
                 버블 라이브러리
-                <span className="text-xs text-neutral-500">패턴 비교</span>
+                <span className="text-xs text-zinc-500">패턴 비교</span>
               </Link>
             </div>
           </SummaryCard>
@@ -853,16 +853,16 @@ export function HomeSnapshot() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">최근 버블</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">최근 버블</p>
               <Link href="/bubbles" className="text-xs text-neutral-400 hover:text-neutral-200">
                 전체 보기
               </Link>
             </div>
             <div className="mt-4 space-y-3">
-              {bubblesLoading && <p className="text-xs text-neutral-500">불러오는 중...</p>}
+              {bubblesLoading && <p className="text-xs text-zinc-500">불러오는 중...</p>}
               {bubblesError && <p className="text-xs text-red-300">{bubblesError}</p>}
               {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
-                <p className="text-xs text-neutral-500">아직 기록된 버블이 없습니다.</p>
+                <p className="text-xs text-zinc-500">아직 기록된 버블이 없습니다.</p>
               )}
               {!bubblesLoading &&
                 !bubblesError &&
@@ -873,13 +873,13 @@ export function HomeSnapshot() {
                   >
                     <div>
                       <p className="text-sm font-semibold">{bubble.symbol}</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-zinc-500">
                         {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{bubble.price}</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-zinc-500">
                         {bubble.memo ? bubble.memo : bubble.tags?.slice(0, 2).join(', ') || '메모 없음'}
                       </p>
                     </div>
@@ -889,35 +889,35 @@ export function HomeSnapshot() {
           </div>
 
           <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">오늘의 기억</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">오늘의 기억</p>
             <div className="mt-4 space-y-4 text-sm text-neutral-300">
               <div>
-                <p className="text-xs text-neutral-500">순 손익</p>
+                <p className="text-xs text-zinc-500">순 손익</p>
                 <p className={`text-2xl font-semibold ${toneByNumber(totalPnlNumeric)}`}>
                   {tradesCount ? formatCurrency(totalPnlNumeric, currency.symbol) : '-'}
                 </p>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-neutral-500">
+                <div className="flex items-center justify-between text-xs text-zinc-500">
                   <span>총 매수</span>
                   <span className="text-neutral-200">
                     {tradesCount ? `${bySide.buyCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-neutral-500">
+                <div className="flex items-center justify-between text-xs text-zinc-500">
                   <span>총 매도</span>
                   <span className="text-neutral-200">
                     {tradesCount ? `${bySide.sellCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-neutral-500">
+                <div className="flex items-center justify-between text-xs text-zinc-500">
                   <span>체결 수</span>
                   <span className="text-neutral-200">
                     {tradesCount ? `${tradesCount.toLocaleString()}건` : '-'}
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-zinc-500">
                 스냅샷이 흐려지기 전에 한 줄이라도 복기 노트를 남겨보세요.
               </p>
               <Link

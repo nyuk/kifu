@@ -141,17 +141,17 @@ export default function AlertPage() {
 
         <section className="grid gap-4 md:grid-cols-3">
           <article className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">지금 분위기</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">지금 분위기</p>
             <p className="mt-2 text-lg font-semibold text-amber-200">{marketTone}</p>
             <p className="mt-1 text-xs text-neutral-400">최근 24시간 체결 {recentActiveHours}건</p>
           </article>
           <article className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">유사 장면</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">유사 장면</p>
             <p className="mt-2 text-lg font-semibold text-sky-200">{Math.max(1, recentTrades.length)}건</p>
             <p className="mt-1 text-xs text-neutral-400">최근 심볼 중심 간단 비교</p>
           </article>
           <article className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">추천 행동</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">추천 행동</p>
             <p className="mt-2 text-lg font-semibold text-emerald-200">조건부 진입</p>
             <p className="mt-1 text-xs text-neutral-400">{latestSymbol} 기준 손절 먼저 확정</p>
           </article>
@@ -159,37 +159,36 @@ export default function AlertPage() {
 
         <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">방금 체결 요약</p>
-            {loading && <p className="text-[11px] text-neutral-500">불러오는 중...</p>}
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">방금 체결 요약</p>
+            {loading && <p className="text-[11px] text-zinc-400">불러오는 중...</p>}
           </div>
           <div className="mt-3 space-y-2">
             {!loading && recentTrades.length === 0 && (
-              <p className="text-xs text-neutral-500">체결이 없어 기본 브리핑을 사용합니다.</p>
+              <p className="text-xs text-zinc-400">체결이 없어 기본 브리핑을 사용합니다.</p>
             )}
             {recentTrades.map((trade) => (
               <div key={trade.id} className="flex items-center justify-between rounded-lg border border-neutral-800/70 bg-neutral-950/40 px-3 py-2">
                 <p className="text-xs text-neutral-300">
                   {trade.symbol} · {trade.side.toUpperCase()} · {Number(trade.quantity).toLocaleString()}
                 </p>
-                <p className="text-[11px] text-neutral-500">{new Date(trade.trade_time).toLocaleString('ko-KR')}</p>
+                <p className="text-[11px] text-zinc-400">{new Date(trade.trade_time).toLocaleString('ko-KR')}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">지금 선택 기록</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">지금 선택 기록</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {actionOptions.map((option) => (
               <button
                 key={option.key}
                 type="button"
                 onClick={() => setActionChoice(option.key)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                  actionChoice === option.key
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${actionChoice === option.key
                     ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
                     : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                }`}
+                  }`}
               >
                 {option.label}
               </button>
@@ -200,7 +199,7 @@ export default function AlertPage() {
             onChange={(event) => setActionNote(event.target.value)}
             placeholder="지금 판단의 한 줄 메모"
             rows={2}
-            className="mt-3 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
+            className="mt-3 w-full rounded-lg border border-neutral-700 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 placeholder:text-zinc-400"
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
@@ -212,7 +211,7 @@ export default function AlertPage() {
               선택 저장
             </button>
             {actionSavedAt && (
-              <span className="text-[11px] text-neutral-500">
+              <span className="text-[11px] text-zinc-400">
                 저장됨: {new Date(actionSavedAt).toLocaleTimeString('ko-KR')}
               </span>
             )}
@@ -225,9 +224,9 @@ export default function AlertPage() {
                     <p className="text-xs text-neutral-300">
                       {entry.symbol} · {entry.action}
                     </p>
-                    {entry.note && <p className="text-[11px] text-neutral-500">{entry.note}</p>}
+                    {entry.note && <p className="text-[11px] text-zinc-400">{entry.note}</p>}
                   </div>
-                  <p className="text-[11px] text-neutral-500">{new Date(entry.created_at).toLocaleTimeString('ko-KR')}</p>
+                  <p className="text-[11px] text-zinc-400">{new Date(entry.created_at).toLocaleTimeString('ko-KR')}</p>
                 </div>
               ))}
             </div>

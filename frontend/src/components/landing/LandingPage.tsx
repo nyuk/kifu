@@ -57,7 +57,7 @@ function CandlestickBackground() {
     return (
         <div className="absolute inset-0 overflow-hidden">
             {/* Gradient base */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e13] via-[#0B0F14] to-[#0d1117]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/50 to-transparent" />
 
             {/* Animated line charts */}
             <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none" viewBox="0 0 2000 500">
@@ -257,13 +257,13 @@ const integrations = [
 ]
 
 const backgroundThemes: Record<string, string> = {
-    hero: 'from-[#05060a] via-[#0b0f14] to-[#05070d]',
-    features: 'from-[#061018] via-[#0b1320] to-[#05070d]',
-    stack: 'from-[#050713] via-[#0f1b2e] to-[#04070b]',
-    capabilities: 'from-[#080b14] via-[#111827] to-[#0b0f14]',
-    roadmap: 'from-[#0b0f14] via-[#1b130f] to-[#0b0f14]',
-    vision: 'from-[#0b0f14] via-[#0d1b1f] to-[#0b0f14]',
-    pricing: 'from-[#0b0f14] via-[#111827] to-[#07090d]',
+    hero: 'from-zinc-950 via-zinc-900/50 to-zinc-950',
+    features: 'from-zinc-950 via-zinc-900/30 to-zinc-950',
+    stack: 'from-zinc-950 via-zinc-900/40 to-zinc-950',
+    capabilities: 'from-zinc-950 via-zinc-900/50 to-zinc-950',
+    roadmap: 'from-zinc-950 via-zinc-900/30 to-zinc-950',
+    vision: 'from-zinc-950 via-zinc-900/40 to-zinc-950',
+    pricing: 'from-zinc-950 via-zinc-900/50 to-zinc-950',
 }
 
 export function LandingPage() {
@@ -487,7 +487,7 @@ export function LandingPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0B0F14] text-neutral-300 selection:bg-cyan-500/30 font-sans">
+        <div className="min-h-screen bg-[#09090b] text-zinc-300 selection:bg-cyan-500/30 font-sans">
             <div className="fixed left-0 top-0 z-[60] h-[3px] w-full bg-white/5">
                 <div
                     ref={progressRef}
@@ -556,7 +556,7 @@ export function LandingPage() {
                         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                             <Link
                                 href="/guest"
-                                className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
+                                className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 shadow-[0_0_30px_rgba(45,212,191,0.3)] hover:shadow-[0_0_40px_rgba(45,212,191,0.5)] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
                             >
                                 게스트로 입장
                             </Link>
@@ -667,34 +667,34 @@ export function LandingPage() {
                                             className="story-layer grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]"
                                             style={style}
                                         >
-                                                <div>
-                                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/80">
-                                                        {item.kicker}
-                                                    </div>
-                                                    <h2 className="mt-4 text-3xl font-semibold text-white md:text-4xl">
-                                                        {item.title}
-                                                    </h2>
-                                                    <p className="mt-4 text-sm text-neutral-300 leading-relaxed">
-                                                        {item.desc}
-                                                    </p>
-                                                    <div className="mt-6 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.2em] text-white/70">
-                                                        {item.tags.map((tag) => (
-                                                            <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                                                                {tag}
-                                                            </span>
-                                                        ))}
-                                                    </div>
+                                            <div>
+                                                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-white/80">
+                                                    {item.kicker}
                                                 </div>
-                                                <div>
-                                                    <div className={`rounded-[32px] border border-white/10 bg-gradient-to-br ${item.accent} to-black/70 p-10 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl`}>
-                                                        <div className="flex items-center justify-between text-xs text-neutral-400">
-                                                            <span className="uppercase tracking-[0.25em]">{item.kicker}</span>
-                                                            <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] text-neutral-300">Live</span>
-                                                        </div>
-                                                        <div className="mt-6">{renderStoryVisual(index)}</div>
-                                                    </div>
+                                                <h2 className="mt-4 text-3xl font-semibold text-white md:text-4xl">
+                                                    {item.title}
+                                                </h2>
+                                                <p className="mt-4 text-sm text-neutral-300 leading-relaxed">
+                                                    {item.desc}
+                                                </p>
+                                                <div className="mt-6 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.2em] text-white/70">
+                                                    {item.tags.map((tag) => (
+                                                        <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                             </div>
+                                            <div>
+                                                <div className={`rounded-[32px] border border-white/10 bg-gradient-to-br ${item.accent} to-black/70 p-10 shadow-[0_30px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl`}>
+                                                    <div className="flex items-center justify-between text-xs text-neutral-400">
+                                                        <span className="uppercase tracking-[0.25em]">{item.kicker}</span>
+                                                        <span className="rounded-full bg-white/5 px-3 py-1 text-[10px] text-neutral-300">Live</span>
+                                                    </div>
+                                                    <div className="mt-6">{renderStoryVisual(index)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )
                                 })}
                             </div>
@@ -951,37 +951,33 @@ export function LandingPage() {
                         ].map((card, i) => (
                             <div
                                 key={i}
-                                className={`parallax-card relative rounded-2xl border p-8 transition-all hover:-translate-y-1 ${
-                                    card.color === 'emerald'
-                                        ? 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
-                                        : card.color === 'cyan'
+                                className={`parallax-card relative rounded-2xl border p-8 transition-all hover:-translate-y-1 ${card.color === 'emerald'
+                                    ? 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
+                                    : card.color === 'cyan'
                                         ? 'border-cyan-500/30 bg-cyan-500/5 hover:border-cyan-500/50'
                                         : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/50'
-                                }`}
+                                    }`}
                                 data-parallax={0.12 + i * 0.04}
                             >
-                                <div className={`text-xs font-bold uppercase tracking-widest mb-4 ${
-                                    card.color === 'emerald' ? 'text-emerald-400' : card.color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'
-                                }`}>
+                                <div className={`text-xs font-bold uppercase tracking-widest mb-4 ${card.color === 'emerald' ? 'text-emerald-400' : card.color === 'cyan' ? 'text-cyan-400' : 'text-purple-400'
+                                    }`}>
                                     {card.phase}
                                 </div>
                                 <ul className="space-y-3">
                                     {card.items.map((item, j) => (
                                         <li key={j} className="flex items-center gap-2 text-neutral-300">
-                                            <span className={`w-1.5 h-1.5 rounded-full ${
-                                                card.color === 'emerald' ? 'bg-emerald-400' : card.color === 'cyan' ? 'bg-cyan-400' : 'bg-purple-400'
-                                            }`} />
+                                            <span className={`w-1.5 h-1.5 rounded-full ${card.color === 'emerald' ? 'bg-emerald-400' : card.color === 'cyan' ? 'bg-cyan-400' : 'bg-purple-400'
+                                                }`} />
                                             {item}
                                         </li>
                                     ))}
                                 </ul>
-                                <div className={`mt-6 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                                    card.color === 'emerald'
-                                        ? 'bg-emerald-500/20 text-emerald-300'
-                                        : card.color === 'cyan'
+                                <div className={`mt-6 inline-block rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${card.color === 'emerald'
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : card.color === 'cyan'
                                         ? 'bg-cyan-500/20 text-cyan-300'
                                         : 'bg-purple-500/20 text-purple-300'
-                                }`}>
+                                    }`}>
                                     {card.status}
                                 </div>
                             </div>

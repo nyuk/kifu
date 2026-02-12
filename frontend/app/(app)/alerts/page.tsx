@@ -34,7 +34,7 @@ export default function AlertsPage() {
       <header className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Monitoring</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Monitoring</p>
             <h2 className="mt-3 text-2xl font-semibold text-neutral-100">{t.alertsTitle}</h2>
             <p className="mt-2 text-sm text-neutral-400">{t.alertsSubtitle}</p>
           </div>
@@ -59,11 +59,10 @@ export default function AlertsPage() {
                 setStatusFilter(tab.value)
                 setPage(0)
               }}
-              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                isActive
+              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${isActive
                   ? 'bg-neutral-200 text-neutral-950'
                   : 'bg-neutral-900/40 text-neutral-400 hover:bg-neutral-800/60'
-              }`}
+                }`}
             >
               {t[tab.labelKey]}
             </button>
@@ -85,7 +84,7 @@ export default function AlertsPage() {
         </div>
       ) : alerts.length === 0 ? (
         <div className="rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-10 text-center">
-          <p className="text-sm text-neutral-500">{t.noAlerts}</p>
+          <p className="text-sm text-zinc-400">{t.noAlerts}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -106,7 +105,7 @@ export default function AlertsPage() {
           >
             Prev
           </button>
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-zinc-400">
             {page + 1} / {totalPages}
           </span>
           <button
