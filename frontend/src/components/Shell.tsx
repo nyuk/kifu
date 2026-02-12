@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
-import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, LogOut, TrendingUp, Boxes } from 'lucide-react'
+import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes } from 'lucide-react'
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
@@ -68,9 +68,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   // Prevent hydration mismatch by rendering a simplified version during SSR
   if (!mounted) {
     return (
-      <div className="h-screen bg-neutral-950 text-neutral-100 overflow-hidden">
-        <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-          <aside className="flex flex-col gap-6 rounded-2xl border border-neutral-800/60 bg-neutral-900/40 p-5 lg:w-64 flex-shrink-0">
+      <div className="app-shell h-screen overflow-hidden">
+        <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
+          <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-zinc-900/70 p-5 lg:w-64 flex-shrink-0 backdrop-blur-md">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
               <h1 className="mt-3 text-2xl font-semibold text-neutral-100">Trading Journal</h1>
@@ -86,7 +86,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <div className="mt-auto rounded-xl border border-neutral-800/60 bg-neutral-900/60 p-4">
+            <div className="mt-auto rounded-xl border border-white/[0.08] bg-zinc-900/75 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Session</p>
               <p className="mt-2 text-sm text-neutral-300">Loading...</p>
               <button
@@ -98,7 +98,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </aside>
-          <main className="flex-1 overflow-y-auto min-h-0">
+          <main className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/45 backdrop-blur-sm">
             {children}
           </main>
         </div>
@@ -107,9 +107,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen bg-zinc-950 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.06)_0%,_rgba(9,9,11,0)_55%)] text-zinc-100 overflow-hidden font-sans selection:bg-zinc-700 selection:text-white">
-      <div className="flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="relative flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-zinc-950/90 backdrop-blur-md p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
+    <div className="app-shell h-screen overflow-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white">
+      <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
+        <aside className="relative flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-zinc-900/72 backdrop-blur-md p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
             <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">{t.appTagline}</h1>
@@ -149,7 +149,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
-          <div className="mt-auto rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <div className="mt-auto rounded-xl border border-white/[0.08] bg-zinc-900/75 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{t.sessionLabel}</p>
             <p className="mt-2 text-sm text-zinc-300">
               {t.sessionText}
@@ -177,7 +177,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </aside>
-        <main className="flex-1 overflow-y-auto min-h-0 rounded-2xl border border-white/5 bg-neutral-900/20 shadow-inner relative">
+        <main className="relative min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/10 bg-zinc-900/45 shadow-inner backdrop-blur-sm">
           {/* Top Gradient Fade moved to individual pages or could be here globally */}
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
           <div className="relative z-10 h-full overflow-y-auto">

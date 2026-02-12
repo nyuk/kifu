@@ -62,7 +62,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
   ).length
 
   return (
-    <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+    <section className="rounded-2xl border border-neutral-800/60 bg-zinc-900/50 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Guided Review</p>
@@ -89,15 +89,15 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
       {/* Summary stats */}
       {hasItems && !isOpen && (
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-          <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+          <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Items</p>
             <p className="mt-1 text-lg font-semibold text-neutral-100">{totalCount}</p>
           </div>
-          <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+          <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Answered</p>
             <p className="mt-1 text-lg font-semibold text-emerald-200">{answeredCount}</p>
           </div>
-          <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+          <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Status</p>
             <p className={`mt-1 text-lg font-semibold ${isCompleted ? 'text-emerald-200' : 'text-amber-200'}`}>
               {isCompleted ? '완료' : `${totalCount - answeredCount}건 남음`}
@@ -190,7 +190,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
                 : '오늘의 복기 시작'}
             </button>
           ) : (
-            <p className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-4 py-3 text-xs text-neutral-500">
+            <p className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-4 py-3 text-xs text-neutral-500">
               오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.
             </p>
           )}

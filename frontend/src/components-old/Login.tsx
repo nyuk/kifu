@@ -15,6 +15,7 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isGuestLoading, setIsGuestLoading] = useState(false)
   const setTokens = useAuthStore((state) => state.setTokens)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
@@ -63,6 +64,26 @@ export function Login() {
       setError(err?.response?.data?.message || '로그인에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGuestContinue = async () => {
+    setError('')
+    setIsGuestLoading(true)
+    try {
+      const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL || 'guest.preview@kifu.local'
+      const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD || 'guest1234'
+      const response = await api.post('/v1/auth/login', { email: guestEmail, password: guestPassword })
+      resetSessionData()
+      setTokens(response.data.access_token, response.data.refresh_token)
+      startGuestSession()
+      router.push('/home')
+    } catch {
+      // Fallback: move to guest preview page even if guest account login fails.
+      startGuestSession()
+      router.push('/guest')
+    } finally {
+      setIsGuestLoading(false)
     }
   }
 
@@ -143,13 +164,11 @@ export function Login() {
 
           <button
             type="button"
-            onClick={() => {
-              startGuestSession()
-              router.push('/home')
-            }}
-            className="w-full h-10 px-4 rounded-xl bg-zinc-800 text-zinc-200 border border-white/10 font-medium text-sm hover:bg-zinc-700 hover:text-white active:scale-95 transition-all"
+            onClick={handleGuestContinue}
+            disabled={isGuestLoading || isLoading}
+            className="w-full h-10 px-4 rounded-xl bg-zinc-800 text-zinc-200 border border-white/10 font-medium text-sm hover:bg-zinc-700 hover:text-white active:scale-95 transition-all disabled:opacity-60"
           >
-            게스트로 계속하기
+            {isGuestLoading ? '게스트 세션 시작 중...' : '게스트로 계속하기'}
           </button>
 
           <p className="text-sm text-zinc-400">

@@ -150,7 +150,7 @@ export function HomeSafetyCheckCard() {
   const pendingTone = (groupedSummary.pending ?? 0) > 0 ? 'text-amber-200' : 'text-emerald-200'
 
   return (
-    <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
+    <section className="rounded-2xl border border-neutral-800/60 bg-zinc-900/50 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Safety Check</p>
@@ -177,22 +177,22 @@ export function HomeSafetyCheckCard() {
       </div>
 
       <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-        <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+        <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Total</p>
           <p className="mt-1 text-lg font-semibold text-neutral-100">{formatCompactNumber(groupedSummary.total)}</p>
         </div>
-        <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+        <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Reviewed</p>
           <p className="mt-1 text-lg font-semibold text-emerald-200">{formatCompactNumber(groupedSummary.reviewed)}</p>
         </div>
-        <div className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-3 py-2">
+        <div className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-3 py-2">
           <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Pending</p>
           <p className={`mt-1 text-lg font-semibold ${pendingTone}`}>{formatCompactNumber(groupedSummary.pending)}</p>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-1">
+        <div className="flex rounded-lg border border-neutral-800/70 bg-zinc-900/50 p-1">
           {([
             { key: 'all', label: '전체' },
             { key: 'crypto', label: '코인' },
@@ -213,7 +213,7 @@ export function HomeSafetyCheckCard() {
           ))}
         </div>
 
-        <div className="flex rounded-lg border border-neutral-800/70 bg-neutral-950/60 p-1">
+        <div className="flex rounded-lg border border-neutral-800/70 bg-zinc-900/50 p-1">
           <button
             type="button"
             onClick={() => setVenueFilter('all')}
@@ -250,7 +250,7 @@ export function HomeSafetyCheckCard() {
         <div className="mt-4 space-y-2">
           {isLoading && !safety && <p className="text-xs text-neutral-500">불러오는 중...</p>}
           {!isLoading && groupedItems.length === 0 && (
-            <p className="rounded-lg border border-neutral-800/70 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-500">
+            <p className="rounded-lg border border-neutral-800/70 bg-zinc-900/50 px-3 py-2 text-xs text-neutral-500">
               오늘 기록된 거래가 없습니다.
             </p>
           )}
@@ -262,7 +262,7 @@ export function HomeSafetyCheckCard() {
             return (
               <div
                 key={`${item.target_type}:${item.target_id}`}
-                className="rounded-xl border border-neutral-800/70 bg-neutral-950/60 px-4 py-3"
+                className="rounded-xl border border-neutral-800/70 bg-zinc-900/50 px-4 py-3"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
