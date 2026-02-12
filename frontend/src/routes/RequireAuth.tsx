@@ -24,10 +24,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, hasHydrated, router, pathname])
 
-  // During SSR and initial hydration, render children to avoid mismatch
-  // Only after mounting, check authentication
   if (!mounted) {
-    return <>{children}</>
+    return isDemoMode ? null : <>{children}</>
   }
 
   if (isDemoMode) {

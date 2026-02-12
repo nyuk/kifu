@@ -22,6 +22,12 @@ export function Register() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/home')
+    }
+  }, [isAuthenticated, router])
+
   if (isDemoMode) {
     return (
       <div className="min-h-screen bg-neutral-950 px-4 py-12 text-neutral-100">
@@ -38,12 +44,6 @@ export function Register() {
       </div>
     )
   }
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/home')
-    }
-  }, [isAuthenticated, router])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()

@@ -95,6 +95,9 @@ func RegisterRoutes(
 	users.Get("/me/subscription", userHandler.GetSubscription)
 	users.Get("/me/symbols", marketHandler.GetUserSymbols)
 	users.Put("/me/symbols", marketHandler.UpdateUserSymbols)
+	users.Get("/me/ai-keys", aiHandler.GetUserAIKeys)
+	users.Put("/me/ai-keys", aiHandler.UpdateUserAIKeys)
+	users.Delete("/me/ai-keys/:provider", aiHandler.DeleteUserAIKey)
 
 	exchanges := api.Group("/exchanges")
 	exchanges.Post("/", exchangeHandler.Register)

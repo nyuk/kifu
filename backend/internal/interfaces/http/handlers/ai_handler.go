@@ -272,7 +272,8 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		if errors.Is(err, errAIAllowlistRequired) {
 			return c.Status(403).JSON(fiber.Map{"code": "ALLOWLIST_REQUIRED", "message": "beta allowlist required"})
 		}
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 
 	bubbleID, err := uuid.Parse(c.Params("id"))
@@ -287,7 +288,8 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 
 	bubble, err := h.bubbleRepo.GetByID(c.Context(), bubbleID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if bubble == nil {
 		return c.Status(404).JSON(fiber.Map{"code": "BUBBLE_NOT_FOUND", "message": "bubble not found"})
@@ -306,7 +308,8 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 
 	subscription, err := h.subscriptionRepo.GetByUserID(c.Context(), userID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if subscription == nil {
 		return c.Status(404).JSON(fiber.Map{"code": "SUBSCRIPTION_NOT_FOUND", "message": "subscription not found"})
@@ -323,7 +326,8 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 	for _, provider := range providers {
 		key, err := h.resolveAPIKey(c.Context(), userID, provider)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+			log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 		perProviderKey[provider] = key
 	}
@@ -393,12 +397,10 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 	}
 
 	if successfulServiceUsage > 0 {
-		if h.exceedsServiceMonthlyCap(subscription, successfulServiceUsage) {
-			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
-		}
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, successfulServiceUsage)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+			log.Printf("[RequestOpinions] DecrementQuota error for user=%s: %v", userID, err)
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 		if !ok {
 			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
@@ -421,7 +423,8 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		if errors.Is(err, errAIAllowlistRequired) {
 			return c.Status(403).JSON(fiber.Map{"code": "ALLOWLIST_REQUIRED", "message": "beta allowlist required"})
 		}
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 
 	var req OneShotAIRequest
@@ -446,7 +449,8 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 
 	subscription, err := h.subscriptionRepo.GetByUserID(c.Context(), userID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if subscription == nil {
 		return c.Status(404).JSON(fiber.Map{"code": "SUBSCRIPTION_NOT_FOUND", "message": "subscription not found"})
@@ -459,7 +463,8 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 
 	apiKey, err := h.resolveAPIKey(c.Context(), userID, provider)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if apiKey == "" {
 		return c.Status(400).JSON(fiber.Map{"code": "MISSING_API_KEY", "message": "API key not configured"})
@@ -492,17 +497,16 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		}
 		if err != nil {
 			log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
-			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": err.Error()})
+			log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
+			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
 		}
 	}
 
 	if usesServiceKey(provider, apiKey) {
-		if h.exceedsServiceMonthlyCap(subscription, 1) {
-			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
-		}
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+			log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 		if !ok {
 			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
@@ -535,7 +539,8 @@ func (h *AIHandler) ListOpinions(c *fiber.Ctx) error {
 
 	bubble, err := h.bubbleRepo.GetByID(c.Context(), bubbleID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if bubble == nil {
 		return c.Status(404).JSON(fiber.Map{"code": "BUBBLE_NOT_FOUND", "message": "bubble not found"})
@@ -546,7 +551,8 @@ func (h *AIHandler) ListOpinions(c *fiber.Ctx) error {
 
 	opinions, err := h.opinionRepo.ListByBubble(c.Context(), bubbleID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 
 	response := make([]AIOpinionItem, 0, len(opinions))
@@ -570,7 +576,8 @@ func (h *AIHandler) GetUserAIKeys(c *fiber.Ctx) error {
 
 	keys, err := h.userAIKeyRepo.ListByUser(c.Context(), userID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 
 	keyMap := map[string]*entities.UserAIKey{}
@@ -619,7 +626,8 @@ func (h *AIHandler) UpdateUserAIKeys(c *fiber.Ctx) error {
 
 		encKey, err := cryptoutil.Encrypt(apiKey, h.encryptionKey)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+			log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 
 		record := &entities.UserAIKey{
@@ -632,7 +640,8 @@ func (h *AIHandler) UpdateUserAIKeys(c *fiber.Ctx) error {
 		}
 
 		if err := h.userAIKeyRepo.Upsert(c.Context(), record); err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+			log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 	}
 
@@ -652,7 +661,8 @@ func (h *AIHandler) DeleteUserAIKey(c *fiber.Ctx) error {
 
 	deleted, err := h.userAIKeyRepo.DeleteByUserAndProvider(c.Context(), userID, provider)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 	}
 	if !deleted {
 		return c.Status(404).JSON(fiber.Map{"code": "AI_KEY_NOT_FOUND", "message": "API key not found"})
@@ -694,6 +704,19 @@ func (h *AIHandler) resolveProviders(ctx context.Context, requested []string) ([
 }
 
 func (h *AIHandler) resolveAPIKey(ctx context.Context, userID uuid.UUID, provider string) (string, error) {
+	userKey, err := h.userAIKeyRepo.GetByUserAndProvider(ctx, userID, provider)
+	if err != nil {
+		log.Printf("[resolveAPIKey] failed to lookup user key for provider=%s: %v", provider, err)
+	}
+	if userKey != nil && userKey.APIKeyEnc != "" {
+		decrypted, err := cryptoutil.Decrypt(userKey.APIKeyEnc, h.encryptionKey)
+		if err != nil {
+			log.Printf("[resolveAPIKey] failed to decrypt user key for provider=%s: %v", provider, err)
+		} else if decrypted != "" {
+			return decrypted, nil
+		}
+	}
+
 	switch provider {
 	case providerOpenAI:
 		return strings.TrimSpace(os.Getenv("OPENAI_API_KEY")), nil
