@@ -166,15 +166,31 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
           ) : isCompleted ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
               <span className="text-lg">&#10003;</span>
-              <div>
-                <p className="text-sm font-semibold text-emerald-200">오늘의 복기를 완료했습니다</p>
-                <p className="text-xs text-emerald-200/60">
-                  {streak && streak.current_streak > 0
-                    ? `${streak.current_streak}일 연속 복기 중 (최고: ${streak.longest_streak}일)`
-                    : '내일도 이어가세요!'}
-                </p>
-              </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-200">오늘의 복기를 완료했습니다</p>
+              <p className="text-xs text-emerald-200/60">
+                {streak && streak.current_streak > 0
+                  ? `${streak.current_streak}일 연속 복기 중 (최고: ${streak.longest_streak}일)`
+                  : '내일도 이어가세요!'}
+              </p>
             </div>
+            {supplementPending > 0 || rolloverPending > 0 ? (
+              <button
+                type="button"
+                onClick={() => setIsOpen(true)}
+                className="rounded-md bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-100 border border-emerald-300/40 hover:bg-emerald-500/30"
+              >
+                보강/이월 복기 이어하기
+              </button>
+            ) : (
+              <Link
+                href="/review"
+                className="rounded-md bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-100 border border-emerald-300/40 hover:bg-emerald-500/30"
+              >
+                복기 결과 보기
+              </Link>
+            )}
+          </div>
           ) : hasItems ? (
             <button
               type="button"
@@ -192,6 +208,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
           ) : (
             <p className="rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-xs text-neutral-500">
               오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.
+              <span className="ml-1 text-neutral-300">비거래일도 기록 흐름은 계속 저장할 수 있습니다.</span>
             </p>
           )}
         </div>

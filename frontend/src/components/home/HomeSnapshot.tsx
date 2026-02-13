@@ -48,9 +48,13 @@ const parseSourceBadge = (tags: string[] = []) => {
   if (normalized.includes('alert') || normalized.includes('alerting')) return 'ALERT'
   if (normalized.includes('one-shot') || normalized.includes('one-shot-note')) return 'One-shot'
   if (normalized.includes('technical')) return 'Technical'
+  if (normalized.includes('summary')) return '요약'
   if (normalized.includes('brief') || normalized.includes('detailed')) return '요약'
   return 'One-shot'
 }
+
+const SOURCE_BADGE_CLASS = 'rounded-full border border-emerald-300/35 bg-emerald-500/12 px-2 py-0.5 text-emerald-200'
+const VENUE_BADGE_CLASS = 'rounded-full border border-sky-300/35 bg-sky-500/12 px-2 py-0.5 text-sky-200'
 
 const normalizeVenueLabel = (value?: string) => {
   if (!value) return ''
@@ -807,12 +811,12 @@ export function HomeSnapshot() {
                   <div key={note.id} className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
                       {note.source_label && (
-                        <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-violet-200">
+                        <span className={SOURCE_BADGE_CLASS}>
                           {note.source_label}
                         </span>
                       )}
                       {note.venue_name && (
-                        <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-sky-200">
+                        <span className={VENUE_BADGE_CLASS}>
                           {normalizeVenueLabel(note.venue_name)}
                         </span>
                       )}

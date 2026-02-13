@@ -44,9 +44,13 @@ const parseSourceBadge = (tags: string[] = []) => {
   if (normalized.includes('alert') || normalized.includes('alerting') || normalized.includes('alerting')) return 'ALERT'
   if (normalized.includes('one-shot') || normalized.includes('one-shot-note')) return 'One-shot'
   if (normalized.includes('technical')) return 'Technical'
+  if (normalized.includes('summary')) return '요약'
   if (normalized.includes('brief') || normalized.includes('detailed')) return '요약'
   return 'One-shot'
 }
+
+const SOURCE_BADGE_CLASS = 'rounded-full border border-emerald-300/35 bg-emerald-500/12 px-2 py-0.5 text-emerald-200'
+const VENUE_BADGE_CLASS = 'rounded-full border border-sky-300/35 bg-sky-500/12 px-2 py-0.5 text-sky-200'
 
 const normalizeVenueLabel = (value?: string) => {
   if (!value) return ''
@@ -240,7 +244,10 @@ export default function ReviewPage() {
     const params = new URLSearchParams()
     if (aiSymbolFilter !== 'ALL') params.set('ai_symbol', aiSymbolFilter)
     if (aiTimeframeFilter !== 'ALL') params.set('ai_tf', aiTimeframeFilter)
-    const link = `${window.location.pathname}?${params.toString()}`
+    const url = new URL(window.location.href)
+    url.pathname = '/review'
+    url.search = params.toString()
+    const link = url.toString()
     try {
       await navigator.clipboard.writeText(link)
       setCopiedShare(true)
@@ -464,12 +471,12 @@ export default function ReviewPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
                     {note.source_label && (
-                      <span className="rounded-full border border-purple-300/30 bg-purple-500/10 px-2 py-0.5 text-purple-200">
+                      <span className={SOURCE_BADGE_CLASS}>
                         {note.source_label}
                       </span>
                     )}
                     {note.venue_name && (
-                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-sky-200">
+                      <span className={VENUE_BADGE_CLASS}>
                         {normalizeVenueLabel(note.venue_name)}
                       </span>
                     )}
