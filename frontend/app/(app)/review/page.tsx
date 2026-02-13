@@ -24,6 +24,7 @@ type BubbleListItem = {
   symbol: string
   timeframe: string
   candle_time?: string
+  venue_name?: string
 }
 
 type BubbleListResponse = {
@@ -34,6 +35,27 @@ type AINoteCard = ReviewNote & {
   symbol?: string
   timeframe?: string
   candle_time?: string
+  venue_name?: string
+  source_label?: string
+}
+
+const parseSourceBadge = (tags: string[] = []) => {
+  const normalized = tags.map((tag) => tag.toLowerCase())
+  if (normalized.includes('alert') || normalized.includes('alerting') || normalized.includes('alerting')) return 'ALERT'
+  if (normalized.includes('one-shot') || normalized.includes('one-shot-note')) return 'One-shot'
+  if (normalized.includes('technical')) return 'Technical'
+  if (normalized.includes('brief') || normalized.includes('detailed')) return '요약'
+  return 'One-shot'
+}
+
+const normalizeVenueLabel = (value?: string) => {
+  if (!value) return ''
+  const lowered = value.toLowerCase()
+  if (lowered.includes('binance')) return 'Binance'
+  if (lowered.includes('upbit')) return 'Upbit'
+  if (lowered.includes('kis')) return 'KIS'
+  if (lowered.includes('tradingview') || lowered.includes('mock')) return '시스템'
+  return value
 }
 
 export default function ReviewPage() {
@@ -54,6 +76,7 @@ export default function ReviewPage() {
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
   const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
+  const [copiedShare, setCopiedShare] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const {
     stats,
@@ -178,6 +201,8 @@ export default function ReviewPage() {
             symbol: bubble?.symbol,
             timeframe: bubble?.timeframe,
             candle_time: bubble?.candle_time,
+            venue_name: bubble?.venue_name,
+            source_label: parseSourceBadge(note.tags || []),
           }
         })
         if (isActive) setAiNotes(enriched.slice(0, 30))
@@ -210,6 +235,20 @@ export default function ReviewPage() {
       return true
     })
   }, [aiNotes, aiSymbolFilter, aiTimeframeFilter])
+
+  const copyAiFilterLink = async () => {
+    const params = new URLSearchParams()
+    if (aiSymbolFilter !== 'ALL') params.set('ai_symbol', aiSymbolFilter)
+    if (aiTimeframeFilter !== 'ALL') params.set('ai_tf', aiTimeframeFilter)
+    const link = `${window.location.pathname}?${params.toString()}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopiedShare(true)
+      window.setTimeout(() => setCopiedShare(false), 1500)
+    } catch {
+      setCopiedShare(false)
+    }
+  }
 
   useEffect(() => {
     const qSymbol = searchParams.get('ai_symbol')
@@ -393,10 +432,17 @@ export default function ReviewPage() {
                 </option>
               ))}
             </select>
-            <span className="text-xs text-zinc-400 ml-1">
-              {filteredAiNotes.length} / {aiNotes.length}
-            </span>
-          </div>
+                <span className="text-xs text-zinc-400 ml-1">
+                  {filteredAiNotes.length} / {aiNotes.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={copyAiFilterLink}
+                  className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-xs text-neutral-300 hover:bg-white/[0.12] hover:text-white"
+                >
+                  {copiedShare ? '복사 완료' : '링크 복사'}
+                </button>
+              </div>
           {aiNotesError && (
             <p className="mt-3 text-xs text-rose-300">{aiNotesError}</p>
           )}
@@ -417,6 +463,16 @@ export default function ReviewPage() {
                     <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+                    {note.source_label && (
+                      <span className="rounded-full border border-purple-300/30 bg-purple-500/10 px-2 py-0.5 text-purple-200">
+                        {note.source_label}
+                      </span>
+                    )}
+                    {note.venue_name && (
+                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-sky-200">
+                        {normalizeVenueLabel(note.venue_name)}
+                      </span>
+                    )}
                     {note.symbol && (
                       <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.symbol}</span>
                     )}

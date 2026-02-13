@@ -156,7 +156,6 @@ function getTimeframeSeconds(tf: string): number {
 }
 
 export function Chart() {
-  console.log('>>> CHART COMPONENT RENDER (V2 Fixed) <<<')
   const { symbol: symbolParam } = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -540,12 +539,13 @@ export function Chart() {
     const rawParam = Array.isArray(symbolParam) ? symbolParam[0] : symbolParam
     const normalizedParam = rawParam?.toUpperCase().trim() || ''
     const match = symbols.find((item) => item.symbol === normalizedParam)
-    const fallback = normalizedParam && isMarketSupported(normalizedParam) ? normalizedParam : ''
-    const selected = match?.symbol || fallback || symbols[0].symbol
+    // Keep explicit URL symbols as-is (even if currently unsupported),
+    // so we can show a clear unsupported message instead of silently falling back.
+    const selected = match?.symbol || normalizedParam || symbols[0].symbol
 
     setSelectedSymbol(selected)
     setTimeframe('1d')
-    if (!normalizedParam || (!match && !fallback)) {
+    if (!normalizedParam) {
       router.replace(`/chart/${selected}`)
     }
   }, [router, symbolParam, symbols])
@@ -962,14 +962,6 @@ export function Chart() {
       if (price === null) return
 
       const clickedTime = param.time as number
-      // const timeRange = getTimeframeSeconds(timeframe)
-
-      // Check if clicking near an existing bubble
-      const existingGrouping = overlayPositionsRef.current.find(p => p.candleTime === clickedTime)
-
-      if (existingGrouping && existingGrouping.bubbles.length > 0) {
-        console.log('Clicked group:', existingGrouping)
-      }
 
       setClickedCandle({ time: clickedTime, price })
       setIsModalOpen(true)

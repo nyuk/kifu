@@ -25,6 +25,7 @@ type BubbleItem = {
   bubble_type: string
   memo?: string | null
   tags?: string[]
+  venue_name?: string
 }
 
 type BubbleListResponse = {
@@ -38,6 +39,27 @@ type AINoteCard = ReviewNote & {
   symbol?: string
   timeframe?: string
   candle_time?: string
+  venue_name?: string
+  source_label?: string
+}
+
+const parseSourceBadge = (tags: string[] = []) => {
+  const normalized = tags.map((tag) => tag.toLowerCase())
+  if (normalized.includes('alert') || normalized.includes('alerting')) return 'ALERT'
+  if (normalized.includes('one-shot') || normalized.includes('one-shot-note')) return 'One-shot'
+  if (normalized.includes('technical')) return 'Technical'
+  if (normalized.includes('brief') || normalized.includes('detailed')) return '요약'
+  return 'One-shot'
+}
+
+const normalizeVenueLabel = (value?: string) => {
+  if (!value) return ''
+  const lowered = value.toLowerCase()
+  if (lowered.includes('binance')) return 'Binance'
+  if (lowered.includes('upbit')) return 'Upbit'
+  if (lowered.includes('kis')) return 'KIS'
+  if (lowered.includes('tradingview') || lowered.includes('mock')) return '시스템'
+  return value
 }
 
 const periodLabels: Record<string, string> = {
@@ -295,6 +317,8 @@ export function HomeSnapshot() {
             symbol: bubble?.symbol,
             timeframe: bubble?.timeframe,
             candle_time: bubble?.candle_time,
+            venue_name: bubble?.venue_name,
+            source_label: parseSourceBadge(note.tags || []),
           }
         })
         if (isActive) setAiNotes(enriched.slice(0, 20))
@@ -782,6 +806,16 @@ export function HomeSnapshot() {
                 return (
                   <div key={note.id} className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
                     <div className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
+                      {note.source_label && (
+                        <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-violet-200">
+                          {note.source_label}
+                        </span>
+                      )}
+                      {note.venue_name && (
+                        <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-sky-200">
+                          {normalizeVenueLabel(note.venue_name)}
+                        </span>
+                      )}
                       {note.symbol && <span>{note.symbol}</span>}
                       {note.timeframe && <span>· {note.timeframe}</span>}
                       {note.symbol && note.candle_time && (

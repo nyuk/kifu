@@ -4,6 +4,7 @@ backend/.env
 frontend/.env
 .gocache/
 backend.log
+backend-run.log
 backend/backend.log
 backend/backend_debug.log
 backend/backups/
