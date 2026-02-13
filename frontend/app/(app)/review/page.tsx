@@ -54,6 +54,37 @@ const SOURCE_BADGE_CLASS = 'rounded-full border border-emerald-300/35 bg-emerald
 const VENUE_BADGE_CLASS = 'rounded-full border border-sky-300/35 bg-sky-500/12 px-2 py-0.5 text-sky-200'
 const AI_NOTES_PAGE_SIZE = 6
 
+const normalizeAiSymbol = (value?: string) => (value || '').trim().toUpperCase().replace(/\s+/g, '')
+
+const normalizeAiTimeframe = (value?: string) => {
+  const tf = (value || '1d').trim().toLowerCase()
+  if (tf === '1m' || tf === '15m' || tf === '1h' || tf === '4h' || tf === '1d') {
+    return tf
+  }
+  return '1d'
+}
+
+const buildAiChartUrl = (note: {
+  symbol?: string
+  timeframe?: string
+  candle_time?: string
+  created_at?: string
+}) => {
+  const symbol = normalizeAiSymbol(note.symbol)
+  const timeframe = normalizeAiTimeframe(note.timeframe)
+  if (!symbol) return null
+
+  const focusTime = note.candle_time || note.created_at
+  if (!focusTime) {
+    return `/chart/${symbol}`
+  }
+
+  const params = new URLSearchParams()
+  params.set('focus_ts', focusTime)
+  params.set('focus_tf', timeframe)
+  return `/chart/${symbol}?${params.toString()}`
+}
+
 const normalizeVenueLabel = (value?: string) => {
   if (!value) return ''
   const lowered = value.toLowerCase()
@@ -408,9 +439,12 @@ export default function ReviewPage() {
           onClick={copyAiFilterLink}
           className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-sm text-neutral-300 hover:bg-white/[0.12] hover:text-white"
         >
-          {copiedShare ? '복사 완료' : '링크 복사'}
+          {copiedShare ? '링크 공유 완료' : 'AI 요약 필터 링크 복사'}
         </button>
       </div>
+      <p className="mt-1 text-[11px] text-zinc-400">
+        현재 공유 범위: {aiSymbolFilter === 'ALL' ? '심볼 전체' : aiSymbolFilter} / {aiTimeframeFilter === 'ALL' ? '타임프레임 전체' : aiTimeframeFilter}
+      </p>
       {aiNotesError && (
         <p className="mt-3 text-sm text-rose-300">{aiNotesError}</p>
       )}
@@ -447,12 +481,12 @@ export default function ReviewPage() {
                 {note.timeframe && (
                   <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
                 )}
-                {note.symbol && note.candle_time && (
+                {note.symbol && buildAiChartUrl(note) && (
                   <Link
-                    href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
+                    href={buildAiChartUrl(note) || ''}
                     className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-emerald-300 hover:bg-emerald-500/10 transition-colors"
                   >
-                    차트 이동
+                    해당 캔들로 이동
                   </Link>
                 )}
                 {note.bubble_id && (
