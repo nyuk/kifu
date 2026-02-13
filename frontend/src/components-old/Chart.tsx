@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
 import { api, DEFAULT_SYMBOLS } from '../lib/api'
@@ -12,6 +12,7 @@ import { useBubbleStore, type Bubble, type Trade } from '../lib/bubbleStore'
 import { useToast } from '../components/ui/Toast'
 import { ChartReplay } from '../components/chart/ChartReplay'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
+import { PageJumpPager } from '../components/ui/PageJumpPager'
 import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../types/trade'
 import type { ManualPosition } from '../types/position'
 import { useAuthStore } from '../stores/auth'
@@ -88,6 +89,7 @@ const densityOptions = [
 ] as const
 
 const actionOptions = ['ALL', 'BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'] as const
+const CHART_PANEL_PAGE_SIZE = 12
 
 const normalizeUpbitSymbol = (value: string) => {
   const symbol = value.toUpperCase()
@@ -242,6 +244,14 @@ export function Chart() {
     trades: OverlayTrade[]
   } | null>(null)
 
+  const [summaryPage, setSummaryPage] = useState(1)
+  const [summaryPageInput, setSummaryPageInput] = useState('1')
+
+  const [detailBubblePage, setDetailBubblePage] = useState(1)
+  const [detailTradePage, setDetailTradePage] = useState(1)
+  const [detailBubblePageInput, setDetailBubblePageInput] = useState('1')
+  const [detailTradePageInput, setDetailTradePageInput] = useState('1')
+
   // Refs for stable access in effects/callbacks
   const overlayPositionsRef = useRef(overlayPositions)
   const updatePositionsRef = useRef<() => void>(() => { })
@@ -391,6 +401,13 @@ export function Chart() {
       setPanelTab('detail')
     }
   }, [selectedGroup])
+
+  useEffect(() => {
+    setDetailBubblePage(1)
+    setDetailTradePage(1)
+    setDetailBubblePageInput('1')
+    setDetailTradePageInput('1')
+  }, [selectedGroup?.candleTime, selectedGroup?.bubbles.length, selectedGroup?.trades.length])
 
   useEffect(() => {
     const isOnboarding = searchParams?.get('onboarding') === '1'
@@ -883,6 +900,33 @@ export function Chart() {
     }).sort((a, b) => b.ts - a.ts)
   }, [activeBubbles, bubbleSearch, actionFilter])
 
+  const summaryTotalPages = Math.max(1, Math.ceil(filteredBubbles.length / CHART_PANEL_PAGE_SIZE))
+  const pagedSummaryBubbles = filteredBubbles.slice(
+    (summaryPage - 1) * CHART_PANEL_PAGE_SIZE,
+    summaryPage * CHART_PANEL_PAGE_SIZE
+  )
+
+  useEffect(() => {
+    setSummaryPage(1)
+    setSummaryPageInput('1')
+  }, [filteredBubbles.length])
+
+  const jumpSummaryPage = () => {
+    const parsed = Number.parseInt(summaryPageInput, 10)
+    if (Number.isNaN(parsed) || parsed < 1) {
+      setSummaryPageInput(String(summaryPage))
+      return
+    }
+    setSummaryPage(Math.min(summaryTotalPages, parsed))
+  }
+
+  const handleSummaryPageKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpSummaryPage()
+    }
+  }
+
   const bubbleSummary = useMemo(() => {
     const counts = {
       total: activeBubbles.length,
@@ -915,6 +959,49 @@ export function Chart() {
       trades: showTrades ? tradeTotal : 0,
     }
   }, [densityAdjustedPositions, overlayPositions.length, showBubbles, showTrades])
+
+  const detailBubbleTotalPages = Math.max(1, Math.ceil((selectedGroup?.bubbles.length || 0) / CHART_PANEL_PAGE_SIZE))
+  const detailTradeTotalPages = Math.max(1, Math.ceil((selectedGroup?.trades.length || 0) / CHART_PANEL_PAGE_SIZE))
+  const pagedDetailBubbles = (selectedGroup?.bubbles || []).slice(
+    (detailBubblePage - 1) * CHART_PANEL_PAGE_SIZE,
+    detailBubblePage * CHART_PANEL_PAGE_SIZE
+  )
+  const pagedDetailTrades = (selectedGroup?.trades || []).slice(
+    (detailTradePage - 1) * CHART_PANEL_PAGE_SIZE,
+    detailTradePage * CHART_PANEL_PAGE_SIZE
+  )
+
+  const jumpDetailBubblePage = () => {
+    const parsed = Number.parseInt(detailBubblePageInput, 10)
+    if (Number.isNaN(parsed) || parsed < 1) {
+      setDetailBubblePageInput(String(detailBubblePage))
+      return
+    }
+    setDetailBubblePage(Math.min(detailBubbleTotalPages, parsed))
+  }
+
+  const jumpDetailTradePage = () => {
+    const parsed = Number.parseInt(detailTradePageInput, 10)
+    if (Number.isNaN(parsed) || parsed < 1) {
+      setDetailTradePageInput(String(detailTradePage))
+      return
+    }
+    setDetailTradePage(Math.min(detailTradeTotalPages, parsed))
+  }
+
+  const handleDetailBubblePageKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpDetailBubblePage()
+    }
+  }
+
+  const handleDetailTradePageKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpDetailTradePage()
+    }
+  }
 
   // 버블/트레이드 변경 시 위치 업데이트
   useEffect(() => {
@@ -1997,7 +2084,7 @@ export function Chart() {
                       표시할 버블이 없습니다.
                     </div>
                   )}
-                  {filteredBubbles.slice(0, 40).map((bubble) => (
+                  {pagedSummaryBubbles.map((bubble) => (
                     <div key={bubble.id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                       <div className="flex items-center justify-between text-xs text-neutral-500">
                         <span>{new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
@@ -2023,6 +2110,20 @@ export function Chart() {
                     </div>
                   ))}
                 </div>
+                <PageJumpPager
+                  totalItems={filteredBubbles.length}
+                  totalPages={summaryTotalPages}
+                  currentPage={summaryPage}
+                  pageInput={summaryPageInput}
+                  onPageInputChange={setSummaryPageInput}
+                  onPageInputKeyDown={handleSummaryPageKeyDown}
+                  onFirst={() => setSummaryPage(1)}
+                  onPrevious={() => setSummaryPage((page) => Math.max(1, page - 1))}
+                  onNext={() => setSummaryPage((page) => Math.min(summaryTotalPages, page + 1))}
+                  onLast={() => setSummaryPage(summaryTotalPages)}
+                  onJump={jumpSummaryPage}
+                  itemLabel="개"
+                />
               </div>
             </>
           )}
@@ -2110,7 +2211,7 @@ export function Chart() {
                         Bubbles ({selectedGroup.bubbles.length})
                       </p>
                       <div className="max-h-[220px] overflow-y-auto space-y-2 pr-2">
-                        {selectedGroup.bubbles.map((bubble) => (
+                        {pagedDetailBubbles.map((bubble) => (
                           <div key={bubble.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-bold ${
@@ -2134,6 +2235,20 @@ export function Chart() {
                           </div>
                         ))}
                       </div>
+                      <PageJumpPager
+                        totalItems={selectedGroup.bubbles.length}
+                        totalPages={detailBubbleTotalPages}
+                        currentPage={detailBubblePage}
+                        pageInput={detailBubblePageInput}
+                        onPageInputChange={setDetailBubblePageInput}
+                        onPageInputKeyDown={handleDetailBubblePageKeyDown}
+                        onFirst={() => setDetailBubblePage(1)}
+                        onPrevious={() => setDetailBubblePage((page) => Math.max(1, page - 1))}
+                        onNext={() => setDetailBubblePage((page) => Math.min(detailBubbleTotalPages, page + 1))}
+                        onLast={() => setDetailBubblePage(detailBubbleTotalPages)}
+                        onJump={jumpDetailBubblePage}
+                        itemLabel="개"
+                      />
                     </div>
                   )}
 
@@ -2143,7 +2258,7 @@ export function Chart() {
                         Trades ({selectedGroup.trades.length})
                       </p>
                       <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
-                        {selectedGroup.trades.map((trade) => (
+                        {pagedDetailTrades.map((trade) => (
                           <div key={trade.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <div className="flex items-center justify-between text-xs text-neutral-500">
                               <span className={trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}>
@@ -2158,6 +2273,20 @@ export function Chart() {
                           </div>
                         ))}
                       </div>
+                      <PageJumpPager
+                        totalItems={selectedGroup.trades.length}
+                        totalPages={detailTradeTotalPages}
+                        currentPage={detailTradePage}
+                        pageInput={detailTradePageInput}
+                        onPageInputChange={setDetailTradePageInput}
+                        onPageInputKeyDown={handleDetailTradePageKeyDown}
+                        onFirst={() => setDetailTradePage(1)}
+                        onPrevious={() => setDetailTradePage((page) => Math.max(1, page - 1))}
+                        onNext={() => setDetailTradePage((page) => Math.min(detailTradeTotalPages, page + 1))}
+                        onLast={() => setDetailTradePage(detailTradeTotalPages)}
+                        onJump={jumpDetailTradePage}
+                        itemLabel="개"
+                      />
                     </div>
                   )}
                 </>
