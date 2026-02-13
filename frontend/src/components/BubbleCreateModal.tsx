@@ -63,6 +63,18 @@ function mapAiErrorMessage(err: any) {
   return 'AI 의견 요청에 실패했습니다. 다시 시도해주세요.'
 }
 
+function isRetryableAiError(err: any): boolean {
+  const status = err?.response?.status
+  const detail = String(err?.response?.data?.message || err?.message || '').toLowerCase()
+
+  if (status === 429 || status === 500 || status === 502 || status === 503 || status === 504) return true
+  return detail.includes('temporar') || detail.includes('network error') || detail.includes('timeout') || status === 0
+}
+
+function buildRetryBackoff(attempt: number): number {
+  return Math.min(1000 * Math.pow(2, attempt), 4000)
+}
+
 export function BubbleCreateModal({
   open,
   symbol,
@@ -84,6 +96,7 @@ export function BubbleCreateModal({
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiRetryAttempt, setAiRetryAttempt] = useState(0)
   const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
   const [aiError, setAiError] = useState('')
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
@@ -254,6 +267,8 @@ export function BubbleCreateModal({
   const updateBubble = useBubbleStore((state) => state.updateBubble)
   const aiDisabled = disableAi && !isDemoMode
 
+  const MAX_AI_RETRIES = 2
+
   const handleAskAi = async () => {
     if (aiDisabled) {
       setAiError('게스트 모드에서는 AI 의견 요청이 비활성화됩니다.')
@@ -262,7 +277,9 @@ export function BubbleCreateModal({
     if (!price || !symbol) return
     setAiLoading(true)
     setAiError('')
+    setAiRetryAttempt(0)
     setEvidenceError('')
+    const finalPrice = parseFloat(price)
     try {
       let packet: EvidencePacket | null = null
       const shouldBuildPacket = includeEvidence || includePositions || includeBubbles
@@ -289,18 +306,39 @@ export function BubbleCreateModal({
         } catch (err) {
           console.error(err)
           setEvidenceError('증거 패킷을 구성하지 못했습니다.')
-        } finally {
-          setEvidenceLoading(false)
+          } finally {
+            setEvidenceLoading(false)
+          }
+      }
+
+      let lastError: unknown = null
+      for (let attempt = 0; attempt < MAX_AI_RETRIES + 1; attempt += 1) {
+        if (attempt > 0) {
+          setAiRetryAttempt(attempt)
+        }
+        try {
+          const response = await fetchAiOpinion(symbol, timeframe, finalPrice, promptType, packet, { memo, tags })
+          setAiResponse(response)
+          setAiRetryAttempt(0)
+          if (!memo) {
+            setMemo(response.response)
+          }
+          return
+        } catch (e: any) {
+          lastError = e
+          if (isRetryableAiError(e) && attempt < MAX_AI_RETRIES) {
+            const nextAttemptLabel = attempt + 1
+            setAiError(`일시적 오류로 인해 재시도 중입니다. (${nextAttemptLabel}/${MAX_AI_RETRIES})`)
+            await new Promise((resolve) => setTimeout(resolve, buildRetryBackoff(attempt)))
+            continue
+          }
+          throw e
         }
       }
-      const response = await fetchAiOpinion(symbol, timeframe, parseFloat(price), promptType, packet, { memo, tags })
-      setAiResponse(response)
-      // Auto-append recommendation to note if empty
-      if (!memo) {
-        setMemo(response.response)
-      }
+      if (lastError) throw lastError
     } catch (e: any) {
       setAiError(mapAiErrorMessage(e))
+      setAiRetryAttempt(0)
     } finally {
       setAiLoading(false)
     }
@@ -539,6 +577,9 @@ export function BubbleCreateModal({
             </div>
             {aiError && (
               <div className="mt-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-2">
+                {aiRetryAttempt > 0 && (
+                  <p className="mb-1 text-[11px] font-semibold text-rose-200">재시도 {aiRetryAttempt}/{MAX_AI_RETRIES}</p>
+                )}
                 <p className="text-[11px] text-rose-200">{aiError}</p>
                 <div className="mt-2">
                   <button
