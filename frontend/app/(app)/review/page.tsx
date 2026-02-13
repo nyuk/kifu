@@ -82,10 +82,10 @@ export default function ReviewPage() {
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
   const [reviewTab, setReviewTab] = useState<'overview' | 'ai' | 'analytics' | 'journal'>('overview')
+  const [analyticsTab, setAnalyticsTab] = useState<'calendar' | 'metrics' | 'trend'>('calendar')
   const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
   const [aiNotesPage, setAiNotesPage] = useState(1)
   const [aiNotesPageInput, setAiNotesPageInput] = useState('1')
-  const [showCalendar, setShowCalendar] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const {
@@ -555,81 +555,113 @@ export default function ReviewPage() {
   )
 
   const analyticsSection = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-neutral-200">성과 캘린더</h3>
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1">
           <button
             type="button"
-            onClick={() => setShowCalendar((prev) => !prev)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-neutral-300"
+            onClick={() => setAnalyticsTab('calendar')}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'calendar'
+              ? 'bg-zinc-700 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
           >
-            {showCalendar ? '접기' : '펼치기'}
+            성과 캘린더
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnalyticsTab('metrics')}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'metrics'
+              ? 'bg-zinc-700 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            지표
+          </button>
+          <button
+            type="button"
+            onClick={() => setAnalyticsTab('trend')}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'trend'
+              ? 'bg-zinc-700 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            추세 분석
           </button>
         </div>
-        <div className={showCalendar ? 'mt-4' : 'mt-2'}>
-          {showCalendar ? <CalendarView calendar={calendar} isLoading={isLoading} /> : <p className="mt-3 text-sm text-zinc-300">캘린더 기능은 필요할 때 열어 보실 수 있습니다.</p>}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AccuracyChart accuracy={accuracy} isLoading={isLoadingAccuracy} />
-        <TagPerformance byTag={stats?.by_tag} isLoading={isLoading} />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SymbolPerformance bySymbol={symbolStatsForView} isLoading={isLoading} />
-      </div>
-      {stats?.by_period && Object.keys(stats.by_period).length > 0 && (
-        <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h3 className="text-sm font-medium text-zinc-300">구간 성과</h3>
-            <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
-              {['1h', '4h', '1d'].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setSelectedPeriod(p as any)}
-                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${selectedPeriod === p
-                    ? 'bg-zinc-700 text-white shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                    }`}
-                >
-                  {p.toUpperCase()}
-                </button>
-              ))}
+
+        {analyticsTab === 'calendar' && (
+          <div>
+            <h3 className="text-sm font-medium text-neutral-200">성과 캘린더</h3>
+            <div className="mt-3">
+              <CalendarView calendar={calendar} isLoading={isLoading} />
             </div>
           </div>
-          {(() => {
-            const data = stats.by_period[selectedPeriod]
-            if (!data) return <p className="text-sm text-zinc-500">No data for this period.</p>
-            const pnl = parseFloat(data.avg_pnl)
-            return (
-              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-lg font-bold text-zinc-200">
-                    {selectedPeriod === '1h' ? '1시간' : selectedPeriod === '4h' ? '4시간' : '1일'} 후 결과
-                  </span>
-                  <span className={`text-xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    승률 {data.win_rate.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                    <p className="text-sm text-zinc-500 mb-1">평균 PnL</p>
-                    <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                    <p className="text-sm text-zinc-500 mb-1">샘플 수</p>
-                    <p className="text-lg font-semibold text-zinc-200">{data.count}개</p>
-                  </div>
-                </div>
+        )}
+
+        {analyticsTab === 'metrics' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AccuracyChart accuracy={accuracy} isLoading={isLoadingAccuracy} />
+            <TagPerformance byTag={stats?.by_tag} isLoading={isLoading} />
+            <SymbolPerformance bySymbol={symbolStatsForView} isLoading={isLoading} />
+          </div>
+        )}
+
+        {analyticsTab === 'trend' && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <h3 className="text-sm font-medium text-zinc-300">구간 성과</h3>
+              <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
+                {(['1h', '4h', '1d'] as const).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setSelectedPeriod(period)}
+                    className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${selectedPeriod === period
+                      ? 'bg-zinc-700 text-white shadow-sm'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                  >
+                    {period.toUpperCase()}
+                  </button>
+                ))}
               </div>
-            )
-          })()}
-        </div>
-      )}
-      <div className="mt-6">
-        <PerformanceTrendChart period={filters.period} />
+            </div>
+            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
+              {stats?.by_period && Object.keys(stats.by_period).length > 0 ? (
+                (() => {
+                  const data = stats.by_period[selectedPeriod]
+                  if (!data) return <p className="text-sm text-zinc-500">해당 주기의 데이터가 없습니다.</p>
+                  const pnl = parseFloat(data.avg_pnl)
+                  return (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                        <p className="text-sm text-zinc-500 mb-1">평균 PnL</p>
+                        <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                        <p className="text-sm text-zinc-500 mb-1">샘플 수</p>
+                        <p className="text-lg font-semibold text-zinc-200">{data.count}개</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05] md:col-span-2">
+                        <p className="text-sm text-zinc-500 mb-1">승률</p>
+                        <p className={`text-lg font-semibold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {data.win_rate.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : (
+                <p className="text-sm text-zinc-500">집계할 데이터가 부족합니다.</p>
+              )}
+            </div>
+            <div className="mt-6">
+              <PerformanceTrendChart period={filters.period} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
