@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../../src/lib/api'
 import { normalizeTradeSummary } from '../../../src/lib/tradeAdapters'
@@ -16,6 +16,7 @@ import { NoteList } from '../../../src/components/review/NoteList'
 import { parseAiSections, toneClass } from '../../../src/lib/aiResponseFormat'
 import { ExportButtons } from '../../../src/components/review/ExportButtons'
 import { PerformanceTrendChart } from '../../../src/components/review/PerformanceTrendChart'
+import { PageJumpPager } from '../../../src/components/ui/PageJumpPager'
 import type { TradeSummaryResponse } from '../../../src/types/trade'
 import type { SymbolStats, ReviewNote, NotesListResponse } from '../../../src/types/review'
 
@@ -51,6 +52,7 @@ const parseSourceBadge = (tags: string[] = []) => {
 
 const SOURCE_BADGE_CLASS = 'rounded-full border border-emerald-300/35 bg-emerald-500/12 px-2 py-0.5 text-emerald-200'
 const VENUE_BADGE_CLASS = 'rounded-full border border-sky-300/35 bg-sky-500/12 px-2 py-0.5 text-sky-200'
+const AI_NOTES_PAGE_SIZE = 6
 
 const normalizeVenueLabel = (value?: string) => {
   if (!value) return ''
@@ -79,7 +81,11 @@ export default function ReviewPage() {
   const [aiNotesError, setAiNotesError] = useState<string | null>(null)
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
+  const [reviewTab, setReviewTab] = useState<'overview' | 'ai' | 'analytics' | 'journal'>('overview')
   const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
+  const [aiNotesPage, setAiNotesPage] = useState(1)
+  const [aiNotesPageInput, setAiNotesPageInput] = useState('1')
+  const [showCalendar, setShowCalendar] = useState(false)
   const [copiedShare, setCopiedShare] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const {
@@ -240,6 +246,37 @@ export default function ReviewPage() {
     })
   }, [aiNotes, aiSymbolFilter, aiTimeframeFilter])
 
+  useEffect(() => {
+    setAiNotesPage(1)
+    setAiNotesPageInput('1')
+  }, [aiSymbolFilter, aiTimeframeFilter])
+
+  const jumpToAiNotesPage = () => {
+    const parsedPage = Number.parseInt(aiNotesPageInput, 10)
+    if (Number.isNaN(parsedPage)) {
+      setAiNotesPageInput(String(aiNotesPage))
+      return
+    }
+    setAiNotesPage(Math.min(aiNotesTotalPages, Math.max(1, parsedPage)))
+  }
+
+  const handleAiNotesPageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpToAiNotesPage()
+    }
+  }
+
+  const aiNotesTotalPages = Math.max(1, Math.ceil(filteredAiNotes.length / AI_NOTES_PAGE_SIZE))
+  const pagedAiNotes = useMemo(() => {
+    const start = (aiNotesPage - 1) * AI_NOTES_PAGE_SIZE
+    return filteredAiNotes.slice(start, start + AI_NOTES_PAGE_SIZE)
+  }, [filteredAiNotes, aiNotesPage])
+
+  useEffect(() => {
+    setAiNotesPageInput(String(aiNotesPage))
+  }, [aiNotesPage])
+
   const copyAiFilterLink = async () => {
     const params = new URLSearchParams()
     if (aiSymbolFilter !== 'ALL') params.set('ai_symbol', aiSymbolFilter)
@@ -318,10 +355,295 @@ export default function ReviewPage() {
     return mapped
   }, [stats?.by_symbol, tradeSummary])
 
+  const renderAiPager = (
+    <PageJumpPager
+      totalItems={filteredAiNotes.length}
+      totalPages={aiNotesTotalPages}
+      currentPage={aiNotesPage}
+      pageInput={aiNotesPageInput}
+      onPageInputChange={setAiNotesPageInput}
+      onPageInputKeyDown={handleAiNotesPageInputKeyDown}
+      onFirst={() => setAiNotesPage(1)}
+      onPrevious={() => setAiNotesPage((page) => Math.max(1, page - 1))}
+      onNext={() => setAiNotesPage((page) => Math.min(aiNotesTotalPages, page + 1))}
+      onLast={() => setAiNotesPage(aiNotesTotalPages)}
+      onJump={jumpToAiNotesPage}
+      disabled={aiNotesLoading}
+      itemLabel="개"
+    />
+  )
+
+  const aiNotesSection = (
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-sm font-medium text-neutral-200">AI 복기 요약</h3>
+        <span className="text-sm text-zinc-300">최근 요청 기준</span>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <select
+          value={aiSymbolFilter}
+          onChange={(event) => setAiSymbolFilter(event.target.value)}
+          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-white/20"
+        >
+          {aiSymbolOptions.map((option) => (
+            <option key={option} value={option}>
+              {option === 'ALL' ? '심볼 전체' : option}
+            </option>
+          ))}
+        </select>
+        <select
+          value={aiTimeframeFilter}
+          onChange={(event) => setAiTimeframeFilter(event.target.value)}
+          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-white/20"
+        >
+          {aiTimeframeOptions.map((option) => (
+            <option key={option} value={option}>
+              {option === 'ALL' ? '타임프레임 전체' : option}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-zinc-300 ml-1">{filteredAiNotes.length} / {aiNotes.length}</span>
+        <button
+          type="button"
+          onClick={copyAiFilterLink}
+          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-sm text-neutral-300 hover:bg-white/[0.12] hover:text-white"
+        >
+          {copiedShare ? '복사 완료' : '링크 복사'}
+        </button>
+      </div>
+      {aiNotesError && (
+        <p className="mt-3 text-sm text-rose-300">{aiNotesError}</p>
+      )}
+      {aiNotesLoading && (
+        <p className="mt-3 text-sm text-zinc-300">불러오는 중...</p>
+      )}
+      {!aiNotesLoading && filteredAiNotes.length === 0 && !aiNotesError && (
+        <p className="mt-3 text-sm text-zinc-300">아직 AI 복기 요약이 없습니다.</p>
+      )}
+      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {pagedAiNotes.map((note) => {
+          const sections = parseAiSections(note.content || '')
+          const header = sections.length > 0 ? sections[0].title : note.title
+          return (
+            <div key={note.id} className="rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-white/10">
+              <div className="flex items-center justify-between text-sm text-neutral-300">
+                <span className="font-medium text-neutral-300">{header || 'AI 요약'}</span>
+                <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5 text-sm">
+                {note.source_label && (
+                  <span className={SOURCE_BADGE_CLASS}>
+                    {note.source_label}
+                  </span>
+                )}
+                {note.venue_name && (
+                  <span className={VENUE_BADGE_CLASS}>
+                    {normalizeVenueLabel(note.venue_name)}
+                  </span>
+                )}
+                {note.symbol && (
+                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.symbol}</span>
+                )}
+                {note.timeframe && (
+                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
+                )}
+                {note.symbol && note.candle_time && (
+                  <Link
+                    href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
+                    className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+                  >
+                    차트 이동
+                  </Link>
+                )}
+                {note.bubble_id && (
+                  <Link
+                    href={`/bubbles?bubble_id=${note.bubble_id}`}
+                    className="rounded-full border border-cyan-500/30 px-2 py-0.5 text-cyan-300 hover:bg-cyan-500/10 transition-colors"
+                  >
+                    관련 버블
+                  </Link>
+                )}
+              </div>
+              <div className="mt-3 space-y-2">
+                {(sections.length > 0 ? sections : [{ title: '요약', body: note.content, tone: 'summary' as const }]).map((section) => (
+                  <div
+                    key={`${note.id}-${section.title}`}
+                    className={`rounded-lg border px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                  >
+                    <p className="text-sm font-bold uppercase tracking-wider opacity-90 mb-1">{section.title}</p>
+                    <p className="text-current opacity-90">{section.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {aiNotesTotalPages > 1 && renderAiPager}
+    </div>
+  )
+
+  const summarySection = (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-neutral-200">거래내역 반영 요약</h3>
+          <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+            실현손익 {tradePnl >= 0 ? '+' : ''}{tradePnl.toLocaleString()}
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(tradeSummary?.by_exchange || []).map((item, index) => {
+            const exchangeName = item.exchange || 'unknown'
+            const tradeCount = Number(item.total_trades || item.trade_count || 0)
+            const chipKey = `${exchangeName}-${tradeCount}-${index}`
+            return (
+              <span key={chipKey} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-neutral-200">
+                {exchangeName} · {tradeCount.toLocaleString()}건
+              </span>
+            )
+          })}
+          {(!tradeSummary || tradeSummary.by_exchange.length === 0) && (
+            <span className="text-sm text-zinc-300">표시할 거래 요약이 없습니다.</span>
+          )}
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+            <p className="text-sm uppercase tracking-wider text-zinc-300">실거래 건수</p>
+            <p className="mt-1 text-base font-semibold text-sky-300">{tradeCount.toLocaleString()}건</p>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+            <p className="text-sm uppercase tracking-wider text-zinc-300">TOP 심볼</p>
+            <p className="mt-1 text-base font-semibold text-emerald-300">
+              {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()})` : '-'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+            <p className="text-sm uppercase tracking-wider text-zinc-300">TOP 거래소</p>
+            <p className="mt-1 text-base font-semibold text-amber-300">
+              {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()})` : '-'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-neutral-200">긴급 대응 기록</h3>
+          <Link href="/alert" className="text-sm text-neutral-300 hover:text-neutral-200 transition-colors">
+            긴급 모드로 이동
+          </Link>
+        </div>
+        <div className="mt-4 space-y-2">
+          {alertActions.length === 0 && (
+            <p className="text-sm text-zinc-300">아직 긴급 대응 기록이 없습니다.</p>
+          )}
+          {alertActions.slice(0, 6).map((entry) => (
+            <div key={entry.id} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2.5">
+              <div className="flex items-center justify-between text-sm text-neutral-300">
+                <span className="font-medium text-neutral-300">{entry.symbol} · {entry.action}</span>
+                <span>{new Date(entry.created_at).toLocaleString('ko-KR')}</span>
+              </div>
+              {entry.note && (
+                <p className="mt-1 text-sm text-neutral-300">{entry.note}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
+  const analyticsSection = (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium text-neutral-200">성과 캘린더</h3>
+          <button
+            type="button"
+            onClick={() => setShowCalendar((prev) => !prev)}
+            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-neutral-300"
+          >
+            {showCalendar ? '접기' : '펼치기'}
+          </button>
+        </div>
+        <div className={showCalendar ? 'mt-4' : 'mt-2'}>
+          {showCalendar ? <CalendarView calendar={calendar} isLoading={isLoading} /> : <p className="mt-3 text-sm text-zinc-300">캘린더 기능은 필요할 때 열어 보실 수 있습니다.</p>}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AccuracyChart accuracy={accuracy} isLoading={isLoadingAccuracy} />
+        <TagPerformance byTag={stats?.by_tag} isLoading={isLoading} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SymbolPerformance bySymbol={symbolStatsForView} isLoading={isLoading} />
+      </div>
+      {stats?.by_period && Object.keys(stats.by_period).length > 0 && (
+        <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <h3 className="text-sm font-medium text-zinc-300">구간 성과</h3>
+            <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
+              {['1h', '4h', '1d'].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setSelectedPeriod(p as any)}
+                  className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${selectedPeriod === p
+                    ? 'bg-zinc-700 text-white shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                >
+                  {p.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          {(() => {
+            const data = stats.by_period[selectedPeriod]
+            if (!data) return <p className="text-sm text-zinc-500">No data for this period.</p>
+            const pnl = parseFloat(data.avg_pnl)
+            return (
+              <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-bold text-zinc-200">
+                    {selectedPeriod === '1h' ? '1시간' : selectedPeriod === '4h' ? '4시간' : '1일'} 후 결과
+                  </span>
+                  <span className={`text-xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    승률 {data.win_rate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                    <p className="text-sm text-zinc-500 mb-1">평균 PnL</p>
+                    <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                    <p className="text-sm text-zinc-500 mb-1">샘플 수</p>
+                    <p className="text-lg font-semibold text-zinc-200">{data.count}개</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      )}
+      <div className="mt-6">
+        <PerformanceTrendChart period={filters.period} />
+      </div>
+    </div>
+  )
+
+  const journalSection = (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <NoteList />
+      <ExportButtons period={filters.period} outcomePeriod={filters.outcomePeriod} />
+    </div>
+  )
+
   return (
-    <div className="min-h-screen text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen text-sm text-neutral-100 p-4 md:p-8">
+      <div className="w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">복기 대시보드</h1>
@@ -332,281 +654,63 @@ export default function ReviewPage() {
           <PeriodFilter filters={filters} onFilterChange={setFilters} />
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6 text-red-400">
             {error}
           </div>
         )}
 
-        {/* Stats Overview */}
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1">
+          <button
+            type="button"
+            onClick={() => setReviewTab('overview')}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'overview'
+              ? 'bg-white/15 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            개요
+          </button>
+          <button
+            type="button"
+            onClick={() => setReviewTab('ai')}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'ai'
+              ? 'bg-white/15 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            AI 복기
+          </button>
+          <button
+            type="button"
+            onClick={() => setReviewTab('analytics')}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'analytics'
+              ? 'bg-white/15 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            성과 분석
+          </button>
+          <button
+            type="button"
+            onClick={() => setReviewTab('journal')}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'journal'
+              ? 'bg-white/15 text-white'
+              : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            노트/내보내기
+          </button>
+        </div>
+
         <div className="mb-6">
           <StatsOverview stats={stats} isLoading={isLoading} />
         </div>
 
-        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-neutral-200">거래내역 반영 요약</h3>
-            <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-              실현손익 {tradePnl >= 0 ? '+' : ''}{tradePnl.toLocaleString()}
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(tradeSummary?.by_exchange || []).map((item, index) => {
-              const exchangeName = item.exchange || 'unknown'
-              const tradeCount = Number(item.total_trades || item.trade_count || 0)
-              const chipKey = `${exchangeName}-${tradeCount}-${index}`
-              return (
-                <span key={chipKey} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-neutral-300">
-                  {exchangeName} · {tradeCount.toLocaleString()}건
-                </span>
-              )
-            })}
-            {(!tradeSummary || tradeSummary.by_exchange.length === 0) && (
-              <span className="text-xs text-zinc-400">표시할 거래 요약이 없습니다.</span>
-            )}
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-400">실거래 건수</p>
-              <p className="mt-1 text-base font-semibold text-sky-300">{tradeCount.toLocaleString()}건</p>
-            </div>
-            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-400">TOP 심볼</p>
-              <p className="mt-1 text-base font-semibold text-emerald-300">
-                {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()})` : '-'}
-              </p>
-            </div>
-            <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-400">TOP 거래소</p>
-              <p className="mt-1 text-base font-semibold text-amber-300">
-                {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()})` : '-'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-neutral-200">긴급 대응 기록</h3>
-            <Link href="/alert" className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors">
-              긴급 모드로 이동
-            </Link>
-          </div>
-          <div className="mt-4 space-y-2">
-            {alertActions.length === 0 && (
-              <p className="text-xs text-zinc-400">아직 긴급 대응 기록이 없습니다.</p>
-            )}
-            {alertActions.slice(0, 6).map((entry) => (
-              <div key={entry.id} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2.5">
-                <div className="flex items-center justify-between text-xs text-neutral-400">
-                  <span className="font-medium text-neutral-300">{entry.symbol} · {entry.action}</span>
-                  <span>{new Date(entry.created_at).toLocaleString('ko-KR')}</span>
-                </div>
-                {entry.note && (
-                  <p className="mt-1 text-xs text-neutral-400">{entry.note}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-neutral-200">AI 복기 요약</h3>
-            <span className="text-xs text-zinc-400">최근 요청 기준</span>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <select
-              value={aiSymbolFilter}
-              onChange={(event) => setAiSymbolFilter(event.target.value)}
-              className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
-            >
-              {aiSymbolOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option === 'ALL' ? '심볼 전체' : option}
-                </option>
-              ))}
-            </select>
-            <select
-              value={aiTimeframeFilter}
-              onChange={(event) => setAiTimeframeFilter(event.target.value)}
-              className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-300 focus:outline-none focus:border-white/20"
-            >
-              {aiTimeframeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option === 'ALL' ? '타임프레임 전체' : option}
-                </option>
-              ))}
-            </select>
-                <span className="text-xs text-zinc-400 ml-1">
-                  {filteredAiNotes.length} / {aiNotes.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={copyAiFilterLink}
-                  className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-xs text-neutral-300 hover:bg-white/[0.12] hover:text-white"
-                >
-                  {copiedShare ? '복사 완료' : '링크 복사'}
-                </button>
-              </div>
-          {aiNotesError && (
-            <p className="mt-3 text-xs text-rose-300">{aiNotesError}</p>
-          )}
-          {aiNotesLoading && (
-            <p className="mt-3 text-xs text-zinc-400">불러오는 중...</p>
-          )}
-          {!aiNotesLoading && filteredAiNotes.length === 0 && !aiNotesError && (
-            <p className="mt-3 text-xs text-zinc-400">아직 AI 복기 요약이 없습니다.</p>
-          )}
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {filteredAiNotes.map((note) => {
-              const sections = parseAiSections(note.content || '')
-              const header = sections.length > 0 ? sections[0].title : note.title
-              return (
-                <div key={note.id} className="rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-white/10">
-                  <div className="flex items-center justify-between text-xs text-neutral-400">
-                    <span className="font-medium text-neutral-300">{header || 'AI 요약'}</span>
-                    <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                    {note.source_label && (
-                      <span className={SOURCE_BADGE_CLASS}>
-                        {note.source_label}
-                      </span>
-                    )}
-                    {note.venue_name && (
-                      <span className={VENUE_BADGE_CLASS}>
-                        {normalizeVenueLabel(note.venue_name)}
-                      </span>
-                    )}
-                    {note.symbol && (
-                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.symbol}</span>
-                    )}
-                    {note.timeframe && (
-                      <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-neutral-300">{note.timeframe}</span>
-                    )}
-                    {note.symbol && note.candle_time && (
-                      <Link
-                        href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
-                        className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-emerald-300 hover:bg-emerald-500/10 transition-colors"
-                      >
-                        차트 이동
-                      </Link>
-                    )}
-                    {note.bubble_id && (
-                      <Link
-                        href={`/bubbles?bubble_id=${note.bubble_id}`}
-                        className="rounded-full border border-cyan-500/30 px-2 py-0.5 text-cyan-300 hover:bg-cyan-500/10 transition-colors"
-                      >
-                        관련 버블
-                      </Link>
-                    )}
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {(sections.length > 0 ? sections : [{ title: '요약', body: note.content, tone: 'summary' as const }]).map((section) => (
-                      <div
-                        key={`${note.id}-${section.title}`}
-                        className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-90 mb-1">{section.title}</p>
-                        <p className="text-current opacity-90">{section.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* AI Accuracy */}
-          <AccuracyChart accuracy={accuracy} isLoading={isLoadingAccuracy} />
-
-          {/* Tag Performance */}
-          <TagPerformance byTag={stats?.by_tag} isLoading={isLoading} />
-        </div>
-
-        {/* Secondary Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Symbol Performance */}
-          <SymbolPerformance bySymbol={symbolStatsForView} isLoading={isLoading} />
-
-          {/* Calendar */}
-          <CalendarView calendar={calendar} isLoading={isLoading} />
-        </div>
-
-        {/* Period Stats */}
-        {stats?.by_period && Object.keys(stats.by_period).length > 0 && (
-          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-md p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-500">Period Performance</h3>
-              <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
-                {['1h', '4h', '1d'].map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setSelectedPeriod(p as any)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${selectedPeriod === p
-                      ? 'bg-zinc-700 text-white shadow-sm'
-                      : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
-                  >
-                    {p.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {(() => {
-              const data = stats.by_period[selectedPeriod]
-              if (!data) return <p className="text-sm text-zinc-500">No data for this period.</p>
-              const pnl = parseFloat(data.avg_pnl)
-              return (
-                <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-lg font-bold text-zinc-200">
-                      {selectedPeriod === '1h' ? '1시간' : selectedPeriod === '4h' ? '4시간' : '1일'} 후 결과
-                    </span>
-                    <span className={`text-xl font-bold ${data.win_rate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      승률 {data.win_rate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                      <p className="text-xs text-zinc-500 mb-1">평균 PnL</p>
-                      <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
-                      <p className="text-xs text-zinc-500 mb-1">샘플 수</p>
-                      <p className="text-lg font-semibold text-zinc-200">
-                        {data.count}개
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-          </div>
-        )}
-
-
-        {/* Performance Trend */}
-        <div className="mt-6">
-          <PerformanceTrendChart period={filters.period} />
-        </div>
-
-        {/* Notes and Export Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          {/* Review Notes */}
-          <NoteList />
-
-          {/* Export */}
-          <ExportButtons period={filters.period} outcomePeriod={filters.outcomePeriod} />
-        </div>
+        {reviewTab === 'overview' && summarySection}
+        {reviewTab === 'ai' && aiNotesSection}
+        {reviewTab === 'analytics' && analyticsSection}
+        {reviewTab === 'journal' && journalSection}
       </div >
     </div >
   )

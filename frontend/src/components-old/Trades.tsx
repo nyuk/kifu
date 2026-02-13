@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
+import { PageJumpPager } from '../components/ui/PageJumpPager'
 
 type TradeItem = {
   id: string
@@ -33,23 +34,42 @@ const exchangeLabel: Record<string, string> = {
   upbit: 'Upbit',
 }
 
+const PAGE_SIZE = 25
+
 export function Trades() {
   const [items, setItems] = useState<TradeItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageInput, setPageInput] = useState('')
 
   const [exchange, setExchange] = useState('all')
   const [side, setSide] = useState('all')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [symbol, setSymbol] = useState('')
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  useEffect(() => {
+    setCurrentPage(1)
+    setPageInput('1')
+  }, [exchange, side, sortOrder, symbol])
+
+  useEffect(() => {
+    setPageInput(String(currentPage))
+  }, [currentPage])
+
   useEffect(() => {
     const fetchTrades = async () => {
       setLoading(true)
       setError(null)
       try {
-        const params = new URLSearchParams({ page: '1', limit: '200', sort: sortOrder })
+        const params = new URLSearchParams({
+          page: String(currentPage),
+          limit: String(PAGE_SIZE),
+          sort: sortOrder,
+        })
         if (exchange !== 'all') params.set('exchange', exchange)
         if (side !== 'all') params.set('side', side.toUpperCase())
         if (symbol.trim()) params.set('symbol', symbol.trim().toUpperCase())
@@ -65,7 +85,7 @@ export function Trades() {
     }
 
     fetchTrades()
-  }, [exchange, side, sortOrder, symbol])
+  }, [exchange, side, sortOrder, symbol, currentPage])
 
   const stats = useMemo(() => {
     const buyTrades = items.filter((t) => t.side.toUpperCase() === 'BUY')
@@ -133,6 +153,22 @@ export function Trades() {
     }
     return map
   }, [items])
+
+  const jumpToPage = () => {
+    const parsedPage = Number.parseInt(pageInput, 10)
+    if (Number.isNaN(parsedPage) || parsedPage < 1) {
+      setPageInput(String(currentPage))
+      return
+    }
+    setCurrentPage(Math.min(totalPages, Math.max(1, parsedPage)))
+  }
+
+  const handlePageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpToPage()
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -218,6 +254,8 @@ export function Trades() {
           </button>
         </div>
 
+        <div className="text-xs text-zinc-400 mb-4">페이지 {currentPage} / {totalPages}</div>
+
         <div className="flex-1 overflow-y-auto min-h-0">
           {loading && <div className="text-neutral-500 text-sm">불러오는 중...</div>}
           {error && <div className="text-rose-300 text-sm">{error}</div>}
@@ -270,6 +308,22 @@ export function Trades() {
             </div>
           )}
         </div>
+
+        <PageJumpPager
+          totalItems={total}
+          totalPages={totalPages}
+          currentPage={currentPage}
+          pageInput={pageInput}
+          onPageInputChange={setPageInput}
+          onPageInputKeyDown={handlePageInputKeyDown}
+          onFirst={() => setCurrentPage(1)}
+          onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
+          onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+          onLast={() => setCurrentPage(totalPages)}
+          onJump={jumpToPage}
+          disabled={loading}
+          itemLabel="건"
+        />
       </section>
     </div>
   )

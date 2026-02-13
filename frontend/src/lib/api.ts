@@ -25,24 +25,78 @@ const GUEST_FRIENDLY_URLS = [
   '/v1/auth/register',
 ]
 
+type AxiosErrorWithConfig = {
+  config?: {
+    _retry?: boolean
+    url?: string
+    headers?: Record<string, string>
+  }
+}
+
+type RefreshSubscriber = {
+  resolve: (token: string) => void
+  reject: (error: unknown) => void
+}
+
+let isRefreshing = false
+let refreshSubscribers: RefreshSubscriber[] = []
+
+const isGuestFriendlyError = (url: string | undefined): boolean => {
+  return GUEST_FRIENDLY_URLS.some((path) => (url || '').includes(path))
+}
+
+const subscribeTokenRefresh = (subscriber: RefreshSubscriber) => {
+  refreshSubscribers.push(subscriber)
+}
+
+const onTokenRefreshed = (token: string) => {
+  const subscribers = [...refreshSubscribers]
+  refreshSubscribers = []
+  subscribers.forEach((subscriber) => subscriber.resolve(token))
+}
+
+const onRefreshFailed = (error: unknown) => {
+  const subscribers = [...refreshSubscribers]
+  refreshSubscribers = []
+  subscribers.forEach((subscriber) => subscriber.reject(error))
+}
+
 // Response interceptor - handle 401 errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config as AxiosErrorWithConfig['config']
     const requestUrl = originalRequest?.url || ''
 
     // Check if this URL supports guest mode (no redirect on 401)
-    const isGuestFriendly = GUEST_FRIENDLY_URLS.some(url => requestUrl.includes(url))
+    const isGuestFriendly = isGuestFriendlyError(requestUrl)
 
     // If 401 and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error?.response?.status === 401 && !originalRequest?._retry) {
+      if (!originalRequest) {
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
 
       const { refreshToken, setTokens, clearTokens } = useAuthStore.getState()
 
       // Try to refresh token
       if (refreshToken) {
+        if (isRefreshing) {
+          try {
+            const token = await new Promise<string>((resolve, reject) => {
+              subscribeTokenRefresh({ resolve, reject })
+            })
+            originalRequest.headers = originalRequest.headers || {}
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return api(originalRequest)
+          } catch (refreshError) {
+            return Promise.reject(refreshError)
+          }
+        }
+
+        isRefreshing = true
         try {
           const response = await axios.post(`${baseURL}/v1/auth/refresh`, {
             refresh_token: refreshToken,
@@ -50,16 +104,29 @@ api.interceptors.response.use(
 
           const { access_token, refresh_token } = response.data
           setTokens(access_token, refresh_token)
+          isRefreshing = false
+          onTokenRefreshed(access_token)
 
           // Retry original request with new token
+          originalRequest.headers = originalRequest.headers || {}
           originalRequest.headers.Authorization = `Bearer ${access_token}`
           return api(originalRequest)
         } catch (refreshError) {
-          // Refresh failed - clear tokens
-          clearTokens()
+          isRefreshing = false
+          onRefreshFailed(refreshError)
+
+          // Network error should not immediately sign the user out
+          if (!refreshError || !(refreshError as { response?: { status?: number } }).response) {
+            return Promise.reject(refreshError)
+          }
+
+          const refreshStatus = (refreshError as { response?: { status?: number } }).response?.status
+          if ([401, 403].includes(refreshStatus || 0)) {
+            clearTokens()
+          }
 
           // Only redirect for non-guest-friendly URLs
-          if (!isGuestFriendly && typeof window !== 'undefined') {
+          if (!isGuestFriendly && refreshStatus && [401, 403].includes(refreshStatus) && typeof window !== 'undefined') {
             window.location.href = '/login'
           }
           return Promise.reject(refreshError)

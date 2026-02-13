@@ -56,12 +56,12 @@ export function StatsOverview({ stats, isLoading }: Props) {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {cards.map((card) => (
         <div key={card.label} className="rounded-xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-5 transition-colors hover:bg-white/[0.05]">
-          <div className="text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">{card.label}</div>
+          <div className="text-sm font-medium uppercase tracking-wider text-neutral-500 mb-2">{card.label}</div>
           <div className={`text-2xl font-bold ${card.color || 'text-neutral-100'} font-mono tracking-tight`}>
             {card.value}
           </div>
           {card.subtext && (
-            <div className="text-xs text-neutral-400 mt-1">{card.subtext}</div>
+            <div className="text-sm text-neutral-400 mt-1">{card.subtext}</div>
           )}
         </div>
       ))}

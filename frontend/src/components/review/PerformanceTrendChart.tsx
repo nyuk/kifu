@@ -37,10 +37,10 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
-          <div className="h-48 bg-gray-700 rounded"></div>
+          <div className="h-4 bg-white/[0.1] rounded w-1/4 mb-4"></div>
+          <div className="h-48 bg-white/[0.08] rounded"></div>
         </div>
       </div>
     )
@@ -48,8 +48,8 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
 
   if (error) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
-        <div className="text-red-400">{error}</div>
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <div className="text-red-400 text-sm">{error}</div>
       </div>
     )
   }
@@ -63,27 +63,27 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
   const recentData = data.slice(-7)
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-white mb-4">성과 추세</h3>
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <h3 className="text-sm font-medium text-neutral-200 mb-4">성과 추세</h3>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="bg-gray-900 rounded-lg p-3 text-center">
-          <p className="text-gray-400 text-xs mb-1">총 누적 수익</p>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center">
+          <p className="text-zinc-400 text-sm mb-1">총 누적 수익</p>
           <p className={`text-lg font-bold ${
             data[data.length - 1]?.cumulative_pnl >= 0 ? 'text-green-400' : 'text-red-400'
           }`}>
             {data[data.length - 1]?.cumulative_pnl.toFixed(2) || '0.00'}%
           </p>
         </div>
-        <div className="bg-gray-900 rounded-lg p-3 text-center">
-          <p className="text-gray-400 text-xs mb-1">평균 승률</p>
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center">
+          <p className="text-zinc-400 text-sm mb-1">평균 승률</p>
           <p className="text-lg font-bold text-blue-400">
             {(data.reduce((acc, d) => acc + (d.win_rate || 0), 0) / (data.filter(d => d.bubble_count > 0).length || 1)).toFixed(1)}%
           </p>
         </div>
-        <div className="bg-gray-900 rounded-lg p-3 text-center">
-          <p className="text-gray-400 text-xs mb-1">총 버블 수</p>
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center">
+          <p className="text-zinc-400 text-sm mb-1">총 버블 수</p>
           <p className="text-lg font-bold text-white">
             {data.reduce((acc, d) => acc + d.bubble_count, 0)}
           </p>
@@ -91,9 +91,9 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
       </div>
 
       {/* Chart Area */}
-      <div className="relative h-48 bg-gray-900 rounded-lg p-4">
+      <div className="relative h-48 rounded-lg border border-white/5 bg-white/[0.02] p-4">
         {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-gray-500 py-2">
+        <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-sm text-zinc-500 py-2">
           <span>{range.toFixed(1)}%</span>
           <span>0%</span>
           <span>-{range.toFixed(1)}%</span>
@@ -102,7 +102,7 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
         {/* Chart */}
         <div className="ml-12 h-full relative">
           {/* Zero line */}
-          <div className="absolute left-0 right-0 top-1/2 border-t border-gray-700"></div>
+          <div className="absolute left-0 right-0 top-1/2 border-t border-white/10"></div>
 
           {/* Bars */}
           <div className="flex items-end justify-around h-full gap-1">
@@ -130,7 +130,7 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
 
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                    <div className="bg-gray-700 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                    <div className="bg-zinc-700 text-white text-sm rounded px-2 py-1 whitespace-nowrap">
                       <div>{point.date}</div>
                       <div className={point.cumulative_pnl >= 0 ? 'text-green-400' : 'text-red-400'}>
                         {point.cumulative_pnl.toFixed(2)}%
@@ -146,7 +146,7 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
       </div>
 
       {/* X-axis labels */}
-      <div className="flex justify-between mt-2 ml-12 text-xs text-gray-500">
+      <div className="flex justify-between mt-2 ml-12 text-sm text-zinc-500">
         {recentData.map((point) => (
           <span key={point.date}>
             {new Date(`${point.date}T00:00:00`).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
@@ -156,19 +156,19 @@ export function PerformanceTrendChart({ period }: PerformanceTrendChartProps) {
 
       {/* Daily Details */}
       <div className="mt-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-2">최근 기록</h4>
+        <h4 className="text-sm font-medium text-zinc-200 mb-2">최근 기록</h4>
         <div className="space-y-1 max-h-32 overflow-y-auto">
           {[...data].reverse().slice(0, 10).filter(d => d.bubble_count > 0).map((point) => (
             <div
               key={point.date}
-              className="flex justify-between items-center text-sm py-1 px-2 bg-gray-900 rounded"
+              className="flex justify-between items-center text-sm py-1 px-2 rounded border border-white/5 bg-white/[0.02]"
             >
-              <span className="text-gray-400">{point.date}</span>
+              <span className="text-zinc-400">{point.date}</span>
               <div className="flex gap-4">
                 <span className={point.pnl >= 0 ? 'text-green-400' : 'text-red-400'}>
                   {point.pnl >= 0 ? '+' : ''}{point.pnl.toFixed(2)}%
                 </span>
-                <span className="text-gray-500">{point.bubble_count} 버블</span>
+                <span className="text-zinc-500">{point.bubble_count} 버블</span>
               </div>
             </div>
           ))}

@@ -24,6 +24,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
   const [shellTheme, setShellTheme] = useState<ShellTheme>('neutral')
+  const contentClass = 'relative z-10 h-full overflow-y-auto px-4 py-6 md:px-6 lg:px-8'
 
   useEffect(() => {
     setMounted(true)
@@ -91,7 +92,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return (
       <div className="app-shell theme-neutral h-screen overflow-hidden">
         <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-          <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 lg:w-64 flex-shrink-0 backdrop-blur-xl">
+          <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-5 lg:w-64 flex-shrink-0 backdrop-blur-xl">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
               <h1 className="mt-3 text-2xl font-semibold text-neutral-100">Trading Journal</h1>
@@ -119,7 +120,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </aside>
-          <main className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm">
+          <main className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.06] backdrop-blur-sm">
             {children}
           </main>
         </div>
@@ -150,8 +151,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           ))}
         </div>
       </div>
+
       <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="relative flex flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.03] backdrop-blur-xl p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
+        <aside className="relative flex flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.06] backdrop-blur-xl p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
             <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">{t.appTagline}</h1>
@@ -176,9 +178,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={`group relative flex items-center gap-3 rounded-lg h-9 px-3 text-sm font-medium transition-all duration-200 ${isActive
-                    ? item.activeColor || 'bg-white/[0.1] text-white'
-                    : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
-                    } ${item.color || ''}`}
+                  ? item.activeColor || 'bg-white/[0.1] text-white'
+                  : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
+                  } ${item.color || ''}`}
                 >
                   {isActive && (
                     <div className={`absolute left-0 h-full w-[3px] rounded-r-full ${accentClass} shadow-[0_0_12px_rgba(255,255,255,0.3)]`} />
@@ -191,7 +193,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )
             })}
           </nav>
-          <div className="mt-auto rounded-xl border border-white/[0.06] bg-white/[0.04] p-4">
+          <div className="mt-auto rounded-xl border border-white/[0.06] bg-white/[0.06] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{t.sessionLabel}</p>
             <p className="mt-2 text-sm text-zinc-300">
               {t.sessionText}
@@ -219,14 +221,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </aside>
-        <main className="relative min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.02] shadow-inner backdrop-blur-sm">
+        <main className="relative min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.06] shadow-inner backdrop-blur-sm">
           {/* Top Gradient Fade moved to individual pages or could be here globally */}
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-          <div className="relative z-10 h-full overflow-y-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+        <div className={contentClass}>
+          {children}
+        </div>
+      </main>
     </div>
+  </div>
   )
 }

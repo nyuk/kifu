@@ -55,9 +55,9 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-white mb-3">데이터 내보내기</h3>
-      <p className="text-gray-400 text-sm mb-4">
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <h3 className="text-sm font-medium text-neutral-200">데이터 내보내기</h3>
+      <p className="text-sm text-zinc-300 mb-4">
         복기 데이터를 CSV 파일로 내보내 외부에서 분석할 수 있습니다.
       </p>
 
@@ -65,7 +65,7 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
         <button
           onClick={() => handleExport('stats')}
           disabled={isExporting !== null}
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'stats' ? (
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -78,15 +78,15 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
             </svg>
           )}
           <div className="text-left">
-            <div className="text-white font-medium">통계 내보내기</div>
-            <div className="text-gray-400 text-xs">승률, PnL 통계</div>
+            <div className="text-sm font-medium text-neutral-100">통계 내보내기</div>
+            <div className="text-sm text-zinc-300 mt-0.5">승률, PnL 통계</div>
           </div>
         </button>
 
         <button
           onClick={() => handleExport('accuracy')}
           disabled={isExporting !== null}
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'accuracy' ? (
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -99,15 +99,15 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
             </svg>
           )}
           <div className="text-left">
-            <div className="text-white font-medium">AI 정확도</div>
-            <div className="text-gray-400 text-xs">AI 예측 성과</div>
+            <div className="text-sm font-medium text-neutral-100">AI 정확도</div>
+            <div className="text-sm text-zinc-300 mt-0.5">AI 예측 성과</div>
           </div>
         </button>
 
         <button
           onClick={() => handleExport('bubbles')}
           disabled={isExporting !== null}
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'bubbles' ? (
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -120,8 +120,8 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
             </svg>
           )}
           <div className="text-left">
-            <div className="text-white font-medium">버블 데이터</div>
-            <div className="text-gray-400 text-xs">전체 버블 목록</div>
+            <div className="text-sm font-medium text-neutral-100">버블 데이터</div>
+            <div className="text-sm text-zinc-300 mt-0.5">전체 버블 목록</div>
           </div>
         </button>
       </div>

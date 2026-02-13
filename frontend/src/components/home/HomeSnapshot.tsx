@@ -528,7 +528,7 @@ export function HomeSnapshot() {
 
   return (
     <div className={`min-h-screen text-zinc-100 p-4 md:p-8 ${stateTone} transition-colors duration-700 ease-out`}>
-      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+      <div className="w-full flex flex-col gap-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Library Ritual</p>

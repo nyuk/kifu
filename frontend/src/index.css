@@ -6,6 +6,10 @@
 
 body {
   @apply bg-zinc-950 text-zinc-200 font-sans;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -17,6 +21,9 @@ body {
   min-height: 100vh;
   background: #0c0f13;
   color: #f4f4f5;
+  font-size: 1.02rem;
+  letter-spacing: 0.002em;
+  font-weight: 420;
   overflow: clip;
 }
 
@@ -94,6 +101,18 @@ body {
       rgba(0, 0, 0, 0.12) 56%,
       rgba(0, 0, 0, 0.34) 86%,
       rgba(0, 0, 0, 0.50) 100%);
+}
+
+.app-shell .text-zinc-400,
+.app-shell .text-zinc-500,
+.app-shell .text-zinc-600,
+.app-shell .text-neutral-400,
+.app-shell .text-neutral-500,
+.app-shell .text-neutral-600,
+.app-shell .text-stone-400,
+.app-shell .text-stone-500,
+.app-shell .text-stone-600 {
+  color: #bcc2d1;
 }
 
 @layer utilities {

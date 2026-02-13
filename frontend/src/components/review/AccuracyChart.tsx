@@ -18,7 +18,7 @@ const rankMedals = ['', '', '']
 export function AccuracyChart({ accuracy, isLoading }: Props) {
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <div className="h-5 bg-zinc-700 rounded w-40 mb-4" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -37,7 +37,7 @@ export function AccuracyChart({ accuracy, isLoading }: Props) {
 
   if (!accuracy || !accuracy.ranking || accuracy.ranking.length === 0) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <h3 className="text-sm font-medium text-zinc-400 mb-4">AI Provider 정확도</h3>
         <div className="text-center py-4 text-zinc-500">
           데이터가 없습니다
@@ -47,10 +47,10 @@ export function AccuracyChart({ accuracy, isLoading }: Props) {
   }
 
   return (
-    <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-zinc-400">AI Provider 정확도</h3>
-        <span className="text-xs text-zinc-500">
+        <h3 className="text-sm font-medium text-zinc-200">AI Provider 정확도</h3>
+        <span className="text-sm text-zinc-500">
           {accuracy.evaluated_opinions}/{accuracy.total_opinions} 평가됨
         </span>
       </div>
@@ -65,7 +65,7 @@ export function AccuracyChart({ accuracy, isLoading }: Props) {
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{rankMedals[item.rank - 1] || `${item.rank}.`}</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium text-zinc-200">
                     {providerIcons[item.provider] || item.provider}
                   </span>
                 </div>
@@ -86,7 +86,7 @@ export function AccuracyChart({ accuracy, isLoading }: Props) {
                 />
               </div>
               {stats && (
-                <div className="flex gap-4 mt-1 text-xs text-zinc-500">
+                <div className="flex gap-4 mt-1 text-sm text-zinc-500">
                   <span>평가: {stats.evaluated}</span>
                   <span>적중: {stats.correct}</span>
                 </div>

@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
+import { PageJumpPager } from '../ui/PageJumpPager'
 import { FilterGroup, FilterPills } from '../ui/FilterPills'
 import type { PositionItem, PositionsResponse, TimelineItem, TimelineResponse } from '../../types/portfolio'
 import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../../types/trade'
@@ -26,6 +27,8 @@ const formatDateTime = (value?: string) => {
     minute: '2-digit',
   })
 }
+
+const POSITION_PAGE_SIZE = 12
 
 const buildParams = (filters: Filters, cursor?: string | null) => {
   const params = new URLSearchParams()
@@ -61,6 +64,8 @@ export function PortfolioDashboard() {
     skipped: number
     processed: number
   } | null>(null)
+  const [positionPage, setPositionPage] = useState(1)
+  const [positionPageInput, setPositionPageInput] = useState('1')
 
   const statusOptions = useMemo(
     () => [
@@ -100,6 +105,29 @@ export function PortfolioDashboard() {
       openPositions,
     }
   }, [positions, timeline])
+
+  const pagedPositions = useMemo(() => {
+    const start = (positionPage - 1) * POSITION_PAGE_SIZE
+    return positions.slice(start, start + POSITION_PAGE_SIZE)
+  }, [positions, positionPage])
+
+  const positionTotalPages = Math.max(1, Math.ceil(positions.length / POSITION_PAGE_SIZE))
+
+  const jumpToPositionPage = () => {
+    const parsedPage = Number.parseInt(positionPageInput, 10)
+    if (Number.isNaN(parsedPage)) {
+      setPositionPageInput(String(positionPage))
+      return
+    }
+    goToPositionPage(parsedPage)
+  }
+
+  const handlePositionPageKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpToPositionPage()
+    }
+  }
 
   const fetchPositions = useCallback(async () => {
     setLoadingPositions(true)
@@ -307,9 +335,29 @@ export function PortfolioDashboard() {
     }
   }
 
+  const goToPositionPage = (nextPage: number) => {
+    setPositionPage((page) => {
+      const target = Math.max(1, Math.min(positionTotalPages, nextPage))
+      return target === page ? page : target
+    })
+  }
+
+  useEffect(() => {
+    setPositionPage(1)
+  }, [filters])
+
+  useEffect(() => {
+    if (!positionPage || positionTotalPages <= 0) return
+    if (positionPage > positionTotalPages) setPositionPage(positionTotalPages)
+  }, [positionPage, positionTotalPages])
+
+  useEffect(() => {
+    setPositionPageInput(String(positionPage))
+  }, [positionPage])
+
   return (
     <div className="min-h-screen text-neutral-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Portfolio</p>
           <h1 className="text-3xl font-semibold">통합 포트폴리오</h1>
@@ -497,14 +545,16 @@ export function PortfolioDashboard() {
           <div className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Positions</p>
-              <span className="text-xs text-zinc-400">{positions.length} items</span>
+              <span className="text-xs text-zinc-400">
+                {positions.length} items · {positionPage} / {positionTotalPages} 페이지
+              </span>
             </div>
             <div className="mt-4 space-y-3">
               {loadingPositions && positions.length === 0 && <p className="text-xs text-zinc-400">불러오는 중...</p>}
               {!loadingPositions && positions.length === 0 && (
                 <p className="text-xs text-zinc-400">포지션 요약이 없습니다.</p>
               )}
-              {positions.map((position) => (
+              {pagedPositions.map((position) => (
                 <div key={position.key} className="rounded-xl border border-white/5 bg-white/[0.03] p-5 hover:bg-white/[0.04] transition-colors">
                   <p className="text-sm font-semibold">{position.instrument}</p>
                   <p className="text-xs text-zinc-400">
@@ -526,6 +576,22 @@ export function PortfolioDashboard() {
                   </div>
                 </div>
               ))}
+
+              <PageJumpPager
+                totalItems={positions.length}
+                totalPages={positionTotalPages}
+                currentPage={positionPage}
+                pageInput={positionPageInput}
+                onPageInputChange={setPositionPageInput}
+                onPageInputKeyDown={handlePositionPageKeyDown}
+                onFirst={() => goToPositionPage(1)}
+                onPrevious={() => goToPositionPage(positionPage - 1)}
+                onNext={() => goToPositionPage(positionPage + 1)}
+                onLast={() => goToPositionPage(positionTotalPages)}
+                onJump={jumpToPositionPage}
+                itemLabel="개"
+                disabled={loadingPositions}
+              />
             </div>
           </div>
         </section>

@@ -119,7 +119,7 @@ export default function AlertPage() {
 
   return (
     <div className="min-h-full p-4 text-neutral-100 md:p-8">
-      <div className="mx-auto max-w-5xl space-y-5">
+      <div className="w-full space-y-5">
         <header className="rounded-2xl border border-rose-500/30 bg-gradient-to-br from-neutral-900 to-rose-950/40 p-6">
           <p className="text-xs uppercase tracking-[0.3em] text-rose-300/80">Emergency Note</p>
           <h1 className="mt-2 text-3xl font-semibold">긴급 모드</h1>

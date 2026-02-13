@@ -10,7 +10,7 @@ type Props = {
 export function SymbolPerformance({ bySymbol, isLoading }: Props) {
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <div className="h-5 bg-zinc-700 rounded w-32 mb-4" />
         <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
@@ -25,7 +25,7 @@ export function SymbolPerformance({ bySymbol, isLoading }: Props) {
 
   if (symbols.length === 0) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <h3 className="text-sm font-medium text-zinc-400 mb-4">심볼별 성과</h3>
         <div className="text-center py-4 text-zinc-500">
           데이터가 없습니다
@@ -38,9 +38,9 @@ export function SymbolPerformance({ bySymbol, isLoading }: Props) {
   const sortedSymbols = symbols.sort((a, b) => b[1].count - a[1].count)
 
   return (
-    <div className="bg-zinc-800 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-zinc-400 mb-4">심볼별 성과</h3>
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <h3 className="text-sm font-medium text-zinc-200 mb-4">심볼별 성과</h3>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
         {sortedSymbols.map(([symbol, stats]) => {
           const pnl = parseFloat(stats.avg_pnl)
           return (
@@ -50,7 +50,7 @@ export function SymbolPerformance({ bySymbol, isLoading }: Props) {
             >
               <div className="flex items-center gap-2">
                 <span className="font-mono font-medium text-sm">{symbol}</span>
-                <span className="text-xs text-zinc-500">({stats.count})</span>
+                <span className="text-sm text-zinc-300">({stats.count})</span>
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <span className={stats.win_rate >= 50 ? 'text-green-400' : 'text-red-400'}>

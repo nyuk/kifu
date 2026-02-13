@@ -46,7 +46,7 @@ export function CalendarView({ calendar, isLoading }: Props) {
 
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4">
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
         <div className="h-5 bg-zinc-700 rounded w-32 mb-4" />
         <div className="grid grid-cols-7 gap-1">
           {[...Array(35)].map((_, i) => (
@@ -82,14 +82,14 @@ export function CalendarView({ calendar, isLoading }: Props) {
   }
 
   return (
-    <div className="bg-zinc-800 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-zinc-400 mb-4">
-        {year}년 {monthNames[month]}
-      </h3>
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+        <h3 className="text-sm font-medium text-zinc-200 mb-4">
+          {year}년 {monthNames[month]}
+        </h3>
 
       <div className="grid grid-cols-7 gap-1 mb-2">
         {dayNames.map((name) => (
-          <div key={name} className="text-center text-xs text-zinc-500 py-1">
+          <div key={name} className="text-center text-sm text-zinc-500 py-1">
             {name}
           </div>
         ))}
@@ -104,7 +104,7 @@ export function CalendarView({ calendar, isLoading }: Props) {
             <div
               key={i}
               className={`
-                relative h-8 rounded text-center text-xs flex items-center justify-center
+                relative h-8 rounded text-center text-sm flex items-center justify-center
                 transition-colors cursor-pointer
                 ${isCurrentMonth ? getDayColor(data) : 'bg-zinc-800/50 text-zinc-600'}
               `}
@@ -125,7 +125,7 @@ export function CalendarView({ calendar, isLoading }: Props) {
         })}
       </div>
 
-      <div className="flex items-center justify-center gap-4 mt-4 text-xs text-zinc-500">
+      <div className="flex items-center justify-center gap-4 mt-4 text-sm text-zinc-500">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-green-500/40" />
           <span>수익</span>

@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-[#0c0f13] text-zinc-100 antialiased selection:bg-green-500/30">
+      <body className="bg-[#0c0f13] text-zinc-200 antialiased selection:bg-green-500/30">
         <ToastProvider>
           {children}
         </ToastProvider>

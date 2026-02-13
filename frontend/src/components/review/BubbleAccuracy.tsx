@@ -88,7 +88,7 @@ export function BubbleAccuracy({ bubbleId, compact = false }: Props) {
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 text-sm">
         <span className="text-zinc-500">AI 정확도:</span>
         <span
           className={`font-medium ${
@@ -122,7 +122,7 @@ export function BubbleAccuracy({ bubbleId, compact = false }: Props) {
           >
             {accuracyRate}%
           </span>
-          <span className="text-xs text-zinc-500">({correctCount}/{totalCount})</span>
+          <span className="text-sm text-zinc-500">({correctCount}/{totalCount})</span>
         </div>
       </div>
 
@@ -130,7 +130,7 @@ export function BubbleAccuracy({ bubbleId, compact = false }: Props) {
         {data.map((item, idx) => (
           <div
             key={idx}
-            className="flex items-center justify-between text-xs bg-white/[0.04] rounded px-3 py-2"
+            className="flex items-center justify-between text-sm bg-white/[0.04] rounded px-3 py-2"
           >
             <div className="flex items-center gap-2">
               <span className="text-zinc-400">{item.provider}</span>
