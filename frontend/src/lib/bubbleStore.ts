@@ -17,6 +17,7 @@ export interface Bubble {
   timeframe: string;
   ts: number; // epoch ms
   price: number;
+  bubbleType?: string;
   note: string;
   tags?: string[];
   action?: 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE';
@@ -41,8 +42,9 @@ export interface Trade {
 
 interface BubbleState {
   bubbles: Bubble[];
+  totalBubbles: number;
   addBubble: (bubble: Bubble) => void;
-  fetchBubblesFromServer: (limit?: number) => Promise<{ count: number }>;
+  fetchBubblesFromServer: (limit?: number, loadAll?: boolean) => Promise<{ count: number; total: number }>;
   createBubbleRemote: (payload: {
     symbol: string;
     timeframe: string;
@@ -79,28 +81,70 @@ export const useBubbleStore = create<BubbleState>()(
   persist(
     (set, get) => ({
       bubbles: [],
-      addBubble: (bubble) => set((state) => ({ bubbles: [...state.bubbles, bubble] })),
-      fetchBubblesFromServer: async (limit = 2000) => {
-        const params = new URLSearchParams({ page: '1', limit: String(limit), sort: 'desc' })
-        const response = await api.get(`/v1/bubbles?${params.toString()}`)
-        const items = response.data?.items || []
-        const mapped: Bubble[] = items.map((data: any) => ({
-          id: data.id,
-          symbol: data.symbol,
-          timeframe: data.timeframe,
-          ts: new Date(data.candle_time).getTime(),
-          price: Number(data.price),
-          note: data.memo || '',
-          tags: data.tags || [],
-          action: data.action,
-          agents: data.agents || [],
-          asset_class: data.asset_class,
-          venue_name: data.venue_name,
-          created_at: data.created_at || new Date().toISOString(),
-          updated_at: data.updated_at || new Date().toISOString(),
-        }))
-        set({ bubbles: mapped })
-        return { count: mapped.length }
+      totalBubbles: 0,
+      addBubble: (bubble) =>
+        set((state) => {
+          const next = [...state.bubbles, bubble]
+          return {
+            bubbles: next,
+            totalBubbles: state.totalBubbles > 0 ? state.totalBubbles + 1 : next.length,
+          }
+        }),
+      fetchBubblesFromServer: async (limit = 200, loadAll = false) => {
+        const pageLimit = Math.min(200, Math.max(1, Number(limit) || 200))
+        let page = 1
+        let total = 0
+        const mapped: Bubble[] = []
+
+        while (true) {
+          const params = new URLSearchParams({ page: String(page), limit: String(pageLimit), sort: 'desc' })
+          const response = await api.get(`/v1/bubbles?${params.toString()}`)
+          const items = response.data?.items || []
+          const pageTotal = Number(response.data?.total || 0)
+          if (pageTotal > 0) {
+            total = pageTotal
+          }
+
+          const mappedPage: Bubble[] = items.map((data: any) => ({
+            id: data.id,
+            symbol: data.symbol,
+            timeframe: data.timeframe,
+            ts: new Date(data.candle_time).getTime(),
+            price: Number(data.price),
+            bubbleType: data.bubble_type || 'manual',
+            note: data.memo || '',
+            tags: data.tags || [],
+            action: data.action,
+            agents: data.agents || [],
+            asset_class: data.asset_class,
+            venue_name: data.venue_name,
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString(),
+          }))
+
+          mapped.push(...mappedPage)
+
+          if (!loadAll) {
+            break
+          }
+          if (mapped.length >= total && total > 0) {
+            break
+          }
+          if (items.length === 0) {
+            break
+          }
+          if (page * pageLimit >= total && total > 0) {
+            break
+          }
+          if (page > 200) {
+            break
+          }
+          page += 1
+        }
+
+        const finalTotal = Math.max(total, mapped.length)
+        set({ bubbles: mapped, totalBubbles: finalTotal })
+        return { count: mapped.length, total: finalTotal }
       },
       createBubbleRemote: async (payload) => {
         const response = await api.post('/v1/bubbles', payload);
@@ -111,6 +155,7 @@ export const useBubbleStore = create<BubbleState>()(
           timeframe: data.timeframe,
           ts: new Date(data.candle_time).getTime(),
           price: Number(data.price),
+          bubbleType: data.bubble_type || 'manual',
           note: data.memo || '',
           tags: data.tags || [],
           asset_class: data.asset_class,
@@ -119,7 +164,10 @@ export const useBubbleStore = create<BubbleState>()(
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
         };
-        set((state) => ({ bubbles: [...state.bubbles, bubble] }));
+        set((state) => ({
+          bubbles: [...state.bubbles, bubble],
+          totalBubbles: Math.max(state.totalBubbles, state.bubbles.length + 1),
+        }));
         return bubble;
       },
       updateBubbleRemote: async (id, payload) => {
@@ -145,10 +193,17 @@ export const useBubbleStore = create<BubbleState>()(
           bubbles: state.bubbles.map((b) =>
             b.id === id ? { ...b, ...updates, updated_at: new Date().toISOString() } : b
           ),
+          totalBubbles: Math.max(state.totalBubbles, state.bubbles.length),
         })),
       deleteBubble: (id) =>
-        set((state) => ({ bubbles: state.bubbles.filter((b) => b.id !== id) })),
-      replaceAllBubbles: (bubbles) => set({ bubbles }),
+        set((state) => {
+          const next = state.bubbles.filter((b) => b.id !== id)
+          return {
+            bubbles: next,
+            totalBubbles: Math.max(0, state.totalBubbles > 0 ? state.totalBubbles - 1 : next.length),
+          }
+        }),
+      replaceAllBubbles: (bubbles) => set({ bubbles, totalBubbles: bubbles.length }),
       getBubblesForTime: (symbol, timeframe, ts) => {
         return get().bubbles.filter(
           (b) => b.symbol === symbol && b.timeframe === timeframe && b.ts === ts
@@ -254,7 +309,7 @@ export const useBubbleStore = create<BubbleState>()(
       trades: [],
       importTrades: (newTrades) => set((state) => ({ trades: [...state.trades, ...newTrades] })),
       deleteAllTrades: () => set({ trades: [] }),
-      resetSessionData: () => set({ bubbles: [], trades: [] }),
+      resetSessionData: () => set({ bubbles: [], trades: [], totalBubbles: 0 }),
     }),
     {
       name: 'bubble-storage-v2',

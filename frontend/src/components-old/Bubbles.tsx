@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useBubbleStore, type Bubble } from '../lib/bubbleStore'
+import { useBubbleStore } from '../lib/bubbleStore'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 import { PageJumpPager } from '../components/ui/PageJumpPager'
@@ -14,6 +14,7 @@ const PAGE_SIZE = 12
 export function Bubbles() {
   const searchParams = useSearchParams()
   const bubbles = useBubbleStore((state) => state.bubbles)
+  const totalBubbles = useBubbleStore((state) => state.totalBubbles)
   const deleteBubble = useBubbleStore((state) => state.deleteBubble)
   const replaceAllBubbles = useBubbleStore((state) => state.replaceAllBubbles)
   const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
@@ -27,7 +28,7 @@ export function Bubbles() {
   const listContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    fetchBubblesFromServer().catch(() => null)
+    fetchBubblesFromServer(200, true).catch(() => null)
   }, [fetchBubblesFromServer])
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export function Bubbles() {
 
   useEffect(() => {
     const handleRefresh = () => {
-      fetchBubblesFromServer().catch(() => null)
+      fetchBubblesFromServer(200, true).catch(() => null)
     }
     window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
     return () => {
@@ -191,7 +192,7 @@ export function Bubbles() {
         <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Journal</p>
         <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Bubble Library</h2>
         <p className="mt-2 text-sm text-neutral-400">
-          저장된 분석 버블 ({bubbles.length}개) · AI 조언 포함: {stats.withAgents}개
+            저장된 분석 버블 ({totalBubbles.toLocaleString()}개) · AI 조언 포함: {stats.withAgents}개
         </p>
       </header>
 

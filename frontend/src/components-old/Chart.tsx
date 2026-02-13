@@ -133,6 +133,19 @@ const getWeekKey = (value: Date) => {
   return `${date.getUTCFullYear()}-W${weekNo}`
 }
 
+const getBubbleDisplayType = (bubble: Bubble) => (bubble.bubbleType || 'manual').toLowerCase()
+
+const getBubbleDisplayNote = (bubble: Bubble) => {
+  if (getBubbleDisplayType(bubble) === 'auto') {
+    if (bubble.tags?.includes('buy')) return '자동매매: 매수 동기화'
+    if (bubble.tags?.includes('sell')) return '자동매매: 매도 동기화'
+    return '자동 기록: 거래 동기화'
+  }
+  return bubble.note || '-'
+}
+
+const getBubbleSourceBadge = (bubble: Bubble) => (getBubbleDisplayType(bubble) === 'auto' ? '자동' : '수동')
+
 const parseFocusTimestampMs = (raw: string | null) => {
   if (!raw) return null
   const numeric = Number(raw)
@@ -374,7 +387,7 @@ export function Chart() {
   useEffect(() => {
     const handleRefresh = () => {
       setRefreshTick((prev) => prev + 1)
-      fetchBubblesFromServer().catch(() => null)
+      fetchBubblesFromServer(200, true).catch(() => null)
     }
     window.addEventListener('kifu-portfolio-refresh', handleRefresh as EventListener)
     return () => {
@@ -393,7 +406,7 @@ export function Chart() {
       resetSessionData()
       return
     }
-    fetchBubblesFromServer().catch(() => null)
+    fetchBubblesFromServer(200, true).catch(() => null)
   }, [mounted, guestMode, accessToken, fetchBubblesFromServer, resetSessionData])
 
   useEffect(() => {
@@ -1949,10 +1962,11 @@ export function Chart() {
                         <div key={b.id} className="mb-1 last:mb-0 p-1 bg-white/[0.08] rounded">
                           <div className="flex justify-between">
                             <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
+                            <span className="text-xs text-emerald-200/80">{getBubbleSourceBadge(b)}</span>
                             <span>${b.price}</span>
                           </div>
-                          <div className="text-neutral-400 max-w-[240px] break-words line-clamp-2" title={b.note}>
-                            {b.note}
+                          <div className="text-neutral-400 max-w-[240px] break-words line-clamp-2" title={getBubbleDisplayNote(b)}>
+                            {getBubbleDisplayNote(b)}
                           </div>
                         </div>
                       ))}
@@ -2088,6 +2102,7 @@ export function Chart() {
                     <div key={bubble.id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                       <div className="flex items-center justify-between text-xs text-neutral-500">
                         <span>{new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
+                        <span className="text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</span>
                         <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
                           {bubble.action || 'NOTE'}
                         </span>
@@ -2095,7 +2110,7 @@ export function Chart() {
                       <div className="mt-1 text-[10px] text-neutral-500">
                         생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                       </div>
-                      <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{bubble.note}</p>
+                      <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-500">
                         <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.symbol}</span>
                         <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.timeframe}</span>
@@ -2225,13 +2240,14 @@ export function Chart() {
                               </span>
                               <span className="text-xs text-neutral-400">${bubble.price.toLocaleString()}</span>
                             </div>
+                            <div className="mt-0.5 text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</div>
                             <div className="mt-1 text-[10px] text-neutral-500">
                               캔들 {new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                             </div>
                             <div className="mt-0.5 text-[10px] text-neutral-500">
                               생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
                             </div>
-                            <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{bubble.note}</p>
+                            <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
                           </div>
                         ))}
                       </div>
