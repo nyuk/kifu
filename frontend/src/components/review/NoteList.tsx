@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { KeyboardEvent, useState, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { NoteEditor } from './NoteEditor'
+import { PageJumpPager } from '../ui/PageJumpPager'
 import type { ReviewNote } from '../../types/review'
 
 const EMOTION_EMOJI: Record<string, string> = {
@@ -31,6 +32,11 @@ export function NoteList({ bubbleId }: NoteListProps) {
 
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<ReviewNote | null>(null)
+  const [notePageInput, setNotePageInput] = useState('1')
+
+  useEffect(() => {
+    setNotePageInput(String(pagination.page))
+  }, [pagination.page])
 
   useEffect(() => {
     if (bubbleId) {
@@ -71,6 +77,22 @@ export function NoteList({ bubbleId }: NoteListProps) {
     })
   }
 
+  const jumpToNotePage = () => {
+    const targetPage = Number.parseInt(notePageInput, 10)
+    if (Number.isNaN(targetPage) || targetPage < 1) {
+      setNotePageInput(String(pagination.page))
+      return
+    }
+    fetchNotes(targetPage)
+  }
+
+  const handleNotePageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpToNotePage()
+    }
+  }
+
   if (isLoading && notes.length === 0) {
     return (
       <div className="rounded-xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
@@ -91,7 +113,7 @@ export function NoteList({ bubbleId }: NoteListProps) {
         </h3>
         <button
           onClick={handleNewNote}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -111,8 +133,8 @@ export function NoteList({ bubbleId }: NoteListProps) {
           <svg className="mx-auto mb-3 h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p className="text-sm">아직 작성된 노트가 없습니다</p>
-          <p className="mt-1 text-xs opacity-70">매매 복기를 기록해보세요</p>
+            <p className="text-sm">아직 작성된 노트가 없습니다</p>
+          <p className="mt-1 text-sm opacity-70">매매 복기를 기록해보세요</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -156,12 +178,12 @@ export function NoteList({ bubbleId }: NoteListProps) {
 
               {note.lesson_learned && (
                 <div className="mb-3 rounded border-l-2 border-amber-500 bg-amber-900/10 pl-3 py-1.5">
-                  <p className="mb-0.5 text-xs font-medium text-amber-300">배운 점</p>
+                  <p className="mb-0.5 text-sm font-medium text-amber-300">배운 점</p>
                   <p className="text-sm text-neutral-300">{note.lesson_learned}</p>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 {note.tags?.map((tag) => (
                   <span key={tag} className="rounded bg-sky-500/10 px-2 py-0.5 text-sky-300">
                     #{tag}
@@ -175,25 +197,21 @@ export function NoteList({ bubbleId }: NoteListProps) {
       )}
 
       {!bubbleId && pagination.totalPages > 1 && (
-        <div className="mt-6 flex justify-center gap-2">
-          <button
-            onClick={() => fetchNotes(pagination.page - 1)}
-            disabled={pagination.page <= 1}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-neutral-300 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            이전
-          </button>
-          <span className="px-3 py-1.5 text-sm text-zinc-400">
-            {pagination.page} / {pagination.totalPages}
-          </span>
-          <button
-            onClick={() => fetchNotes(pagination.page + 1)}
-            disabled={pagination.page >= pagination.totalPages}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-neutral-300 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            다음
-          </button>
-        </div>
+        <PageJumpPager
+          totalItems={pagination.total}
+          totalPages={pagination.totalPages}
+          currentPage={pagination.page}
+          pageInput={notePageInput}
+          onPageInputChange={setNotePageInput}
+          onPageInputKeyDown={handleNotePageInputKeyDown}
+          onFirst={() => fetchNotes(1)}
+          onPrevious={() => fetchNotes(Math.max(1, pagination.page - 1))}
+          onNext={() => fetchNotes(Math.min(pagination.totalPages, pagination.page + 1))}
+          onLast={() => fetchNotes(pagination.totalPages)}
+          onJump={jumpToNotePage}
+          itemLabel="개"
+          disabled={isLoading}
+        />
       )}
 
       {isEditorOpen && (

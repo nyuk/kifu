@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { type KeyboardEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useI18n } from '../../../src/lib/i18n'
 import { useAlertStore } from '../../../src/stores/alertStore'
 import { AlertCard } from '../../../src/components/alerts/AlertCard'
+import { PageJumpPager } from '../../../src/components/ui/PageJumpPager'
 import type { AlertStatus } from '../../../src/types/alert'
 
 const STATUS_TABS: { value: AlertStatus | 'all'; labelKey: 'statusAll' | 'statusPending' | 'statusBriefed' | 'statusDecided' | 'statusExpired' }[] = [
@@ -20,6 +21,7 @@ export default function AlertsPage() {
   const { alerts, alertsTotal, isLoadingAlerts, alertsError, fetchAlerts } = useAlertStore()
   const [statusFilter, setStatusFilter] = useState<AlertStatus | 'all'>('all')
   const [page, setPage] = useState(0)
+  const [pageInput, setPageInput] = useState('1')
   const limit = 20
 
   useEffect(() => {
@@ -27,7 +29,27 @@ export default function AlertsPage() {
     fetchAlerts(status, limit, page * limit)
   }, [fetchAlerts, statusFilter, page])
 
+  useEffect(() => {
+    setPageInput(String(page + 1))
+  }, [page])
+
   const totalPages = Math.ceil(alertsTotal / limit)
+
+  const jumpToAlertPage = () => {
+    const parsedPage = Number.parseInt(pageInput, 10)
+    if (Number.isNaN(parsedPage) || parsedPage < 1) {
+      setPageInput(String(page + 1))
+      return
+    }
+    setPage(Math.min(totalPages, Math.max(1, parsedPage)) - 1)
+  }
+
+  const handleAlertPageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      jumpToAlertPage()
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,27 +118,21 @@ export default function AlertsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 disabled:opacity-40"
-          >
-            Prev
-          </button>
-          <span className="text-xs text-zinc-400">
-            {page + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
+        <PageJumpPager
+          totalItems={alertsTotal}
+          totalPages={totalPages}
+          currentPage={page + 1}
+          pageInput={pageInput}
+          onPageInputChange={setPageInput}
+          onPageInputKeyDown={handleAlertPageInputKeyDown}
+          onFirst={() => setPage(0)}
+          onPrevious={() => setPage((prev) => Math.max(0, prev - 1))}
+          onNext={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
+          onLast={() => setPage(totalPages - 1)}
+          onJump={jumpToAlertPage}
+          disabled={isLoadingAlerts}
+          itemLabel="건"
+        />
       )}
     </div>
   )
