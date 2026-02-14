@@ -33,6 +33,7 @@ const (
 type ExchangeHandler struct {
 	exchangeRepo  repositories.ExchangeCredentialRepository
 	tradeRepo     repositories.TradeRepository
+	runRepo       repositories.RunRepository
 	encryptionKey []byte
 	client        *http.Client
 	syncer        ExchangeSyncer
@@ -51,10 +52,12 @@ func NewExchangeHandler(
 	tradeRepo repositories.TradeRepository,
 	encryptionKey []byte,
 	syncer ExchangeSyncer,
+	runRepo repositories.RunRepository,
 ) *ExchangeHandler {
 	return &ExchangeHandler{
 		exchangeRepo:  exchangeRepo,
 		tradeRepo:     tradeRepo,
+		runRepo:       runRepo,
 		encryptionKey: encryptionKey,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -92,6 +95,16 @@ type ExchangeTestResponse struct {
 	Success   bool    `json:"success"`
 	Message   string  `json:"message"`
 	ExpiresAt *string `json:"expires_at,omitempty"`
+}
+
+type ExchangeSyncResponse struct {
+	Success       bool   `json:"success"`
+	Message       string `json:"message"`
+	Exchange      string `json:"exchange"`
+	BeforeCount   int    `json:"before_count,omitempty"`
+	AfterCount    int    `json:"after_count,omitempty"`
+	InsertedCount int    `json:"inserted_count,omitempty"`
+	RunID         string `json:"run_id,omitempty"`
 }
 
 type apiRestrictionsResponse struct {
@@ -358,13 +371,36 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 	if !cred.IsValid {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_EXCHANGE", "message": "exchange credential is invalid"})
 	}
+
+	runStartedAt := time.Now().UTC()
+	runMeta := map[string]any{
+		"run_type":   "exchange_sync",
+		"exchange":   cred.Exchange,
+		"started_by": cred.ID.String(),
+	}
+
+	run, err := h.runRepo.Create(c.Context(), userID, "exchange_sync", "running", runStartedAt, mustJSON(runMeta))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
 	beforeCount := h.exchangeTradeCount(c.Context(), userID, cred.Exchange)
+	runMeta["before_count"] = beforeCount
+	runMeta["history_days_requested"] = strings.TrimSpace(c.Query("history_days"))
+	runMeta["full_backfill_requested"] = strings.EqualFold(strings.TrimSpace(c.Query("full_backfill")), "true")
+	_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "running", nil, runMetaJSON(runMeta))
 
 	fullBackfill := strings.EqualFold(strings.TrimSpace(c.Query("full_backfill")), "true")
 	historyDays := 0
 	if raw := strings.TrimSpace(c.Query("history_days")); raw != "" {
 		parsed, parseErr := parsePositiveInt(raw)
 		if parseErr != nil {
+			runFinishedAt := time.Now().UTC()
+			_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", &runFinishedAt, runMetaJSON(map[string]any{
+				"run_id":      run.RunID.String(),
+				"error":       "invalid history_days",
+				"http_status": 400,
+			}))
 			return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "history_days is invalid"})
 		}
 		historyDays = parsed
@@ -386,11 +422,25 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 
 	if syncErr != nil {
 		if syncErr == jobs.ErrUnsupportedExchange {
+			runFinishedAt := time.Now().UTC()
+			_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", &runFinishedAt, runMetaJSON(map[string]any{
+				"run_id":      run.RunID.String(),
+				"exchange":    cred.Exchange,
+				"error":       syncErr.Error(),
+				"http_status": 400,
+			}))
 			return c.Status(400).JSON(fiber.Map{
 				"code":    "UNSUPPORTED_SYNC",
 				"message": "이 거래소는 자동 동기화가 아직 준비중입니다. CSV import를 사용해주세요.",
 			})
 		}
+		runFinishedAt := time.Now().UTC()
+		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", &runFinishedAt, runMetaJSON(map[string]any{
+			"run_id":      run.RunID.String(),
+			"exchange":    cred.Exchange,
+			"error":       syncErr.Error(),
+			"http_status": 502,
+		}))
 		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_SYNC_FAILED", "message": syncErr.Error()})
 	}
 
@@ -399,13 +449,24 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 	if inserted < 0 {
 		inserted = 0
 	}
-	return c.Status(200).JSON(fiber.Map{
-		"success":       true,
-		"message":       "sync completed",
+	runFinishedAt := time.Now().UTC()
+	_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "completed", &runFinishedAt, runMetaJSON(map[string]any{
+		"run_id":        run.RunID.String(),
 		"exchange":      cred.Exchange,
 		"before_count":  beforeCount,
 		"after_count":   afterCount,
 		"inserted_count": inserted,
+		"http_status":   200,
+	}))
+
+	return c.Status(200).JSON(ExchangeSyncResponse{
+		Success:       true,
+		Message:       "sync completed",
+		Exchange:      cred.Exchange,
+		BeforeCount:   beforeCount,
+		AfterCount:    afterCount,
+		InsertedCount: inserted,
+		RunID:         run.RunID.String(),
 	})
 }
 
@@ -524,4 +585,12 @@ func signRequest(secret string, params url.Values) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	_, _ = h.Write([]byte(params.Encode()))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func runMetaJSON(meta map[string]any) json.RawMessage {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return []byte("{}")
+	}
+	return raw
 }

@@ -61,6 +61,8 @@ func Run() error {
 	bubbleRepo := repositories.NewBubbleRepository(pool)
 	tradeRepo := repositories.NewTradeRepository(pool)
 	tradeSyncRepo := repositories.NewTradeSyncStateRepository(pool)
+	runRepo := repositories.NewRunRepository(pool)
+	summaryPackRepo := repositories.NewSummaryPackRepository(pool)
 	aiProviderRepo := repositories.NewAIProviderRepository(pool)
 	aiOpinionRepo := repositories.NewAIOpinionRepository(pool)
 	userAIKeyRepo := repositories.NewUserAIKeyRepository(pool)
@@ -142,7 +144,44 @@ func Run() error {
 		})(c)
 	})
 
-	http.RegisterRoutes(app, userRepo, refreshTokenRepo, subscriptionRepo, exchangeRepo, userSymbolRepo, bubbleRepo, tradeRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, outcomeRepo, accuracyRepo, noteRepo, alertRuleRepo, alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo, channelRepo, verifyCodeRepo, tgSender, tgBotUsername, portfolioRepo, manualPositionRepo, safetyRepo, guidedReviewRepo, poller, encKey, jwtSecret)
+	summaryPackService := services.NewSummaryPackService(tradeRepo)
+
+	http.RegisterRoutes(
+		app,
+		pool,
+		userRepo,
+		refreshTokenRepo,
+		subscriptionRepo,
+		exchangeRepo,
+		userSymbolRepo,
+		bubbleRepo,
+		tradeRepo,
+		aiOpinionRepo,
+		aiProviderRepo,
+		userAIKeyRepo,
+		outcomeRepo,
+		accuracyRepo,
+		noteRepo,
+		alertRuleRepo,
+		alertRepo,
+		alertBriefingRepo,
+		alertDecisionRepo,
+		alertOutcomeRepo,
+		channelRepo,
+		verifyCodeRepo,
+		tgSender,
+		tgBotUsername,
+		portfolioRepo,
+		manualPositionRepo,
+		safetyRepo,
+		guidedReviewRepo,
+		poller,
+		encKey,
+		jwtSecret,
+		runRepo,
+		summaryPackRepo,
+		summaryPackService,
+	)
 
 	go poller.Start(context.Background())
 

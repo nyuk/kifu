@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"strings"
 
 	"github.com/google/uuid"
@@ -152,6 +153,34 @@ func (r *TradeRepositoryImpl) List(ctx context.Context, userID uuid.UUID, filter
 		return nil, 0, rows.Err()
 	}
 	return trades, total, nil
+}
+
+func (r *TradeRepositoryImpl) ListByTimeRange(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]*entities.Trade, error) {
+	query := `
+    SELECT id, user_id, bubble_id, binance_trade_id, exchange, symbol, side, position_side, open_close, reduce_only, quantity, price, realized_pnl, trade_time
+    FROM trades
+    WHERE user_id = $1 AND trade_time >= $2 AND trade_time <= $3
+    ORDER BY trade_time ASC
+  `
+	rows, err := r.pool.Query(ctx, query, userID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trades []*entities.Trade
+	for rows.Next() {
+		var trade entities.Trade
+		if err := rows.Scan(
+			&trade.ID, &trade.UserID, &trade.BubbleID, &trade.BinanceTradeID, &trade.Exchange, &trade.Symbol, &trade.Side, &trade.PositionSide, &trade.OpenClose, &trade.ReduceOnly, &trade.Quantity, &trade.Price, &trade.RealizedPnL, &trade.TradeTime); err != nil {
+			return nil, err
+		}
+		trades = append(trades, &trade)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return trades, nil
 }
 
 func (r *TradeRepositoryImpl) Summary(ctx context.Context, userID uuid.UUID, filter repositories.TradeFilter) (repositories.TradeSummary, []repositories.TradeSideSummary, []repositories.TradeSymbolSummary, error) {

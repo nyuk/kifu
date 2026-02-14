@@ -6,15 +6,18 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/handlers"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/middleware"
+	"github.com/moneyvessel/kifu/internal/services"
 	"golang.org/x/time/rate"
 )
 
 func RegisterRoutes(
 	app *fiber.App,
+	pool *pgxpool.Pool,
 	userRepo repositories.UserRepository,
 	refreshTokenRepo repositories.RefreshTokenRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
@@ -44,6 +47,9 @@ func RegisterRoutes(
 	exchangeSyncer handlers.ExchangeSyncer,
 	encryptionKey []byte,
 	jwtSecret string,
+	runRepo repositories.RunRepository,
+	summaryPackRepo repositories.SummaryPackRepository,
+	summaryPackService *services.SummaryPackService,
 ) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "healthy"})
@@ -51,7 +57,7 @@ func RegisterRoutes(
 
 	authHandler := handlers.NewAuthHandler(userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
 	userHandler := handlers.NewUserHandler(userRepo, subscriptionRepo)
-	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer)
+	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer, runRepo)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo, portfolioRepo)
@@ -65,11 +71,30 @@ func RegisterRoutes(
 	alertNotifHandler := handlers.NewAlertNotificationHandler(alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo)
 	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender, tgBotUsername)
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
-	importHandler := handlers.NewImportHandler(portfolioRepo)
+	importHandler := handlers.NewImportHandler(portfolioRepo, runRepo)
 	connectionHandler := handlers.NewConnectionHandler()
 	safetyHandler := handlers.NewSafetyHandler(safetyRepo)
 	guidedReviewHandler := handlers.NewGuidedReviewHandler(guidedReviewRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
+	packHandler := handlers.NewPackHandler(runRepo, summaryPackRepo, summaryPackService)
+	simReportHandler := handlers.NewSimReportHandler(
+		pool,
+		userRepo,
+		subscriptionRepo,
+		tradeRepo,
+		bubbleRepo,
+		guidedReviewRepo,
+		noteRepo,
+		alertRuleRepo,
+		aiProviderRepo,
+		userAIKeyRepo,
+		userSymbolRepo,
+		portfolioRepo,
+		manualPositionRepo,
+		outcomeRepo,
+		aiOpinionRepo,
+		accuracyRepo,
+	)
 
 	aiRPM := parseIntFromEnv("AI_RATE_LIMIT_RPM", 3)
 	if aiRPM < 1 {
@@ -209,6 +234,11 @@ func RegisterRoutes(
 	imports := api.Group("/imports")
 	imports.Post("/trades", importHandler.ImportTrades)
 
+	packs := api.Group("/packs")
+	packs.Post("/generate", packHandler.Generate)
+	packs.Get("/latest", packHandler.GetLatest)
+	packs.Get("/:pack_id", packHandler.GetByID)
+
 	connections := api.Group("/connections")
 	connections.Post("/", connectionHandler.Create)
 
@@ -222,6 +252,10 @@ func RegisterRoutes(
 	guidedReviews.Post("/items/:id/submit", guidedReviewHandler.SubmitItem)
 	guidedReviews.Post("/:id/complete", guidedReviewHandler.CompleteReview)
 	guidedReviews.Get("/streak", guidedReviewHandler.GetStreak)
+
+	// Admin sim report (dev/operator diagnostic utility)
+	admin := api.Group("/admin")
+	admin.Post("/sim-report/run", simReportHandler.Run)
 }
 
 func parseIntFromEnv(key string, fallback int) int {

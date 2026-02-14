@@ -31,6 +31,50 @@ type ExchangeSyncResponse = {
   before_count?: number
   after_count?: number
   inserted_count?: number
+  run_id?: string
+}
+
+type SummaryPackPayload = {
+  time_range?: {
+    start_ts?: string
+    end_ts?: string
+    timezone?: string
+  }
+  data_sources?: {
+    exchanges?: string[]
+    csv_imported?: boolean
+  }
+  pnl_summary?: {
+    realized_pnl_total?: string | null
+    unrealized_pnl_snapshot?: string | null
+    fees_total?: string | null
+    funding_total?: string | null
+  }
+  activity_summary?: {
+    trade_count?: number
+    notional_volume_total?: string | null
+  }
+}
+
+type SummaryPackResponse = {
+  pack_id: string
+  user_id: string
+  source_run_id: string
+  range: string
+  schema_version: string
+  calc_version: string
+  content_hash: string
+  reconciliation_status: string
+  missing_suspects_count: number
+  duplicate_suspects_count: number
+  normalization_warnings: string[]
+  payload: SummaryPackPayload
+  created_at: string
+}
+
+type PackGenerateResponse = {
+  pack_id: string
+  reconciliation_status: string
 }
 
 const exchangeLabel: Record<ExchangeOption, string> = {
@@ -49,6 +93,10 @@ export function ExchangeConnectionManager() {
   const [syncStartedAtMap, setSyncStartedAtMap] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
   const [guestMode, setGuestMode] = useState(false)
+  const [runIdMap, setRunIdMap] = useState<Record<string, string>>({})
+  const [packMap, setPackMap] = useState<Record<string, SummaryPackResponse>>({})
+  const [packLoadingMap, setPackLoadingMap] = useState<Record<string, boolean>>({})
+  const [packErrorMap, setPackErrorMap] = useState<Record<string, string>>({})
 
   const [exchange, setExchange] = useState<ExchangeOption>('binance_futures')
   const [apiKey, setApiKey] = useState('')
@@ -185,6 +233,10 @@ export function ExchangeConnectionManager() {
       const response = await api.post<ExchangeSyncResponse>(`/v1/exchanges/${item.id}/sync${query}`, undefined, {
         timeout: fullBackfill ? 10 * 60 * 1000 : 2 * 60 * 1000,
       })
+      const runId = response.data.run_id || ''
+      if (runId) {
+        setRunIdMap((prev) => ({ ...prev, [item.id]: runId }))
+      }
       const before = response.data.before_count
       const after = response.data.after_count
       const inserted = response.data.inserted_count
@@ -204,6 +256,58 @@ export function ExchangeConnectionManager() {
     } finally {
       setSyncingMap((prev) => ({ ...prev, [item.id]: false }))
     }
+  }
+
+  const onGeneratePack = async (item: ExchangeItem) => {
+    if (guestMode) return
+    const runID = runIdMap[item.id]
+    if (!runID) {
+      setPackErrorMap((prev) => ({ ...prev, [item.id]: '동기화 run_id가 없습니다. 동기화를 먼저 실행하세요.' }))
+      return
+    }
+
+    setPackLoadingMap((prev) => ({ ...prev, [item.id]: true }))
+    setPackErrorMap((prev) => ({ ...prev, [item.id]: '' }))
+    try {
+      const generateResponse = await api.post<PackGenerateResponse>('/v1/packs/generate', {
+        source_run_id: runID,
+        range: '30d',
+      })
+      const pack = await api.get<SummaryPackResponse>(`/v1/packs/${generateResponse.data.pack_id}`)
+      setPackMap((prev) => ({ ...prev, [item.id]: pack.data }))
+      setStatusMap((prev) => ({ ...prev, [item.id]: '팩 생성 완료' }))
+    } catch (err: any) {
+      const message = err?.response?.data?.message ?? '팩 생성 실패'
+      setPackErrorMap((prev) => ({ ...prev, [item.id]: message }))
+    } finally {
+      setPackLoadingMap((prev) => ({ ...prev, [item.id]: false }))
+    }
+  }
+
+  const onDownloadPack = (pack: SummaryPackResponse) => {
+    const blob = new Blob([JSON.stringify(pack, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `summary-pack-${pack.pack_id}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const formatValue = (value: string | null | undefined) => (value && value.trim() ? value : '-')
+
+  const statusClass = (status: string) => {
+    if (status === 'ok') {
+      return 'border-emerald-400/40 bg-emerald-400/8 text-emerald-100'
+    }
+    if (status === 'warning') {
+      return 'border-amber-400/40 bg-amber-400/8 text-amber-100'
+    }
+    return 'border-rose-400/40 bg-rose-400/8 text-rose-100'
   }
 
   const onDelete = async (item: ExchangeItem) => {
@@ -332,6 +436,14 @@ export function ExchangeConnectionManager() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => onGeneratePack(item)}
+                    disabled={packLoadingMap[item.id] || guestMode}
+                    className="rounded-md border border-fuchsia-400/50 px-2.5 py-1 text-xs font-semibold text-fuchsia-200"
+                  >
+                    {packLoadingMap[item.id] ? '팩 생성 중...' : '팩 생성(30d)'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onDelete(item)}
                     disabled={guestMode}
                     className="rounded-md border border-rose-400/50 px-2.5 py-1 text-xs font-semibold text-rose-200"
@@ -352,6 +464,42 @@ export function ExchangeConnectionManager() {
                 </div>
               )}
               {statusMap[item.id] && <p className="mt-2 text-xs text-neutral-400">{statusMap[item.id]}</p>}
+              {runIdMap[item.id] && (
+                <p className="mt-1 text-[11px] text-neutral-500">최근 동기화 run_id: {runIdMap[item.id]}</p>
+              )}
+              {packErrorMap[item.id] && <p className="mt-2 text-xs text-rose-300">{packErrorMap[item.id]}</p>}
+
+              {packMap[item.id] && (
+                <div className="mt-3 space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                  <div className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] ${statusClass(packMap[item.id].reconciliation_status)}`}>
+                    {packMap[item.id].reconciliation_status.toUpperCase()}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-300">
+                    <div className="rounded-md border border-white/5 bg-white/[0.03] px-2 py-1">
+                      실현손익: {formatValue(packMap[item.id].payload?.pnl_summary?.realized_pnl_total)}
+                    </div>
+                    <div className="rounded-md border border-white/5 bg-white/[0.03] px-2 py-1">
+                      수수료: {formatValue(packMap[item.id].payload?.pnl_summary?.fees_total)}
+                    </div>
+                    <div className="rounded-md border border-white/5 bg-white/[0.03] px-2 py-1">
+                      펀딩: {formatValue(packMap[item.id].payload?.pnl_summary?.funding_total)}
+                    </div>
+                    <div className="rounded-md border border-white/5 bg-white/[0.03] px-2 py-1">
+                      거래수: {(packMap[item.id].payload?.activity_summary?.trade_count ?? '-')?.toString()}
+                    </div>
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    경고: missing {packMap[item.id].missing_suspects_count} / duplicate {packMap[item.id].duplicate_suspects_count}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onDownloadPack(packMap[item.id])}
+                    className="rounded-md border border-sky-400/50 px-2.5 py-1 text-xs font-semibold text-sky-200"
+                  >
+                    JSON 다운로드
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

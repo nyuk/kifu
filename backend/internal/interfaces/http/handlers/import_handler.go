@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"math/big"
 	"strings"
 	"time"
@@ -21,10 +22,28 @@ import (
 
 type ImportHandler struct {
 	portfolioRepo repositories.PortfolioRepository
+	runRepo       repositories.RunRepository
 }
 
-func NewImportHandler(portfolioRepo repositories.PortfolioRepository) *ImportHandler {
-	return &ImportHandler{portfolioRepo: portfolioRepo}
+type ImportResponse struct {
+	Imported               int           `json:"imported"`
+	Skipped                int           `json:"skipped"`
+	Duplicates             int           `json:"duplicates"`
+	Issues                 []importIssue `json:"issues"`
+	IssueCount             int           `json:"issue_count"`
+	IssuesTruncated        bool          `json:"issues_truncated"`
+	PositionsRefreshed     bool          `json:"positions_refreshed"`
+	PositionRefreshError   string        `json:"positions_refresh_error"`
+	Venue                  string        `json:"venue"`
+	Source                 string        `json:"source"`
+	RunID                  string        `json:"run_id"`
+}
+
+func NewImportHandler(portfolioRepo repositories.PortfolioRepository, runRepo repositories.RunRepository) *ImportHandler {
+	return &ImportHandler{
+		portfolioRepo: portfolioRepo,
+		runRepo:       runRepo,
+	}
 }
 
 const maxImportIssues = 100
@@ -126,6 +145,21 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 		accountLabel = "default"
 	}
 
+	runMeta := map[string]interface{}{
+		"run_type":      "trade_csv_import",
+		"source":        source,
+		"venue":         venue,
+		"asset_class":   assetClass,
+		"venue_type":    venueType,
+		"account_label": accountLabel,
+		"address":       address,
+	}
+	runStartedAt := time.Now().UTC()
+	run, err := h.runRepo.Create(c.Context(), userID, "trade_csv_import", "running", runStartedAt, mustJSON(runMeta))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
 	displayName := venueDisplayMap[venue]
 	if displayName == "" {
 		displayName = strings.ToUpper(venue)
@@ -156,11 +190,24 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 	reader.TrimLeadingSpace = true
 	header, err := reader.Read()
 	if err != nil {
+		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+			"run_id":      run.RunID.String(),
+			"venue":       venue,
+			"error":       "failed to read header",
+			"http_status": http.StatusBadRequest,
+		}))
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "failed to read header"})
 	}
 
 	cols, missing := resolveCsvColumns(header)
 	if len(missing) > 0 {
+		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+			"run_id":      run.RunID.String(),
+			"venue":       venue,
+			"error":       "missing columns",
+			"missing":     missing,
+			"http_status": http.StatusBadRequest,
+		}))
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "missing columns: " + strings.Join(missing, ", ")})
 	}
 
@@ -184,6 +231,12 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 			break
 		}
 		if err != nil {
+			_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+				"run_id":      run.RunID.String(),
+				"venue":       venue,
+				"error":       "failed to read csv",
+				"http_status": http.StatusBadRequest,
+			}))
 			return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "failed to read csv"})
 		}
 		rowNumber += 1
@@ -277,6 +330,18 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 		}
 	}
 
+	runFinishedAt := time.Now().UTC()
+	runSummaryMeta := map[string]any{
+		"run_id":                run.RunID.String(),
+		"exchange_rows_imported": imported,
+		"exchange_rows_skipped":  skipped,
+		"exchange_rows_duplicated": duplicates,
+		"positions_refreshed":    positionsRefreshed,
+		"positions_error":        positionRefreshError,
+		"http_status":            http.StatusOK,
+	}
+	_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "completed", &runFinishedAt, mergeJSON(mustJSON(runMeta), runSummaryMeta))
+
 	if report == "csv" {
 		var buffer bytes.Buffer
 		writer := csv.NewWriter(&buffer)
@@ -300,16 +365,17 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"imported":         imported,
-		"skipped":          skipped,
-		"duplicates":       duplicates,
-		"issues":           issues,
-		"issue_count":      len(issues),
-		"issues_truncated": issuesTruncated,
-		"positions_refreshed": positionsRefreshed,
+		"imported":               imported,
+		"skipped":                skipped,
+		"duplicates":             duplicates,
+		"issues":                 issues,
+		"issue_count":            len(issues),
+		"issues_truncated":       issuesTruncated,
+		"positions_refreshed":    positionsRefreshed,
 		"positions_refresh_error": positionRefreshError,
-		"venue":            venue,
-		"source":           source,
+		"venue":                  venue,
+		"source":                 source,
+		"run_id":                 run.RunID.String(),
 	})
 }
 
@@ -684,4 +750,27 @@ func isRowEmpty(row []string) bool {
 		}
 	}
 	return true
+}
+
+func mustJSON(value any) json.RawMessage {
+	if value == nil {
+		return []byte("{}")
+	}
+
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return []byte("{}")
+	}
+	return raw
+}
+
+func mergeJSON(base json.RawMessage, overlay map[string]any) json.RawMessage {
+	merged := map[string]any{}
+	if len(base) > 0 {
+		_ = json.Unmarshal(base, &merged)
+	}
+	for key, value := range overlay {
+		merged[key] = value
+	}
+	return mustJSON(merged)
 }

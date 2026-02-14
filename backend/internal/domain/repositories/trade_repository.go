@@ -65,6 +65,7 @@ type TradeRepository interface {
 	Create(ctx context.Context, trade *entities.Trade) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.Trade, error)
 	List(ctx context.Context, userID uuid.UUID, filter TradeFilter) ([]*entities.Trade, int, error)
+	ListByTimeRange(ctx context.Context, userID uuid.UUID, from, to time.Time) ([]*entities.Trade, error)
 	ListByUserAndSymbol(ctx context.Context, userID uuid.UUID, symbol string) ([]*entities.Trade, error)
 	ListByBubble(ctx context.Context, bubbleID uuid.UUID) ([]*entities.Trade, error)
 	ListUnlinked(ctx context.Context, userID uuid.UUID, limit int) ([]*entities.Trade, error)
