@@ -28,6 +28,28 @@ type TradeListResponse = {
   items: TradeItem[]
 }
 
+type TradeSummaryResponse = {
+  totals?: {
+    total_trades?: number
+    realized_pnl_total?: string
+  }
+  by_side?: Array<{
+    side: string
+    total_trades?: number
+    trade_count?: number
+  }>
+  by_exchange?: Array<{
+    exchange: string
+    total_trades?: number
+    trade_count?: number
+  }>
+  by_symbol?: Array<{
+    symbol: string
+    total_trades?: number
+    trade_count?: number
+  }>
+}
+
 const exchangeLabel: Record<string, string> = {
   binance_futures: 'Binance Futures',
   binance_spot: 'Binance Spot',
@@ -40,7 +62,10 @@ export function Trades() {
   const [items, setItems] = useState<TradeItem[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('')
 
@@ -87,22 +112,46 @@ export function Trades() {
     fetchTrades()
   }, [exchange, side, sortOrder, symbol, currentPage])
 
-  const stats = useMemo(() => {
-    const buyTrades = items.filter((t) => t.side.toUpperCase() === 'BUY')
-    const sellTrades = items.filter((t) => t.side.toUpperCase() === 'SELL')
+  useEffect(() => {
+    const fetchSummary = async () => {
+      setSummaryLoading(true)
+      setSummaryError(null)
+      try {
+        const params = new URLSearchParams()
+        if (exchange !== 'all') params.set('exchange', exchange)
+        if (side !== 'all') params.set('side', side.toUpperCase())
+        if (symbol.trim()) params.set('symbol', symbol.trim().toUpperCase())
+        const response = await api.get<TradeSummaryResponse>(`/v1/trades/summary?${params.toString()}`)
+        setTradeSummary(response.data)
+      } catch {
+        setTradeSummary(null)
+        setSummaryError('요약 지표를 불러오지 못했습니다.')
+      } finally {
+        setSummaryLoading(false)
+      }
+    }
+    fetchSummary()
+  }, [exchange, side, symbol])
 
-    const totalBuyValue = buyTrades.reduce((sum, t) => sum + Number(t.price) * Number(t.quantity), 0)
-    const totalSellValue = sellTrades.reduce((sum, t) => sum + Number(t.price) * Number(t.quantity), 0)
+  const stats = useMemo(() => {
+    const bySide = tradeSummary?.by_side || []
+    const byExchange = tradeSummary?.by_exchange || []
+    const buyRow = bySide.find((row) => row.side?.toUpperCase() === 'BUY')
+    const sellRow = bySide.find((row) => row.side?.toUpperCase() === 'SELL')
+    const futuresRow = byExchange.find((row) => row.exchange === 'binance_futures')
+    const totalTrades = Number(tradeSummary?.totals?.total_trades || total)
+    const realizedPnL = Number(tradeSummary?.totals?.realized_pnl_total || 0)
+    const symbolCount = (tradeSummary?.by_symbol || []).length
 
     return {
-      total: items.length,
-      buys: buyTrades.length,
-      sells: sellTrades.length,
-      totalBuyValue,
-      totalSellValue,
-      futuresCount: items.filter((t) => t.exchange === 'binance_futures').length,
+      total: totalTrades,
+      buys: Number(buyRow?.total_trades || buyRow?.trade_count || 0),
+      sells: Number(sellRow?.total_trades || sellRow?.trade_count || 0),
+      futuresCount: Number(futuresRow?.total_trades || futuresRow?.trade_count || 0),
+      realizedPnL,
+      symbolCount,
     }
-  }, [items])
+  }, [tradeSummary, total])
 
   const futuresActionById = useMemo(() => {
     const map = new Map<string, string>()
@@ -189,14 +238,18 @@ export function Trades() {
           <p className="mt-3 text-2xl font-semibold text-indigo-300">{stats.futuresCount}</p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Total Buy Value</p>
-          <p className="mt-3 text-2xl font-semibold text-green-400">${stats.totalBuyValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Realized PnL</p>
+          <p className={`mt-3 text-2xl font-semibold ${stats.realizedPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {stats.realizedPnL.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Total Sell Value</p>
-          <p className="mt-3 text-2xl font-semibold text-red-400">${stats.totalSellValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Symbols</p>
+          <p className="mt-3 text-2xl font-semibold text-sky-300">{stats.symbolCount}</p>
         </div>
       </section>
+      {summaryLoading && <div className="text-xs text-zinc-400">요약 지표를 계산 중입니다...</div>}
+      {summaryError && <div className="text-xs text-rose-300">{summaryError}</div>}
 
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col flex-1 min-h-0">
         <div className="flex flex-wrap items-center gap-4 mb-4 flex-shrink-0">

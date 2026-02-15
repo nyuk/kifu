@@ -189,11 +189,22 @@ export function PortfolioDashboard() {
       setUsingTradeFallback(false)
       return
     }
+    if (filters.assetClass === 'stock') {
+      setUsingTradeFallback(false)
+      return
+    }
+    if (filters.source !== 'all' && filters.source !== 'api') {
+      setUsingTradeFallback(false)
+      return
+    }
 
     let isActive = true
     const loadFromTradesFallback = async () => {
       try {
-        const response = await api.get<TradeListResponse>('/v1/trades?page=1&limit=500&sort=desc')
+        const params = new URLSearchParams({ page: '1', limit: '500', sort: 'desc' })
+        const venue = normalizeExchangeFilter(filters.venue)
+        if (venue) params.set('exchange', venue)
+        const response = await api.get<TradeListResponse>(`/v1/trades?${params.toString()}`)
         if (!isActive) return
         const trades = response.data.items || []
         if (trades.length === 0) return
@@ -258,7 +269,11 @@ export function PortfolioDashboard() {
         }
 
         setTimeline(timelineItems)
-        setPositions(Array.from(grouped.values()))
+        let fallbackPositions = Array.from(grouped.values())
+        if (filters.status !== 'all') {
+          fallbackPositions = fallbackPositions.filter((position) => position.status === filters.status)
+        }
+        setPositions(fallbackPositions)
         setUsingTradeFallback(true)
       } catch {
         // ignore fallback errors
@@ -268,7 +283,7 @@ export function PortfolioDashboard() {
     return () => {
       isActive = false
     }
-  }, [loadingPositions, loadingTimeline, positions.length, timeline.length])
+  }, [loadingPositions, loadingTimeline, positions.length, timeline.length, filters.assetClass, filters.source, filters.venue, filters.status])
 
   useEffect(() => {
     fetchTradeSummary()

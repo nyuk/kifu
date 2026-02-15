@@ -5,7 +5,8 @@
 # Usage: bash scripts/predeploy-e2e-test.sh [API_URL]
 # =============================================================================
 
-API_URL="${1:-http://127.0.0.1:3000}"
+# Default to local backend dev port used by project
+API_URL="${1:-http://127.0.0.1:8080}"
 API="${API_URL}/api/v1"
 
 # Unique test user per run

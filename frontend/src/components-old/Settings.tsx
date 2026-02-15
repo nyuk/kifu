@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
 import { clearGuestSession } from '../lib/guestSession'
@@ -211,6 +212,21 @@ export function Settings() {
           <p className="mt-3 text-lg font-semibold text-zinc-200">{t.telegramTitle}</p>
           <div className="mt-4">
             <TelegramConnect />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Diagnostics</p>
+          <p className="mt-3 text-lg font-semibold text-zinc-200">30일 사용자 시뮬레이터</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            사용자 행동을 날짜 단위로 압축 실행해 루틴/복기 누락/데이터 누적 상태를 빠르게 점검합니다.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/admin/sim-report"
+              className="inline-flex h-10 items-center rounded-lg border border-sky-300/40 bg-sky-500/20 px-4 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30"
+            >
+              시뮬레이터 열기
+            </Link>
           </div>
         </div>
       </section>

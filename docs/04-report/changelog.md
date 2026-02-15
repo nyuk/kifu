@@ -1,5 +1,40 @@
 # Report Changelog
 
+## [2026-02-13] - Admin Sim Report (Time-Compressed User Test)
+
+### Added
+- Admin diagnostic flow for time-compressed user simulation
+- Backend endpoint `POST /api/v1/admin/sim-report/run`
+- Frontend page `/admin/sim-report` with parameterized run + summary/day-level result table
+- Step-level flow logs per day (`trade_phase`, `guided_review_*`, `note_create`, `alert_*`, `ai_probe`)
+- Target user mode for simulation (`self` / `sandbox`) with sandbox reset support
+- Settings entry link for quick access
+
+### Changed (Consistency Hotfix)
+- Simulation range semantics switched to `end date anchored` generation:
+  - Input date is treated as **end date**, simulator fills past N days.
+- Simulator now seeds cross-tab dependent datasets together:
+  - `trade_events` + `positions` rebuild
+  - `outcomes`
+  - `ai_opinions` + `ai_opinion_accuracies` (mock opinions)
+  - `manual_positions`
+  - `user_symbols`
+- Portfolio fallback behavior tightened:
+  - `asset_class=stock` and non-API source filters no longer fallback to crypto trades.
+- Trades top KPI cards now use summary API (`/v1/trades/summary`) instead of page-local rows.
+
+### Verification
+- Backend: `go test ./...` pass
+- Frontend: `lint/typecheck/build` pass (lint warnings are existing baseline)
+- CLI smoke: temporary user + `days=2` run success
+
+### Deliverables
+- `docs/04-report/features/2026-02-13-admin-sim-report.md`
+- `docs/CHANGELOG.md`
+- `docs/todo.md`
+
+---
+
 ## [2026-02-12] - Dark Leather Texture & Unified Surface Update
 
 ### Changed
@@ -118,4 +153,3 @@
 - Guest mode entry point verification
 - Authentication flow checkpoint
 - Database initialization checks
-

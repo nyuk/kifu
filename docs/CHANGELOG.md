@@ -2,7 +2,25 @@
 
 ## 2026-02-13
 
+### Added
+- 30일 시간 압축 사용자 시뮬레이션 기능 추가:
+  - 백엔드 진단 API `POST /api/v1/admin/sim-report/run`
+  - 거래/버블 생성 + Guided Review 제출/완료 + 복기노트 + 알림룰(생성/정리) + AI 키/프로바이더 점검을 날짜 단위로 자동 실행
+  - 실행 결과(일자별 단계 로그 `steps`, 기능별 성공/실패, 연속 복기 streak) 리포트 반환
+  - 실행 대상 모드 추가:
+    - `target_mode=self` (현재 로그인 계정)
+    - `target_mode=sandbox` (테스트 전용 계정 자동 생성/재사용)
+  - sandbox 모드에서 `sandbox_reset=true` 시 기존 테스트 데이터 정리 후 재생성
+- 운영자 진단 화면 추가:
+  - `/admin/sim-report` 페이지에서 시뮬레이션 파라미터 입력/실행/결과 확인
+  - Settings 탭에서 진입 링크 제공
+
 ### Changed
+- 시뮬레이션 데이터 정합성 보강:
+  - 시뮬레이션 날짜 기준을 `종료일(End Date) 기준 과거 N일`로 변경
+  - 시뮬레이션 실행 시 `trade_events/positions`, `outcomes`, `ai_opinions`, `ai_opinion_accuracies`, `manual_positions`, `user_symbols`까지 동시 생성
+  - 포트폴리오 자산군 필터(`stock`)에서 trades fallback이 코인 데이터를 덮어쓰는 문제 수정
+  - 거래내역 탭 상단 통계를 페이지 일부 데이터가 아닌 `/v1/trades/summary` 기준으로 집계하도록 수정
 - Review AI 카드의 차트 이동 링크를 강화:
   - 심볼 정규화(대문자/공백 제거)
   - 타임프레임 정규화(허용 값 외 `1d` 폴백)
@@ -16,6 +34,12 @@
   - `AI 요약 필터 상태 공유 링크(복사 버튼) 동작 가이드 문구 다듬기` 완료 처리
 
 ### Files Affected
+- `backend/internal/interfaces/http/handlers/sim_report_handler.go`
+- `backend/internal/interfaces/http/routes.go`
+- `frontend/app/(app)/admin/sim-report/page.tsx`
+- `frontend/src/components/portfolio/PortfolioDashboard.tsx`
+- `frontend/src/components-old/Trades.tsx`
+- `frontend/src/components-old/Settings.tsx`
 - `frontend/app/(app)/review/page.tsx`
 - `docs/todo.md`
 
