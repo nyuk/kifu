@@ -15,6 +15,7 @@
 
 구성
 - `context-summary.md`: 현재 상태 핵심 한줄 요약
+- `v1.0-system-overview.md`: 복기 서비스 전체(v1.0) 기준 개요
 - `architecture.md`: 백엔드/프런트 구성과 흐름
 - `api-endpoints.md`: API 목록과 응답 규칙
 - `debug-playbook.md`: 에러 대응, 재현, 검증 체크리스트
@@ -66,6 +67,7 @@ NotebookLM 프롬프트 기본 템플릿
 - 작업 후 `/api/v1/packs/{id}` 조회 결과를 `debug-playbook.md`에 메모(성공/실패/원인).
 
 ### 5) 버전 우선순위 강제 규칙 (v1.0 먼저)
+- v1.0 기준 문서 우선 로딩(가장 먼저): `v1.0-system-overview.md`, `context-summary.md`, `architecture.md`
 - 응답 생성 시 아래 템플릿을 반드시 같이 넣는다.
 - "v1.0 baseline이 기본이다. v1.1은 기능 추가/변경 항목만 부록으로 둔다."
 - "근거 문서 출처를 먼저 정렬: (1) v1.0 문서군, (2) v1.1 문서군."
