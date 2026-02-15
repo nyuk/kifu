@@ -5,6 +5,11 @@
   `summary_packs`를 생성/저장하고 UI에서 조회·다운로드할 수 있도록 v1 스펙을 완성한다.
 - AI 판단 없이 통계/건강검진은 결정론적으로 생성한다.
 
+### 고해상도 문서 링크
+- ADR: [`docs/adr/0001-summary-pack-v1-decisions.md`](../../adr/0001-summary-pack-v1-decisions.md)
+- Runbook: [`docs/runbook/summary-pack-v1.md`](../../runbook/summary-pack-v1.md)
+- Spec: [`docs/spec/summary-pack-v1.md`](../../spec/summary-pack-v1.md)
+
 ## 구현 범위
 
 ### 백엔드
@@ -111,3 +116,5 @@ curl -s "http://127.0.0.1:8080/api/v1/packs/<pack-id>" \
 ## 남은 과제
 - pack 생성 API에 대한 HTTP smoke test(Generate->Get->권한오류) 추가 고려
 - `summary_pack_service` missing 카운트 임계치 확장(현재 규칙으로는 `error` 트리거가 어렵다는 이슈 검토)
+- 멱등성 정책(재시도/연타 대응): 현재는 `source_run_id + range` 조합 중복 허용(매 생성마다 새 `pack_id`)
+  - 자동 생성 비용/중복이 증가하면 ADR/Spec의 정책 전환안을 적용해 최신 1건 재사용 또는 upsert로 전환
