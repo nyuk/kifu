@@ -5,7 +5,7 @@
 
 ## 전제
 - 마이그레이션 `022_create_runs_and_summary_packs.sql` 반영됨
-- 백엔드 API `POST /api/v1/packs/generate`, `GET /api/v1/packs/latest`, `GET /api/v1/packs/{pack_id}` 가 배포됨
+- 백엔드 API `POST /api/v1/packs/generate`, `POST /api/v1/packs/generate-latest`, `GET /api/v1/packs/latest`, `GET /api/v1/packs/{pack_id}` 가 배포됨
 - 사용자 인증 토큰(또는 쿠키 세션) 정상 동작
 
 ## 1. 기본 실행 흐름
@@ -17,6 +17,13 @@
 3. 응답의 `pack_id`를 저장한다.
 4. `GET /api/v1/packs/{pack_id}`로 결과 JSON을 확인한다.
 5. `reconciliation_status`, `missing_suspects_count`, `duplicate_suspects_count`을 리뷰한다.
+
+### v1.1 권장 플로우
+1. 동기화/임포트 완료 후 직접 `run_id` 입력 없이:
+   `POST /api/v1/packs/generate-latest` 호출.
+2. 응답 `source_run_id`, `anchor_ts`를 화면에 표시.
+3. 응답 `pack_id`로 `GET /api/v1/packs/{pack_id}` 조회.
+4. 필요시 `GET /api/v1/packs/latest?range=30d`로 최신값 확인.
 
 ## 2. 점검 우선순위
 
@@ -41,12 +48,22 @@
 
 ### P1: 조회 실패
 - 증상
-  - `PACK_NOT_FOUND` 또는 404 응답
+- `PACK_NOT_FOUND` 또는 404 응답
 - 확인
   - generate가 실제로 200 반환했는지
   - 네트워크 에러로 응답이 중간 손실되지 않았는지
 - 조치
   - `GET /api/v1/packs/latest?range=30d`로 최신 생성 여부 확인
+
+### P0: 최근 완료 run 없음
+- 증상
+  - `404 NO_COMPLETED_RUN`
+- 확인
+  - 인증 사용자 기준 최근 `exchange_sync`/`trade_csv_import`/`portfolio_csv_import` run 중 `status='completed'` 존재 여부
+  - 동기화/임포트 완료 메시지 후 run가 성공으로 마무리됐는지 (`finished_at` 존재 여부)
+- 조치
+  - 동기화/임포트 완료 후 재시도
+  - run가 실패한 경우 로그를 확인해 상태/메타 보완 후 재동기화
 
 ### P2: `reconciliation_status=warning/error`
 - warning 조건
@@ -101,4 +118,3 @@ ORDER BY range, reconciliation_status;
   1) UI에서 버튼 비활성화
   2) API 라우팅 임시 유지(읽기만 허용)
   3) 신규 migration 미적용 상태로 롤백은 하지 말고, root cause fix 후 핫픽스 배포
-

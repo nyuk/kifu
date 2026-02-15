@@ -236,6 +236,7 @@ func RegisterRoutes(
 
 	packs := api.Group("/packs")
 	packs.Post("/generate", packHandler.Generate)
+	packs.Post("/generate-latest", packHandler.GenerateLatest)
 	packs.Get("/latest", packHandler.GetLatest)
 	packs.Get("/:pack_id", packHandler.GetByID)
 

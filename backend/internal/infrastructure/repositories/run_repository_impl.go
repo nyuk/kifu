@@ -85,3 +85,24 @@ func (r *RunRepositoryImpl) UpdateStatus(ctx context.Context, runID uuid.UUID, s
 	_, err := r.pool.Exec(ctx, query, status, *finishedAt, meta, runID)
 	return err
 }
+
+func (r *RunRepositoryImpl) GetLatestCompletedRun(ctx context.Context, userID uuid.UUID) (*entities.Run, error) {
+	query := `
+		SELECT run_id, user_id, run_type, status, started_at, finished_at, meta, created_at
+		FROM runs
+		WHERE user_id = $1
+		  AND status = 'completed'
+		  AND run_type IN ('exchange_sync', 'trade_csv_import', 'portfolio_csv_import')
+		ORDER BY finished_at DESC NULLS LAST, started_at DESC
+		LIMIT 1
+	`
+
+	var run entities.Run
+	err := r.pool.QueryRow(ctx, query, userID).Scan(
+		&run.RunID, &run.UserID, &run.RunType, &run.Status, &run.StartedAt, &run.FinishedAt, &run.Meta, &run.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &run, nil
+}

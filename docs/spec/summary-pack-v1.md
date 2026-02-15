@@ -46,6 +46,46 @@
 - `404 RUN_NOT_FOUND` : 본인 run_id가 아님/삭제됨
 - `500 PACK_SAVE_FAILED` : DB 저장 실패
 
+## 1.1) POST `/api/v1/packs/generate-latest`
+
+### Request
+```json
+{
+  "range": "30d"
+}
+```
+
+#### Fields
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `range` | string(enum) | N | `30d` \| `7d` \| `all` (default: `30d`) |
+
+### Behavior
+- 서버가 인증 사용자의 **최근 성공한 동기화/임포트 run**(`exchange_sync`, `trade_csv_import`, `portfolio_csv_import`) 중 최신 완료된 1개를 자동 선택.
+- 선택 기준: `ORDER BY finished_at DESC NULLS LAST, started_at DESC`
+- `run_id`는 내부에서 결정되며 클라이언트는 알릴 필요 없음.
+
+### Response 200
+```json
+{
+  "pack_id": "c6d4...-uuid",
+  "reconciliation_status": "ok",
+  "source_run_id": "9f1f9b2d-4f2e-4f88-b9d4-...",
+  "anchor_ts": "2026-02-13T09:00:00Z"
+}
+```
+
+#### Response fields
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `pack_id` | string(uuid) | 생성된 Summary Pack id |
+| `reconciliation_status` | enum | `ok` / `warning` / `error` |
+| `source_run_id` | string(uuid) | 서버가 자동 선택한 기준 run |
+| `anchor_ts` | string(ISO8601) | run의 `finished_at` (없으면 `started_at`) |
+
+### Possible Errors
+- `404 NO_COMPLETED_RUN` : 최근 완료 run이 없어 생성할 수 없음
+
 ## 2) GET `/api/v1/packs/latest`
 
 ### Query
@@ -56,6 +96,10 @@ Summary Pack 전체 엔티티 (pack_id, user_id, source_run_id, range, schema_ve
 
 ### Error
 - `404 PACK_NOT_FOUND` : 해당 range의 pack 없음
+
+### 권장 UI 플로우 (v1.1)
+- 기본 동작: `POST /api/v1/packs/generate-latest` (run 자동 선택) + `GET /api/v1/packs/{pack_id}`
+- 참고(고급): 기존 `POST /api/v1/packs/generate`는 디버그/고급 모드 전용으로 유지
 
 ## 3) GET `/api/v1/packs/{pack_id}`
 
@@ -140,4 +184,3 @@ Summary Pack 전체 엔티티 (GetLatest와 동일 형태)
 - 운영 정책 변경 시:
   - 최신 pack 재사용 우선(동일 요청은 기존 pack 반환)
   - 또는 `unique (user_id, source_run_id, range)` 제약 + `ON CONFLICT UPDATE` 전환
-

@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -25,6 +26,17 @@ type PackGenerateRequest struct {
 type PackGenerateResponse struct {
 	PackID               uuid.UUID `json:"pack_id"`
 	ReconciliationStatus string    `json:"reconciliation_status"`
+}
+
+type PackGenerateLatestResponse struct {
+	PackID               uuid.UUID `json:"pack_id"`
+	ReconciliationStatus string    `json:"reconciliation_status"`
+	SourceRunID          uuid.UUID `json:"source_run_id"`
+	AnchorTs             string    `json:"anchor_ts"`
+}
+
+type PackGenerateLatestRequest struct {
+	Range string `json:"range"`
 }
 
 func NewPackHandler(
@@ -88,6 +100,55 @@ func (h *PackHandler) Generate(c *fiber.Ctx) error {
 	return c.Status(200).JSON(PackGenerateResponse{
 		PackID:               pack.PackID,
 		ReconciliationStatus: pack.ReconciliationStatus,
+	})
+}
+
+func (h *PackHandler) GenerateLatest(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	var req PackGenerateLatestRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid request body"})
+	}
+
+	rangeValue := strings.TrimSpace(req.Range)
+	if rangeValue == "" {
+		rangeValue = "30d"
+	}
+
+	run, err := h.runRepo.GetLatestCompletedRun(c.Context(), userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
+		}
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if run == nil {
+		return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
+	}
+
+	pack, _, err := h.summaryPackSvc.GeneratePack(c.Context(), userID, run, rangeValue)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "PACK_GENERATE_FAILED", "message": err.Error()})
+	}
+
+	if err := h.summaryPackRepo.Create(c.Context(), pack); err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "PACK_SAVE_FAILED", "message": err.Error()})
+	}
+
+	anchorTs := run.StartedAt.Format(time.RFC3339)
+	if run.FinishedAt != nil {
+		anchorTs = run.FinishedAt.Format(time.RFC3339)
+	}
+
+	return c.Status(200).JSON(PackGenerateLatestResponse{
+		PackID:               pack.PackID,
+		ReconciliationStatus: pack.ReconciliationStatus,
+		SourceRunID:          run.RunID,
+		AnchorTs:             anchorTs,
 	})
 }
 

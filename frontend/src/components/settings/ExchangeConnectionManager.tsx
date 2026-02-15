@@ -72,9 +72,11 @@ type SummaryPackResponse = {
   created_at: string
 }
 
-type PackGenerateResponse = {
+type PackGenerateLatestResponse = {
   pack_id: string
   reconciliation_status: string
+  source_run_id: string
+  anchor_ts: string
 }
 
 const exchangeLabel: Record<ExchangeOption, string> = {
@@ -260,25 +262,23 @@ export function ExchangeConnectionManager() {
 
   const onGeneratePack = async (item: ExchangeItem) => {
     if (guestMode) return
-    const runID = runIdMap[item.id]
-    if (!runID) {
-      setPackErrorMap((prev) => ({ ...prev, [item.id]: '동기화 run_id가 없습니다. 동기화를 먼저 실행하세요.' }))
-      return
-    }
 
     setPackLoadingMap((prev) => ({ ...prev, [item.id]: true }))
     setPackErrorMap((prev) => ({ ...prev, [item.id]: '' }))
+
     try {
-      const generateResponse = await api.post<PackGenerateResponse>('/v1/packs/generate', {
-        source_run_id: runID,
-        range: '30d',
-      })
-      const pack = await api.get<SummaryPackResponse>(`/v1/packs/${generateResponse.data.pack_id}`)
+      const latestResponse = await api.post<PackGenerateLatestResponse>('/v1/packs/generate-latest', { range: '30d' })
+      const pack = await api.get<SummaryPackResponse>(`/v1/packs/${latestResponse.data.pack_id}`)
       setPackMap((prev) => ({ ...prev, [item.id]: pack.data }))
-      setStatusMap((prev) => ({ ...prev, [item.id]: '팩 생성 완료' }))
+      setStatusMap((prev) => ({
+        ...prev,
+        [item.id]: `팩 생성 완료 · 기준 시각 ${latestResponse.data.anchor_ts}`,
+      }))
     } catch (err: any) {
-      const message = err?.response?.data?.message ?? '팩 생성 실패'
-      setPackErrorMap((prev) => ({ ...prev, [item.id]: message }))
+      setPackErrorMap((prev) => ({
+        ...prev,
+        [item.id]: err?.response?.data?.message ?? '팩 생성 실패',
+      }))
     } finally {
       setPackLoadingMap((prev) => ({ ...prev, [item.id]: false }))
     }
