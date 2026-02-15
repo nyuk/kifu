@@ -151,16 +151,20 @@ user_streaks
 
 ## 9. 우선순위
 
-### MVP (Phase 1)
-- [ ] 홈 진입점 카드
-- [ ] Layer 1~4 질문 플로우 (단일 거래)
-- [ ] 일간 카드 리스트
-- [ ] 기본 스트릭 카운터
+### MVP (Phase 1) - 구현 완료
+- [x] Layer 1~4 질문 플로우 (단일 거래)
+- [x] 기본 스트릭 카운터 (user_streaks 테이블)
+- [x] GET /guided-reviews/today, POST /items/:id/submit, POST /:id/complete, GET /streak
+- [x] 프론트엔드 GuidedReviewFlow.tsx (4-layer 플로우)
+- [x] 추가 DB 필드: symbol, side, pnl, trade_count (엔티티 확장)
+- [x] in_progress 상태 추가 (pending/in_progress/completed/skipped)
+- [ ] 홈 진입점 카드 (미구현)
+- [ ] 일간 카드 히스토리 리스트 엔드포인트 (미구현)
 
-### Phase 2
-- [ ] 다수 거래 묶기
-- [ ] 비거래일 복기
-- [ ] 주간 인사이트 (AI)
+### Phase 2 - 미구현
+- [ ] 다수 거래 묶기 (5+ 동일 심볼 거래 번들링)
+- [ ] 비거래일 복기 (프론트 부분 구현, 백엔드 엔드포인트 필요)
+- [ ] 주간 인사이트 (AI) - 백엔드 Job/엔드포인트 필요
 
 ### Phase 3
 - [ ] 푸시 알림

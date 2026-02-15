@@ -25,7 +25,7 @@ func (r *SummaryPackRepositoryImpl) Create(ctx context.Context, pack *entities.S
 		INSERT INTO summary_packs (
 			pack_id, user_id, source_run_id, range, schema_version, calc_version, content_hash,
 			reconciliation_status, missing_suspects_count, duplicate_suspects_count, normalization_warnings, payload
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		pack.PackID,

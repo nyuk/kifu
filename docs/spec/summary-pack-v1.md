@@ -52,7 +52,7 @@
 - `range` (string, default `30d`)
 
 ### Response
-단일 Summary Pack 객체 (아래 Payload section 참조).
+Summary Pack 전체 엔티티 (pack_id, user_id, source_run_id, range, schema_version, calc_version, content_hash, reconciliation_status, missing/duplicate counts, normalization_warnings, payload JSONB, created_at 포함).
 
 ### Error
 - `404 PACK_NOT_FOUND` : 해당 range의 pack 없음
@@ -63,7 +63,7 @@
 - `pack_id` (string(uuid))
 
 ### Response
-Summary Pack 전체 JSON payload
+Summary Pack 전체 엔티티 (GetLatest와 동일 형태)
 
 ## 4) Summary Pack payload schema
 

@@ -71,13 +71,11 @@ cd backend && go build -o main ./cmd/...
 
 ### Error Handling
 - Frontend: try-catch + toast 알림
-- Backend: 표준 에러 응답 형식 사용
+- Backend: 표준 에러 응답 형식 사용 (flat format)
   ```json
   {
-    "error": {
-      "code": "VALIDATION_ERROR",
-      "message": "Invalid input"
-    }
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input"
   }
   ```
 

@@ -396,9 +396,10 @@ PATCH  /api/v1/alerts/:id/dismiss   - 알림 무시
 ### Notification Settings
 ```
 POST   /api/v1/notifications/telegram/connect    - 텔레그램 연동 시작 (인증코드 발급)
-POST   /api/v1/notifications/telegram/verify     - 인증코드 확인
 DELETE /api/v1/notifications/telegram             - 텔레그램 연동 해제
 GET    /api/v1/notifications/channels             - 연동된 채널 목록
+POST   /api/v1/webhook/telegram                   - 텔레그램 웹훅 (인증코드 확인 포함)
+# Note: telegram/verify는 별도 엔드포인트 대신 웹훅으로 처리 (사용자가 텔레그램을 떠나지 않는 UX)
 ```
 
 ### Telegram Webhook
