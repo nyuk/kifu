@@ -26,3 +26,41 @@ NotebookLM 프롬프트 기본 템플릿
 - "이번 대화는 docs/nlm 기준으로만 답변. 추측이면 `추측`으로 표시하고 근거 파일명을 붙여줘."
 - "요청: 에러 로그 기준 원인 가설 3개 + 최소 수정안만 제시. 각 안에 영향 범위/검증 포인트를 달아줘."
 - "요청: 이번 주 변경 내역을 generate-latest 플로우 중심으로 시간순으로 정리해줘."
+
+## NotebookLM 업로드 실행 순서 (권장)
+
+### 1) 업로드 전 점검
+- 업로드 대상 폴더 확인:
+  - `docs/nlm/repomix-output/backend.md`
+  - `docs/nlm/repomix-output/frontend.md`
+  - `docs/nlm/repomix-output/docs.md`
+  - `docs/nlm/repomix-output/project-summary.md`
+- 최신성 확인:
+  - `docs/nlm/context-summary.md`의 커밋 라인이 직전 변경 커밋을 반영하는지 확인
+  - `README.md` 및 핵심 문서에서 `/api/v1/packs/generate-latest` 기준이 맞는지 확인
+- 민감정보 점검:
+  - `.env`, API Key/Secret, 개인식별정보, 계좌/로그인 관련 원문이 없는지 재확인
+
+### 2) 추천 업로드 순서(검색 효율 극대화)
+1. `docs/nlm/context-summary.md`
+2. `docs/nlm/architecture.md`
+3. `docs/nlm/api-endpoints.md`
+4. `docs/nlm/debug-playbook.md`
+5. `docs/nlm/security-baseline.md`
+6. `docs/nlm/mindmap-notebooklm.md`
+7. `docs/nlm/repomix-output/backend.md`
+8. `docs/nlm/repomix-output/frontend.md`
+9. `docs/nlm/repomix-output/docs.md`
+10. `docs/nlm/repomix-output/project-summary.md`
+
+### 3) 업로드 후 즉시 질문 템플릿
+- "이 문서셋을 기준으로 `generate-latest` 플로우 의존성 지도를 8줄로 정리해줘."
+- "실패 시나리오 3개(NO_COMPLETED_RUN, 500, 사용자 스코프 이슈) 기준으로 원인 가설을 우선순위로 정리해줘."
+- "보안 기준으로 위험 요소 5개와 대응 체크리스트를 생성해줘."
+- "다음 배포 전 점검 항목 10개로 체크리스트 만들어줘."
+
+### 4) 업데이트 루틴
+- 수정이 있을 때마다 repomix 산출본을 갱신 후 같은 파일을 덮어쓴다.
+- 새 채팅 첫 메시지 시작 문구:
+  - "`docs/nlm/context-summary.md`와 `docs/nlm/repomix-output/*` 기준으로 이어서."
+- 작업 후 `/api/v1/packs/{id}` 조회 결과를 `debug-playbook.md`에 메모(성공/실패/원인).
