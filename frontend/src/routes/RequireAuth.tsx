@@ -20,7 +20,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, hasHydrated, router, pathname])
 
   if (!mounted) {
-    return isDemoMode ? null : <>{children}</>
+    return null
   }
 
   if (!hasHydrated) {
