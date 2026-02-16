@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: kifu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - kifu_pgdata:/var/lib/postgresql/data
+    networks:
+      - kifu-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kifu-backend
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - kifu-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE}
+        NEXT_PUBLIC_GUEST_EMAIL: ${NEXT_PUBLIC_GUEST_EMAIL}
+        NEXT_PUBLIC_GUEST_PASSWORD: ${NEXT_PUBLIC_GUEST_PASSWORD}
+    container_name: kifu-frontend
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_APP_MODE: ${NEXT_PUBLIC_APP_MODE}
+      NEXT_PUBLIC_GUEST_EMAIL: ${NEXT_PUBLIC_GUEST_EMAIL}
+      NEXT_PUBLIC_GUEST_PASSWORD: ${NEXT_PUBLIC_GUEST_PASSWORD}
+    depends_on:
+      - backend
+    ports:
+      - "3001:3000"
+    networks:
+      - kifu-network
+
+volumes:
+  kifu_pgdata:
+
+networks:
+  kifu-network:
+    driver: bridge
