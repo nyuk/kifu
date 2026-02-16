@@ -6,7 +6,35 @@ const defaultLocalBaseURL = 'http://127.0.0.1:8080/api'
 
 const normalizeBaseURL = (value: string): string => value.replace(/\/+$/, '')
 
-const baseURL = normalizeBaseURL(configuredBaseURL || defaultLocalBaseURL)
+const safeApiBaseURL = (value: string | undefined): string => {
+  const raw = normalizeBaseURL(value ? value.trim() : '')
+  if (!raw) return defaultLocalBaseURL
+
+  if (/^https?:\/\//.test(raw)) {
+    try {
+      const parsed = new URL(raw)
+
+      // Legacy frontend env incorrectly set to :8080 for public domain.
+      // Strip this so login/signup calls stay on HTTPS page origin with /api rewrite path.
+      if (parsed.hostname === 'kifu.moneyvessel.kr' && parsed.port === '8080') {
+        parsed.port = ''
+      }
+
+      const pathname = parsed.pathname.replace(/\/+$/, '')
+      if (!pathname.endsWith('/api')) {
+        parsed.pathname = `${pathname}/api`
+      }
+
+      return parsed.toString()
+    } catch {
+      return defaultLocalBaseURL
+    }
+  }
+
+  return raw
+}
+
+const baseURL = safeApiBaseURL(configuredBaseURL || defaultLocalBaseURL)
 
 export const api = axios.create({
   baseURL,
