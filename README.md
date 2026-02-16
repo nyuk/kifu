@@ -1,7 +1,7 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Korean is optional supplementary context when needed.
 
 ![KIFU](frontend/public/logo/kifu-logo-wordmark.svg)
 
@@ -9,7 +9,7 @@
 
 **A trading journal and AI review platform for better decision quality.**
 
-[🇺🇸 English](./README.md) · [🇰🇷 한국어](./README.ko.md)
+[🇺🇸 English](./README.md) · [🇰🇷 Korean](./README.ko.md)
 
 ![KIFU Hero](docs/marketing/assets/readme-hero-home.svg)
 

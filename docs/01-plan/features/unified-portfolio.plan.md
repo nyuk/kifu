@@ -1,7 +1,7 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Korean is optional supplementary context when needed.
 
 # Plan: Unified Portfolio & Timeline (CEX/DEX/Stocks)
 
@@ -10,64 +10,64 @@
 
 ## Objective
 
-코인(CEX/DEX)과 주식(Broker)을 하나의 타임라인으로 통합하고, 자산군/거래소/소스별 필터와 포지션 요약을 제공한다. CSV → API → 지갑 연결 순으로 단계 확장한다.
+Combine coin (CEX/DEX) and stock flows into one timeline, with filtering and position summary by venue/source/class.
 
 ## Requirements
 
 ### Must Have
-- [ ] 통합 데이터 모델 확정 (asset_class, venue_type, venue, instrument, source)
-- [ ] 하나의 타임라인 뷰 (CEX/DEX/주식 섞어서 표시)
-- [ ] 필터: 자산군/거래소/소스/기간
-- [ ] 포지션 요약(포지션 단위 합산) + 체결 단위 보기
-- [ ] KRW/USDT 동시 표시 (환율 캐시)
-- [ ] CSV 수입 통합 (코인/주식/DEX 모두)
+- Finalize unified data model (`asset_class`, `venue_type`, `venue`, `instrument`, `source`).
+- Single timeline view for mixed CEX/DEX/stocks.
+- Filters for asset class, venue, source, and date range.
+- Position summary + fill-level summary.
+- Display KRW and USDT simultaneously using FX cache.
+- Unified CSV import for coin/stocks/DEX.
 
 ### Should Have
-- [ ] CEX API 연동: Binance, Upbit, Bybit, Bithumb
-- [ ] 주식 API 연동: 한국투자증권
-- [ ] DEX API 연동: Hyperliquid, Jupiter, Uniswap
+- CEX API integration: Binance, Upbit, Bybit, Bithumb
+- Stock API integration: Korea Investment Securities
+- DEX API integration: Hyperliquid, Jupiter, Uniswap
 
 ### Could Have
-- [ ] 지갑 연결 (온체인 자동 수집)
-- [ ] LP/스테이킹 이벤트 반영
-- [ ] 자동 포지션 라벨링
+- Wallet connection (on-chain auto-sync)
+- LP/staking event support
+- Auto position labeling
 
 ### Out of Scope (Now)
-- 자동매매/주문 실행
-- 소셜 기능/공유
+- Auto-trading/execution
+- Social-sharing features
 
 ## Success Criteria
 
-- [ ] 동일 기간에서 CEX/DEX/주식 이벤트가 하나의 타임라인에 정확히 표시됨
-- [ ] 필터 변경 시 2초 이내 응답
-- [ ] CSV 수입 후 1분 내 타임라인 반영
-- [ ] KRW/USDT 전환 시 UI 깨짐 없음
+- CEX/DEX/stock events are correctly shown in one timeline.
+- Filter updates in under 2 seconds.
+- Timeline reflects CSV imports within 1 minute.
+- KRW/USDT conversion does not break UI when both are shown.
 
 ## Implementation Phases
 
-### Phase 1: 공통 모델 + CSV 통합
-1. DB 스키마 설계 및 마이그레이션
-2. CSV 임포트 통합 엔드포인트
-3. 타임라인 API + 기본 UI
-4. 포지션 요약 산출(기본 룰)
+### Phase 1: Core model + CSV unification
+1. Define DB schema and migration.
+2. Unified CSV import endpoint.
+3. Timeline API and baseline UI.
+4. Position summary by base aggregation.
 
-### Phase 2: API 연동
+### Phase 2: API integration
 1. Binance → Upbit → Bybit → Bithumb
-2. 한국투자증권 API
+2. Korea Investment Securities API
 3. Hyperliquid / Jupiter / Uniswap
 
-### Phase 3: 지갑 연결
-1. 지갑 연결 + 온체인 인덱서 연동
-2. LP/스테이킹 이벤트 확장
+### Phase 3: Wallet connection
+1. Wallet connect + on-chain indexer integration
+2. LP/staking event expansion
 
 ## Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| 심볼 표준화 실패 | High | instrument 매핑 테이블 + 정규화 규칙 |
-| DEX 이벤트 스키마 다양성 | High | event_type + metadata(JSONB)로 확장 |
-| 환율 적용 불일치 | Medium | fx_rate 테이블 + 기준 시점 명시 |
-| 대량 데이터 성능 | Medium | 파티셔닝/인덱스/요약 캐시 |
+| Symbol normalization failure | High | Instrument mapping table + normalization rule |
+| DEX event schema divergence | High | Extendable `event_type` + metadata(JSONB) |
+| FX conversion mismatch | Medium | `fx_rate` table and explicit reference timestamp |
+| High-volume performance | Medium | Partitioning, indexing, summary cache |
 
 ## Approval
 - [ ] Approved by:

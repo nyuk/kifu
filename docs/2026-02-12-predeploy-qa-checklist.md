@@ -1,89 +1,89 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
 # 2026-02-12 Pre-Deploy QA Checklist
 
-배포 전 핵심 플로우/데이터 정합성/운영 안전장치 점검용 체크리스트.
+Pre-deployment checklist for flow validity, data consistency, and operational safeguards.
 
-## 1) 핵심 플로우 E2E
+## 1) Core E2E flow
 
-- [ ] 회원가입 완료
-- [ ] 온보딩 분기 확인
-  - [ ] 회원가입 직후 `거래내역 불러오기 / 초기 성향 테스트` 선택 노출
-  - [ ] 성향 테스트 선택 시 테스트 페이지 진입
-  - [ ] 임포트 선택 시 임포트 페이지 진입
-- [ ] 로그인 후 홈 진입 성공
-- [ ] 차트 진입 후 심볼 변경 정상 동작
-- [ ] 말풍선 생성/저장 성공
-- [ ] `Ask AI` 호출 성공 (에러 없이 응답 카드 노출)
-- [ ] 복기 탭에서 방금 생성한 데이터 확인 가능
+- [ ] Signup complete
+- [ ] Onboarding branch check
+  - [ ] Post-signup selection: `Import trades / Start mindset test`
+  - [ ] Test path opens correctly
+  - [ ] Import path opens correctly
+- [ ] Login and landing to `/home` succeeds
+- [ ] Symbol switching works in chart
+- [ ] Bubble create/save succeeds
+- [ ] `Ask AI` succeeds without UI errors
+- [ ] Review tab shows newly created records
 
-메모:
-
----
-
-## 2) 거래 동기화 & 데이터 정합성
-
-- [ ] 업비트 동기화 성공
-- [ ] 바이낸스 동기화 성공
-- [ ] 최신 거래(실거래 기준)가 거래내역 탭에 보임
-- [ ] 홈/포트폴리오/복기 요약 수치가 거래내역과 크게 어긋나지 않음
-- [ ] 동일 거래 중복 노출 없음
-- [ ] 날짜/시간 정합성 확인
-  - [ ] 캔들 시간
-  - [ ] 생성 시간
-  - [ ] 복기 표시 시간
-
-메모:
+Notes:
 
 ---
 
-## 3) UI/UX 최소 품질 확인
+## 2) Exchange sync and consistency
 
-- [ ] 로그인 실패 문구가 너무 빨리 사라지지 않음
-- [ ] 로그인 실패 시 입력값이 불필요하게 초기화되지 않음
-- [ ] 온보딩 화면 정렬(세로 중앙) 정상
-- [ ] 차트 상단 컨트롤이 과도하게 겹치지 않음
-- [ ] 말풍선/포지션 마커가 차트 바깥으로 심하게 이탈하지 않음
-- [ ] 모바일(또는 좁은 화면)에서 모달 저장 버튼 접근 가능
+- [ ] Upbit sync succeeds
+- [ ] Binance sync succeeds
+- [ ] Most recent real trades appear in trades list
+- [ ] Home / portfolio / review KPI values are approximately consistent with trade data
+- [ ] No duplicate trade records
+- [ ] Timestamp consistency
+  - [ ] Candle time
+  - [ ] Created time
+  - [ ] Review display time
 
-메모:
-
----
-
-## 4) AI 호출/비용 보호
-
-- [ ] `Ask AI` 버튼 연타 방지 동작
-- [ ] 실패 시 사용자 안내 문구 노출
-- [ ] 쿼터/레이트리밋 정책대로 차단 또는 안내 동작
-- [ ] 데모 모드와 프로덕션 모드 동작 구분 확인
-
-메모:
+Notes:
 
 ---
 
-## 5) 운영 안전장치 (배포 직전)
+## 3) Basic UI/UX checks
 
-- [ ] 프론트 환경변수 확인
+- [ ] Login failure message remains visible long enough
+- [ ] Login input values are not unexpectedly cleared
+- [ ] Onboarding layout alignment is stable
+- [ ] Chart controls do not overlap heavily
+- [ ] Bubble/position markers stay within chart bounds
+- [ ] Modal save button accessible on mobile/narrow screens
+
+Notes:
+
+---
+
+## 4) AI calls and cost protection
+
+- [ ] `Ask AI` debounce blocks rapid duplicate clicks
+- [ ] Failure state message displayed correctly
+- [ ] Quota/rate-limit handling path works as expected
+- [ ] Demo mode behavior differs clearly from production mode
+
+Notes:
+
+---
+
+## 5) Operational safeguards (before deploy)
+
+- [ ] Frontend env variables
   - [ ] `NEXT_PUBLIC_API_BASE_URL`
   - [ ] `NEXT_PUBLIC_APP_MODE`
-- [ ] 백엔드 환경변수 확인
+- [ ] Backend env variables
   - [ ] `OPENAI_API_KEY`
-  - [ ] DB 접속 정보
-  - [ ] JWT/세션 시크릿
-- [ ] DB 마이그레이션 버전 확인
-- [ ] 롤백 기준 커밋 SHA 기록
-- [ ] 배포 직후 헬스체크 URL 확인
+  - [ ] Database credentials
+  - [ ] JWT/session secrets
+- [ ] DB migration version confirmed
+- [ ] Rollback commit SHA recorded
+- [ ] Health-check URL recorded
 
-롤백 커밋 SHA:
+Rollback SHA:
 
-헬스체크 URL:
+Health URL:
 
 ---
 
-## 6) 실행 커맨드 기록
+## 6) Execution commands
 
 ```bash
 cd /Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/frontend
@@ -92,19 +92,18 @@ npm run build
 ```
 
 ```bash
-# 백엔드(예시)
+# Backend
 cd /Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/backend
 go test ./...
 ```
 
-실행 결과:
+Run results:
 
 ---
 
-## 7) 최종 판정
+## 7) Final verdict
 
-- [ ] 배포 가능
-- [ ] 배포 보류
+- [ ] Go / release
+- [ ] Hold deployment
 
-보류 사유(있으면):
-
+Hold reason (if any):

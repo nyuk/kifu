@@ -1,53 +1,58 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
-# 웹 MCP 소형 테스트 룰북 (Kifu)
+# Web MCP Mini Smoke Rules (Kifu)
 
-이 문서는 자동화와 별도로, 브라우저 기반 빠른 재현/수동 점검용 체크리스트다.
-백엔드/프론트 기본 동작을 빠르게 확인할 때 사용한다.
+A quick browser-based manual-check list used alongside automated tests.
 
-## 공통 준비
-- 백엔드: `http://127.0.0.1:8080` 정상 동작
-- 프론트: `http://127.0.0.1:5173` 정상 동작
-- 샌드박스/테스트 계정 사용 권장
-- 브라우저: 시크릿/새 탭부터 시작(캐시 영향 최소화)
+## Common Setup
 
-## Case A — 로그인/세션
-- [ ] 로그인 성공 후 `/home` 진입
-- [ ] 탭 이동 후 새로고침 시 `/login` 강제 리다이렉트 없음
-- [ ] 한 번 로그인이 끝나면 뒤로가기/앞으로가기 남용 시 무한반복 루프 없음
+- Backend: `http://127.0.0.1:8080`
+- Frontend: `http://127.0.0.1:5173`
+- Use sandbox/test account.
+- Start with private window; avoid cache side effects.
 
-## Case B — 거래소 동기화
-- [ ] 연결된 거래소 목록 표시
-- [ ] 동기화 실행 시 응답/에러 로그 확인
-- [ ] Trade 탭 건수 증가(또는 기존 데이터 기준 증분 체크)
-- [ ] Home, Portfolio, Review/Bubble 내 트레이드 기반 요약이 함께 갱신되는지 확인
+## Case A — Auth/session
 
-## Case C — 차트/말풍선 정합성
-- [ ] 차트 심볼 이동 (BTCUSDT, 거래내역이 존재한 심볼 우선)
-- [ ] 타임프레임 변경(1d/4h/1h) 시 데이터 반응
-- [ ] 최근 말풍선 최소 5개 표시
-- [ ] 말풍선 클릭 시 상세가 차트 타임스탬프/시간 축과 정합되는지 확인
+- Login succeeds and `/home` renders
+- Tab navigation followed by refresh keeps session (no forced `/login`)
+- No route loop on browser back/forward after login
 
-## Case D — 복기/리뷰 정합성
-- [ ] Home 핵심 수치(실거래, 매수/매도, 주요 심볼, 주요 거래소)와 Review 요약 비교
-- [ ] Review의 최근 데이터 구간이 거래 내역/버블과 시간 일치
-- [ ] 복기 데이터가 정상적으로 없으면 `정합성 없는 상태` 메시지 노출 여부 확인
+## Case B — Exchange sync
 
-## Case E — AI 의견 수집(짧은 의견)
-- [ ] 말풍선 상세 또는 복기에서 의견 수집 실행
-- [ ] 응답 포맷: `상황/근거/액션` 형태
-- [ ] 502/401/네트워크 오류 반복시 에러 메시지와 재시도 동작 확인
+- Exchange list is shown
+- Sync response and error logs look normal
+- Trade count increases appropriately after sync
+- Home/Portfolio/Review summaries update consistently
 
-## Case F — 성능/레이아웃 스트레스
-- [ ] 탭 간 스크롤 시 카드 겹침/공백/잘림 없음
-- [ ] 텍스트 가독성(너무 작은 글자/색 대비) 점검
-- [ ] 모바일/데스크톱 폭 전환 시 핵심 카드 손실 없음
+## Case C — Chart and bubble consistency
 
-## Case G — 빠른 정합성 요약 추출
-문제가 발생하면 즉시 아래로 진단 산출물 확보
+- Symbol switch works (BTCUSDT and symbol with history)
+- Interval switch (`1d/4h/1h`) updates data
+- At least 5 recent bubbles visible
+- Bubble click aligns with chart timestamp
+
+## Case D — Review consistency
+
+- Home key metrics match Review data and Trades context
+- Review ranges align with bubble/trade timestamps
+- Show neutral-state message when no review data exists
+
+## Case E — AI opinion
+
+- Trigger opinion collection from bubble detail or review
+- Response shape includes `context`, `reason`, `action`
+- 502/401/network errors show retry-safe UI behavior
+
+## Case F — Performance/layout
+
+- No clipping or overlap on tab switch
+- Contrast and text size pass readability
+- No major layout loss between mobile and desktop widths
+
+## Case G — Quick consistency extract
 
 ```bash
 KIFU_AUDIT_EMAIL=<email> KIFU_AUDIT_PASSWORD=<password> \
@@ -55,23 +60,24 @@ python3 scripts/kifu_state_audit.py --api http://127.0.0.1:8080 --summary --save
 python3 scripts/kifu_audit_extract.py /tmp/kifu-audit.json
 ```
 
-## 테스트 기록 템플릿
-- 시나리오:
-- 계정:
-- 시간:
-- 백엔드/프론트:
-- Case 통과:
+## Log template
+
+- Scenario:
+- Account:
+- Time:
+- Backend/frontend:
+- Case result:
   - A:
   - B:
   - C:
   - D:
   - E:
   - F:
-- 실패 항목:
+- Failures:
   - Trade:
   - Review:
   - Portfolio:
   - Bubble:
   - Chart:
-- 네트워크 로그:
-- 스크린샷:
+- Network logs:
+- Screenshots:

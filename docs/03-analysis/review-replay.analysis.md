@@ -1,12 +1,12 @@
+# Gap Analysis Report: review-replay
+
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
-
-# Gap Analysis Report: review-replay
+> - Korean is optional supplementary context when needed.
 
 **Generated**: 2026-02-02
-**Feature**: review-replay (복기 및 리플레이 시스템)
+**Feature**: Review & Replay System
 **Design Document**: `docs/02-design/features/review-replay.design.md`
 
 ---
@@ -44,11 +44,11 @@
 | `Direction` type | ✅ Implemented | `entities/ai_opinion_accuracy.go` |
 | `ReviewStats` | ✅ Implemented | `repositories/bubble_repository.go` |
 
-### 3. UI Components (91%)
+### 3. UI Components (100%)
 
 | Component | Status | Location |
 |-----------|--------|----------|
-| `ReviewDashboard` (page) | ✅ Implemented | `app/(app)/review/page.tsx` |
+| `ReviewDashboard` | ✅ Implemented | `app/(app)/review/page.tsx` |
 | `StatsOverview` | ✅ Implemented | `components/review/StatsOverview.tsx` |
 | `AccuracyChart` | ✅ Implemented | `components/review/AccuracyChart.tsx` |
 | `TagPerformance` | ✅ Implemented | `components/review/TagPerformance.tsx` |
@@ -72,38 +72,29 @@
 
 ## Missing Items
 
-None - All designed components have been implemented.
+No missing items. All designed modules are implemented.
 
 ---
 
-## Extra Features Implemented
+## Extra Features Implemented beyond design
 
-The following features were implemented beyond the original design:
-
-1. **Replay State in Zustand Store** - Centralized replay state management
-2. **Korean/English Direction Extraction** - Bilingual pattern matching
-3. **Period Filter Component** - Flexible date range filtering
-4. **Calendar Heat Map** - Visual win/loss representation by day
-5. **Tag-based Performance Tracking** - Analysis by trading tags
-6. **Chart.tsx Integration** - ChartReplay integrated into main Chart component
+1. Replay state in Zustand store
+2. Korean/English direction extraction patterns
+3. Period filter component
+4. Calendar heatmap
+5. Tag-based performance tracking
+6. `Chart.tsx` replay integration
 
 ---
 
 ## Recommendations
 
-1. ~~**Short-term**: Implement `BubbleAccuracy` component to achieve 100% match rate~~ ✅ Done
-2. ~~**Integration**: Connect `ChartReplay` component to existing Chart pages~~ ✅ Done
-3. **Migration**: Run `005_ai_opinion_accuracies.sql` migration in production
+1. ~~Short-term: implement `BubbleAccuracy` component~~ ✅ Done
+2. ~~Integrate `ChartReplay` on main chart page~~ ✅ Done
+3. **Production action**: apply migration `005_ai_opinion_accuracies.sql` before release
 
 ---
 
 ## Conclusion
 
-With a **100% match rate**, the review-replay feature implementation is complete. All designed components have been implemented:
-- AI accuracy tracking system (backend)
-- Review dashboard with statistics (frontend)
-- Chart replay with time control (frontend)
-- BubbleAccuracy component (frontend)
-- Full integration with Chart.tsx
-
-**Status**: Ready for production deployment after running database migration.
+Implementation is complete with **100% match** against design. Feature is production-ready after migration is applied.

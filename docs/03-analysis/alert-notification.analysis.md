@@ -1,47 +1,50 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Korean is optional supplementary context when needed.
 
 # Alert-Notification Gap Analysis
 
-> 분석일: 2026-02-06 | 종합 일치율: **93%** (volatility_spike 구현 후 업데이트)
+> Analysis date: 2026-02-06
+> Overall match rate: **93%** (updated after `volatility_spike` implementation)
 
-## 카테고리별 점수
+## Score by Category
 
-| 카테고리 | 점수 |
+| Category | Score |
 |----------|:----:|
-| Migration/데이터 모델 | 98% |
-| API 엔드포인트 | 94% |
-| 핵심 흐름 | 88% |
-| 트리거 조건 | 100% (4개 중 4개) |
-| AI 브리핑 | 90% |
-| Telegram Bot | 92% |
-| Backend 구조 | 85% |
-| 설계 결정 반영 | 93% |
-| **종합** | **93%** |
+| Migration/Data model | 98% |
+| API Endpoints | 94% |
+| Core flow | 88% |
+| Trigger engine | 100% (4/4) |
+| AI briefing | 90% |
+| Telegram bot | 92% |
+| Backend structure | 85% |
+| Design alignment | 93% |
+| **Overall** | **93%** |
 
-## 누락/불일치 항목
+## Missing / mismatched items
 
-### ~~HIGH - 즉시 조치~~ (해결됨)
-1. ~~**volatility_spike 평가 로직 미구현**~~ - `evalVolatilitySpike()` 구현 완료. 20개 kline 기반 표준편차 계산, multiplier 기반 트리거
+### ~~HIGH - already resolved~~
+1. ~~`volatility_spike` evaluation was missing~~ - now implemented via 20-kline standard deviation + `multiplier` threshold.
 
-### MEDIUM - 단기 조치
-2. **AI 프로바이더 순차 호출** - 설계는 병렬, 구현은 for 루프 순차 (최대 90초 소요 가능)
-3. **callProvider 코드 중복** - `ai_handler.go`와 `alert_briefing_service.go`에 동일 로직 존재
-4. **포지션 정보 요약만 전달** - 설계는 진입가/수량/PnL 상세, 구현은 Long/Short 요약만
+### MEDIUM - short-term follow-up
+2. AI provider calls are still sequential although design expects parallel execution (possible 90s worst case).
+3. `callProvider` logic duplication exists across `ai_handler.go` and `alert_briefing_service.go`.
+4. Position context passed to AI is summarized only (not fully detailed: entry, size, PnL).
 
-### LOW - 문서 업데이트
-5. `POST /notifications/telegram/verify` 엔드포인트 누락 (Webhook으로 대체됨 - 의도적)
-6. Telegram 딥링크 버튼 1개 (설계는 2개)
-7. Repository 파일 통합 (설계는 6개 파일, 구현은 3개 파일)
-8. 인덱스 이름 불일치 (`idx_alert_rules_enabled` vs `idx_alert_rules_active`)
+### LOW - docs cleanup
+5. `POST /notifications/telegram/verify` intentionally removed in design (replaced with webhook flow).
+6. Telegram quick actions changed from 2 buttons to 1.
+7. Repository split differs from original file-count expectation.
+8. Index name naming differs (`idx_alert_rules_enabled` vs `idx_alert_rules_active`).
 
-## 추가 구현 (설계에 없음, 구현에 있음)
-- 가격 캐시 (10초 TTL) - API 부하 최적화
-- `UpdateCheckState` 별도 메서드 - 교차 감지를 위한 매 틱 상태 업데이트
-- `SendToChatID` 메서드 - Webhook에서 직접 응답
-- ListAlerts에 페이지네이션 total count
+## Items implemented beyond design
 
-## 결론
-종합 93% PASS. `volatility_spike` 구현 완료. 남은 MEDIUM 항목은 성능 최적화/리팩토링 수준.
+- 10-second in-memory price cache to reduce repeated exchange calls
+- `UpdateCheckState` helper for per-tick crossing tracking
+- `SendToChatID` webhook shortcut path
+- Pagination total count support in alert list
+
+## Conclusion
+
+Overall status is **PASS (93%)** with `volatility_spike` now implemented. Remaining medium items are optimization/refactor tasks, not blockers.

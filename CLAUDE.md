@@ -1,105 +1,120 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
 # CLAUDE.md - Project Knowledge Base
 
-> This file is the shared knowledge repository for Claude Code.
-> Add rules here when Claude makes mistakes to prevent recurrence.
+> Shared context for coding assistants (Claude, Codex, ChatGPT, etc.).
+> If recurring behavior issues happen, record fixes here first.
 
 ## Project Overview
 
-**kifu** - Trading/Investment application with chart visualization and trade tracking.
+**kifu** is a trading journal and review platform.
+
+Primary capabilities:
+- Collect trade/portfolio events from exchange sync and CSV import.
+- Record trading intent and context as bubble notes.
+- Collect AI opinions and compare with outcomes.
+- Review and improve decision quality through replay/analysis flows.
+- Publish Summary Pack reports.
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|------------|
+|---|---|
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand |
-| Backend | Go 1.21, Fiber v2, PostgreSQL (pgx), JWT auth |
-| Charts | lightweight-charts |
+| Backend | Go 1.21, Fiber v2, PostgreSQL (pgx), JWT |
+| Charts | `lightweight-charts` |
 
-## Project Structure
+## Repository Structure
 
-```
-kifu/
-├── frontend/          # Next.js app (port 5173)
-│   └── src/
-│       ├── components/
-│       ├── routes/
-│       ├── stores/    # Zustand stores
-│       └── lib/
-├── backend/           # Go Fiber API
+```text
+kifu-project/
+├── backend/
 │   ├── cmd/
 │   ├── internal/
-│   └── migrations/
-└── docs/              # Documentation (if exists)
+│   │   ├── app/
+│   │   ├── domain/
+│   │   ├── infrastructure/
+│   │   ├── interfaces/
+│   │   └── services/
+│   ├── migrations/
+│   └── scripts/
+├── frontend/
+│   ├── app/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── stores/
+│   │   ├── types/
+│   │   └── lib/
+└── docs/
+    ├── 01-plan/
+    ├── 02-design/
+    ├── 03-analysis/
+    ├── 04-report/
+    ├── runbook/
+    ├── spec/
+    ├── adr/
+    └── nlm/
 ```
 
 ## Development Commands
 
 ```bash
-# Frontend
-cd frontend && pnpm dev      # Start dev server (port 5173)
-cd frontend && pnpm build    # Production build
-cd frontend && pnpm lint     # Run ESLint
-
 # Backend
-cd backend && go run ./cmd/... # Start backend
-cd backend && go build -o main ./cmd/...
+go mod download
+cd backend
+go run ./cmd
+cd ..
+
+# Frontend
+cd frontend
+npm install
+npm run dev
+npm run build
+npm run lint
+npm run typecheck
 ```
 
 ## Coding Conventions
 
-### TypeScript/React
-- Prefer `type` over `interface`
-- Never use `enum` → Use string literal unions
-- Use functional components with hooks
-- State management: Zustand only
+### TypeScript / React
+- Prefer `type` over `interface` where possible.
+- Use functional components with hooks.
+- State is managed via Zustand; avoid introducing alternate global state frameworks unless required.
 
 ### Go
-- Follow standard Go conventions
-- Use Fiber v2 patterns for handlers
-- Database: pgx for PostgreSQL
-
-### Testing
-- Frontend: Vitest + React Testing Library
-- Backend: Go standard testing package
-- 테스트 파일명: `*.test.ts` (프론트), `*_test.go` (백엔드)
-- 단위 테스트 우선, 필요시 통합 테스트 추가
+- Keep handlers thin; keep domain/repository/application boundaries explicit.
+- Use repository interfaces and concrete infrastructure implementations.
+- Prefer clear error return values and consistent API shape.
 
 ### API Conventions
-- RESTful 엔드포인트: `/api/v1/{resource}`
-- 복수형 리소스명 사용: `/trades`, `/portfolios`
-- 액션은 동사 사용: `/auth/login`, `/auth/logout`
-
-### Error Handling
-- Frontend: try-catch + toast 알림
-- Backend: 표준 에러 응답 형식 사용 (flat format)
+- RESTful routes under `/api/v1/{resource}`.
+- Resource names are plural for collections.
+- Use noun-based resources and verb-based actions (`/login`, `/logout`, `/refresh`).
+- Error body format:
   ```json
-  {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input"
-  }
+  { "code": "VALIDATION_ERROR", "message": "Invalid input" }
   ```
+
+## Testing Strategy
+
+- Frontend: unit/integration tests first for changed modules.
+- Backend: go test standard suite.
+- API smoke before merge when touching endpoints.
+- No large context dumps to external LLMs; pass only scoped snippets.
 
 ## Prohibited
 
-- ❌ No `console.log` in production code (use proper logging)
-- ❌ No `any` type in TypeScript
-- ❌ No committing `.env` files
-- ❌ No large context dumps to LLM (see important_rules.md)
+- ❌ Commit `.env` or secret material.
+- ❌ Use `console.log` in production logic; use structured logging.
+- ❌ Introduce `any` in new TypeScript code.
+- ❌ Read and modify huge files without targeted rationale.
 
-## Token Optimization (from important_rules.md)
+## Reference Documents
 
-1. **Diff-based requests**: Send only changed parts + 20-40 surrounding lines
-2. **Summarize logs**: Error 20 lines + previous 50 lines max
-3. **Short output format**: Conclusion 5 lines + evidence 5 lines + checklist 5 items
-4. **Local tools first**: Run `pnpm lint`, `go vet` before asking LLM
-
-## References
-
-- `SPEC.md` - Current objectives and scope
-- `important_rules.md` - Multi-model token optimization playbook
-- `QA_CHECKLIST.md` - QA verification checklist
+- `SPEC.md` — active source of truth for current objective.
+- `important_rules.md` — token and workflow playbook.
+- `QA_CHECKLIST.md` — verification checklist.
+- `docs/adr/*` — decision records.

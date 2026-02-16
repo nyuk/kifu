@@ -1,64 +1,51 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
-# 2026-02-13 남은 작업 정리 (실행형 체크리스트)
+# 2026-02-13 Remaining Work (Execution Checklist)
 
-이 문서는 `docs/todo.md`, 최근 변경 로그, 사용 중 발견된 미해결 이슈를 바탕으로 지금부터 바로 실행할 수 있는 잔여 작업만 모은 것이다.
+This is a practical list of remaining items collected from `docs/todo.md`, recent changelogs, and live blockers.
 
-## 우선 실행(현재)
+## Do First
 
-- [ ] **홈 가독성 검증 완료**
-  - `/home`에서 핵심 카드(Quiet Routine, Closing Note) 가독성 확인
-  - 100% 브라우저 배율에서 숫자/텍스트 2초 내 인지 여부
-  - 목표: 회색 저대비 텍스트 제거, 중요 수치 대비 향상
+- [ ] Complete Home readability verification
+  - Confirm `/home` Quiet Routine and Closing Note cards are readable at 100% zoom within 2 seconds.
+  - Remove low-contrast gray text where needed.
+- [ ] Validate checklist/action visibility
+  - Status labels and buttons in `/home`, `/review`, `/trades`, `/portfolio` should be clearly visible.
+  - Keep login-failure error messaging visible for at least 3 seconds.
+- [ ] Mobile and narrow-screen check (390–430px)
+  - Verify wrapping, tab controls, and side scrolling.
+  - Confirm one-screen status summary remains legible.
+- [ ] Pagination stabilization
+  - Verify jump controls and boundary behavior for charts, bubbles, alerts, and notes.
+  - Move away from repeated full-chain button clicking.
+- [ ] Re-check Claude integration conflicts
+  - Confirm no unresolved merge traces in alert/review/home/shell areas.
+  - Compare pending changes by functional area.
 
-- [ ] **체크리스트 시각성/액션 가시성 점검**
-  - `/home`, `/review`, `/trades`, `/portfolio`의 상태 라벨, 배지, 버튼 텍스트 대비 확인
-  - 에러 메시지 노출 유지시간 3초 이상으로 수정 여부 확인
+## Next
 
-- [ ] **모바일/좁은 화면 가독성 점검**
-  - 390~430px 폭에서 줄바꿈/탭 버튼/사이드 스크롤/읽기성 점검
-  - 핵심 요약을 한 화면에서 파악 가능한지 확인
+- [ ] AI routing decision (Claude/Gemini policy)
+  - Define provider strategy and cost policy.
+- [ ] Privacy mode design
+  - Confirm local-first vs server-backed storage policy.
+- [ ] Alert/urgent-mode hardening
+  - Improve briefing template, log/reason capture, and re-entry protection.
+- [ ] Multi-asset expansion
+  - Formalize DEX/stock/other exchange path and sync strategy.
+- [ ] Position UI consistency
+  - Align position display across chart/home/portfolio.
 
-- [ ] **페이지네이션 동작 안정화**
-  - 거래내역/버블/알림/복기 노트 페이지 점프(직접 이동) 및 경계 이동 확인
-  - “1,2,3...” 버튼만 눌러야 하는 구조(끝→끝까지 연타)에서 벗어났는지 검증
+## Known risks (monitor)
 
-- [ ] **클로드 작업 통합 후 충돌 재검증**
-  - alert/review/home/shell 등 최근 커밋에서 생긴 병합 충돌 흔적 제거
-  - 현재 `git status`의 변경 목록을 기능 단위로 분리 재검토
+- Position marker and summary panel alignment still needs fine tuning.
+- Bubble density and summary display may need additional calibration on high-frequency data.
+- Bubble modal footer viewport overlap needs edge-case review.
 
-## 다음 단계(중간 우선순위)
+## Pre-regression check
 
-- [ ] **AI 모델 라우팅 의사결정**
-  - Claude/Gemini 연동 방향 확정 (멀티 모달 연동 방식, 비용/폴백 정책)
-  - 운영 단계에서 모델 사용량 제한 정책과 연결
-
-- [ ] **프라이버시 모드 구조 결정**
-  - 원본 저장 방식(로컬 우선 vs 서버 부분 저장) 최종 정책
-  - 증거 패킷: 일회성 패킷 전송 vs 암호화 금고 저장 옵션 확정
-
-- [ ] **알림/긴급 모드 고도화**
-  - 브리핑 템플릿 완성, 대응 로그/사유 기록, 핸들러 재진입 방어 강화
-
-- [ ] **멀티 자산군 확장 설계 정리**
-  - DEX/국내주식/해외주식/기타 거래소 연동 확장 순서 정의
-  - UI 선택기(자산군/거래소/심볼)와 동기화 정책 정합성 점검
-
-- [ ] **포지션 UI 정합성**
-  - 차트/홈/포트폴리오의 포지션 표시 형식 통일(진입가/SL/TP/레버리지)
-  - 다중 포지션 시 중첩/덮임 이슈 최소화
-
-## Known Issues (잔여 주의 항목)
-
-- 차트 포지션 마커/요약 배치의 정밀 조정이 더 필요할 수 있음 (보정 중)
-- 고빈도 데이터에서 말풍선 밀도와 요약 표시의 잔여 튜닝 필요
-- 말풍선 생성 모달 footer/스크롤 환경에서의 뷰포트 오버랩 점검 필요
-
-## 실무 운영 체크(테스트 이전)
-
-- [ ] `docs/2026-02-13-qa-run.md`에 남은 작업 라운드 체크 항목 반영
-- [ ] `web mcp` 또는 수동 시나리오 룰북(추가 파일)과 동일한 테스트 케이스로 회귀 점검
-- [ ] 각 항목 완료 시 `docs/todo.md`의 해당 체크를 NOW→DONE으로 이동
+- Carry over items in `docs/2026-02-13-qa-run.md`.
+- Mirror web-mcp/manual rules with the same regression list.
+- Move completed items to `docs/todo.md` as NOW → DONE.

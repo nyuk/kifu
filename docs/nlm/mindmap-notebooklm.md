@@ -1,9 +1,9 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
-# NotebookLM 핵심 마인드맵
+# NotebookLM Concept Mindmap
 
 ```mermaid
 graph TD
@@ -17,29 +17,27 @@ graph TD
   B --> BR[Routes]
   B --> BH[Handlers]
   B --> BL[Repository]
-  BR --> R1["/api/v1/packs/generate-latest"]
+  BR --> R1["POST /api/v1/packs/generate-latest"]
   BH --> H1[pack_handler.go]
   BL --> H2[run_repository.go]
   BL --> H3[run_repository_impl.go]
   
   F --> FC[ExchangeConnectionManager.tsx]
-  FC --> FB["Button: 팩 생성(30d)"]
+  FC --> FB["Generate Pack (30d)"]
   FB --> R1
   
-  D --> DS[spec/summary-pack-v1.md]
-  D --> DR[runbook/summary-pack-v1.md]
-  D --> DA[adr/0002-summary-pack-v1.1-decisions.md]
+  D --> DS[docs/spec/summary-pack-v1.md]
+  D --> DR[docs/runbook/summary-pack-v1.md]
+  D --> DA[docs/adr/0002-summary-pack-v1.1-decisions.md]
   
-  R --> RT["Smoke test"]
-  RT --> T1[generate-latest 호출]
-  RT --> T2[/api/v1/packs/{id} 조회]
+  R --> RT[Smoke test]
+  RT --> T1[generate-latest]
+  RT --> T2[GET /api/v1/packs/{id}]
   RT --> E1[NO_COMPLETED_RUN]
   
-  S --> ST[Scope 분리]
-  S --> SK[Secret 관리]
-  S --> SM[민감정보 마스킹]
+  S --> ST[Scope isolation]
+  S --> SK[Secret handling]
+  S --> SM[Data masking]
 ```
 
-## 사용법
-- 이 파일은 노트북LM에서 개념 관계를 빠르게 복원할 때 참고
-- 에러 토의 전에 이 맵으로 영향 범위를 먼저 정한 뒤 세부 파일로 내려가야 함
+Use this map when tracing impact before deep file review.

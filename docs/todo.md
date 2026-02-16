@@ -1,97 +1,65 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
 # TODO
 
-이 문서는 작업 진행 중 언제든지 확인할 수 있는 상시 작업 목록입니다.
+Operational task list for ongoing work.
 
 ## NOW
-- [x] 차트 말풍선 보드/상세 목록 페이지네이션 도입 (`PageJumpPager` 재사용)
-  - 대상: `/chart` 사이드 패널의 최근 말풍선 목록 + 선택 캔들 상세 버블/트레이드 목록
-  - 적용: 즉시 페이지 이동/입력 점프(숫자 페이지 이동) 추가
-  - 완료: 2026-02-13
-- [ ] 남은 작업 실행 체크: `docs/2026-02-13-remaining-work.md` (현재 진행: 1차 우선 항목 1~4)
 
-## CHECKPOINT (바로 확인용)
+- [x] Add pagination and page-jump in chart side bubble list (`PageJumpPager`).
+  - Scope: chart side panel and related lists.
+  - Complete: 2026-02-13
+- [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
+  - Current active priority: first batch items 1–4.
 
-아래 항목은 **“무엇을 확인해야 하는지”**를 명확히 적은 체크리스트입니다.
+## CHECKPOINT (Immediate checks)
 
-- [ ] 1) 홈 가독성 확인
-  - 위치: `/home`
-  - 확인 방법:
-    - 브라우저 기본 배율(100%)에서 핵심 카드 제목(예: Quiet Routine, Closing Note)이 잘 읽히는지
-    - `text-xs` 정보 라벨(예: `Today`, `실거래`, `총 버블` 등)도 눈에 띄는지
-  - 합격 기준:
-    - 핵심 숫자/레이블을 2초 안에 식별 가능
-    - 대비가 충분해 회색 텍스트가 “지워지는 느낌” 없이 보임
-
-- [ ] 2) 체크리스트 항목 시각성 확인
-  - 위치: `/home`의 `HomeSafetyCheckCard`, `/review` 하단 카드, `/trades`/`/portfolio` 요약 수치
-  - 확인 방법:
-    - 체크 항목의 라벨(대/소 문구, 상태 배지, 숫자 카운트)이 독립적으로 보이는지 확인
-    - `Loading...`, `불러오는 중` 같은 안내문이 배경과 구분되는지 확인
-  - 합격 기준:
-    - 동일 화면 내에서 라벨과 본문이 분리되어 읽힘
-    - 중요 상태 텍스트(에러/성공/경고)가 즉시 식별 가능
-
-- [ ] 3) 액션 플로우 체크
-  - 위치: `/home` → 말풍선 생성 모달 → `/chart`/`/review` 이동
-  - 확인 방법:
-    - 말풍선 생성 후 `저장`/`AI 의견 수집` 버튼의 라벨이 명확히 보이는지
-    - 결과 저장 후 복기/차트에서 해당 항목이 조회되는지
-  - 합격 기준:
-    - 버튼 동작 실패 시 에러 문구가 3초 이상 유지되어 확인 가능
-    - 핵심 액션이 2회 탭으로 중복 실행되지 않음
-
-- [ ] 4) 모바일/좁은 화면 가독성 확인
-  - 위치: 브라우저 폭 390~430px
-  - 확인 방법:
-    - 좌측 메뉴/상단 스크롤/버튼 라벨이 줄바꿈 없이 표시되는지
-    - 텍스트가 너무 작아 수동으로 확대가 필요한 상황이 생기지 않는지
-  - 합격 기준:
-    - 화면 좌우 여백을 크게 줄이지 않고 읽기 가능
-    - 스크롤 없이 한 화면에서 상태 요약과 다음 액션을 인지 가능
+- [ ] Home readability
+  - `/home` should expose key cards and labels clearly at 100% zoom.
+  - Contrast and font sizes should pass quick glance criteria.
+- [ ] Checklist and action labels visibility
+  - Status labels, badges, and counts should be visually distinct.
+  - Error/loading labels should be distinct from background.
+- [ ] Bubble/action flow
+  - Bubble creation → save → AI action path should be clear.
+  - Error feedback should remain visible for review.
+- [ ] Narrow-screen behavior
+  - No major overlap on 390–430px widths.
+  - Critical cards should fit with minimal scrolling.
 
 ## NEXT
-- [x] 차트/버블 밀도 개선 (말풍선 요약/밀도 옵션, 리플레이 UI 정리) - 1차 완료, 추가 미세 조정
-- [x] 시간 압축 사용자 테스트 도구 추가 (`/admin/sim-report`, 30일 시뮬레이터)
-- [ ] Claude/Gemini 연동 (모델 라우팅/병렬 호출 방식 결정 후 연결)
-- [x] AI 요약 카드 클릭 시 차트 탭(해당 캔들)까지 바로 이동 연결
-- [x] AI 요약 필터 상태 공유 링크(복사 버튼) 동작 가이드 문구 다듬기
+
+- [x] Improve chart bubble density and replay cleanup.
+- [x] Add user-time simulation tool (`/admin/sim-report`, 30-day mode).
+- [ ] Finalize Claude/Gemini routing policy.
+- [x] Improve review card → chart movement behavior and filter-share labels.
 
 ## LATER
-- [ ] 프라이버시 모드 설계 (원본 로컬/요약 서버 저장 전략) 확정
-- [ ] 증거 패킷 저장(일회성 vs 암호화 금고) 옵션 설계/구현
-- [ ] 알림/긴급 모드 고도화 (상황 브리핑 템플릿, 추적 로그)
-- [ ] 데이터 소스 확장 (DEX/주식/다중 거래소) 구조 정리
 
-## DONE (최근)
-- [x] 시뮬레이션 데이터 정합성 보강 (End Date 기준 과거 N일 생성 + outcomes/ai_opinions/accuracy/trade_events/positions/manual_positions/user_symbols 동시 생성)
-- [x] 포트폴리오 `stock` 필터에서 코인 fallback이 섞이던 문제 수정
-- [x] 거래내역 탭 상단 KPI를 페이지 데이터가 아닌 서버 요약(`/v1/trades/summary`) 기준으로 수정
-- [x] 리뷰/차트 탭 길이/탭 분할 정리 (복기 `성과 분석` 섹션 내부 탭 분할 및 캘린더/지표/추세 분리)
-- [x] AI 응답 재시도/에러 UX 고도화 (사용자 친화 메시지 + 자동 재시도 2회 + 재시도 상태 표시)
-- [x] 차트 URL 심볼 동기화 보정: 미지원 심볼(예: `005930`) 선택 시 BTC로 강제 폴백되지 않도록 수정
-- [x] AI 응답 품질 튜닝 1차 (포맷 강제 강화, 모델 출력 토큰/온도 제한)
-- [x] Evidence Packet 범위 선택 UX 개선 (프리셋/세부 설정 접기)
-- [x] AI 요약 카드/복기 노트 정리 정책 적용 (서버에서 사용자별 최신 N개 유지)
-- [x] 홈/복기 AI 요약 카드 심볼/타임프레임 필터 및 URL 쿼리 동기화
-- [x] AI 요약 카드 → 관련 버블 이동 및 버블 페이지 자동 선택/자동 스크롤
-- [x] AI one-shot 연결 및 응답 카드화
-- [x] Evidence Packet(요약 패킷) 구성/미리보기
-- [x] AI 응답 자동 복기 노트 저장
-- [x] 복기 대시보드에 AI 요약 카드 노출
-- [x] AI 요약 카드에 거래소 배지/생성 출처(One-shot/Alert) 표시
-- [x] AI 요약 카드 배지 톤(Home/복기) 통일
-- [x] AI 요약 필터 공유 링크 절대 URL 복사
-- [x] 수동 포지션 상태 입력(다중 포지션) + 증거 패킷에 포지션 포함
-- [x] 포트폴리오 이벤트 백필 API 추가 및 UI에서 즉시 생성 버튼 제공
-- [x] 거래소 동기화 완료 시 포트폴리오 자동 리프레시
-- [x] API 동기화/CSV 임포트 시 trade_events 자동 생성 → 포트폴리오 정합성 유지
-- [x] 30일 사용자 행동 시뮬레이션 API + 리포트 UI 추가 (`/admin/sim-report`)
+- [ ] Privacy mode design: local-first, partial local storage, or hybrid.
+- [ ] Evidence packet storage policy (ephemeral vs encrypted vault).
+- [ ] Alert and emergency-mode hardening.
+- [ ] Multi-exchange and multi-asset expansion roadmap.
 
-## NOTES
-- 날짜 기반 관리 대신, 상태 기반(NOW/NEXT/LATER)으로 관리합니다.
-- 작업이 끝나면 DONE으로 옮기고, 오래된 항목은 정리합니다.
+## DONE (recent)
+
+- [x] Simulation consistency fixes (`End Date` anchor and multi-entity generation).
+- [x] Stock filter contamination fix in portfolio calculations.
+- [x] Trades summary now uses `/v1/trades/summary`.
+- [x] Review tabs and performance cards aligned and split.
+- [x] AI retry UX and error states improved.
+- [x] Candle-symbol validation for unsupported symbols.
+- [x] AI prompt output normalization and length controls.
+- [x] Evidence packet scope and presets improved.
+- [x] Review card visibility and query sync updates.
+- [x] AI response auto-save to review notes.
+- [x] Position and trade sync refresh improvements.
+- [x] 30-day user simulation API and report UI added.
+
+## Notes
+
+- Track work status with `NOW`, `NEXT`, `LATER`.
+- Move completed items to DONE as soon as verification ends.

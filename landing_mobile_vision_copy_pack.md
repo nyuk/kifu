@@ -1,157 +1,103 @@
 > **Language policy (v1.0-first, English default):**
 > - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+> - Baseline is v1.0; v1.1 changes are documented as appendix sections only.
+> - Korean is optional supplementary context.
 
-# 랜딩 페이지 확장안 (Mobile + Vision) + 카피/슬로건 세트
+# Landing Page Expansion Pack (Mobile + Vision)
 
-> 목적: **“지금 있는 것(증명)”을 앞에 두고**, 모바일/비전은 **뒤쪽에 짧고 선명하게** 배치해서 설득력을 높인다.  
-> 원칙: 예정 기능은 “약속”이 아니라 “방향/계획”으로 표현. 수익 보장/투자 조언 뉘앙스는 피한다.
+Goal: present **current capabilities first**, then show **Mobile** and **Vision** as near-term roadmap.
+Avoid claiming unavailable features as guaranteed.
 
----
+## 1) Recommended Landing Sections
 
-## 1) 추천 랜딩 페이지 섹션 순서
+1. Hero (current value)
+2. How it works (3-step)
+3. Proof / Demo (existing screenshots, live link)
+4. Current features
+5. Mobile roadmap
+6. Vision roadmap
+7. Pricing / CTA / Footer
 
-1. **Hero** (현재 가치 제안)
-2. **How it works** (3-step)
-3. **Proof / Demo** (지금 있는 화면, 라이브 URL)
-4. **Features** (현재 제공 기능)
-5. **Mobile Roadmap** (모바일 계획)
-6. **Vision** (향후 비전/로드맵)
-7. **Pricing / CTA / Footer**
+> Place roadmap sections after proven value sections to avoid over-promising.
 
-> “모바일/비전”은 5~6번에 두는 것을 권장 (먼저 “지금 뭐가 있냐”를 해결).
+## 2) Mobile Roadmap Copy
 
----
+### Section title options
+- Built for mobile-first trading review.
+- Log faster when your alert fires.
+- Move review from chart to your pocket.
 
-## 2) Mobile Roadmap 섹션 (복붙용 카피)
+### Copy
+When an alert fires, let users jump from notification to chart, tap a candle, collect opinion, and save a note in one flow.
 
-### 섹션 타이틀 후보
-- **모바일로 더 빠르게, 더 안전하게**
-- **알림이 울린 순간, 기록이 시작된다**
-- **차트 앞에서만 하던 복기를, 손안으로**
+### Planned mobile capabilities
+- One-click alert-to-review entry.
+- Bubble create/edit/search.
+- AI opinion quick mode.
+- Recent n-day offline review cache.
 
-### 본문(짧게)
-알림이 울린 순간, **바로 차트로 진입**해서  
-특정 캔들을 탭하고 → **의견 수집** → **내 코멘트 기록**까지 끊김 없이 이어지도록 모바일 경험을 준비하고 있습니다.
+### Trust note
+Mobile is not a new feature launch; it is a continuation channel for continuity in recording and review.
 
-### “모바일에서 가능한 것(예정)” 리스트
-- **알림 → 원클릭 진입**(급등/급락/프리미엄/변동성)
-- **말풍선 작성/수정/검색**
-- **AI 의견 수집 Quick 모드**
-- **오프라인 복기(최근 n일 캐시)**
+## 3) Vision Section
 
-### 신뢰 문구(작게)
-> 모바일은 “새 기능”이 아니라, **기록과 복기를 끊기지 않게 만드는 채널**입니다.
+### Title options
+- Turn review into measurable assets.
+- Capture evidence, reduce emotion-driven mistakes.
+- Build a reviewable trading process.
 
----
+### Vision statement
+We do not sell predictions.
+We store decision context and help users reduce repeated mistakes.
 
-## 3) Vision 섹션 (복붙용 카피)
+### Roadmap cards
+- **Today**: Candle notes + AI collection + review mode.
+- **Next**: CSV/API overlay + auto summary + personal pattern reports.
+- **Later**: Multi-device sync + share flows + community insight layer.
 
-### 섹션 타이틀 후보
-- **복기를 ‘자산’으로 만든다**
-- **감정 대신 증거를 남긴다**
-- **트레이딩을 기록 가능한 시스템으로**
+## 4) Ready-to-paste blocks
 
-### 비전 문장(1~2줄)
-우리는 예측을 팔지 않습니다.  
-**결정의 순간을 저장하고, 실수를 줄이는 시스템**을 만듭니다.
+### Mobile block
+**Mobile review, uninterrupted**
+From alert → chart → candle → opinion collection → note save.
 
-### 비전 로드맵(3단계)
-- **Today**: 캔들별 기록 + AI 의견 수집 + 복기 모드
-- **Next**: 거래내역(CSV/API) 오버레이 + 자동 요약 + 개인 패턴 리포트
-- **Later**: 멀티 디바이스 동기화 + 팀/친구 공유 + 커뮤니티 인사이트 레이어
+- One-click alert entry
+- Tap to collect opinion
+- Offline review cache for recent sessions
 
----
+### Vision block
+**Review as infrastructure for judgment quality**
+- Today: notes + AI + replay
+- Next: cross-source overlays + pattern reports
+- Later: sync and sharing layers
 
-## 4) 랜딩에 넣을 “문구 블록”(그대로 붙여넣기)
+## 5) Hero copy shortlist
 
-### Mobile 블록
-**모바일로 더 빠르게, 더 안전하게**  
-알림이 울린 순간, 차트에서 바로 기록하고 복기할 수 있도록 모바일 경험을 준비하고 있습니다.
+1. Save judgment moments, not just prices.
+2. One screen, multiple perspectives.
+3. Alert → Record → Review.
+4. Turn trading into a review system.
+5. Your decision history becomes your edge.
 
-- 알림 → 원클릭 진입  
-- 캔들 탭 → 의견 수집(Quick) → 말풍선 저장  
-- 최근 기록 오프라인 복기(캐시)  
+## 6) CTA options
 
-> 모바일은 기능 확장이 아니라, **기록과 복기가 끊기지 않도록 만드는 채널**입니다.
+- View Demo
+- Try as Guest
+- Start Recording
+- Open Review Mode
+- Create First Bubble
+- Try AI Insight
 
-### Vision 블록
-**복기를 ‘자산’으로 만든다**  
-우리는 예측을 팔지 않습니다. **결정의 순간을 저장하고, 실수를 줄이는 시스템**을 만듭니다.
+## 7) Compliance checks
 
-- **Today**: 캔들별 기록 + AI 의견 수집 + 복기 모드  
-- **Next**: 거래내역(CSV/API) 오버레이 + 자동 요약 + 개인 패턴 리포트  
-- **Later**: 멀티 디바이스 동기화 + 팀/친구 공유 + 커뮤니티 인사이트 레이어  
+- Future features labeled as “planned” or “in progress”.
+- No returns guarantees or investment advice claims.
+- CTAs must map to currently available actions.
+- Use plain, verifiable claims.
 
----
+## 8) Visual direction
 
-## 5) 슬로건(히어로/서브 카피) 후보 20개
-
-1. **결정의 순간을 저장하라. 복기는 데이터로 남긴다.**
-2. **한 번의 클릭으로, 여러 관점을 동시에.**
-3. **알림 → 기록 → 복기. 실수는 반복하지 않게.**
-4. **트레이딩을 “감정”이 아니라 “시스템”으로.**
-5. **차트 위에 남는 건 가격이 아니라, 당신의 판단이다.**
-6. **그때 왜 그랬는지, 다음엔 어떻게 할지.**
-7. **예측이 아니라, 기록과 검증.**
-8. **내 관점 + 에이전트 관점, 한 화면에.**
-9. **복기의 빈틈을 없애는 말풍선 기록.**
-10. **매수/매도/홀드—행동의 근거를 남겨라.**
-11. **하루에 한 번, 의사결정의 품질을 올려라.**
-12. **차트는 흘러가도, 배움은 남는다.**
-13. **기록이 쌓이면, 패턴이 보인다.**
-14. **복기는 ‘회고’가 아니라 ‘무기’다.**
-15. **과거를 재생하면, 다음이 달라진다.**
-16. **지표보다 중요한 건 ‘그때의 판단’이다.**
-17. **내 실수를 데이터로 만들면, 반복이 줄어든다.**
-18. **수익보다 먼저, 판단력을 자동 저장.**
-19. **AI는 답을 주고, 당신은 결정을 남긴다.**
-20. **단순히 트레이딩하지 말고, 학습하라.**
-
----
-
-## 6) 버튼(CTA) 문구 후보 12개
-
-1. **데모 보기**
-2. **게스트로 시작**
-3. **지금 기록 시작하기**
-4. **의견 수집 체험**
-5. **복기 모드 열기**
-6. **내 첫 말풍선 만들기**
-7. **차트에 기록 남기기**
-8. **기록 템플릿 보기**
-9. **요금제 확인**
-10. **프로로 업그레이드**
-11. **모바일 로드맵 보기**
-12. **업데이트 소식 받기**
-
----
-
-## 7) “모바일/비전”을 넣을 때 주의 3가지 (체크)
-
-- [ ] 예정 기능은 **계획/준비** 표현 (출시 확정처럼 말하지 않기)
-- [ ] 수익 보장/투자 조언 뉘앙스 제거 (규제 리스크 감소)
-- [ ] CTA는 **현재 가능한 행동**(데모/게스트/기록 시작)으로 연결
-
----
-
-## 8) 시각화(이미지) 처리 추천
-
-### 가장 쉬운 시각화 2개
-1. **모바일 목업 1장**: 차트 + 말풍선 + “의견수집” 버튼이 보이게
-2. **로드맵 타임라인 1장**: Today/Next/Later 카드 3개
-
-### 생성 프롬프트 예시(이미지 생성용)
-- “dark basalt rock texture background, subtle gold crack lines, minimal fintech UI hero, modern typography, high contrast, calm and trustworthy mood”
-- “mobile app mockup showing candlestick chart with speech bubbles annotations, one primary button 'Collect Insights', dark mode, minimalist UI”
-- “3-step roadmap timeline cards: Today, Next, Later, dark theme, clean layout, soft glow accents”
-
----
-
-## 9) 안티그래비티 작업 지시문(복붙)
-
-> Landing 페이지에 섹션 2개 추가: `Mobile Roadmap` + `Vision`.  
-> 섹션 순서: Proof/Demo 이후, Features 다음.  
-> 모바일은 “planned” 배지 표시. 비전은 Today/Next/Later 3카드.  
-> 기존 라우팅/CTA는 유지. 결과는 `git diff`로 보고.
+- Add two lightweight visuals:
+  1. Mobile mockup with chart + bubble + opinion button.
+  2. 3-card timeline: Today / Next / Later.
+- Keep the same tone as current app textures and dark theme.

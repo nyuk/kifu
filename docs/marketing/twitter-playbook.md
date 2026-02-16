@@ -1,85 +1,75 @@
-> **Language policy (v1.0-first, English default):**
-> - Primary language for repo documentation: English.
-> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
-> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+# Twitter(X) Operating Guide (v1.0-first)
 
-# 트위터(X) 시작 가이드 (v1.0 우선 운영)
+Goal: run a steady two-week content routine as a solo operator.
 
-목표: 혼자서도 일관되게 2주간 콘텐츠 루틴을 만들고 반응을 축적한다.
+## 1) Account setup (one-time)
 
-## 1) 계정 세팅 (1회)
+- Short, memorable handle.
+- Bio draft:
+  `KIFU | Trading review platform with Bubble notes, AI opinions, and chart replay.`
+- Link: GitHub or live demo.
+- Pin: core project intro + GitHub link.
 
-- Handle: 짧고 기억하기 쉬운 이름
-- Bio:  
-  `트레이더용 거래 복기 플랫폼 KIFU | 버블/AI 의견/차트 리플레이를 한 번에 분석`
-- Link: GitHub 또는 데모 링크 1개
-- Pinned: 프로젝트 핵심 소개 + GitHub 링크 1개
+## 2) Publishing rules
 
-## 2) 발행 원칙
+1. Publish learning-oriented posts, not spam.
+2. Use 1 feature + 1 insight + 1 CTA per thread.
+3. Include at least one real screenshot or metric.
+4. Keep v1.1 items in appendix only.
 
-1. 매일 스팸성 광고 대신 "학습형" 포스트 위주
-2. 스레드(긴 글)에서 1개 기능 + 1개 인사이트 + 1개 CTA
-3. 스크린샷은 실제 화면 + 짧은 숫자 성과를 포함
-4. v1.1은 부록 처리: 핵심은 v1.0 복기 흐름 설명으로 유지
+## 3) Frequency (first 14 days)
 
-## 3) 게시 주기(초기 2주)
+- Tue / Thu / Sat (example schedule)
+- 1 post per day, total 6 posts/week
+- Weekend: monitor responses only
 
-- 월/수/금: 정해진 시간(예: 12:00, 20:00) 정기 발행
-- 하루 1개만, 총 6개/주
-- 주말은 댓글 반응 모니터링만 수행
+## 4) Automation vs manual
 
-## 4) 완전 자동 vs 반자동
+Recommended: semi-automated.
+- AI drafts only.
+- Human approves content, links, and sensitive details.
+- Scheduled publishing by your workflow tool.
 
-- 권장: 반자동
-  - AI가 초안 생성
-  - 너는 링크/수치/비밀정보만 검수
-  - 수동 승인 후 예약 발행
-- 이유:
-  - 규정/스팸 오해를 줄이고, 계정 페널티를 방지
-  - 네 프로젝트 특성상 신뢰가 가장 중요하므로 콘텐츠 품질 유지 필요
+Reason: trust and quality matter more than speed in finance tooling.
 
-## 5) 봇 큐(예시) 사용법
+## 5) Queue workflow
 
-`docs/marketing/x-post-queue.sample.json` 포맷으로 큐를 관리한다.
+Use `docs/marketing/x-post-queue.sample.json`.
 
-- `status`가 `draft`면 AI 초안 상태
-- `approved`로 바꾸면 발행자(네가 운영하는 툴)에서 업로드
-- `platform`: `x` 고정
-- `theme`로 태그/콘텐츠 분류
+### Queue statuses
+- `draft`: AI drafted and pending review
+- `approved`: ready for publish
+- `platform`: always `x`
 
-권장 운영:
-1) 새 기능 완성 → 1개 "개발 로그"
-2) 2일 뒤 → 1개 "화면/디자인"
-3) 1주일 뒤 → 1개 "성과/학습"
-4) 월말 → 1개 "릴리즈 노트"
+### Publishing cadence
+1. New feature done: 1 development log.
+2. +2 days: 1 screen/UI post.
+3. +7 days: 1 learning post.
+4. End of month: 1 release recap.
 
-## 6) 첫 14개 포맷 예시
+## 6) 14-day content themes
 
-- Day1: “문제 제기형” (내가 이걸 왜 만들었나)
-- Day2: “기능 1개 소개” (복기 홈)
-- Day3: “Before/After” (기록 이전/이후 비교)
-- Day4: “개발 로그” (버그 하나 해결)
-- Day5: “데이터 신뢰성” (왜 복기 노트+AI 저장)
-- Day6: “리플레이” (과거 판단 어떻게 재생)
-- Day7: 주말 인사이트 요약
-- Day8: “AI 정확도” (버블/결과 비교)
-- Day9: “포트폴리오” (실거래와 정합성)
-- Day10: “알림/요약 팩” (운영성)
-- Day11: “개발자 노트” (어려웠던 결정)
-- Day12: “사용자 시나리오” (어떤 사람에게 유용한지)
-- Day13: “업데이트 미리보기” (다음 기능)
-- Day14: 리캡 + 피드백 요청
+- Problem framing
+- Home/Review feature
+- Before/after workflow
+- Debug log / issue resolved
+- Data trust and integrity
+- Replay and outcome comparison
+- AI accuracy transparency
+- Portfolio consistency checks
+- Alert and pack updates
+- Developer notes
+- User scenario examples
 
-## 7) 금지사항
+## 7) Posting restrictions
 
-- API 키, 유저 계정, 내부 키워드(시크릿) 노출
-- 과장된 성능 수치
-- 시장 가격 조작/투자 권유 문구
+- Never expose API keys, user data, or private credentials.
+- Avoid overstated performance claims.
+- Avoid investment recommendations.
 
-## 8) 즉시 실행 체크리스트 (오늘)
+## 8) Today checklist
 
-- [ ] GitHub README 반영 완료
-- [ ] X Bio/핸들/링크/고정트윗 설정
-- [ ] `docs/marketing/x-post-queue.sample.json`에서 14개 초안 생성
-- [ ] 주 1회 회고: 반응률(조회, 링크클릭, 저장), 전환(레포 방문)
-
+- [ ] README is updated and concise.
+- [ ] Bio and pinned post set.
+- [ ] Generate 14 draft posts in queue.
+- [ ] Track weekly: impressions, clicks, saves, repository visits.
