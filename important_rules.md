@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 멀티 모델/멀티 에이전트 토큰 최적화 플레이북 (OhMyCode + Claude Code + Codex + Gemini + Antigravity)
 
 > 목표: **“모델을 더 쓰는 것”이 아니라, “필요할 때만 비싼 모델을 쓰는 구조”**로 바꿔서  

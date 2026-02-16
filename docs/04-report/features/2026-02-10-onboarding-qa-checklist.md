@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 온보딩 흐름 QA 체크리스트 (고정본)
 
 이 문서는 `회원가입 -> 온보딩 선택 -> 임포트/성향테스트 -> 홈 진입` 흐름의 회귀를 막기 위한 고정 QA 기준입니다.

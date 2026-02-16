@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 랜딩 페이지 확장안 (Mobile + Vision) + 카피/슬로건 세트
 
 > 목적: **“지금 있는 것(증명)”을 앞에 두고**, 모바일/비전은 **뒤쪽에 짧고 선명하게** 배치해서 설득력을 높인다.  

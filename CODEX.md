@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # CODEX.md - AI Assistant Project Context
 
 > 이 문서는 AI 코딩 어시스턴트(Codex, Claude, GPT 등)가 프로젝트를 빠르게 이해하고 작업을 이어받을 수 있도록 작성되었습니다.

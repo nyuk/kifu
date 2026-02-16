@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 웹 MCP 소형 테스트 룰북 (Kifu)
 
 이 문서는 자동화와 별도로, 브라우저 기반 빠른 재현/수동 점검용 체크리스트다.

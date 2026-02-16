@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 트위터(X) 시작 가이드 (v1.0 우선 운영)
 
 목표: 혼자서도 일관되게 2주간 콘텐츠 루틴을 만들고 반응을 축적한다.

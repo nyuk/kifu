@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # AI One-shot 수동 QA 체크리스트 (brief/detailed/technical)
 
 이 문서는 `BubbleCreateModal -> Ask AI -> /v1/ai/one-shot` 경로의 응답 품질을 수동으로 점검하기 위한 기준입니다.

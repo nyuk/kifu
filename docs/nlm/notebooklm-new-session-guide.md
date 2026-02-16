@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 새 NotebookLM 세션 시작 가이드 (v1.0 전면 우선)
 
 ## 1) 이 노트북의 규칙 (반드시 상단 고정)

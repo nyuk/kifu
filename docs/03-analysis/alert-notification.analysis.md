@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # Alert-Notification Gap Analysis
 
 > 분석일: 2026-02-06 | 종합 일치율: **93%** (volatility_spike 구현 후 업데이트)

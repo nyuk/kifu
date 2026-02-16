@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # Full-Project PDCA Cycle Completion Report
 
 > **Summary**: Comprehensive gap analysis and design-implementation sync cycle for kifu project across Summary Pack v1, Alert Notification, Guided Review, and Route Registration. One iteration applied with 5 critical fixes, improving overall match rate from 77% to 86%.

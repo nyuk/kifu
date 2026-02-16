@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 2026-02-12 Pre-Deploy QA Checklist
 
 배포 전 핵심 플로우/데이터 정합성/운영 안전장치 점검용 체크리스트.

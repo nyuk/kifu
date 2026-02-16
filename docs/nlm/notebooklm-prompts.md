@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # NotebookLM 바로 사용 프롬프트 모음
 
 ## v1.0 우선 응답 강제 템플릿 (복붙)

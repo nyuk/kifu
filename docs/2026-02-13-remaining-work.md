@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # 2026-02-13 남은 작업 정리 (실행형 체크리스트)
 
 이 문서는 `docs/todo.md`, 최근 변경 로그, 사용 중 발견된 미해결 이슈를 바탕으로 지금부터 바로 실행할 수 있는 잔여 작업만 모은 것이다.

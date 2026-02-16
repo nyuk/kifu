@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # Repomix 업로드 절차
 
 목표: 코드베이스를 NotebookLM용으로 압축 정리하고 Git에서 버전관리한다.

@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # Production Deployment Checklist (kifu-project)
 
 이 문서는 배포 전/후에 바로 실행할 수 있도록, 현재 코드 기준(Kifu) 운영 반영 체크리스트를 한 곳에 정리한 가이드입니다.

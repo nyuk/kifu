@@ -1,3 +1,8 @@
+> **Language policy (v1.0-first, English default):**
+> - Primary language for repo documentation: English.
+> - Baseline is v1.0; v1.1 changes are documented as extension notes only.
+> - 한국어는 보조 문맥(필요 시)로 제공됩니다.
+
 # kifu-project NLM Knowledge Base (NotebookLM용)
 
 이 디렉터리는 새 채팅에서 계속 이어가기 위해 코드를 **재구성하여** 제공하는 정리본이다.
