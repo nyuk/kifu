@@ -21,8 +21,8 @@ type MiniCandle = {
 
 function CandlestickBackground() {
     const [candles, setCandles] = useState<Candle[]>([])
-    const [linePath, setLinePath] = useState('')
-    const [linePath2, setLinePath2] = useState('')
+    const [linePath, setLinePath] = useState('M 0 250 L 2000 250')
+    const [linePath2, setLinePath2] = useState('M 0 275 L 2000 275')
 
     useEffect(() => {
         // Generate candles
@@ -79,11 +79,13 @@ function CandlestickBackground() {
                     strokeDasharray="5,5"
                 />
                 {/* Gradient fill under main line */}
-                <path
-                    d={`${linePath} L 2000 500 L 0 500 Z`}
-                    fill="url(#areaGradient)"
-                    className="animate-fade-in"
-                />
+                {linePath && (
+                    <path
+                        d={`${linePath} L 2000 500 L 0 500 Z`}
+                        fill="url(#areaGradient)"
+                        className="animate-fade-in"
+                    />
+                )}
                 <defs>
                     <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="#10b981" />
