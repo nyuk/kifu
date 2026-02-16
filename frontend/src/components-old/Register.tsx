@@ -8,7 +8,7 @@ import { useAuthStore } from '../stores/auth'
 import { clearGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
-import { isDemoMode } from '../lib/appMode'
+import { isDemoMode, IS_GUEST_FLOW_ENABLED } from '../lib/appMode'
 
 export function Register() {
   const [name, setName] = useState('')
@@ -28,7 +28,7 @@ export function Register() {
     }
   }, [isAuthenticated, router])
 
-  if (isDemoMode) {
+  if (isDemoMode && IS_GUEST_FLOW_ENABLED) {
     return (
       <div className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
         <div className="mx-auto max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8">
