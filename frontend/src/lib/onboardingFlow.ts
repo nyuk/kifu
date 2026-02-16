@@ -15,7 +15,7 @@ export const resolveAuthRedirectPath = ({ next, from, defaultPath }: AuthRedirec
   if (candidate.startsWith('/onboarding/start')) return '/onboarding/start'
   if (candidate.startsWith('/settings')) return '/settings'
   if (candidate.startsWith('/home')) return '/home'
+  if (candidate.startsWith('/guest')) return '/home'
 
   return defaultPath
 }
-
