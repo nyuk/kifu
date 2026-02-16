@@ -70,9 +70,16 @@ export function Login() {
   const handleGuestContinue = async () => {
     setError('')
     setIsGuestLoading(true)
+    const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL?.trim()
+    const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD?.trim()
+
+    if (!guestEmail || !guestPassword) {
+      setIsGuestLoading(false)
+      setError('게스트 계정이 아직 설정되지 않았습니다. NEXT_PUBLIC_GUEST_EMAIL, NEXT_PUBLIC_GUEST_PASSWORD를 확인해주세요.')
+      return
+    }
+
     try {
-      const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL || 'guest.preview@kifu.local'
-      const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD || 'guest1234'
       const response = await api.post('/v1/auth/login', { email: guestEmail, password: guestPassword })
       resetSessionData()
       setTokens(response.data.access_token, response.data.refresh_token)
