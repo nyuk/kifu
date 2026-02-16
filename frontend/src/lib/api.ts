@@ -1,8 +1,12 @@
 import axios from 'axios'
 import { getAccessToken, useAuthStore } from '../stores/auth'
 
-// Use direct backend URL with IP to avoid localhost resolution issues
-const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8080/api'
+const configuredBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()
+const defaultLocalBaseURL = 'http://127.0.0.1:8080/api'
+
+const normalizeBaseURL = (value: string): string => value.replace(/\/+$/, '')
+
+const baseURL = normalizeBaseURL(configuredBaseURL || defaultLocalBaseURL)
 
 export const api = axios.create({
   baseURL,
