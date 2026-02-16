@@ -6,13 +6,13 @@
   <rect x="836" y="110" width="308" height="130" rx="16" fill="#111827"/>
 
   <text x="84" y="150" fill="#93C5FD" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">Home Snapshot</text>
-  <text x="84" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">실거래·AI 요약·포트폴리오를 한 화면에서 확인</text>
+  <text x="84" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Live trading, AI summaries, and portfolio in one view</text>
 
   <text x="474" y="150" fill="#6EE7B7" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">Review Flow</text>
-  <text x="474" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">오늘 복기, 감정/패턴 기록, 스트릭 관리</text>
+  <text x="474" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Daily debrief, sentiment log, and streak tracking</text>
 
   <text x="864" y="150" fill="#FDE68A" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">AI Review</text>
-  <text x="864" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">버블과 AI 의견, outcome를 동일 기준으로 비교</text>
+  <text x="864" y="184" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Compare bubble notes, AI opinions, and outcomes</text>
 
   <rect x="56" y="270" width="1088" height="230" rx="16" fill="#111827"/>
   <text x="84" y="318" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">Data Layers</text>
@@ -24,16 +24,16 @@
   </g>
 
   <text x="100" y="382" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Trades</text>
-  <text x="100" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">거래/포트폴리오 이벤트 동기화</text>
+  <text x="100" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">Exchange sync and portfolio event ingestion</text>
 
   <text x="390" y="382" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Bubbles</text>
-  <text x="390" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">판단 이벤트/태그/메모</text>
+  <text x="390" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">Decision events, tags, and notes</text>
 
   <text x="680" y="382" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Review</text>
-  <text x="680" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">감정·패턴 기반 복기 및 성과 분석</text>
+  <text x="680" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">Sentiment and pattern logging with performance checks</text>
 
   <text x="970" y="382" fill="#E2E8F0" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Replay</text>
-  <text x="970" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">차트·AI 비교·결과 검증</text>
+  <text x="970" y="414" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="16">Chart, AI comparison, and outcome validation</text>
 
   <path d="M190 430 C220 390 270 390 300 430" stroke="#14B8A6" stroke-width="4" fill="none"/>
   <path d="M480 430 C510 390 560 390 590 430" stroke="#14B8A6" stroke-width="4" fill="none"/>
