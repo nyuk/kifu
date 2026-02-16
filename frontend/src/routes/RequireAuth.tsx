@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
-import { isDemoMode } from '../lib/appMode'
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -14,10 +13,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
-    if (isDemoMode) {
-      router.replace('/guest')
-      return
-    }
     if (!hasHydrated) return
     if (!isAuthenticated) {
       router.replace(`/login?from=${pathname}`)
@@ -26,10 +21,6 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return isDemoMode ? null : <>{children}</>
-  }
-
-  if (isDemoMode) {
-    return null
   }
 
   if (!hasHydrated) {
