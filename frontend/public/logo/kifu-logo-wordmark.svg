@@ -1,0 +1,16 @@
+<svg width="820" height="220" viewBox="0 0 820 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="820" height="220" rx="24" fill="#0B1221"/>
+  <g transform="translate(24 52)">
+    <rect x="0" y="0" width="116" height="116" rx="26" fill="#14B8A6"/>
+    <path d="M32 82c18-36 48-52 80-52" stroke="#0B1221" stroke-width="11" stroke-linecap="round"/>
+    <path d="M30 82h84" stroke="#0F172A" stroke-width="11" stroke-linecap="round"/>
+    <rect x="66" y="34" width="22" height="48" rx="3" fill="#0B1221"/>
+    <rect x="42" y="54" width="16" height="28" rx="3" fill="#0B1221"/>
+    <rect x="92" y="64" width="16" height="38" rx="3" fill="#0B1221"/>
+    <path d="M116 28L150 4L184 28V92L150 116L116 92Z" fill="#E5E7EB"/>
+    <path d="M150 20L168 32V88L150 100L132 88V32Z" fill="#0B1221"/>
+    <path d="M36 108L86 108" stroke="#0F172A" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  <text x="170" y="118" fill="#E5E7EB" font-family="Inter, Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="2">KIFU</text>
+  <text x="170" y="157" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="500">Trading Journal · AI Review Platform</text>
+</svg>
