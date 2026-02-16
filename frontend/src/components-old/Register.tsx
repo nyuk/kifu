@@ -37,7 +37,7 @@ export function Register() {
           <p className="mt-2 text-sm text-zinc-400">
             현재 환경은 Deploy Preview 데모입니다. 계정 생성 없이 흐름을 체험할 수 있습니다.
           </p>
-          <Link href="/guest" className="mt-6 inline-flex rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
+          <Link href="/guest?mode=preview" className="mt-6 inline-flex rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
             게스트 체험으로 이동
           </Link>
         </div>

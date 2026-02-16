@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../src/lib/api'
 import { startGuestSession } from '../../src/lib/guestSession'
 import { useAuthStore } from '../../src/stores/auth'
@@ -45,11 +45,24 @@ const tabMeta: Record<GuestTab, { label: string; title: string; summary: string;
 
 export default function GuestPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const setTokens = useAuthStore((state) => state.setTokens)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const previewMode = searchParams?.get('mode') === 'preview'
   const [tab, setTab] = useState<GuestTab>('home')
   const [scenarioIndex, setScenarioIndex] = useState(0)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!previewMode) {
+      router.replace(isAuthenticated ? '/home' : '/login')
+    }
+  }, [previewMode, isAuthenticated, router])
+
+  if (!previewMode) {
+    return null
+  }
 
   const scenario = useMemo(
     () =>

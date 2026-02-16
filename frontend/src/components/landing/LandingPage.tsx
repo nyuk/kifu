@@ -557,7 +557,7 @@ export function LandingPage() {
                         </div>
                         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                             <Link
-                                href="/guest"
+                                href="/guest?mode=preview"
                                 className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black transition-all hover:scale-105 shadow-[0_0_30px_rgba(45,212,191,0.3)] hover:shadow-[0_0_40px_rgba(45,212,191,0.5)] focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0B0F14]"
                             >
                                 게스트로 입장
@@ -768,10 +768,10 @@ export function LandingPage() {
                     </div>
 
                     <div className="mt-10 flex justify-center">
-                        <Link
-                            href="/guest"
-                            className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
-                        >
+                            <Link
+                                href="/guest?mode=preview"
+                                className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-bold text-black hover:bg-cyan-400 transition-colors"
+                            >
                             <span>🚀</span> 데모 시작하기
                         </Link>
                     </div>
