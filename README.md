@@ -52,8 +52,8 @@ KIFU unifies this as: **Ingest → Record → Review → Improve**.
 ## Architecture
 
 - Backend: Go + Fiber
-- Frontend: React + TypeScript + Vite
-- Data: PostgreSQL, Redis
+- Frontend: Next.js + TypeScript
+- Data: PostgreSQL
 - AI Providers: OpenAI / Claude / Gemini (feature-flagged)
 
 ## Quick Start
@@ -86,6 +86,8 @@ npm run dev
 - Runbooks: `docs/runbook/*`
 - Analysis: `docs/03-analysis/*`
 - NLM bundle: `docs/nlm/*`
+- Submission brief: `SUBMISSION.md`
+- Security status: `SECURITY_STATUS.md`
 
 ## GitHub profile text (About)
 
@@ -94,7 +96,7 @@ GitHub repository **description** supports a single text field, so use English a
 - **Recommended Description**
   - `Trading journal and AI review platform for retrospective analysis: bubbles, portfolio, chart replay, and AI comparison.`
 - **Recommended Topics**
-  - `trading`, `journal`, `review`, `trading-journal`, `go`, `fiber`, `react`, `vite`, `ai`, `portfolio`, `chart`
+  - `trading`, `journal`, `review`, `trading-journal`, `go`, `fiber`, `nextjs`, `typescript`, `ai`, `portfolio`, `chart`
 
 ## Marketing
 

@@ -52,8 +52,8 @@ KIFU는 이를 `수집 → 기록 → 복기 → 개선` 흐름으로 통합합�
 ## 아키텍처
 
 - Backend: Go + Fiber
-- Frontend: React + TypeScript + Vite
-- Data: PostgreSQL, Redis
+- Frontend: Next.js + TypeScript
+- Data: PostgreSQL
 - AI Provider: OpenAI / Claude / Gemini
 
 ## 빠른 시작
@@ -86,6 +86,8 @@ npm run dev
 - 운영: `docs/runbook/*`
 - 분석: `docs/03-analysis/*`
 - NLM 정리: `docs/nlm/*`
+- 제출 요약: `SUBMISSION.md`
+- 보안 상태: `SECURITY_STATUS.md`
 
 ## GitHub 소개 텍스트(About)
 
@@ -94,7 +96,7 @@ GitHub 저장소 소개글(About)은 기본적으로 단일 문구라서 기본 
 - 권장 설명
   - `Trading journal and AI review platform for retrospective analysis: bubbles, portfolio, chart replay, and AI comparison.`
 - 권장 태그
-  - `trading`, `journal`, `review`, `trading-journal`, `go`, `fiber`, `react`, `vite`, `ai`, `portfolio`, `chart`
+  - `trading`, `journal`, `review`, `trading-journal`, `go`, `fiber`, `nextjs`, `typescript`, `ai`, `portfolio`, `chart`
 
 ## 마케팅
 
