@@ -55,10 +55,7 @@ func (c *BaseRPCClient) ListERC20Transfers(ctx context.Context, address string, 
 		return nil, err
 	}
 
-	startBlock, err := c.findStartBlock(ctx, startTime.UTC(), latestBlock)
-	if err != nil {
-		return nil, err
-	}
+	startBlock := estimateStartBlock(latestBlock, startTime.UTC(), endTime.UTC())
 
 	addressTopic := addressToTopic(address)
 	baseTopic := erc20TransferTopic
@@ -113,6 +110,24 @@ func (c *BaseRPCClient) ListERC20Transfers(ctx context.Context, address string, 
 	})
 
 	return events, nil
+}
+
+func estimateStartBlock(latest uint64, startTime, endTime time.Time) uint64 {
+	if latest == 0 {
+		return 0
+	}
+
+	window := endTime.Sub(startTime)
+	if window <= 0 {
+		return latest
+	}
+
+	// Base block time is roughly ~2s. Add extra buffer to avoid underfetch.
+	estimatedDistance := uint64(window/(2*time.Second)) + 5000
+	if estimatedDistance >= latest {
+		return 0
+	}
+	return latest - estimatedDistance
 }
 
 type rpcRequest struct {
