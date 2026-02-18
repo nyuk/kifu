@@ -49,6 +49,23 @@ KIFU unifies this as: **Ingest → Record → Review → Improve**.
 
 > See `docs/spec/summary-pack-v1.md` and `docs/runbook/summary-pack-v1.md`.
 
+## Onchain Quick Check (Base) — MVP
+
+`POST /api/v1/onchain/quick-check`
+
+- Deterministic on-demand facts pack from ERC20 Transfers (`eth_getLogs`)
+- 10-minute cache bucket + IP rate limit (10 req/min)
+- Output: token flow summary + warnings (`LOW_ACTIVITY`, `HIGH_CONCENTRATION`, `TOO_MANY_UNIQUE_TOKENS`)
+- Auth required: `Authorization: Bearer <JWT>`
+
+Example:
+```bash
+curl -X POST "$API/api/v1/onchain/quick-check" \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"chain":"base","address":"0x...","range":"30d"}'
+```
+
 ## Architecture
 
 - Backend: Go + Fiber

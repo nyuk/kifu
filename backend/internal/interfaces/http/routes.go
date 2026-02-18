@@ -3,12 +3,14 @@ package http
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
+	onchaininfra "github.com/moneyvessel/kifu/internal/infrastructure/onchain"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/handlers"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/middleware"
 	"github.com/moneyvessel/kifu/internal/services"
@@ -77,6 +79,9 @@ func RegisterRoutes(
 	guidedReviewHandler := handlers.NewGuidedReviewHandler(guidedReviewRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 	packHandler := handlers.NewPackHandler(runRepo, summaryPackRepo, summaryPackService)
+	baseRPCClient := onchaininfra.NewBaseRPCClient(strings.TrimSpace(os.Getenv("BASE_RPC_URL")))
+	onchainPackService := services.NewOnchainPackService(baseRPCClient)
+	onchainHandler := handlers.NewOnchainHandler(onchainPackService)
 	simReportHandler := handlers.NewSimReportHandler(
 		pool,
 		userRepo,
@@ -239,6 +244,9 @@ func RegisterRoutes(
 	packs.Post("/generate-latest", packHandler.GenerateLatest)
 	packs.Get("/latest", packHandler.GetLatest)
 	packs.Get("/:pack_id", packHandler.GetByID)
+
+	onchain := api.Group("/onchain")
+	onchain.Post("/quick-check", onchainHandler.QuickCheck)
 
 	connections := api.Group("/connections")
 	connections.Post("/", connectionHandler.Create)

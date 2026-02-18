@@ -49,6 +49,23 @@ KIFU는 이를 `수집 → 기록 → 복기 → 개선` 흐름으로 통합합�
 
 > 자세한 스펙: `docs/spec/summary-pack-v1.md`, 운영 가이드: `docs/runbook/summary-pack-v1.md`
 
+## Onchain Quick Check (Base) — MVP
+
+`POST /api/v1/onchain/quick-check`
+
+- ERC20 Transfer(`eth_getLogs`) 기반의 결정론적 온디맨드 facts pack
+- 10분 캐시 버킷 + IP 기준 레이트 리밋(분당 10회)
+- 출력: 토큰 흐름 요약 + 경고(`LOW_ACTIVITY`, `HIGH_CONCENTRATION`, `TOO_MANY_UNIQUE_TOKENS`)
+- 인증 필요: `Authorization: Bearer <JWT>`
+
+예시:
+```bash
+curl -X POST "$API/api/v1/onchain/quick-check" \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"chain":"base","address":"0x...","range":"30d"}'
+```
+
 ## 아키텍처
 
 - Backend: Go + Fiber
