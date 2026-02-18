@@ -21,6 +21,8 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
+const logsChunkSize uint64 = 15000
+
 type BaseRPCClient struct {
 	rpcURL string
 	client *http.Client
@@ -60,12 +62,12 @@ func (c *BaseRPCClient) ListERC20Transfers(ctx context.Context, address string, 
 	addressTopic := addressToTopic(address)
 	baseTopic := erc20TransferTopic
 
-	fromLogs, err := c.fetchLogsAdaptive(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
+	fromLogs, err := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
 	if err != nil {
 		return nil, err
 	}
 
-	toLogs, err := c.fetchLogsAdaptive(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
+	toLogs, err := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
 	if err != nil {
 		return nil, err
 	}
@@ -339,6 +341,37 @@ func (c *BaseRPCClient) fetchLogsAdaptive(ctx context.Context, fromBlock, toBloc
 	merged = append(merged, left...)
 	merged = append(merged, right...)
 	return merged, nil
+}
+
+func (c *BaseRPCClient) fetchLogsChunked(ctx context.Context, fromBlock, toBlock uint64, topics []interface{}) ([]rpcLog, error) {
+	if fromBlock > toBlock {
+		return []rpcLog{}, nil
+	}
+
+	all := make([]rpcLog, 0)
+	for current := fromBlock; current <= toBlock; {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		end := current + logsChunkSize - 1
+		if end > toBlock || end < current {
+			end = toBlock
+		}
+
+		logs, err := c.fetchLogsAdaptive(ctx, current, end, topics)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, logs...)
+
+		if end == toBlock {
+			break
+		}
+		current = end + 1
+	}
+
+	return all, nil
 }
 
 func isRangeTooWideError(err error) bool {

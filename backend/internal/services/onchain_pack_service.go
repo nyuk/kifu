@@ -22,7 +22,7 @@ var (
 	onchainRange30d      = 30 * 24 * time.Hour
 	onchainCacheTTL      = 10 * time.Minute
 	onchainBucketSize    = 10 * time.Minute
-	onchainProviderLimit = 8 * time.Second
+	onchainProviderLimit = 20 * time.Second
 
 	evmAddressRegex = regexp.MustCompile(`^0x[0-9a-fA-F]{40}$`)
 
