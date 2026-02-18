@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../lib/api'
+import { isGuestSession } from '../../lib/guestSession'
 import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
@@ -207,11 +208,19 @@ export function HomeSnapshot() {
   const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
   const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
   const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
+  const [guestMode, setGuestMode] = useState(false)
+  const [guestModeReady, setGuestModeReady] = useState(false)
 
   useEffect(() => {
+    setGuestMode(isGuestSession())
+    setGuestModeReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!guestModeReady || guestMode) return
     fetchGuidedToday()
     fetchGuidedStreak()
-  }, [fetchGuidedToday, fetchGuidedStreak])
+  }, [guestMode, guestModeReady, fetchGuidedToday, fetchGuidedStreak])
 
   useEffect(() => {
     let isActive = true
@@ -515,7 +524,7 @@ export function HomeSnapshot() {
   }, [totalPnlNumeric])
 
   const shouldForceGuidedModal =
-    Boolean(guidedReview) && !guidedLoading && guidedReview?.status !== 'completed'
+    !guestMode && Boolean(guidedReview) && !guidedLoading && guidedReview?.status !== 'completed'
 
   useEffect(() => {
     if (!shouldForceGuidedModal) return
@@ -735,7 +744,7 @@ export function HomeSnapshot() {
 
         <HomeSafetyCheckCard />
 
-        {guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
+        {!guestMode && guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <SummaryCard title="내 기록 요약">

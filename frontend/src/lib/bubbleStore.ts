@@ -77,6 +77,59 @@ interface BubbleState {
   resetSessionData: () => void;
 }
 
+const normalizeBubbleAction = (value: unknown): Bubble['action'] | undefined => {
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim().toUpperCase()
+  if (normalized === 'BUY') return 'BUY'
+  if (normalized === 'SELL') return 'SELL'
+  if (normalized === 'HOLD') return 'HOLD'
+  if (normalized === 'TP') return 'TP'
+  if (normalized === 'SL') return 'SL'
+  if (normalized === 'NONE') return 'NONE'
+  return undefined
+}
+
+const inferBubbleActionFromTags = (tags: unknown): Bubble['action'] | undefined => {
+  if (!Array.isArray(tags)) return undefined
+  const normalizedTags = tags
+    .filter((tag): tag is string => typeof tag === 'string')
+    .map((tag) => tag.trim().toUpperCase())
+
+  if (normalizedTags.some((tag) => tag === 'BUY' || tag === 'LONG')) return 'BUY'
+  if (normalizedTags.some((tag) => tag === 'SELL' || tag === 'SHORT')) return 'SELL'
+  if (normalizedTags.some((tag) => tag === 'HOLD' || tag === 'WAIT')) return 'HOLD'
+  if (normalizedTags.some((tag) => tag === 'TP' || tag === 'TAKE_PROFIT')) return 'TP'
+  if (normalizedTags.some((tag) => tag === 'SL' || tag === 'STOP_LOSS')) return 'SL'
+  if (normalizedTags.some((tag) => tag === 'NONE' || tag === 'NOTE')) return 'NONE'
+
+  return undefined
+}
+
+const resolveBubbleAction = (params: {
+  action?: unknown
+  tags?: unknown
+  bubbleType?: unknown
+  memo?: unknown
+}): Bubble['action'] | undefined => {
+  const fromAction = normalizeBubbleAction(params.action)
+  if (fromAction) return fromAction
+
+  const fromBubbleType = normalizeBubbleAction(params.bubbleType)
+  if (fromBubbleType) return fromBubbleType
+
+  const fromTags = inferBubbleActionFromTags(params.tags)
+  if (fromTags) return fromTags
+
+  if (typeof params.memo === 'string') {
+    const memo = params.memo.toUpperCase()
+    if (memo.includes(' BUY ') || memo.startsWith('BUY ') || memo.endsWith(' BUY')) return 'BUY'
+    if (memo.includes(' SELL ') || memo.startsWith('SELL ') || memo.endsWith(' SELL')) return 'SELL'
+    if (memo.includes(' HOLD ') || memo.startsWith('HOLD ') || memo.endsWith(' HOLD')) return 'HOLD'
+  }
+
+  return undefined
+}
+
 export const useBubbleStore = create<BubbleState>()(
   persist(
     (set, get) => ({
@@ -114,7 +167,12 @@ export const useBubbleStore = create<BubbleState>()(
             bubbleType: data.bubble_type || 'manual',
             note: data.memo || '',
             tags: data.tags || [],
-            action: data.action,
+            action: resolveBubbleAction({
+              action: data.action,
+              tags: data.tags,
+              bubbleType: data.bubble_type,
+              memo: data.memo,
+            }),
             agents: data.agents || [],
             asset_class: data.asset_class,
             venue_name: data.venue_name,
@@ -160,7 +218,12 @@ export const useBubbleStore = create<BubbleState>()(
           tags: data.tags || [],
           asset_class: data.asset_class,
           venue_name: data.venue_name,
-          action: undefined,
+          action: resolveBubbleAction({
+            action: data.action,
+            tags: data.tags || payload.tags,
+            bubbleType: data.bubble_type,
+            memo: data.memo || payload.memo,
+          }),
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
         };

@@ -185,7 +185,7 @@ export function PortfolioDashboard() {
 
   useEffect(() => {
     if (loadingPositions || loadingTimeline) return
-    if (positions.length > 0 || timeline.length > 0) {
+    if (positions.length > 0) {
       setUsingTradeFallback(false)
       return
     }

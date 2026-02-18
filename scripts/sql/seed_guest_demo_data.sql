@@ -62,7 +62,11 @@ SELECT
     WHEN gs % 3 = 1 THEN 'ETHUSDT'
     ELSE 'KRW-BTC'
   END,
-  CASE WHEN gs % 2 = 0 THEN 'BUY' ELSE 'SELL' END,
+  CASE
+    WHEN gs % 3 = 0 THEN CASE WHEN gs % 5 IN (0, 1, 2, 3) THEN 'BUY' ELSE 'SELL' END
+    WHEN gs % 3 = 1 THEN CASE WHEN gs % 5 IN (0, 1) THEN 'BUY' ELSE 'SELL' END
+    ELSE CASE WHEN gs % 5 IN (0, 1, 2) THEN 'BUY' ELSE 'SELL' END
+  END,
   ROUND((0.02 + (gs % 9) * 0.01)::numeric, 4),
   CASE
     WHEN gs % 3 = 0 THEN ROUND((42000 + (gs % 20) * 230)::numeric, 2)
@@ -71,7 +75,11 @@ SELECT
   END,
   ROUND((((gs % 11) - 5) * 12.5)::numeric, 2),
   NOW() - ((gs % 55) || ' days')::interval - ((gs % 20) || ' hours')::interval,
-  CASE WHEN gs % 2 = 0 THEN 'LONG' ELSE 'SHORT' END,
+  CASE
+    WHEN gs % 3 = 0 THEN CASE WHEN gs % 5 IN (0, 1, 2, 3) THEN 'LONG' ELSE 'SHORT' END
+    WHEN gs % 3 = 1 THEN CASE WHEN gs % 5 IN (0, 1) THEN 'LONG' ELSE 'SHORT' END
+    ELSE CASE WHEN gs % 5 IN (0, 1, 2) THEN 'LONG' ELSE 'SHORT' END
+  END,
   CASE WHEN gs % 3 = 0 THEN 'OPEN' ELSE 'CLOSE' END,
   CASE WHEN gs % 4 = 0 THEN true ELSE false END
 FROM generate_series(1, 180) gs
@@ -98,8 +106,21 @@ SELECT
     ELSE ROUND((90 + (gs % 60) * 1.8)::numeric, 2)
   END,
   'manual',
-  FORMAT('Seed bubble %s: scenario note for retrospective review.', gs),
+  FORMAT(
+    'Seed bubble %s: %s scenario note for retrospective review.',
+    gs,
+    CASE
+      WHEN gs % 3 = 0 THEN 'BUY'
+      WHEN gs % 3 = 1 THEN 'SELL'
+      ELSE 'HOLD'
+    END
+  ),
   ARRAY[
+    CASE
+      WHEN gs % 3 = 0 THEN 'buy'
+      WHEN gs % 3 = 1 THEN 'sell'
+      ELSE 'hold'
+    END,
     CASE WHEN gs % 2 = 0 THEN 'trend' ELSE 'retest' END,
     CASE WHEN gs % 5 = 0 THEN 'risk' ELSE 'seed' END
   ]::text[],
@@ -256,4 +277,3 @@ SELECT
 FROM (
   SELECT id FROM users WHERE lower(email) = lower(:'guest_email')
 ) u;
-
