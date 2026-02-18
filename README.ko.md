@@ -84,6 +84,8 @@ npm run dev
 - 설계: `docs/01-plan/*`, `docs/02-design/*`
 - 스펙: `docs/spec/*`
 - 운영: `docs/runbook/*`
+- 제출 체크리스트: `docs/runbook/2026-02-19-submission-checklist.md`
+- 게스트 데이터 주입: `docs/runbook/guest-demo-data-seeding.md`
 - 분석: `docs/03-analysis/*`
 - NLM 정리: `docs/nlm/*`
 - 제출 요약: `SUBMISSION.md`

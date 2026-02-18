@@ -84,6 +84,8 @@ npm run dev
 - Design: `docs/01-plan/*`, `docs/02-design/*`
 - Specs: `docs/spec/*`
 - Runbooks: `docs/runbook/*`
+- Submission checklist: `docs/runbook/2026-02-19-submission-checklist.md`
+- Guest demo seeding: `docs/runbook/guest-demo-data-seeding.md`
 - Analysis: `docs/03-analysis/*`
 - NLM bundle: `docs/nlm/*`
 - Submission brief: `SUBMISSION.md`
