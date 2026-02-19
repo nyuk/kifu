@@ -21,7 +21,10 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
-const logsChunkSize uint64 = 200000
+const (
+	logsChunkSize     uint64 = 20000
+	maxLookbackBlocks uint64 = 120000
+)
 
 type BaseRPCClient struct {
 	rpcURL string
@@ -62,23 +65,11 @@ func (c *BaseRPCClient) ListERC20Transfers(ctx context.Context, address string, 
 	addressTopic := addressToTopic(address)
 	baseTopic := erc20TransferTopic
 
-	var fromLogs, toLogs []rpcLog
-	var fromErr, toErr error
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		fromLogs, fromErr = c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
-	}()
-	go func() {
-		defer wg.Done()
-		toLogs, toErr = c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
-	}()
-	wg.Wait()
-
+	fromLogs, fromErr := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
 	if fromErr != nil {
 		return nil, fromErr
 	}
+	toLogs, toErr := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
 	if toErr != nil {
 		return nil, toErr
 	}
@@ -137,6 +128,9 @@ func estimateStartBlock(latest uint64, startTime, endTime time.Time) uint64 {
 
 	// Base block time is roughly ~2s. Add extra buffer to avoid underfetch.
 	estimatedDistance := uint64(window/(2*time.Second)) + 5000
+	if estimatedDistance > maxLookbackBlocks {
+		estimatedDistance = maxLookbackBlocks
+	}
 	if estimatedDistance >= latest {
 		return 0
 	}
