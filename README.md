@@ -3,7 +3,7 @@
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
 > - Korean is optional supplementary context when needed.
 
-![KIFU](frontend/public/logo/kifu-logo-wordmark.svg)
+![KIFU](./frontend/public/logo/kifu-logo-wordmark.svg)
 
 # KIFU
 
@@ -11,13 +11,13 @@
 
 [🇺🇸 English](./README.md) · [🇰🇷 Korean](./README.ko.md)
 
-![KIFU Hero](docs/marketing/assets/readme-hero-home.svg)
+![KIFU Hero](./docs/marketing/assets/readme-hero-home.svg)
 
 ## Demo Screenshots
 
-![Dashboard Demo](docs/marketing/assets/demo-dashboard.svg)
-![Review Demo](docs/marketing/assets/demo-review.svg)
-![Onchain Demo](docs/marketing/assets/demo-onchain.svg)
+![Dashboard Demo](./docs/marketing/assets/demo-dashboard.svg)
+![Review Demo](./docs/marketing/assets/demo-review.svg)
+![Onchain Demo](./docs/marketing/assets/demo-onchain.svg)
 
 KIFU turns trading activity into a structured feedback loop:
 - Capture trades and portfolio changes
@@ -41,6 +41,23 @@ KIFU unifies this as: **Ingest → Record → Review → Improve**.
 - Bubble timeline and chart replay for side-by-side analysis
 - KPI dashboards and outcome analysis
 - Alerting, secure auth, token management
+
+## Pricing Concept (Draft)
+
+- **Free tier**: bubble candlestick journal + portfolio snapshot (limited review baseline)
+- **Paid tier trigger**: AI opinion collection count is the main gating metric
+  - Each AI-generated opinion stored against a trade/event consumes one **Opinion Credit**.
+  - Free users can use only the bubble candlestick flow; opinion collection is capped or disabled.
+  - Paid users can consume high-frequency opinion credits and unlock richer analysis features.
+
+### 2-week roadmap (KIFU)
+- **Week 1**
+  - Finalize paid behavior: credit policy, free quota, overflow behavior, payment entry
+  - Add billing prompt and hard stop for free users after credit limit
+  - Add guardrails on free tier features and copy in onboarding
+- **Week 2**
+  - Add pricing/checkout UI + usage dashboard
+  - Launch small in-app experiment and track conversion from free users into paid usage
 
 ## Summary Pack
 

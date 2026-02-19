@@ -3,7 +3,7 @@
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
 > - 한국어는 보조 문맥(필요 시)로 제공됩니다.
 
-![KIFU](frontend/public/logo/kifu-logo-wordmark.svg)
+![KIFU](./frontend/public/logo/kifu-logo-wordmark.svg)
 
 # KIFU
 
@@ -11,13 +11,13 @@
 
 [🇺🇸 English](./README.md) · [🇰🇷 한국어](./README.ko.md)
 
-![KIFU Hero](docs/marketing/assets/readme-hero-home.svg)
+![KIFU Hero](./docs/marketing/assets/readme-hero-home.svg)
 
 ## 데모 스크린샷
 
-![Dashboard Demo](docs/marketing/assets/demo-dashboard.svg)
-![Review Demo](docs/marketing/assets/demo-review.svg)
-![Onchain Demo](docs/marketing/assets/demo-onchain.svg)
+![Dashboard Demo](./docs/marketing/assets/demo-dashboard.svg)
+![Review Demo](./docs/marketing/assets/demo-review.svg)
+![Onchain Demo](./docs/marketing/assets/demo-onchain.svg)
 
 KIFU는 거래/포트폴리오 활동을 다음 루프로 정리합니다.
 - 거래·포트폴리오 이벤트 수집
@@ -42,6 +42,22 @@ KIFU는 이를 `수집 → 기록 → 복기 → 개선` 흐름으로 통합합�
 - KPI 대시보드 및 성과 분석
 - 알림, 인증, 토큰 관리
 
+## 과금 개념 (Draft)
+
+- **무료 플랜**: 말풍선 캔들 타임라인 중심의 기본 복기/포트폴리오 뷰
+- **유료 전환 기준**: AI 의견 수집 건수를 기준으로 과금
+  - 거래/이벤트마다 생성한 AI 의견을 저장할 때마다 **Opinion Credit** 1개 소모
+  - 무료는 말풍선(캔들) 복기만 제공, AI 의견 수집은 횟수 제한 또는 제한해제되지 않음
+  - 유료는 고빈도 AI 의견 수집 및 고급 분석 기능을 개방
+
+### KIFU 2주 목표
+- **1주차**
+  - 과금 규칙 확정: 크레딧 정책, 무료 한도, 오버플로우 동작
+  - 유료 전환 포인트 UI/문구 정비 및 이용자 가이드/온보딩 반영
+- **2주차**
+  - 결제 진입(포인트 구매) 흐름 및 사용량 대시보드 연결
+  - 무료→유료 전환 퍼널 지표 수집 및 전환률 실험 실행
+
 ## Summary Pack
 
 ### v1.0 (기본)
@@ -59,7 +75,7 @@ KIFU는 이를 `수집 → 기록 → 복기 → 개선` 흐름으로 통합합�
 
 `POST /api/v1/onchain/quick-check`
 
-- ERC20 Transfer(`eth_getLogs`) 기반의 결정론적 온디맨드 facts pack
+- ERC20 Transfer(`alchemy_getAssetTransfers`) 기반의 결정론적 온디맨드 facts pack
 - 10분 캐시 버킷 + IP 기준 레이트 리밋(분당 10회)
 - 출력: 토큰 흐름 요약 + 경고(`LOW_ACTIVITY`, `HIGH_CONCENTRATION`, `TOO_MANY_UNIQUE_TOKENS`)
 - 인증 필요: `Authorization: Bearer <JWT>`
