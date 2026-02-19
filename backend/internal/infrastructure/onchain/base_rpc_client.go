@@ -360,6 +360,16 @@ func (c *BaseRPCClient) fetchLogsChunked(ctx context.Context, fromBlock, toBlock
 		return []rpcLog{}, nil
 	}
 
+	// Fast path: try single-range query first.
+	// For indexed address topics this is often faster and avoids many RPC calls.
+	logs, err := c.fetchLogs(ctx, fromBlock, toBlock, topics)
+	if err == nil {
+		return logs, nil
+	}
+	if !isRangeTooWideError(err) {
+		return nil, err
+	}
+
 	all := make([]rpcLog, 0)
 	for current := fromBlock; current <= toBlock; {
 		if ctx.Err() != nil {
@@ -371,11 +381,11 @@ func (c *BaseRPCClient) fetchLogsChunked(ctx context.Context, fromBlock, toBlock
 			end = toBlock
 		}
 
-		logs, err := c.fetchLogsAdaptive(ctx, current, end, topics)
-		if err != nil {
-			return nil, err
+		partLogs, partErr := c.fetchLogsAdaptive(ctx, current, end, topics)
+		if partErr != nil {
+			return nil, partErr
 		}
-		all = append(all, logs...)
+		all = append(all, partLogs...)
 
 		if end == toBlock {
 			break
