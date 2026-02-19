@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -79,7 +80,15 @@ func RegisterRoutes(
 	guidedReviewHandler := handlers.NewGuidedReviewHandler(guidedReviewRepo)
 	manualPositionHandler := handlers.NewManualPositionHandler(manualPositionRepo)
 	packHandler := handlers.NewPackHandler(runRepo, summaryPackRepo, summaryPackService)
-	baseRPCClient := onchaininfra.NewBaseRPCClient(strings.TrimSpace(os.Getenv("BASE_RPC_URL")))
+	baseRPCURL := strings.TrimSpace(os.Getenv("BASE_RPC_URL"))
+	if baseRPCURL == "" {
+		log.Println("[onchain] WARNING: BASE_RPC_URL not set, falling back to public RPC")
+	} else {
+		// Log only the host portion for debugging, not the full key
+		parts := strings.SplitN(baseRPCURL, "/v2/", 2)
+		log.Printf("[onchain] BASE_RPC_URL configured: %s/v2/***", parts[0])
+	}
+	baseRPCClient := onchaininfra.NewBaseRPCClient(baseRPCURL)
 	onchainPackService := services.NewOnchainPackService(baseRPCClient)
 	onchainHandler := handlers.NewOnchainHandler(onchainPackService)
 	simReportHandler := handlers.NewSimReportHandler(

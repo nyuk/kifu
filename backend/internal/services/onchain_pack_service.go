@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"regexp"
 	"sort"
@@ -173,6 +174,7 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 
 	events, providerErr := s.provider.ListERC20Transfers(providerCtx, normalized.address, startTime, now)
 	if providerErr != nil {
+		log.Printf("[onchain] provider error for %s/%s range=%s: %v", normalized.chain, normalized.address, normalized.rng, providerErr)
 		return OnchainQuickCheckResponse{
 			SchemaVersion: onchainSchemaVersion,
 			Chain:         normalized.chain,
