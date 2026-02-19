@@ -174,6 +174,41 @@ func (e *rpcCallError) Message() string {
 }
 
 func (c *BaseRPCClient) callRPC(ctx context.Context, method string, params interface{}, out interface{}) error {
+	const maxRetries = 4
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(attempt) * 500 * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		lastErr = c.doRPC(ctx, method, params, out)
+		if lastErr == nil {
+			return nil
+		}
+
+		if !isRateLimitError(lastErr) {
+			return lastErr
+		}
+	}
+	return lastErr
+}
+
+func isRateLimitError(err error) bool {
+	rpcErr, ok := err.(*rpcCallError)
+	if ok && rpcErr.Code() == 429 {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "429") || strings.Contains(msg, "rate") || strings.Contains(msg, "throttl")
+}
+
+func (c *BaseRPCClient) doRPC(ctx context.Context, method string, params interface{}, out interface{}) error {
 	payload, err := json.Marshal(rpcRequest{
 		JSONRPC: "2.0",
 		ID:      1,
@@ -387,6 +422,13 @@ func (c *BaseRPCClient) fetchLogsChunked(ctx context.Context, fromBlock, toBlock
 			break
 		}
 		current = end + 1
+
+		// Pace requests to avoid Alchemy rate limits
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(300 * time.Millisecond):
+		}
 	}
 
 	return all, nil
