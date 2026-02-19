@@ -21,7 +21,7 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
-const logsChunkSize uint64 = 15000
+const logsChunkSize uint64 = 50000
 
 type BaseRPCClient struct {
 	rpcURL string
@@ -299,6 +299,7 @@ type rpcLog struct {
 	Topics          []string `json:"topics"`
 	Data            string   `json:"data"`
 	BlockNumber     string   `json:"blockNumber"`
+	BlockTimestamp  string   `json:"blockTimestamp"`
 	TransactionHash string   `json:"transactionHash"`
 	LogIndex        string   `json:"logIndex"`
 }
@@ -410,9 +411,12 @@ func (c *BaseRPCClient) logToEvent(ctx context.Context, logItem rpcLog) (service
 		return services.TransferEvent{}, err
 	}
 
-	timestamp, err := c.getBlockTime(ctx, blockNumber)
-	if err != nil {
-		timestamp = time.Time{}
+	var timestamp time.Time
+	if logItem.BlockTimestamp != "" {
+		tsRaw, tsErr := parseHexUint64(logItem.BlockTimestamp)
+		if tsErr == nil && tsRaw > 0 {
+			timestamp = time.Unix(int64(tsRaw), 0).UTC()
+		}
 	}
 
 	return services.TransferEvent{
