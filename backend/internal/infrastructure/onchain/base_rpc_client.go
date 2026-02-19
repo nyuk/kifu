@@ -201,16 +201,18 @@ func (c *BaseRPCClient) callRPC(ctx context.Context, method string, params inter
 		return err
 	}
 
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("rpc http status=%d", resp.StatusCode)
-	}
-
 	var decoded rpcResponse
 	if err := json.Unmarshal(body, &decoded); err != nil {
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("rpc http status=%d body=%s", resp.StatusCode, string(body))
+		}
 		return err
 	}
 	if decoded.Error != nil {
 		return &rpcCallError{code: decoded.Error.Code, message: decoded.Error.Message}
+	}
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("rpc http status=%d", resp.StatusCode)
 	}
 	if out == nil || len(decoded.Result) == 0 {
 		return nil
