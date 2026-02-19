@@ -13,6 +13,12 @@
 
 ![KIFU Hero](docs/marketing/assets/readme-hero-home.svg)
 
+## Demo Screenshots
+
+![Dashboard Demo](docs/marketing/assets/demo-dashboard.svg)
+![Review Demo](docs/marketing/assets/demo-review.svg)
+![Onchain Demo](docs/marketing/assets/demo-onchain.svg)
+
 KIFU turns trading activity into a structured feedback loop:
 - Capture trades and portfolio changes
 - Add context-driven review notes

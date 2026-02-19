@@ -1,0 +1,22 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#0B1220"/>
+  <rect x="24" y="24" width="1232" height="72" rx="12" fill="#111A2B"/>
+  <text x="52" y="69" fill="#E6EDF8" font-family="Arial, sans-serif" font-size="28" font-weight="700">KIFU - Dashboard</text>
+  <rect x="24" y="116" width="360" height="260" rx="12" fill="#111A2B"/>
+  <rect x="404" y="116" width="420" height="260" rx="12" fill="#111A2B"/>
+  <rect x="844" y="116" width="412" height="260" rx="12" fill="#111A2B"/>
+  <rect x="24" y="396" width="604" height="300" rx="12" fill="#111A2B"/>
+  <rect x="648" y="396" width="608" height="300" rx="12" fill="#111A2B"/>
+  <text x="48" y="156" fill="#7DD3FC" font-family="Arial, sans-serif" font-size="22" font-weight="700">Portfolio Snapshot</text>
+  <text x="428" y="156" fill="#86EFAC" font-family="Arial, sans-serif" font-size="22" font-weight="700">Recent Trades</text>
+  <text x="868" y="156" fill="#FDE68A" font-family="Arial, sans-serif" font-size="22" font-weight="700">AI Highlights</text>
+  <text x="48" y="436" fill="#C4B5FD" font-family="Arial, sans-serif" font-size="22" font-weight="700">Performance Curve</text>
+  <text x="672" y="436" fill="#F9A8D4" font-family="Arial, sans-serif" font-size="22" font-weight="700">Bubble Timeline</text>
+  <polyline points="60,650 140,620 220,632 300,570 380,588 460,520 540,548 620,500" stroke="#22C55E" stroke-width="4" fill="none"/>
+  <circle cx="760" cy="520" r="20" fill="#60A5FA"/>
+  <circle cx="840" cy="560" r="26" fill="#34D399"/>
+  <circle cx="920" cy="510" r="18" fill="#F59E0B"/>
+  <circle cx="1000" cy="545" r="30" fill="#F472B6"/>
+  <circle cx="1090" cy="500" r="22" fill="#A78BFA"/>
+  <circle cx="1170" cy="555" r="16" fill="#38BDF8"/>
+</svg>

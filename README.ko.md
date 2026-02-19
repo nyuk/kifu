@@ -13,6 +13,12 @@
 
 ![KIFU Hero](docs/marketing/assets/readme-hero-home.svg)
 
+## 데모 스크린샷
+
+![Dashboard Demo](docs/marketing/assets/demo-dashboard.svg)
+![Review Demo](docs/marketing/assets/demo-review.svg)
+![Onchain Demo](docs/marketing/assets/demo-onchain.svg)
+
 KIFU는 거래/포트폴리오 활동을 다음 루프로 정리합니다.
 - 거래·포트폴리오 이벤트 수집
 - 판단 기록과 복기 노트 작성

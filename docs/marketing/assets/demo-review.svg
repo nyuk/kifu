@@ -1,0 +1,26 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#0E1322"/>
+  <rect x="24" y="24" width="1232" height="72" rx="12" fill="#151F35"/>
+  <text x="52" y="69" fill="#E6EDF8" font-family="Arial, sans-serif" font-size="28" font-weight="700">KIFU - Review Session</text>
+  <rect x="24" y="116" width="760" height="580" rx="12" fill="#151F35"/>
+  <rect x="804" y="116" width="452" height="280" rx="12" fill="#151F35"/>
+  <rect x="804" y="416" width="452" height="280" rx="12" fill="#151F35"/>
+  <text x="52" y="156" fill="#93C5FD" font-family="Arial, sans-serif" font-size="22" font-weight="700">Trade Replay & Notes</text>
+  <text x="832" y="156" fill="#86EFAC" font-family="Arial, sans-serif" font-size="22" font-weight="700">Sentiment Tags</text>
+  <text x="832" y="456" fill="#FDE68A" font-family="Arial, sans-serif" font-size="22" font-weight="700">Checklist</text>
+  <line x1="60" y1="600" x2="760" y2="600" stroke="#334155" stroke-width="2"/>
+  <polyline points="70,560 140,510 210,530 280,470 350,500 420,440 490,480 560,430 630,450 700,390" stroke="#60A5FA" stroke-width="4" fill="none"/>
+  <rect x="70" y="190" width="660" height="42" rx="8" fill="#1F2A44"/>
+  <rect x="70" y="246" width="620" height="42" rx="8" fill="#1F2A44"/>
+  <rect x="70" y="302" width="640" height="42" rx="8" fill="#1F2A44"/>
+  <rect x="70" y="358" width="590" height="42" rx="8" fill="#1F2A44"/>
+  <circle cx="850" cy="210" r="12" fill="#34D399"/>
+  <circle cx="850" cy="246" r="12" fill="#F59E0B"/>
+  <circle cx="850" cy="282" r="12" fill="#F87171"/>
+  <rect x="880" y="198" width="320" height="24" rx="6" fill="#1F2A44"/>
+  <rect x="880" y="234" width="280" height="24" rx="6" fill="#1F2A44"/>
+  <rect x="880" y="270" width="300" height="24" rx="6" fill="#1F2A44"/>
+  <rect x="840" y="500" width="380" height="18" rx="6" fill="#1F2A44"/>
+  <rect x="840" y="534" width="360" height="18" rx="6" fill="#1F2A44"/>
+  <rect x="840" y="568" width="340" height="18" rx="6" fill="#1F2A44"/>
+</svg>

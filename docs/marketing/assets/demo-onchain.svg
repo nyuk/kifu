@@ -1,0 +1,31 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#0A1020"/>
+  <rect x="24" y="24" width="1232" height="72" rx="12" fill="#131C33"/>
+  <text x="52" y="69" fill="#E6EDF8" font-family="Arial, sans-serif" font-size="28" font-weight="700">KIFU - Onchain Quick Check (Base)</text>
+  <rect x="24" y="116" width="1232" height="120" rx="12" fill="#131C33"/>
+  <rect x="24" y="256" width="608" height="440" rx="12" fill="#131C33"/>
+  <rect x="648" y="256" width="608" height="210" rx="12" fill="#131C33"/>
+  <rect x="648" y="486" width="608" height="210" rx="12" fill="#131C33"/>
+  <text x="52" y="158" fill="#93C5FD" font-family="Arial, sans-serif" font-size="22" font-weight="700">Input</text>
+  <text x="52" y="198" fill="#CBD5E1" font-family="Arial, sans-serif" font-size="18">chain=base, address=0xcf97..., range=7d</text>
+  <text x="52" y="296" fill="#86EFAC" font-family="Arial, sans-serif" font-size="22" font-weight="700">Summary</text>
+  <text x="676" y="296" fill="#FDE68A" font-family="Arial, sans-serif" font-size="22" font-weight="700">Top In / Top Out</text>
+  <text x="676" y="526" fill="#FCA5A5" font-family="Arial, sans-serif" font-size="22" font-weight="700">Warnings</text>
+  <rect x="52" y="320" width="260" height="80" rx="10" fill="#1E293B"/>
+  <rect x="332" y="320" width="260" height="80" rx="10" fill="#1E293B"/>
+  <text x="74" y="356" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="18">token_transfer_count</text>
+  <text x="74" y="382" fill="#34D399" font-family="Arial, sans-serif" font-size="22" font-weight="700">111,014</text>
+  <text x="354" y="356" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="18">unique_token_count</text>
+  <text x="354" y="382" fill="#60A5FA" font-family="Arial, sans-serif" font-size="22" font-weight="700">6</text>
+  <rect x="52" y="420" width="540" height="24" rx="6" fill="#1E293B"/>
+  <rect x="52" y="456" width="500" height="24" rx="6" fill="#1E293B"/>
+  <rect x="52" y="492" width="520" height="24" rx="6" fill="#1E293B"/>
+  <rect x="52" y="528" width="460" height="24" rx="6" fill="#1E293B"/>
+  <rect x="52" y="564" width="480" height="24" rx="6" fill="#1E293B"/>
+  <rect x="676" y="320" width="540" height="22" rx="6" fill="#1E293B"/>
+  <rect x="676" y="352" width="520" height="22" rx="6" fill="#1E293B"/>
+  <rect x="676" y="384" width="480" height="22" rx="6" fill="#1E293B"/>
+  <rect x="676" y="550" width="540" height="26" rx="6" fill="#1E293B"/>
+  <text x="694" y="568" fill="#FBBF24" font-family="Arial, sans-serif" font-size="16">HIGH_CONCENTRATION (warning)</text>
+  <text x="676" y="640" fill="#94A3B8" font-family="Arial, sans-serif" font-size="16">status: warning</text>
+</svg>
