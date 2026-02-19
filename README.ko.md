@@ -3,21 +3,11 @@
 > - Baseline is v1.0; v1.1 changes are documented as extension notes only.
 > - 한국어는 보조 문맥(필요 시)로 제공됩니다.
 
-![KIFU](./frontend/public/logo/kifu-logo-wordmark.svg)
-
 # KIFU
 
 **거래 복기와 AI 검증을 통해 의사결정 품질을 개선하는 트레이딩 저널 플랫폼**
 
 [🇺🇸 English](./README.md) · [🇰🇷 한국어](./README.ko.md)
-
-![KIFU Hero](./docs/marketing/assets/readme-hero-home.svg)
-
-## 데모 스크린샷
-
-![Dashboard Demo](./docs/marketing/assets/demo-dashboard.svg)
-![Review Demo](./docs/marketing/assets/demo-review.svg)
-![Onchain Demo](./docs/marketing/assets/demo-onchain.svg)
 
 KIFU는 거래/포트폴리오 활동을 다음 루프로 정리합니다.
 - 거래·포트폴리오 이벤트 수집
