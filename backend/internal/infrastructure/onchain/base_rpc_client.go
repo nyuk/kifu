@@ -21,7 +21,7 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
-const logsChunkSize uint64 = 50000
+const logsChunkSize uint64 = 10000
 
 type BaseRPCClient struct {
 	rpcURL string
@@ -392,6 +392,15 @@ func isRangeTooWideError(err error) bool {
 		return true
 	}
 	if strings.Contains(msg, "block range") {
+		return true
+	}
+	if strings.Contains(msg, "context deadline exceeded") {
+		return true
+	}
+	if strings.Contains(msg, "client.timeout exceeded") {
+		return true
+	}
+	if strings.Contains(msg, "timeout") {
 		return true
 	}
 	return false
