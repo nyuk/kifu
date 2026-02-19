@@ -22,7 +22,7 @@ import (
 var erc20TransferTopic = computeTransferTopic()
 
 const (
-	logsChunkSize     uint64 = 20000
+	logsChunkSize     uint64 = 2000
 	maxLookbackBlocks uint64 = 120000
 )
 
@@ -389,16 +389,6 @@ func (c *BaseRPCClient) fetchLogsAdaptive(ctx context.Context, fromBlock, toBloc
 func (c *BaseRPCClient) fetchLogsChunked(ctx context.Context, fromBlock, toBlock uint64, topics []interface{}) ([]rpcLog, error) {
 	if fromBlock > toBlock {
 		return []rpcLog{}, nil
-	}
-
-	// Fast path: try single-range query first.
-	// For indexed address topics this is often faster and avoids many RPC calls.
-	logs, err := c.fetchLogs(ctx, fromBlock, toBlock, topics)
-	if err == nil {
-		return logs, nil
-	}
-	if !isRangeTooWideError(err) {
-		return nil, err
 	}
 
 	all := make([]rpcLog, 0)
