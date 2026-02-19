@@ -21,7 +21,7 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
-const logsChunkSize uint64 = 10000
+const logsChunkSize uint64 = 5000
 
 type BaseRPCClient struct {
 	rpcURL string
@@ -39,7 +39,7 @@ func NewBaseRPCClient(rpcURL string) *BaseRPCClient {
 	return &BaseRPCClient{
 		rpcURL: trimmed,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 90 * time.Second,
 		},
 		blockTimeCache: make(map[uint64]time.Time),
 	}
