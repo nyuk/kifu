@@ -1,0 +1,915 @@
+{
+  "timestamp": "2026-02-12T16:07:24.654Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-12T16:07:11.240Z",
+    "activeFeatures": [
+      "tools",
+      "frontend",
+      "entities",
+      "repositories",
+      "handlers",
+      "backend",
+      "http",
+      "stores",
+      "guided-review",
+      "home",
+      "components-old",
+      "routes",
+      "scripts",
+      "alert",
+      "review",
+      "portfolio",
+      "alerts",
+      "[id]",
+      "rules"
+    ],
+    "primaryFeature": "tools",
+    "features": {
+      "tools": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-10T14:04:28.641Z",
+          "lastUpdated": "2026-02-10T14:04:28.641Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\tools\\migrate.go"
+      },
+      "frontend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-10T14:09:14.785Z",
+          "lastUpdated": "2026-02-12T16:00:41.450Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\layout.tsx"
+      },
+      "entities": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:24:11.018Z",
+          "lastUpdated": "2026-02-11T04:24:11.018Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\domain\\entities\\guided_review.go"
+      },
+      "repositories": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:24:17.522Z",
+          "lastUpdated": "2026-02-11T04:24:56.508Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\infrastructure\\repositories\\guided_review_repository_impl.go"
+      },
+      "handlers": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:18.457Z",
+          "lastUpdated": "2026-02-12T00:44:23.329Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\handlers\\ai_handler.go"
+      },
+      "backend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:24.115Z",
+          "lastUpdated": "2026-02-12T00:42:01.227Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\app\\app.go"
+      },
+      "http": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:35.130Z",
+          "lastUpdated": "2026-02-12T00:36:55.158Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\routes.go"
+      },
+      "stores": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:26:18.840Z",
+          "lastUpdated": "2026-02-11T04:26:18.841Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\stores\\guidedReviewStore.ts"
+      },
+      "guided-review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:27:06.741Z",
+          "lastUpdated": "2026-02-11T04:27:06.741Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\guided-review\\GuidedReviewFlow.tsx"
+      },
+      "home": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:27:28.347Z",
+          "lastUpdated": "2026-02-12T16:07:11.240Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\home\\HomeSnapshot.tsx"
+      },
+      "components-old": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T00:40:50.544Z",
+          "lastUpdated": "2026-02-12T16:06:28.461Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components-old\\Chart.tsx"
+      },
+      "routes": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T00:41:14.439Z",
+          "lastUpdated": "2026-02-12T00:41:14.439Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\routes\\RequireAuth.tsx"
+      },
+      "scripts": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T14:08:26.621Z",
+          "lastUpdated": "2026-02-12T14:22:40.464Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\scripts\\predeploy-e2e-test.sh"
+      },
+      "alert": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:03:25.967Z",
+          "lastUpdated": "2026-02-12T16:05:21.823Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\(app)\\alert\\page.tsx"
+      },
+      "review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:03:27.165Z",
+          "lastUpdated": "2026-02-12T16:05:37.441Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\(app)\\review\\page.tsx"
+      },
+      "portfolio": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:03:28.539Z",
+          "lastUpdated": "2026-02-12T16:07:03.862Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\portfolio\\PortfolioDashboard.tsx"
+      },
+      "alerts": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:05:26.072Z",
+          "lastUpdated": "2026-02-12T16:06:55.891Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\alerts\\AlertOutcomes.tsx"
+      },
+      "[id]": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:05:41.514Z",
+          "lastUpdated": "2026-02-12T16:05:42.571Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\(app)\\alerts\\[id]\\page.tsx"
+      },
+      "rules": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T16:05:46.510Z",
+          "lastUpdated": "2026-02-12T16:05:47.556Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\(app)\\alerts\\rules\\page.tsx"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-10T14:04:28.641Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-12T16:07:11.240Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-10T14:04:28.641Z",
+        "feature": "tools",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-10T14:09:14.785Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:11.018Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:17.522Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:56.508Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:18.457Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:24.115Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:31.126Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:35.130Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:39.098Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:44.314Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:26:05.825Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:26:18.841Z",
+        "feature": "stores",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:06.741Z",
+        "feature": "guided-review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:28.347Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:33.052Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:36.511Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:36:55.158Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:40:50.544Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:41:02.352Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:41:14.439Z",
+        "feature": "routes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:42:01.227Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:42:19.422Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:43:08.480Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:43:20.944Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:44:03.025Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:44:23.329Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:08:26.621Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:22:36.238Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:22:40.464Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:13.710Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:19.075Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:24.222Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:59:43.204Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:59:47.796Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:59:52.453Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:00:00.269Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:00:04.521Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:00:41.450Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:03:25.967Z",
+        "feature": "alert",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:03:27.165Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:03:28.539Z",
+        "feature": "portfolio",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:18.301Z",
+        "feature": "alert",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:19.377Z",
+        "feature": "alert",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:20.767Z",
+        "feature": "alert",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:21.823Z",
+        "feature": "alert",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:26.072Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:27.466Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:28.312Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:29.377Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:34.893Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:36.152Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:37.441Z",
+        "feature": "review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:41.514Z",
+        "feature": "[id]",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:42.571Z",
+        "feature": "[id]",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:46.510Z",
+        "feature": "rules",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:47.556Z",
+        "feature": "rules",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:52.095Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:53.428Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:54.436Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:05:56.303Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:00.664Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:01.836Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:03.018Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:04.303Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:05.805Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:06.962Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:08.185Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:09.303Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:13.405Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:14.566Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:15.640Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:16.726Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:17.861Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:18.995Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:20.235Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:21.563Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:22.626Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:23.812Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:25.234Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:26.345Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:27.333Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:28.461Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:35.598Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:37.135Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:38.655Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:39.090Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:40.296Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:45.346Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:46.084Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:47.421Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:48.618Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:49.949Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:51.055Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:52.335Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:53.690Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:54.775Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:06:55.891Z",
+        "feature": "alerts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:02.745Z",
+        "feature": "portfolio",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:03.862Z",
+        "feature": "portfolio",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:08.166Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:09.184Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:10.187Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T16:07:11.240Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

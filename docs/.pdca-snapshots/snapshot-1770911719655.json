@@ -1,0 +1,405 @@
+{
+  "timestamp": "2026-02-12T15:55:19.654Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-12T15:52:24.222Z",
+    "activeFeatures": [
+      "tools",
+      "frontend",
+      "entities",
+      "repositories",
+      "handlers",
+      "backend",
+      "http",
+      "stores",
+      "guided-review",
+      "home",
+      "components-old",
+      "routes",
+      "scripts"
+    ],
+    "primaryFeature": "tools",
+    "features": {
+      "tools": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-10T14:04:28.641Z",
+          "lastUpdated": "2026-02-10T14:04:28.641Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\tools\\migrate.go"
+      },
+      "frontend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-10T14:09:14.785Z",
+          "lastUpdated": "2026-02-12T15:52:24.222Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\app\\layout.tsx"
+      },
+      "entities": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:24:11.018Z",
+          "lastUpdated": "2026-02-11T04:24:11.018Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\domain\\entities\\guided_review.go"
+      },
+      "repositories": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:24:17.522Z",
+          "lastUpdated": "2026-02-11T04:24:56.508Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\infrastructure\\repositories\\guided_review_repository_impl.go"
+      },
+      "handlers": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:18.457Z",
+          "lastUpdated": "2026-02-12T00:44:23.329Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\handlers\\ai_handler.go"
+      },
+      "backend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:24.115Z",
+          "lastUpdated": "2026-02-12T00:42:01.227Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\app\\app.go"
+      },
+      "http": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:25:35.130Z",
+          "lastUpdated": "2026-02-12T00:36:55.158Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\backend\\internal\\interfaces\\http\\routes.go"
+      },
+      "stores": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:26:18.840Z",
+          "lastUpdated": "2026-02-11T04:26:18.841Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\stores\\guidedReviewStore.ts"
+      },
+      "guided-review": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:27:06.741Z",
+          "lastUpdated": "2026-02-11T04:27:06.741Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\guided-review\\GuidedReviewFlow.tsx"
+      },
+      "home": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-11T04:27:28.347Z",
+          "lastUpdated": "2026-02-11T04:27:36.511Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components\\home\\HomeSnapshot.tsx"
+      },
+      "components-old": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T00:40:50.544Z",
+          "lastUpdated": "2026-02-12T00:41:02.352Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\components-old\\Register.tsx"
+      },
+      "routes": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T00:41:14.439Z",
+          "lastUpdated": "2026-02-12T00:41:14.439Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\frontend\\src\\routes\\RequireAuth.tsx"
+      },
+      "scripts": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-12T14:08:26.621Z",
+          "lastUpdated": "2026-02-12T14:22:40.464Z"
+        },
+        "lastFile": "C:\\Users\\nyuk8\\PycharmProjects\\kifu\\kifu\\scripts\\predeploy-e2e-test.sh"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-10T14:04:28.641Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-12T15:52:24.222Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-10T14:04:28.641Z",
+        "feature": "tools",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-10T14:09:14.785Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:11.018Z",
+        "feature": "entities",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:17.522Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:24:56.508Z",
+        "feature": "repositories",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:18.457Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:24.115Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:31.126Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:35.130Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:39.098Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:25:44.314Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:26:05.825Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:26:18.841Z",
+        "feature": "stores",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:06.741Z",
+        "feature": "guided-review",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:28.347Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:33.052Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-11T04:27:36.511Z",
+        "feature": "home",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:36:55.158Z",
+        "feature": "http",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:40:50.544Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:41:02.352Z",
+        "feature": "components-old",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:41:14.439Z",
+        "feature": "routes",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:42:01.227Z",
+        "feature": "backend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:42:19.422Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:43:08.480Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:43:20.944Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:44:03.025Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T00:44:23.329Z",
+        "feature": "handlers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:08:26.621Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:22:36.238Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T14:22:40.464Z",
+        "feature": "scripts",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:13.710Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:19.075Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-12T15:52:24.222Z",
+        "feature": "frontend",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

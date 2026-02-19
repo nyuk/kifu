@@ -21,7 +21,7 @@ import (
 
 var erc20TransferTopic = computeTransferTopic()
 
-const logsChunkSize uint64 = 5000
+const logsChunkSize uint64 = 200000
 
 type BaseRPCClient struct {
 	rpcURL string
@@ -62,14 +62,25 @@ func (c *BaseRPCClient) ListERC20Transfers(ctx context.Context, address string, 
 	addressTopic := addressToTopic(address)
 	baseTopic := erc20TransferTopic
 
-	fromLogs, err := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
-	if err != nil {
-		return nil, err
-	}
+	var fromLogs, toLogs []rpcLog
+	var fromErr, toErr error
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		fromLogs, fromErr = c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, addressTopic, nil})
+	}()
+	go func() {
+		defer wg.Done()
+		toLogs, toErr = c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
+	}()
+	wg.Wait()
 
-	toLogs, err := c.fetchLogsChunked(ctx, startBlock, latestBlock, []interface{}{baseTopic, nil, addressTopic})
-	if err != nil {
-		return nil, err
+	if fromErr != nil {
+		return nil, fromErr
+	}
+	if toErr != nil {
+		return nil, toErr
 	}
 
 	byKey := make(map[string]services.TransferEvent, len(fromLogs)+len(toLogs))
