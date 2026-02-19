@@ -40,6 +40,12 @@ The original implementation needed 12,000+ chunked `eth_getLogs` calls for a 7-d
 
 111,014 ERC20 transfers returned successfully for 7-day range.
 
+Verification sample:
+- Endpoint: `POST /api/v1/onchain/quick-check`
+- Address: `0xcf979e05c91450e1fb5d98139101f0efcd934d07`
+- Range: `7d`
+- Result: `token_transfer_count=111014`, `unique_token_count=6`, `status=warning`, warning=`HIGH_CONCENTRATION`
+
 ## Rules for Future Development
 
 - **Do NOT use `eth_getLogs` on Alchemy Free tier** — 10-block limit

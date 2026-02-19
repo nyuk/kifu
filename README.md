@@ -53,7 +53,7 @@ KIFU unifies this as: **Ingest → Record → Review → Improve**.
 
 `POST /api/v1/onchain/quick-check`
 
-- Deterministic on-demand facts pack from ERC20 Transfers (`eth_getLogs`)
+- Deterministic on-demand facts pack from ERC20 Transfers (`alchemy_getAssetTransfers`)
 - 10-minute cache bucket + IP rate limit (10 req/min)
 - Output: token flow summary + warnings (`LOW_ACTIVITY`, `HIGH_CONCENTRATION`, `TOO_MANY_UNIQUE_TOKENS`)
 - Auth required: `Authorization: Bearer <JWT>`
@@ -65,6 +65,13 @@ curl -X POST "$API/api/v1/onchain/quick-check" \
   -H "Content-Type: application/json" \
   -d '{"chain":"base","address":"0x...","range":"30d"}'
 ```
+
+Verified response snapshot (2026-02-19):
+- `address`: `0xcf979e05c91450e1fb5d98139101f0efcd934d07`
+- `range`: `7d`
+- `token_transfer_count`: `111014`
+- `unique_token_count`: `6`
+- `status`: `warning` (`HIGH_CONCENTRATION`)
 
 ## Architecture
 
