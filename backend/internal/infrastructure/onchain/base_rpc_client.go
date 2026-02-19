@@ -39,7 +39,7 @@ func NewBaseRPCClient(rpcURL string) *BaseRPCClient {
 	return &BaseRPCClient{
 		rpcURL: trimmed,
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 		blockTimeCache: make(map[uint64]time.Time),
 	}
