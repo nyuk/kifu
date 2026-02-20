@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,11 +9,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 )
 
 type AdminUsersHandler struct {
 	userRepo repositories.UserRepository
+	pool     *pgxpool.Pool
 }
 
 type AdminUserItem struct {
@@ -36,8 +39,11 @@ type AdminUpdateUserRoleRequest struct {
 	IsAdmin bool `json:"is_admin"`
 }
 
-func NewAdminUsersHandler(userRepo repositories.UserRepository) *AdminUsersHandler {
-	return &AdminUsersHandler{userRepo: userRepo}
+func NewAdminUsersHandler(userRepo repositories.UserRepository, pool *pgxpool.Pool) *AdminUsersHandler {
+	return &AdminUsersHandler{
+		userRepo: userRepo,
+		pool:     pool,
+	}
 }
 
 func (h *AdminUsersHandler) List(c *fiber.Ctx) error {
@@ -102,7 +108,39 @@ func (h *AdminUsersHandler) UpdateAdmin(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
+	if ok {
+		if err := h.logAdminRoleChange(c.Context(), requesterID, id, req.IsAdmin); err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "failed to record admin role change audit"})
+		}
+	}
+
 	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "user role updated"})
+}
+
+func (h *AdminUsersHandler) logAdminRoleChange(
+	ctx context.Context,
+	actorID uuid.UUID,
+	targetID uuid.UUID,
+	isAdmin bool,
+) error {
+	if h.pool == nil || actorID == uuid.Nil {
+		return nil
+	}
+
+	details := map[string]bool{"is_admin": isAdmin}
+	_, err := h.pool.Exec(
+		ctx,
+		`INSERT INTO admin_audit_logs
+			(actor_user_id, target_user_id, action, action_target, action_resource, details)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		actorID,
+		targetID,
+		"user.admin.update",
+		"user",
+		"user",
+		details,
+	)
+	return err
 }
 
 func parseIntOrDefault(raw string, fallback int) (int, error) {

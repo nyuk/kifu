@@ -67,6 +67,12 @@ const tools = [
     title: '관리자 사용자 관리',
     description: '운영자 계정 발급과 회수를 관리하고, 사용자 조회를 수행합니다.',
   },
+  {
+    href: '/admin/audit-logs',
+    label: 'Admin Audit Log',
+    title: '관리자 변경 이력',
+    description: 'admin 역할 변경 등 운영 로그를 조회하고 요청자/대상/시간을 확인합니다.',
+  },
 ]
 
 export default function AdminPage() {

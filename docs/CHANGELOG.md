@@ -9,6 +9,10 @@
 - Added admin management UI: `/admin/users`
   - Shows users with search + pagination
   - Supports admin grant/revoke with self-protection
+- Added initial admin audit trail baseline:
+  - DB table: `admin_audit_logs`
+  - Backend endpoint: `GET /api/v1/admin/audit-logs`
+  - Admin UI page: `/admin/audit-logs`
 
 ### Changed
 - Admin role changes now require explicit admin endpoint access under existing `/api/v1/admin/*` guard (JWT + `is_admin` DB check).
@@ -17,12 +21,15 @@
 - `backend/internal/domain/repositories/user_repository.go`
 - `backend/internal/infrastructure/repositories/user_repository_impl.go`
 - `backend/internal/interfaces/http/handlers/admin_user_handler.go`
+- `backend/internal/interfaces/http/handlers/admin_audit_handler.go`
 - `backend/internal/interfaces/http/routes.go`
 - `backend/internal/interfaces/http/handlers/auth_handler_test.go`
 - `frontend/app/(app)/admin/page.tsx`
 - `frontend/app/(app)/admin/users/page.tsx`
+- `frontend/app/(app)/admin/audit-logs/page.tsx`
 - `docs/roadmap.md`
 - `docs/todo.md`
+- `backend/migrations/024_add_admin_audit_logs.sql`
 
 ## 2026-02-13
 
