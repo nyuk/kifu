@@ -36,3 +36,7 @@ This document tracks postponed or planned work that is not part of the current p
   - Admin role change events are recorded in `admin_audit_logs`
   - API exposure via `GET /api/v1/admin/audit-logs`
   - Admin UI page `/admin/audit-logs` for browsing actor/target/time/details
+- [x] Operational policy controls for admin workspace
+  - Added `admin_policies` table + migration (`025_add_admin_policies.sql`)
+  - Added `GET /api/v1/admin/policies` and `PUT /api/v1/admin/policies`
+  - Added `/admin/policies` UI for operational toggles

@@ -13,6 +13,12 @@
   - DB table: `admin_audit_logs`
   - Backend endpoint: `GET /api/v1/admin/audit-logs`
   - Admin UI page: `/admin/audit-logs`
+- Added operational policy controls in admin workspace:
+  - DB table: `admin_policies` (migration `025_add_admin_policies.sql`)
+  - Backend endpoint: `GET /api/v1/admin/policies`
+  - Backend endpoint: `PUT /api/v1/admin/policies` (single-key toggle update)
+  - Admin UI page: `/admin/policies`
+- Admin operation dashboard now includes a shortcut card to policy controls from `/admin`
 
 ### Changed
 - Admin role changes now require explicit admin endpoint access under existing `/api/v1/admin/*` guard (JWT + `is_admin` DB check).

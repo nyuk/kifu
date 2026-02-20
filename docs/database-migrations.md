@@ -33,8 +33,11 @@ All migration files are in `backend/migrations/`.
 | 020 | `020_guided_review.sql` | Guided review | `guided_reviews` |
 | 021 | `021_ai_allowlist.sql` | AI allowlist | `users.ai_allowlisted` |
 | 022 | `022_create_runs_and_summary_packs.sql` | Runs + Summary Packs | `runs`, `summary_packs` |
+| 023 | `023_add_is_admin_to_users.sql` | Admin role flag | `users.is_admin` |
+| 024 | `024_add_admin_audit_logs.sql` | Admin audit logs | `admin_audit_logs` |
+| 025 | `025_add_admin_policies.sql` | Operational policy toggles | `admin_policies` |
 
-## Latest Migration: 022
+## Latest Migration: 025
 
 ### `runs`
 
@@ -75,3 +78,16 @@ Indexes:
 - `(user_id, created_at DESC)`
 - `(user_id, range, created_at DESC)`
 - `(user_id, source_run_id)`
+
+### `admin_policies`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `key` | TEXT (PK) | Policy identifier |
+| `value` | JSONB | Boolean-style policy value stored as JSON |
+| `description` | TEXT | Human-readable description |
+| `updated_by` | UUID | Admin user who last updated |
+| `updated_at` | TIMESTAMPTZ | Last update timestamp |
+
+Indexes:
+- `(updated_at DESC)`

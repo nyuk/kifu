@@ -26,12 +26,13 @@ Operational task list for ongoing work.
   - [x] Admin-only simulation access and route hardening audit notes
   - [x] Guest-mode simulator exposure audit (UI + backend route validation)
   - [ ] 운영 제어 액션(재시작/일시정지) 설계 및 연결
-- [ ] 관리자 페이지 역할 확장 (현재 미구현)
+- [x] 관리자 페이지 역할 확장 (현재 미구현)
   - [x] 사용자/권한 조회 및 admin 부여/회수 (기본 UI/API)
     - Implemented: `admin/users` 페이지, 사용자 검색/목록, admin 플래그 변경
   - [x] 핵심 작업 감사 로그(요청자/시간/요청대상) 보관
     - Implemented: `admin_audit_logs` 테이블 + `GET /api/v1/admin/audit-logs` + `/admin/audit-logs`
-  - [ ] 정책 기반 알림/제한 설정 변경(운영 규칙 토글)
+  - [x] 정책 기반 알림/제한 설정 변경(운영 규칙 토글)
+    - Implemented: `admin_policies` 테이블 + `GET /api/v1/admin/policies` + `PUT /api/v1/admin/policies` + `/admin/policies`
   - [ ] 에이전트 서비스 상태 패널의 수동 제어(재시작, 중단, 모드 전환)
   - [ ] 장애 대응 표준 로그 템플릿 적용(정합성 실패 원인 추적)
 - [ ] Incident logging hardening (replace assumptions with structured logs on critical path)

@@ -73,6 +73,12 @@ const tools = [
     title: '관리자 변경 이력',
     description: 'admin 역할 변경 등 운영 로그를 조회하고 요청자/대상/시간을 확인합니다.',
   },
+  {
+    href: '/admin/policies',
+    label: 'Operational Policy',
+    title: '운영 정책 토글',
+    description: '운영 전역 정책(점검 모드, 알림 발송, 관리자 등록 기능) 토글을 관리합니다.',
+  },
 ]
 
 export default function AdminPage() {

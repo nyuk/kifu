@@ -113,6 +113,7 @@ func RegisterRoutes(
 	adminMetricsHandler := handlers.NewAdminMetricsHandler(pool)
 	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo, pool)
 	adminAuditHandler := handlers.NewAdminAuditHandler(pool)
+	adminPolicyHandler := handlers.NewAdminPolicyHandler(pool)
 
 	aiRPM := parseIntFromEnv("AI_RATE_LIMIT_RPM", 3)
 	if aiRPM < 1 {
@@ -303,6 +304,8 @@ func RegisterRoutes(
 	admin.Get("/users", adminUsersHandler.List)
 	admin.Patch("/users/:id/admin", adminUsersHandler.UpdateAdmin)
 	admin.Get("/audit-logs", adminAuditHandler.List)
+	admin.Get("/policies", adminPolicyHandler.List)
+	admin.Put("/policies", adminPolicyHandler.Upsert)
 }
 
 func parseIntFromEnv(key string, fallback int) int {
