@@ -11,6 +11,10 @@ This document tracks postponed or planned work that is not part of the current p
 - [ ] Admin dashboard expansion:
   - Admin workspace sections
   - Access control audit and operational metrics
+- [ ] Admin workspace role-specific capabilities:
+  - User role management (promote/revoke admin and audit trail)
+  - Operational controls for agent services (safety, restart/disable, run history)
+  - Incident-level guardrail and structured log collection
 - [ ] Agent service detail service pages and lifecycle controls
 - [ ] Structured incident logging on critical failure paths
 

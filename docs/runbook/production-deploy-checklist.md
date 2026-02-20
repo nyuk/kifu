@@ -93,6 +93,27 @@ psql "$DATABASE_URL" -c "SELECT COUNT(*) AS summary_packs_count FROM summary_pac
   - `/api/v1/packs/latest?range=30d`
   - `/api/v1/packs/{pack_id}`
 
+### Admin/권한 smoke (add immediately after auth baseline)
+- No auth call
+  - `GET /api/v1/admin/telemetry` → `401`
+- Non-admin token call
+  - `GET /api/v1/admin/telemetry` → `403`
+- Admin token call
+  - `GET /api/v1/admin/telemetry` → `200`
+- Admin UI route
+  - `GET /admin` should be accessible by admin and blocked/redirected for others
+
+권장 실행 스니펫:
+```bash
+export API_BASE="http://127.0.0.1:8080"
+export ADMIN_JWT="<admin.jwt>"
+export NON_ADMIN_JWT="<regular.user.jwt>"
+
+curl -sS "$API_BASE/api/v1/admin/telemetry" -o /tmp/admin_telemetry_unauth.txt -w "%{http_code}\n"
+curl -sS -H "Authorization: Bearer $NON_ADMIN_JWT" "$API_BASE/api/v1/admin/telemetry" -o /tmp/admin_telemetry_403.txt -w "%{http_code}\n"
+curl -sS -H "Authorization: Bearer $ADMIN_JWT" "$API_BASE/api/v1/admin/telemetry" -o /tmp/admin_telemetry_200.txt -w "%{http_code}\n"
+```
+
 ### Example
 ```bash
 curl -sS -X POST "http://<BACKEND_HOST>/api/v1/packs/generate" \
@@ -133,5 +154,6 @@ Rollback options:
 - [ ] Env vars confirmed
 - [ ] API smoke passed
 - [ ] UI flows rendered
+- [ ] Admin route smoke passed (401/403/200)
 - [ ] 1-hour monitor check complete
 - [ ] Rollback plan communicated

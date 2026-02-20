@@ -54,6 +54,72 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres ps
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U kifu -d kifu -c "SELECT email, is_admin FROM users WHERE is_admin = true;"
 ```
 
+### Production verification matrix (runtime)
+
+`/admin` 접근 제한은 프론트/백엔드 모두에서 동작해야 합니다.
+예시:
+```bash
+export API_BASE="http://127.0.0.1:8080"
+export ADMIN_JWT="<admin.jwt>"
+export NON_ADMIN_JWT="<non-admin.jwt>"
+```
+
+1) No auth (`401` expected)
+```bash
+curl -sS -o /tmp/admin_telemetry_noauth.txt -w "%{http_code}\n" \
+  "$API_BASE/api/v1/admin/telemetry"
+```
+Expect: `401`
+
+2) Non-admin authenticated user (`403` expected)
+```bash
+curl -sS -X GET -H "Authorization: Bearer $NON_ADMIN_JWT" \
+  -o /tmp/admin_telemetry_nonadmin.txt -w "%{http_code}\n" \
+  "$API_BASE/api/v1/admin/telemetry"
+```
+Expect: `403` and body contains `admin access required`.
+
+3) Admin authenticated user (`200` expected)
+```bash
+curl -sS -X GET -H "Authorization: Bearer $ADMIN_JWT" \
+  -o /tmp/admin_telemetry_admin.json -w "%{http_code}\n" \
+  "$API_BASE/api/v1/admin/telemetry"
+```
+Expect: `200` and telemetry payload.
+
+4) Frontend route gate
+- `GET /admin` with guest login should redirect to `/home`.
+- `GET /admin` with admin login should return admin workspace page.
+- `/home` settings card: 30일 시뮬레이터 노출 should be hidden when `is_admin=false` and guest session.
+
+### Admin account operation playbook (production)
+
+DB 기준으로 `users.is_admin` 플래그를 운영자 계정으로 설정해야 합니다.
+
+1) Promote account:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "UPDATE users SET is_admin = true WHERE lower(email) = lower('admin@example.com');"
+```
+
+2) Verify:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SELECT email, is_admin FROM users WHERE lower(email) = lower('admin@example.com');"
+```
+
+3) Revoke later if needed:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "UPDATE users SET is_admin = false WHERE lower(email) = lower('admin@example.com');"
+```
+
+### Authority design clarification (권한 기준)
+- Current behavior: DB `users.is_admin` is the source of truth for `/admin/*` access (backend guard).
+- JWT `role` is currently derived from `is_admin` at token issue time, but request-level gate is not role-claim-based.
+- If you want strict standardization, define `is_admin` as the single authority source and keep `role` as legacy metadata only, or remove `role` usage everywhere.
+- Current status: singleization decision recorded as unresolved but no dual-behavior conflict in runtime checks.
+
 ## Known caveat handled
 - 기존 `docker compose` 실행 시 `docker-compose.yml`만 쓰면 서비스가 `postgres`만 보여 `backend/frontend`가 안 올라오는 현상
 - 병합 파일을 항상 지정해야 함 (`-f docker-compose.yml -f docker-compose.prod.yml`)
