@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
-import { clearGuestSession, isGuestSession } from '../lib/guestSession'
+import { clearGuestSession, isGuestEmail, isGuestSession } from '../lib/guestSession'
 import { LanguageSelector } from '../components/LanguageSelector'
 import { ExchangeConnectionManager } from '../components/settings/ExchangeConnectionManager'
 import { api } from '../lib/api'
@@ -162,13 +162,17 @@ export function Settings() {
       try {
         const response = await api.get<{ email?: string; is_admin?: boolean }>('/v1/users/me')
         if (isActive) {
-          setProfileEmail(response.data?.email || null)
+          const email = response.data?.email
+          const isGuest = isGuestSession() || isGuestEmail(email)
+          setProfileEmail(email || null)
           setIsAdmin(Boolean(response.data?.is_admin))
+          setGuestMode(isGuest)
         }
       } catch {
         if (isActive) {
           setProfileEmail(null)
           setIsAdmin(false)
+          setGuestMode(isGuestSession())
         }
       }
     }

@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
 import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
+import { isGuestEmail } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck } from 'lucide-react'
@@ -22,16 +23,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
+  const [hasGuestSessionByEmail, setHasGuestSessionByEmail] = useState(false)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [shellTheme, setShellTheme] = useState<ShellTheme>('neutral')
   const contentClass = 'relative z-10 h-full overflow-y-auto px-4 py-6 md:px-6 lg:px-8'
 
-  const isGuestSessionActive = Boolean(guestSessionId)
+  const isGuestSessionActive = Boolean(guestSessionId) || hasGuestSessionByEmail
 
   useEffect(() => {
     setMounted(true)
-    setGuestSessionId(readGuestSession()?.id || null)
+    const guestSession = readGuestSession()
+    setGuestSessionId(guestSession?.id || null)
+    if (guestSession) {
+      setHasGuestSessionByEmail(false)
+    }
     try {
       const saved = localStorage.getItem(SHELL_THEME_KEY)
       if (saved === 'neutral' || saved === 'forest' || saved === 'warm') {
@@ -58,6 +64,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         if (isActive) {
           setProfileEmail(null)
           setIsAdmin(false)
+          setHasGuestSessionByEmail(Boolean(readGuestSession()))
         }
         return
       }
@@ -66,9 +73,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
         if (!isActive) return
         setProfileEmail(response.data?.email || null)
         setIsAdmin(Boolean(response.data?.is_admin))
+        setHasGuestSessionByEmail(isGuestEmail(response.data?.email))
       } catch {
         if (isActive) setProfileEmail(null)
         if (isActive) setIsAdmin(false)
+        setHasGuestSessionByEmail(Boolean(readGuestSession()))
       }
     }
     load()

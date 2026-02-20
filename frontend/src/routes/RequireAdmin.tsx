@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../lib/api'
-import { isGuestSession } from '../lib/guestSession'
+import { isGuestEmail, isGuestSession } from '../lib/guestSession'
 import { useAuthStore } from '../stores/auth'
 
 type MeResponse = {
+  email?: string
   is_admin?: boolean
 }
 
@@ -35,6 +36,12 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
       try {
         const response = await api.get<MeResponse>('/v1/users/me')
         if (!active) return
+        if (isGuestEmail(response.data?.email)) {
+          setAllowed(false)
+          setChecked(true)
+          router.replace('/home')
+          return
+        }
         const isAdmin = Boolean(response.data?.is_admin)
         setAllowed(isAdmin)
         setChecked(true)

@@ -38,3 +38,14 @@ export const clearGuestSession = () => {
 
 export const isGuestSession = () => readGuestSession() !== null
 
+const normalizeEmail = (value: string | undefined | null): string => {
+  return (value || '').trim().toLowerCase()
+}
+
+export const isGuestEmail = (email: string | undefined | null): boolean => {
+  const configuredGuestEmail = normalizeEmail(process.env.NEXT_PUBLIC_GUEST_EMAIL)
+  if (!configuredGuestEmail) {
+    return false
+  }
+  return normalizeEmail(email) === configuredGuestEmail
+}
