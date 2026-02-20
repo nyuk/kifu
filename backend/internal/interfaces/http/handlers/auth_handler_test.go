@@ -33,8 +33,13 @@ func (r *authTestUserRepo) GetByEmail(_ context.Context, email string) (*entitie
 	}
 	return r.users[email], nil
 }
-func (r *authTestUserRepo) Update(_ context.Context, _ *entities.User) error { return nil }
-func (r *authTestUserRepo) Delete(_ context.Context, _ uuid.UUID) error      { return nil }
+func (r *authTestUserRepo) ListForAdmin(_ context.Context, _ int, _ int, _ string) ([]*entities.User, error) {
+	return nil, nil
+}
+func (r *authTestUserRepo) CountForAdmin(_ context.Context, _ string) (int, error) { return 0, nil }
+func (r *authTestUserRepo) SetAdmin(_ context.Context, _ uuid.UUID, _ bool) error  { return nil }
+func (r *authTestUserRepo) Update(_ context.Context, _ *entities.User) error       { return nil }
+func (r *authTestUserRepo) Delete(_ context.Context, _ uuid.UUID) error            { return nil }
 
 type authTestRefreshTokenRepo struct{}
 

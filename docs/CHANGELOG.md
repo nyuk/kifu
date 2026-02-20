@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-02-21
+
+### Added
+- Added admin user management baseline capabilities under admin workspace:
+  - Backend endpoint: `GET /api/v1/admin/users`
+  - Backend endpoint: `PATCH /api/v1/admin/users/:id/admin`
+- Added admin management UI: `/admin/users`
+  - Shows users with search + pagination
+  - Supports admin grant/revoke with self-protection
+
+### Changed
+- Admin role changes now require explicit admin endpoint access under existing `/api/v1/admin/*` guard (JWT + `is_admin` DB check).
+
+### Files Affected
+- `backend/internal/domain/repositories/user_repository.go`
+- `backend/internal/infrastructure/repositories/user_repository_impl.go`
+- `backend/internal/interfaces/http/handlers/admin_user_handler.go`
+- `backend/internal/interfaces/http/routes.go`
+- `backend/internal/interfaces/http/handlers/auth_handler_test.go`
+- `frontend/app/(app)/admin/page.tsx`
+- `frontend/app/(app)/admin/users/page.tsx`
+- `docs/roadmap.md`
+- `docs/todo.md`
+
 ## 2026-02-13
 
 ### Added

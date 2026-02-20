@@ -61,6 +61,12 @@ const tools = [
     description:
       'runs/simulation 파이프라인의 최근 실행 이력과 상태를 모니터링합니다.',
   },
+  {
+    href: '/admin/users',
+    label: 'User Administration',
+    title: '관리자 사용자 관리',
+    description: '운영자 계정 발급과 회수를 관리하고, 사용자 조회를 수행합니다.',
+  },
 ]
 
 export default function AdminPage() {

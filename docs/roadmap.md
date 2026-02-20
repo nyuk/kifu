@@ -25,3 +25,10 @@ This document tracks postponed or planned work that is not part of the current p
 - [x] Admin authority source extraction for role assignment
 - [x] Find ID / Reset Password flows
 - [x] Agent service detail screen skeleton (`/admin/agent-services`)
+
+## 2026-02-21 Progress
+
+- [x] Admin user management baseline API + UI scaffold
+  - Admin user listing with pagination and search
+  - Admin role grant/revoke endpoint (`PATCH /api/v1/admin/users/:id/admin`) with self-protection
+  - Admin navigation card to `/admin/users`

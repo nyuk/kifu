@@ -27,7 +27,8 @@ Operational task list for ongoing work.
   - [x] Guest-mode simulator exposure audit (UI + backend route validation)
   - [ ] 운영 제어 액션(재시작/일시정지) 설계 및 연결
 - [ ] 관리자 페이지 역할 확장 (현재 미구현)
-  - [ ] 사용자/권한 조회 및 admin 부여/회수 (운영 로그 포함)
+  - [x] 사용자/권한 조회 및 admin 부여/회수 (기본 UI/API)
+    - Implemented: `admin/users` 페이지, 사용자 검색/목록, admin 플래그 변경
   - [ ] 정책 기반 알림/제한 설정 변경(운영 규칙 토글)
   - [ ] 에이전트 서비스 상태 패널의 수동 제어(재시작, 중단, 모드 전환)
   - [ ] 핵심 작업 감사 로그(요청자/시간/요청대상) 보관

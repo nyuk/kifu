@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -63,6 +64,107 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepositoryImpl) ListForAdmin(ctx context.Context, limit int, offset int, search string) ([]*entities.User, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	needle := strings.TrimSpace(strings.ToLower(search))
+	baseQuery := `
+		SELECT id, email, password_hash, name, ai_allowlisted, is_admin, created_at, updated_at
+		FROM users
+	`
+	var rows pgx.Rows
+	var err error
+
+	if needle == "" {
+		query := baseQuery + `
+			ORDER BY created_at DESC
+			LIMIT $1 OFFSET $2
+		`
+		rows, err = r.pool.Query(ctx, query, limit, offset)
+	} else {
+		query := baseQuery + `
+			WHERE lower(email) LIKE $1 OR lower(name) LIKE $1
+			ORDER BY created_at DESC
+			LIMIT $2 OFFSET $3
+		`
+		param := "%" + needle + "%"
+		rows, err = r.pool.Query(ctx, query, param, limit, offset)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]*entities.User, 0, limit)
+	for rows.Next() {
+		var user entities.User
+		if err := rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.PasswordHash,
+			&user.Name,
+			&user.AIAllowlisted,
+			&user.IsAdmin,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *UserRepositoryImpl) CountForAdmin(ctx context.Context, search string) (int, error) {
+	needle := strings.TrimSpace(strings.ToLower(search))
+	var count int
+
+	if needle == "" {
+		query := `
+			SELECT COUNT(*)
+			FROM users
+		`
+		if err := r.pool.QueryRow(ctx, query).Scan(&count); err != nil {
+			return 0, err
+		}
+		return count, nil
+	}
+
+	query := `
+		SELECT COUNT(*)
+		FROM users
+		WHERE lower(email) LIKE $1 OR lower(name) LIKE $1
+	`
+	param := "%" + needle + "%"
+	if err := r.pool.QueryRow(ctx, query, param).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *UserRepositoryImpl) SetAdmin(ctx context.Context, id uuid.UUID, isAdmin bool) error {
+	query := `
+		UPDATE users
+		SET is_admin = $2, updated_at = NOW()
+		WHERE id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, id, isAdmin)
+	return err
 }
 
 func (r *UserRepositoryImpl) Update(ctx context.Context, user *entities.User) error {

@@ -111,6 +111,7 @@ func RegisterRoutes(
 		accuracyRepo,
 	)
 	adminMetricsHandler := handlers.NewAdminMetricsHandler(pool)
+	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo)
 
 	aiRPM := parseIntFromEnv("AI_RATE_LIMIT_RPM", 3)
 	if aiRPM < 1 {
@@ -298,6 +299,8 @@ func RegisterRoutes(
 	admin.Get("/telemetry", adminMetricsHandler.Telemetry)
 	admin.Get("/agent-services", adminMetricsHandler.AgentServices)
 	admin.Post("/sim-report/run", simReportHandler.Run)
+	admin.Get("/users", adminUsersHandler.List)
+	admin.Patch("/users/:id/admin", adminUsersHandler.UpdateAdmin)
 }
 
 func parseIntFromEnv(key string, fallback int) int {
