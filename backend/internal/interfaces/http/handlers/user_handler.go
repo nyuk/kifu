@@ -36,6 +36,7 @@ type UserProfileResponse struct {
 	Email         string            `json:"email"`
 	Name          string            `json:"name"`
 	AIAllowlisted bool              `json:"ai_allowlisted"`
+	IsAdmin       bool              `json:"is_admin"`
 	CreatedAt     time.Time         `json:"created_at"`
 	Subscription  *SubscriptionInfo `json:"subscription,omitempty"`
 }
@@ -88,6 +89,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 		Email:         user.Email,
 		Name:          user.Name,
 		AIAllowlisted: user.AIAllowlisted,
+		IsAdmin:       user.IsAdmin,
 		CreatedAt:     user.CreatedAt,
 		Subscription:  subInfo,
 	}
@@ -146,6 +148,7 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 		Email:         user.Email,
 		Name:          user.Name,
 		AIAllowlisted: user.AIAllowlisted,
+		IsAdmin:       user.IsAdmin,
 		CreatedAt:     user.CreatedAt,
 		Subscription:  subInfo,
 	}

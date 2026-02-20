@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"log"
+	"net/http"
 	"strings"
 	"time"
 
@@ -71,6 +73,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		Email:        strings.ToLower(req.Email),
 		PasswordHash: passwordHash,
 		Name:         req.Name,
+		IsAdmin:      false,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -124,7 +127,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid credentials"})
 	}
 
-	accessToken, err := auth.GenerateAccessToken(user.ID, h.jwtSecret)
+	accessToken, err := auth.GenerateAccessToken(user.ID, auth.AdminRoleFromBool(user.IsAdmin), h.jwtSecret)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
@@ -190,7 +193,15 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "token expired"})
 	}
 
-	accessToken, err := auth.GenerateAccessToken(token.UserID, h.jwtSecret)
+	user, err := h.userRepo.GetByID(c.Context(), token.UserID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if user == nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "user not found"})
+	}
+
+	accessToken, err := auth.GenerateAccessToken(token.UserID, auth.AdminRoleFromBool(user.IsAdmin), h.jwtSecret)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
@@ -238,6 +249,37 @@ type LogoutResponse struct {
 	Message string `json:"message"`
 }
 
+type AccountHelpRequest struct {
+	Mode  string `json:"mode"`
+	Email string `json:"email"`
+}
+
+type AccountHelpResponse struct {
+	Message string `json:"message"`
+}
+
+const (
+	accountHelpModeUsername = "username"
+	accountHelpModePassword = "password"
+	socialProviderGoogle    = "google"
+	socialProviderApple     = "apple"
+	socialProviderKakao     = "kakao"
+)
+
+var socialLoginProviders = map[string]struct{}{
+	socialProviderGoogle: {},
+	socialProviderApple:  {},
+	socialProviderKakao:  {},
+}
+
+type SocialLoginResponse struct {
+	Provider string `json:"provider"`
+	Status   string `json:"status"`
+	Message  string `json:"message"`
+}
+
+const socialLoginNotReadyMessage = "소셜 로그인이 준비중입니다."
+
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	var req LogoutRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -262,6 +304,55 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(LogoutResponse{Message: "logged out"})
+}
+
+func (h *AuthHandler) AccountHelp(c *fiber.Ctx) error {
+	var req AccountHelpRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
+	}
+
+	mode := strings.TrimSpace(strings.ToLower(req.Mode))
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if mode != accountHelpModeUsername && mode != accountHelpModePassword {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "mode must be username or password"})
+	}
+	if email == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "email is required"})
+	}
+
+	// No-op recovery path: keep behavior generic to avoid account existence leakage.
+	if _, err := h.userRepo.GetByEmail(c.Context(), email); err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	log.Printf("[auth] account_help_request mode=%s email=%s", mode, email)
+
+	message := "요청이 접수되었습니다. 등록된 이메일이면 안내를 전송합니다."
+	if mode == accountHelpModePassword {
+		message = "요청이 접수되었습니다. 비밀번호 재설정 안내를 준비 중입니다."
+	} else {
+		message = "요청이 접수되었습니다. 아이디 복구 안내를 준비 중입니다."
+	}
+
+	return c.Status(http.StatusOK).JSON(AccountHelpResponse{Message: message})
+}
+
+func (h *AuthHandler) SocialLoginStart(c *fiber.Ctx) error {
+	provider := strings.ToLower(strings.TrimSpace(c.Params("provider")))
+	if provider == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "provider is required"})
+	}
+
+	if _, ok := socialLoginProviders[provider]; !ok {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_PROVIDER", "message": "unsupported social provider"})
+	}
+
+	return c.Status(http.StatusOK).JSON(SocialLoginResponse{
+		Provider: provider,
+		Status:   "coming_soon",
+		Message:  socialLoginNotReadyMessage,
+	})
 }
 
 func ExtractUserID(c *fiber.Ctx) (uuid.UUID, error) {

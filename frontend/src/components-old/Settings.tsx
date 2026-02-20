@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
-import { clearGuestSession } from '../lib/guestSession'
+import { clearGuestSession, isGuestSession } from '../lib/guestSession'
 import { LanguageSelector } from '../components/LanguageSelector'
 import { ExchangeConnectionManager } from '../components/settings/ExchangeConnectionManager'
 import { api } from '../lib/api'
@@ -148,16 +148,28 @@ export function Settings() {
   const clearTokens = useAuthStore((state) => state.clearTokens)
   const accessToken = useAuthStore((state) => state.accessToken)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [guestMode, setGuestMode] = useState(false)
+
+  useEffect(() => {
+    setGuestMode(isGuestSession())
+  }, [])
 
   useEffect(() => {
     let isActive = true
     const load = async () => {
       if (!accessToken) return
       try {
-        const response = await api.get<{ email?: string }>('/v1/users/me')
-        if (isActive) setProfileEmail(response.data?.email || null)
+        const response = await api.get<{ email?: string; is_admin?: boolean }>('/v1/users/me')
+        if (isActive) {
+          setProfileEmail(response.data?.email || null)
+          setIsAdmin(Boolean(response.data?.is_admin))
+        }
       } catch {
-        if (isActive) setProfileEmail(null)
+        if (isActive) {
+          setProfileEmail(null)
+          setIsAdmin(false)
+        }
       }
     }
     load()
@@ -214,21 +226,23 @@ export function Settings() {
             <TelegramConnect />
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Diagnostics</p>
-          <p className="mt-3 text-lg font-semibold text-zinc-200">30일 사용자 시뮬레이터</p>
-          <p className="mt-2 text-sm text-zinc-500">
-            사용자 행동을 날짜 단위로 압축 실행해 루틴/복기 누락/데이터 누적 상태를 빠르게 점검합니다.
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/sim-report"
-              className="inline-flex h-10 items-center rounded-lg border border-sky-300/40 bg-sky-500/20 px-4 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30"
-            >
-              시뮬레이터 열기
-            </Link>
+        {!guestMode && isAdmin && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Diagnostics</p>
+            <p className="mt-3 text-lg font-semibold text-zinc-200">30일 사용자 시뮬레이터</p>
+            <p className="mt-2 text-sm text-zinc-500">
+              사용자 행동을 날짜 단위로 압축 실행해 루틴/복기 누락/데이터 누적 상태를 빠르게 점검합니다.
+            </p>
+            <div className="mt-4">
+              <Link
+                href="/admin/sim-report"
+                className="inline-flex h-10 items-center rounded-lg border border-sky-300/40 bg-sky-500/20 px-4 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30"
+              >
+                시뮬레이터 열기
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </section>
       <button
         type="button"

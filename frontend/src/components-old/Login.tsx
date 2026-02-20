@@ -14,6 +14,8 @@ export function Login() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isGuestLoading, setIsGuestLoading] = useState(false)
+  const [socialMessage, setSocialMessage] = useState('')
+  const [socialLoading, setSocialLoading] = useState('')
   const setTokens = useAuthStore((state) => state.setTokens)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
@@ -70,6 +72,20 @@ export function Login() {
       setError('게스트 계정 로그인에 실패했습니다. 게스트 환경설정과 비밀번호를 확인해주세요.')
     } finally {
       setIsGuestLoading(false)
+    }
+  }
+
+  const handleSocialLogin = async (provider: 'google' | 'apple' | 'kakao') => {
+    setError('')
+    setSocialMessage('')
+    setSocialLoading(provider)
+    try {
+      const response = await api.get<{ provider: string; status: string; message: string }>(`/v1/auth/social-login/${provider}`)
+      setSocialMessage(response.data?.message || `${provider} 로그인은 준비중입니다.`)
+    } catch {
+      setError('소셜 로그인은 현재 사용할 수 없습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setSocialLoading('')
     }
   }
 
@@ -142,6 +158,42 @@ export function Login() {
             {isLoading ? '로그인 중...' : '로그인'}
           </button>
 
+          <section className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">소셜 로그인</p>
+            <p className="mt-2 text-xs text-zinc-400">준비 중인 기능입니다. 정책 확정 후 순차 오픈 예정입니다.</p>
+            <div className="mt-3 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleSocialLogin('google')}
+                disabled={Boolean(socialLoading)}
+                className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
+              >
+                {socialLoading === 'google' ? '처리 중...' : 'Google로 계속하기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin('apple')}
+                disabled={Boolean(socialLoading)}
+                className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
+              >
+                {socialLoading === 'apple' ? '처리 중...' : 'Apple로 계속하기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin('kakao')}
+                disabled={Boolean(socialLoading)}
+                className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
+              >
+                {socialLoading === 'kakao' ? '처리 중...' : 'Kakao로 계속하기'}
+              </button>
+            </div>
+            {socialMessage && (
+              <p className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                {socialMessage}
+              </p>
+            )}
+          </section>
+
           <div className="relative flex items-center gap-4 py-2">
             <div className="h-px flex-1 bg-white/10" />
             <span className="text-xs text-zinc-500">또는</span>
@@ -161,6 +213,12 @@ export function Login() {
             처음이신가요?{' '}
             <Link href="/register" className="font-semibold text-zinc-100">
               회원가입
+            </Link>
+          </p>
+          <p className="text-sm text-zinc-400">
+            아이디/비밀번호를 잊으셨나요?{' '}
+            <Link href="/account-help" className="font-semibold text-zinc-100">
+              계정 찾기
             </Link>
           </p>
           <Link

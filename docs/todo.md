@@ -15,6 +15,19 @@ Operational task list for ongoing work.
 - [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
   - Current active priority: first batch items 1–4.
 
+## PRODUCT BACKLOG (not exposed in README)
+
+- [ ] Social login (OAuth providers)
+- [x] DB-only serverization for auth/session authority separation
+- [x] Account lookup and password reset flows
+- [x] Admin dashboard expansion (role-aware sections and telemetry)
+- [ ] Agent service detail screens and operational controls
+  - [x] Agent 서비스 상세 화면 추가 (`/admin/agent-services`)
+  - [x] Admin-only simulation access and route hardening audit notes
+  - [x] Guest-mode simulator exposure audit (UI + backend route validation)
+  - [ ] 운영 제어 액션(재시작/일시정지) 설계 및 연결
+- [ ] Incident logging hardening (replace assumptions with structured logs on critical path)
+
 ## CHECKPOINT (Immediate checks)
 
 - [ ] Home readability

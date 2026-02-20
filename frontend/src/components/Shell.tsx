@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
-import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes } from 'lucide-react'
+import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck } from 'lucide-react'
 
 type ShellTheme = 'neutral' | 'forest' | 'warm'
 const SHELL_THEME_KEY = 'kifu-shell-theme-v1'
@@ -23,8 +23,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
   const [guestSessionId, setGuestSessionId] = useState<string | null>(null)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [shellTheme, setShellTheme] = useState<ShellTheme>('neutral')
   const contentClass = 'relative z-10 h-full overflow-y-auto px-4 py-6 md:px-6 lg:px-8'
+
+  const isGuestSessionActive = Boolean(guestSessionId)
 
   useEffect(() => {
     setMounted(true)
@@ -52,14 +55,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
     let isActive = true
     const load = async () => {
       if (!accessToken) {
-        if (isActive) setProfileEmail(null)
+        if (isActive) {
+          setProfileEmail(null)
+          setIsAdmin(false)
+        }
         return
       }
       try {
-        const response = await api.get<{ email?: string }>('/v1/users/me')
-        if (isActive) setProfileEmail(response.data?.email || null)
+        const response = await api.get<{ email?: string; is_admin?: boolean }>('/v1/users/me')
+        if (!isActive) return
+        setProfileEmail(response.data?.email || null)
+        setIsAdmin(Boolean(response.data?.is_admin))
       } catch {
         if (isActive) setProfileEmail(null)
+        if (isActive) setIsAdmin(false)
       }
     }
     load()
@@ -68,7 +77,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [accessToken])
 
-  const navItems = [
+  const baseNavItems = [
     { icon: Home, label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
     { icon: PieChart, label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
     { icon: LineChart, label: t.navChart, href: '/chart', color: 'text-sky-400', activeColor: 'bg-sky-400/10 text-sky-300' },
@@ -79,6 +88,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { icon: TrendingUp, label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
     { icon: Settings, label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]
+
+  const navItems = isAdmin && !isGuestSessionActive
+    ? [...baseNavItems, { icon: ShieldCheck, label: 'Admin', href: '/admin', color: 'text-cyan-400', activeColor: 'bg-cyan-400/10 text-cyan-300' }]
+    : baseNavItems
 
   const handleLogout = () => {
     clearGuestSession()
@@ -171,6 +184,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               else if (item.href.includes('bubbles')) accentClass = 'bg-amber-500'
               else if (item.href.includes('trades')) accentClass = 'bg-rose-500'
               else if (item.href.includes('review')) accentClass = 'bg-emerald-500'
+              else if (item.href.includes('admin')) accentClass = 'bg-cyan-500'
               else if (item.href.includes('settings')) accentClass = 'bg-neutral-500'
 
               return (

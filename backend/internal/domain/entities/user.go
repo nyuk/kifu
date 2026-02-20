@@ -12,6 +12,7 @@ type User struct {
 	PasswordHash  string    `json:"-"`
 	Name          string    `json:"name"`
 	AIAllowlisted bool      `json:"ai_allowlisted"`
+	IsAdmin       bool      `json:"is_admin"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

@@ -3,6 +3,8 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { api } from '../../../../src/lib/api'
 
+const ADMIN_SIM_REPORT_HISTORY_KEY = 'kifu-admin-sim-report-last'
+
 type SimReportDay = {
   date: string
   no_trade_day: boolean
@@ -119,7 +121,29 @@ export default function AdminSimReportPage() {
         payload.seed = Number(seed)
       }
       const response = await api.post<SimReportResponse>('/v1/admin/sim-report/run', payload)
-      setResult(response.data)
+      const data = response.data
+      setResult(data)
+      try {
+        localStorage.setItem(ADMIN_SIM_REPORT_HISTORY_KEY, JSON.stringify({
+          run_id: data.run_id,
+          started_at: data.started_at,
+          finished_at: data.finished_at,
+          totals: data.totals,
+          streak: data.streak,
+          effective_user: {
+            email: data.effective_user.email,
+            mode: data.effective_user.mode,
+            reset_performed: data.effective_user.reset_performed,
+          },
+          start_date: data.start_date,
+          end_date: data.end_date,
+          days: data.days,
+          warnings_count: data.warnings?.length || 0,
+          warnings: data.warnings ? data.warnings.slice(0, 3) : [],
+        }))
+      } catch {
+        // no-op
+      }
     } catch (runError: any) {
       const message = runError?.response?.data?.message || runError?.message || '시뮬레이션 실행에 실패했습니다.'
       setError(message)

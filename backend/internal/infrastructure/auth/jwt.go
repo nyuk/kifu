@@ -18,12 +18,14 @@ const (
 
 type Claims struct {
 	UserID uuid.UUID `json:"sub"`
+	Role   string    `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func GenerateAccessToken(userID uuid.UUID, secret string) (string, error) {
+func GenerateAccessToken(userID uuid.UUID, role, secret string) (string, error) {
 	claims := Claims{
 		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

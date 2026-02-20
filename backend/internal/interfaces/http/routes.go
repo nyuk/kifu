@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
@@ -109,6 +110,7 @@ func RegisterRoutes(
 		aiOpinionRepo,
 		accuracyRepo,
 	)
+	adminMetricsHandler := handlers.NewAdminMetricsHandler(pool)
 
 	aiRPM := parseIntFromEnv("AI_RATE_LIMIT_RPM", 3)
 	if aiRPM < 1 {
@@ -127,6 +129,8 @@ func RegisterRoutes(
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
+	auth.Post("/account-help", authHandler.AccountHelp)
+	auth.Get("/social-login/:provider", authHandler.SocialLoginStart)
 
 	users := api.Group("/users")
 	users.Get("/me", userHandler.GetProfile)
@@ -272,7 +276,27 @@ func RegisterRoutes(
 	guidedReviews.Get("/streak", guidedReviewHandler.GetStreak)
 
 	// Admin sim report (dev/operator diagnostic utility)
-	admin := api.Group("/admin")
+	admin := api.Group("/admin", func(c *fiber.Ctx) error {
+		userID, ok := c.Locals("userID").(uuid.UUID)
+		if !ok {
+			return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+		}
+
+		user, err := userRepo.GetByID(c.Context(), userID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+		if user == nil {
+			return c.Status(404).JSON(fiber.Map{"code": "USER_NOT_FOUND", "message": "user not found"})
+		}
+
+		if !user.IsAdmin {
+			return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "admin access required"})
+		}
+		return c.Next()
+	})
+	admin.Get("/telemetry", adminMetricsHandler.Telemetry)
+	admin.Get("/agent-services", adminMetricsHandler.AgentServices)
 	admin.Post("/sim-report/run", simReportHandler.Run)
 }
 
