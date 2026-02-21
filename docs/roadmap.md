@@ -16,7 +16,7 @@ This document tracks postponed or planned work that is not part of the current p
   - Operational controls for agent services (safety, restart/disable, run history)
   - Incident-level guardrail and structured log collection
 - [ ] Agent service detail service pages and lifecycle controls
-- [ ] Structured incident logging on critical failure paths
+- [x] Structured incident logging on critical failure paths
 
 ## Completed (not yet migrated)
 
@@ -48,6 +48,9 @@ This document tracks postponed or planned work that is not part of the current p
   - `/api/v1/admin/*` now enforces DB `users.is_admin` for all routes in the group
 - [x] Admin dashboard 상세화
   - `/admin` displays role/authority summary, agent service health snapshot, and operational ownership items
+- [x] Onchain critical-path incident logging (`/api/v1/onchain/quick-check`)
+  - Added structured log lines in `onchain_handler.go` and `onchain_pack_service.go`
+  - Logs include request trace (`request_id`,`ip`) and key dimensions (chain, address, range, cache/provider outcome, latency)
 
 - [x] Social login foundation (Google OAuth sign-in)
   - Added `/api/v1/auth/social-login/google` URL issuer with signed state and `/api/v1/auth/social-login/:provider/callback`

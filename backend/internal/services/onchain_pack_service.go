@@ -152,11 +152,13 @@ func onchainRangeDuration(rng string) time.Duration {
 
 func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQuickCheckRequest) (OnchainQuickCheckResponse, error) {
 	if s.provider == nil {
+		log.Printf("[incident:onchain] severity=error event=service.provider_missing")
 		return OnchainQuickCheckResponse{}, errors.New("onchain provider unavailable")
 	}
 
 	normalized, err := normalizeQuickCheckRequest(req)
 	if err != nil {
+		log.Printf("[incident:onchain] severity=warning event=service.validation_reject chain=%s address=%s range=%s reason=%v", strings.ToLower(strings.TrimSpace(req.Chain)), strings.ToLower(strings.TrimSpace(req.Address)), strings.TrimSpace(req.Range), err)
 		return OnchainQuickCheckResponse{}, err
 	}
 
@@ -165,16 +167,20 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 	cacheKey := fmt.Sprintf("%s:%s:%s:%d", normalized.chain, normalized.address, normalized.rng, bucket.Unix())
 
 	if cached, ok := s.getCached(cacheKey, now); ok {
+		log.Printf("[incident:onchain] severity=info event=service.cache_hit chain=%s address=%s range=%s", normalized.chain, normalized.address, normalized.rng)
 		return cached, nil
 	}
+	log.Printf("[incident:onchain] severity=info event=service.cache_miss chain=%s address=%s range=%s bucket=%d", normalized.chain, normalized.address, normalized.rng, bucket.Unix())
 
 	startTime := now.Add(-onchainRangeDuration(normalized.rng))
 	providerCtx, cancel := context.WithTimeout(ctx, s.providerTimeout)
 	defer cancel()
 
+	providerStart := time.Now()
 	events, providerErr := s.provider.ListERC20Transfers(providerCtx, normalized.address, startTime, now)
 	if providerErr != nil {
-		log.Printf("[onchain] provider error for %s/%s range=%s: %v", normalized.chain, normalized.address, normalized.rng, providerErr)
+		providerElapsedMs := time.Since(providerStart).Milliseconds()
+		log.Printf("[incident:onchain] severity=error event=service.provider_error chain=%s address=%s range=%s elapsed_ms=%d err=%v", normalized.chain, normalized.address, normalized.rng, providerElapsedMs, providerErr)
 		return OnchainQuickCheckResponse{
 			SchemaVersion: onchainSchemaVersion,
 			Chain:         normalized.chain,
