@@ -101,6 +101,13 @@ Operational task list for ongoing work.
 - [x] Position and trade sync refresh improvements.
 - [x] 30-day user simulation API and report UI added.
 
+## Completed (recently)
+
+- [x] Admin user management page enhancements
+  - Added role-based local filter (`전체`/`관리자만`/`비관리자`) on `/admin/users`.
+  - Added self-guard: logged-in admin cannot modify own `is_admin` flag from this screen.
+  - Applied filtered row count display and disabled action state for self row.
+
 ## Notes
 
 - Track work status with `NOW`, `NEXT`, `LATER`.

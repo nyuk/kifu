@@ -32,6 +32,7 @@ This document tracks postponed or planned work that is not part of the current p
   - Admin user listing with pagination and search
   - Admin role grant/revoke endpoint (`PATCH /api/v1/admin/users/:id/admin`) with self-protection
   - Admin navigation card to `/admin/users`
+  - Admin page role filtering (`전체/관리자만/비관리자`) and self-row disable in `/admin/users`
 - [x] Admin audit trail baseline
   - Admin role change events are recorded in `admin_audit_logs`
   - API exposure via `GET /api/v1/admin/audit-logs`
