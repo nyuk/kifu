@@ -90,6 +90,18 @@ type AdminAuditLogResponse = {
   offset: number
 }
 
+type AdminPolicy = {
+  key: string
+  value: boolean
+  description: string
+  updated_by: string | null
+  updated_at: string
+}
+
+type AdminPolicyListResponse = {
+  policies: AdminPolicy[]
+}
+
 const tools = [
   {
     href: '/admin/sim-report',
@@ -125,6 +137,13 @@ const tools = [
   },
 ]
 
+const POLICY_LABELS: Record<string, string> = {
+  admin_user_signup_enabled: '관리자 사용자 등록',
+  maintenance_mode: '유지보수 모드',
+  notification_delivery_enabled: '알림 발송',
+  agent_service_poller_enabled: '에이전트 폴러',
+}
+
 export default function AdminPage() {
   const [lastRun, setLastRun] = useState<SimReportHistorySummary | null>(null)
   const [telemetry, setTelemetry] = useState<AdminTelemetry | null>(null)
@@ -132,6 +151,8 @@ export default function AdminPage() {
   const [agentLoadError, setAgentLoadError] = useState('')
   const [recentAuditLogs, setRecentAuditLogs] = useState<AdminAuditLog[]>([])
   const [auditLoadError, setAuditLoadError] = useState('')
+  const [policies, setPolicies] = useState<AdminPolicy[]>([])
+  const [policyLoadError, setPolicyLoadError] = useState('')
 
   useEffect(() => {
     try {
@@ -148,20 +169,25 @@ export default function AdminPage() {
     let isMounted = true
     const load = async () => {
       try {
-        const [telemetryResponse, servicesResponse] = await Promise.all([
+        const [telemetryResponse, servicesResponse, policyResponse] = await Promise.all([
           api.get<AdminTelemetry>('/v1/admin/telemetry'),
           api.get<AgentServicesResponse>('/v1/admin/agent-services'),
+          api.get<AdminPolicyListResponse>('/v1/admin/policies'),
         ])
 
         if (!isMounted) return
         setTelemetry(telemetryResponse.data)
         setAgentServices(servicesResponse.data)
+        setPolicies(policyResponse.data.policies)
         setAgentLoadError('')
+        setPolicyLoadError('')
       } catch {
         if (isMounted) {
           setTelemetry(null)
           setAgentServices(null)
+          setPolicies([])
           setAgentLoadError('운영 지표(에이전트 서비스) 로딩에 실패했습니다.')
+          setPolicyLoadError('운영 정책 조회에 실패했습니다.')
         }
       }
 
@@ -191,6 +217,15 @@ export default function AdminPage() {
   const failedRunCountByType = (type: string) =>
     agentServices?.services.find((service) => service.run_type === type)?.failed_runs ?? 0
 
+  const getPolicyValue = (key: string): boolean => policies.find((policy) => policy.key === key)?.value ?? false
+
+  const isMaintenanceMode = getPolicyValue('maintenance_mode')
+  const isNotificationDeliveryEnabled = getPolicyValue('notification_delivery_enabled')
+  const isAdminSignupEnabled = getPolicyValue('admin_user_signup_enabled')
+  const isAgentPollerEnabled = getPolicyValue('agent_service_poller_enabled')
+
+  const activeAlerts = [isMaintenanceMode, !isNotificationDeliveryEnabled, !isAgentPollerEnabled].filter(Boolean).length
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <header className="rounded-2xl border border-cyan-400/20 bg-white/[0.04] p-6">
@@ -200,6 +235,33 @@ export default function AdminPage() {
           운영/점검용 기능만 노출되며, 권한이 없는 계정은 접근이 제한됩니다.
         </p>
       </header>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+        <h2 className="text-lg font-medium text-zinc-100">권한·노출 기준</h2>
+        <p className="mt-2 text-xs text-zinc-400">
+          DB `users.is_admin`를 운영권한의 단일 판단 근거로 사용하며, 정책값으로 기능 노출을 제어합니다.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard title="운영 접근 기준" value="DB users.is_admin" />
+          <SummaryCard title="유지보수 모드" value={isMaintenanceMode ? 'ON (차단)' : 'OFF'} />
+          <SummaryCard title="알림 발송" value={isNotificationDeliveryEnabled ? 'ON' : 'OFF'} />
+          <SummaryCard title="관리자 회원 등록" value={isAdminSignupEnabled ? '허용' : '비허용'} />
+          <SummaryCard title="에이전트 폴러" value={isAgentPollerEnabled ? '활성' : '중단'} />
+          <SummaryCard title="현재 경보" value={activeAlerts > 0 ? `${activeAlerts}건` : '없음'} />
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          정책 상태
+          {policies
+            .filter((policy) => POLICY_LABELS[policy.key])
+            .slice(0, 4)
+            .map((policy) => (
+              <span key={policy.key}> · {POLICY_LABELS[policy.key]}: {policy.value ? 'ON' : 'OFF'}</span>
+            ))}
+        </p>
+        {policyLoadError && (
+          <p className="mt-4 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{policyLoadError}</p>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
         <h2 className="text-lg font-medium text-zinc-100">관리자 기능</h2>
@@ -366,6 +428,10 @@ export default function AdminPage() {
           <li>감사 추적: `/admin/audit-logs`에서 요청자/대상/변경자 기록 조회</li>
           <li>운영 제어: `/admin/policies`와 `/admin/agent-services`로 제한 정책과 폴러 제어</li>
           <li>시뮬레이션: `/admin/sim-report`는 관리자 전용으로 노출/권한 제어</li>
+          <li>
+            현재 게이트 상태: {isMaintenanceMode ? '유지보수 모드(일반 사용자 제한)' : '일반 운영 모드'}
+            {activeAlerts > 0 ? `, 경보 ${activeAlerts}건` : ', 경보 없음'}
+          </li>
         </ul>
         <p className="mt-3 text-xs text-zinc-500">
           권한/노출 규칙은 프론트엔드 메뉴 제어와 백엔드 경로 가드가 이중 적용되어, 관리자 경로 직접 호출 시에도 차단됩니다.
