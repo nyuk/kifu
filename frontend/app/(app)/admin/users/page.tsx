@@ -20,6 +20,12 @@ type AdminUserListResponse = {
   offset: number
 }
 
+type MeResponse = {
+  id: string
+}
+
+type RoleFilter = 'all' | 'admin' | 'member'
+
 const PAGE_SIZE = 20
 
 export default function AdminUsersPage() {
@@ -30,6 +36,8 @@ export default function AdminUsersPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -54,6 +62,15 @@ export default function AdminUsersPage() {
     }
   }, [search, offset, limit])
 
+  const loadMe = useCallback(async () => {
+    try {
+      const response = await api.get<MeResponse>('/v1/users/me')
+      setMyUserId(response.data.id)
+    } catch {
+      setMyUserId(null)
+    }
+  }, [])
+
   const currentStart = useMemo(() => {
     if (total === 0) return 0
     return offset + 1
@@ -65,8 +82,17 @@ export default function AdminUsersPage() {
   }, [offset, limit, total, users.length])
 
   useEffect(() => {
+    loadMe()
     loadUsers()
-  }, [loadUsers])
+  }, [loadMe, loadUsers])
+
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === 'all') return users
+    if (roleFilter === 'admin') return users.filter((user) => user.is_admin)
+    return users.filter((user) => !user.is_admin)
+  }, [users, roleFilter])
+
+  const filteredCount = useMemo(() => filteredUsers.length, [filteredUsers])
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -74,6 +100,11 @@ export default function AdminUsersPage() {
   }
 
   const toggleAdmin = async (user: AdminUser) => {
+    if (user.id === myUserId) {
+      setMessage('내 계정은 이 화면에서 관리자 권한을 변경할 수 없습니다.')
+      return
+    }
+
     const nextValue = !user.is_admin
     try {
       await api.patch(`/v1/admin/users/${user.id}/admin`, { is_admin: nextValue })
@@ -123,8 +154,37 @@ export default function AdminUsersPage() {
           </button>
         </form>
         <p className="mt-4 text-xs text-zinc-400">
-          총 {total}명, 노출 {currentStart} - {currentEnd}
+          총 {total}명, 노출 {currentStart} - {currentEnd}, 화면필터 {filteredCount}명
         </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setRoleFilter('all')}
+            className={`rounded-md border px-3 py-1 ${roleFilter === 'all'
+              ? 'border-cyan-400/50 bg-cyan-500/15 text-cyan-100'
+              : 'border-white/20 text-zinc-300 bg-white/5'}`}
+          >
+            전체
+          </button>
+          <button
+            type="button"
+            onClick={() => setRoleFilter('admin')}
+            className={`rounded-md border px-3 py-1 ${roleFilter === 'admin'
+              ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100'
+              : 'border-white/20 text-zinc-300 bg-white/5'}`}
+          >
+            관리자만
+          </button>
+          <button
+            type="button"
+            onClick={() => setRoleFilter('member')}
+            className={`rounded-md border px-3 py-1 ${roleFilter === 'member'
+              ? 'border-rose-500/50 bg-rose-500/15 text-rose-100'
+              : 'border-white/20 text-zinc-300 bg-white/5'}`}
+          >
+            비관리자
+          </button>
+        </div>
         {message && <p className="mt-2 text-sm text-amber-200">{message}</p>}
       </section>
 
@@ -147,35 +207,38 @@ export default function AdminUsersPage() {
                   로딩 중...
                 </td>
               </tr>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <tr>
                 <td className="px-3 py-6 text-zinc-400" colSpan={6}>
                   검색 결과가 없습니다.
                 </td>
               </tr>
             ) : (
-              users.map((user) => (
-                <tr key={user.id} className="border-t border-white/10">
-                  <td className="px-3 py-3 text-zinc-100">{user.email}</td>
-                  <td className="px-3 py-3 text-zinc-300">{user.name}</td>
-                  <td className="px-3 py-3 text-zinc-200">{user.is_admin ? 'O' : 'X'}</td>
-                  <td className="px-3 py-3 text-zinc-200">{user.ai_allowlisted ? 'O' : 'X'}</td>
-                  <td className="px-3 py-3 text-zinc-400">{new Date(user.created_at).toLocaleString()}</td>
-                  <td className="px-3 py-3">
-                    <button
-                      className={`rounded-md px-3 py-1 text-xs font-semibold ${
-                        user.is_admin
-                          ? 'border border-amber-500/40 bg-amber-500/15 text-amber-100'
-                          : 'border border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
-                      }`}
-                      onClick={() => toggleAdmin(user)}
-                      type="button"
-                    >
-                      {user.is_admin ? '관리자 해제' : '관리자 설정'}
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredUsers.map((user) => {
+                const isSelf = user.id === myUserId
+                const canToggle = !isSelf
+                const buttonClassName = canToggle
+                  ? user.is_admin
+                    ? 'rounded-md px-3 py-1 text-xs font-semibold border border-amber-500/40 bg-amber-500/15 text-amber-100'
+                    : 'rounded-md px-3 py-1 text-xs font-semibold border border-cyan-500/40 bg-cyan-500/15 text-cyan-100'
+                  : 'rounded-md px-3 py-1 text-xs font-semibold border border-zinc-500/40 bg-zinc-500/10 text-zinc-300'
+                const buttonLabel = isSelf ? '내 계정' : user.is_admin ? '관리자 해제' : '관리자 설정'
+
+                return (
+                  <tr key={user.id} className="border-t border-white/10">
+                    <td className="px-3 py-3 text-zinc-100">{user.email}</td>
+                    <td className="px-3 py-3 text-zinc-300">{user.name}</td>
+                    <td className="px-3 py-3 text-zinc-200">{user.is_admin ? 'O' : 'X'}</td>
+                    <td className="px-3 py-3 text-zinc-200">{user.ai_allowlisted ? 'O' : 'X'}</td>
+                    <td className="px-3 py-3 text-zinc-400">{new Date(user.created_at).toLocaleString()}</td>
+                    <td className="px-3 py-3">
+                      <button type="button" disabled={!canToggle} className={buttonClassName} onClick={() => toggleAdmin(user)}>
+                        {buttonLabel}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>
