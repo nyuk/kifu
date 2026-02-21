@@ -70,6 +70,26 @@ type AgentServicesResponse = {
   runs: AgentServiceRun[]
 }
 
+type AdminAuditLog = {
+  id: string
+  actor_user_id: string | null
+  actor_email: string
+  target_user_id: string | null
+  target_email: string
+  action: string
+  action_target: string
+  action_resource: string
+  details: Record<string, unknown>
+  created_at: string
+}
+
+type AdminAuditLogResponse = {
+  logs: AdminAuditLog[]
+  total: number
+  limit: number
+  offset: number
+}
+
 const tools = [
   {
     href: '/admin/sim-report',
@@ -110,6 +130,8 @@ export default function AdminPage() {
   const [telemetry, setTelemetry] = useState<AdminTelemetry | null>(null)
   const [agentServices, setAgentServices] = useState<AgentServicesResponse | null>(null)
   const [agentLoadError, setAgentLoadError] = useState('')
+  const [recentAuditLogs, setRecentAuditLogs] = useState<AdminAuditLog[]>([])
+  const [auditLoadError, setAuditLoadError] = useState('')
 
   useEffect(() => {
     try {
@@ -140,6 +162,18 @@ export default function AdminPage() {
           setTelemetry(null)
           setAgentServices(null)
           setAgentLoadError('운영 지표(에이전트 서비스) 로딩에 실패했습니다.')
+        }
+      }
+
+      try {
+        const auditResponse = await api.get<AdminAuditLogResponse>('/v1/admin/audit-logs?limit=5&offset=0')
+        if (!isMounted) return
+        setRecentAuditLogs(auditResponse.data.logs || [])
+        setAuditLoadError('')
+      } catch {
+        if (isMounted) {
+          setRecentAuditLogs([])
+          setAuditLoadError('최근 감사 로그 로딩에 실패했습니다.')
         }
       }
     }
@@ -255,6 +289,36 @@ export default function AdminPage() {
             </div>
           ) : (
             <p className="text-zinc-500">로딩중...</p>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-medium text-zinc-100">최근 감사 로그</h2>
+            <p className="mt-2 text-xs text-zinc-400">관리자 핵심 변경 이력을 바로 확인합니다.</p>
+          </div>
+          <Link href="/admin/audit-logs" className="text-xs font-medium text-cyan-200 hover:text-cyan-100">
+            전체 보기
+          </Link>
+        </div>
+        <div className="mt-4 space-y-2">
+          {auditLoadError && (
+            <p className="rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{auditLoadError}</p>
+          )}
+          {recentAuditLogs.length === 0 && !auditLoadError ? (
+            <p className="text-sm text-zinc-400">감사 로그가 없습니다.</p>
+          ) : (
+            recentAuditLogs.map((log) => (
+              <div key={log.id} className="rounded-lg border border-white/[0.08] bg-black/20 p-3">
+                <p className="text-xs text-zinc-400">{new Date(log.created_at).toLocaleString()}</p>
+                <p className="mt-1 text-sm text-zinc-100">
+                  {log.actor_email || 'SYSTEM'} · {log.action} · {log.action_resource}/{log.action_target}
+                </p>
+                <p className="mt-1 text-xs text-zinc-400">대상: {log.target_email || '-'}</p>
+              </div>
+            ))
           )}
         </div>
       </section>
