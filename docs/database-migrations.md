@@ -36,8 +36,17 @@ All migration files are in `backend/migrations/`.
 | 023 | `023_add_is_admin_to_users.sql` | Admin role flag | `users.is_admin` |
 | 024 | `024_add_admin_audit_logs.sql` | Admin audit logs | `admin_audit_logs` |
 | 025 | `025_add_admin_policies.sql` | Operational policy toggles | `admin_policies` |
+| 026 | `026_add_agent_service_poller_policy.sql` | Agent poller master switch | `admin_policies` (seed `agent_service_poller_enabled`) |
 
-## Latest Migration: 025
+## Latest Migration: 026
+
+### `agent_poller_policy`
+
+| Policy Key | Type | Description |
+|------------|------|-------------|
+| `agent_service_poller_enabled` | `boolean` (stored in JSONB) | Master switch for exchange trade polling background jobs |
+
+When false, exchange pollers are paused and skip poll execution until re-enabled.
 
 ### `runs`
 

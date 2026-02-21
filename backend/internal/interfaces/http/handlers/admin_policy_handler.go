@@ -18,6 +18,7 @@ var allowedAdminPolicyKeys = map[string]struct{}{
 	"admin_user_signup_enabled":     {},
 	"maintenance_mode":              {},
 	"notification_delivery_enabled": {},
+	"agent_service_poller_enabled":  {},
 }
 
 type AdminPolicy struct {

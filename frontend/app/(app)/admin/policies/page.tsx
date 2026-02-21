@@ -25,12 +25,14 @@ const POLICY_LABELS: Record<string, string> = {
   admin_user_signup_enabled: '관리자 사용자 등록 허용',
   maintenance_mode: '유지보수 모드',
   notification_delivery_enabled: '알림 전송 허용',
+  agent_service_poller_enabled: '에이전트 폴러 서비스',
 }
 
 const POLICY_HINT: Record<string, string> = {
   admin_user_signup_enabled: 'true면 운영자가 새 사용자를 발급/초대할 수 있습니다.',
   maintenance_mode: 'true면 일반 사용자 접근을 제한하고, 비상 점검 모드로 동작합니다.',
   notification_delivery_enabled: 'false로 설정하면 알림 관련 배달 기능을 중지합니다.',
+  agent_service_poller_enabled: 'true면 거래소 자동 동기화(폴러) 실행을 허용합니다.',
 }
 
 export default function AdminPoliciesPage() {

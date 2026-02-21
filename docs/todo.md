@@ -25,7 +25,7 @@ Operational task list for ongoing work.
   - [x] Agent 서비스 상세 화면 추가 (`/admin/agent-services`)
   - [x] Admin-only simulation access and route hardening audit notes
   - [x] Guest-mode simulator exposure audit (UI + backend route validation)
-  - [ ] 운영 제어 액션(재시작/일시정지) 설계 및 연결
+  - [x] 운영 제어 액션(재시작/일시정지) 설계 및 연결
 - [x] 관리자 페이지 역할 확장 (현재 미구현)
   - [x] 사용자/권한 조회 및 admin 부여/회수 (기본 UI/API)
     - Implemented: `admin/users` 페이지, 사용자 검색/목록, admin 플래그 변경

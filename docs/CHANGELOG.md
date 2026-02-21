@@ -18,6 +18,11 @@
   - Backend endpoint: `GET /api/v1/admin/policies`
   - Backend endpoint: `PUT /api/v1/admin/policies` (single-key toggle update)
   - Admin UI page: `/admin/policies`
+- Added exchange trade poller operational controls:
+  - Migration `026_add_agent_service_poller_policy.sql` seeds `agent_service_poller_enabled` policy
+  - Poller loop now checks policy in `backend/internal/jobs/trade_poller.go`
+    and pauses execution when disabled
+  - Admin UI `/admin/agent-services` now includes pause/resume/restart controls for poller operations
 - Admin operation dashboard now includes a shortcut card to policy controls from `/admin`
 
 ### Changed

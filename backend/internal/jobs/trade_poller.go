@@ -31,13 +31,14 @@ import (
 )
 
 const (
-	binanceFapiBaseURL  = "https://fapi.binance.com"
-	binanceAPIBaseURL   = "https://api.binance.com"
-	upbitAPIBaseURL     = "https://api.upbit.com"
-	binanceFuturesID    = "binance_futures"
-	binanceSpotID       = "binance_spot"
-	upbitExchangeID     = "upbit"
-	defaultPollInterval = 300 * time.Second
+	binanceFapiBaseURL   = "https://fapi.binance.com"
+	binanceAPIBaseURL    = "https://api.binance.com"
+	upbitAPIBaseURL      = "https://api.upbit.com"
+	binanceFuturesID     = "binance_futures"
+	binanceSpotID        = "binance_spot"
+	upbitExchangeID      = "upbit"
+	defaultPollInterval  = 300 * time.Second
+	agentPollerPolicyKey = "agent_service_poller_enabled"
 )
 
 type TradePoller struct {
@@ -169,6 +170,27 @@ func (p *TradePoller) Start(ctx context.Context) {
 	}
 }
 
+func (p *TradePoller) isAgentServiceEnabled(ctx context.Context) bool {
+	const query = `
+		SELECT CASE
+			WHEN jsonb_typeof(value) = 'boolean' THEN (value::boolean)
+			ELSE TRUE
+		END
+		FROM admin_policies
+		WHERE key = $1`
+
+	var enabled bool
+	err := p.pool.QueryRow(ctx, query, agentPollerPolicyKey).Scan(&enabled)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return true
+		}
+		log.Printf("trade poller: failed to read policy %s: %v", agentPollerPolicyKey, err)
+		return true
+	}
+	return enabled
+}
+
 func (p *TradePoller) startUserPoller(ctx context.Context, cred *entities.ExchangeCredential) {
 	key := fmt.Sprintf("%s|%s", cred.UserID.String(), cred.Exchange)
 
@@ -187,7 +209,9 @@ func (p *TradePoller) startUserPoller(ctx context.Context, cred *entities.Exchan
 		ticker := time.NewTicker(p.pollInterval)
 		defer ticker.Stop()
 		for {
-			if err := p.pollOnce(userCtx, cred, nil); err != nil {
+			if !p.isAgentServiceEnabled(userCtx) {
+				log.Printf("trade poller: paused for user %s (%s) by policy", cred.UserID.String(), cred.Exchange)
+			} else if err := p.pollOnce(userCtx, cred, nil); err != nil {
 				log.Printf("trade poller: user %s (%s) error: %v", cred.UserID.String(), cred.Exchange, err)
 			}
 			select {

@@ -40,3 +40,6 @@ This document tracks postponed or planned work that is not part of the current p
   - Added `admin_policies` table + migration (`025_add_admin_policies.sql`)
   - Added `GET /api/v1/admin/policies` and `PUT /api/v1/admin/policies`
   - Added `/admin/policies` UI for operational toggles
+  - Added `agent_service_poller_enabled` seed migration (`026_add_agent_service_poller_policy.sql`)
+  - Added trade poller policy gate in `backend/internal/jobs/trade_poller.go`
+  - Added pause/resume/restart controls to `/admin/agent-services`
