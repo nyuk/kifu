@@ -12,6 +12,9 @@ Operational task list for ongoing work.
 - [x] Add pagination and page-jump in chart side bubble list (`PageJumpPager`).
   - Scope: chart side panel and related lists.
   - Complete: 2026-02-13
+- [x] Standardize admin access authority to DB `users.is_admin` as source of truth and remove guest-email path dependency.
+  - Scope: backend admin middleware and frontend auth guard.
+  - Complete: 2026-02-21
 - [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
   - Current active priority: first batch items 1–4.
 
@@ -33,7 +36,8 @@ Operational task list for ongoing work.
     - Implemented: `admin_audit_logs` 테이블 + `GET /api/v1/admin/audit-logs` + `/admin/audit-logs`
   - [x] 정책 기반 알림/제한 설정 변경(운영 규칙 토글)
     - Implemented: `admin_policies` 테이블 + `GET /api/v1/admin/policies` + `PUT /api/v1/admin/policies` + `/admin/policies`
-  - [ ] 에이전트 서비스 상태 패널의 수동 제어(재시작, 중단, 모드 전환)
+  - [x] 에이전트 서비스 상태 패널의 수동 제어(재시작, 중단, 모드 전환)
+  - [x] 관리자 대시보드 상세화(운영 요약/역할 정리/에이전트 상태 노출)
   - [ ] 장애 대응 표준 로그 템플릿 적용(정합성 실패 원인 추적)
 - [ ] Incident logging hardening (replace assumptions with structured logs on critical path)
 

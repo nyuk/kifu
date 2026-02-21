@@ -46,6 +46,30 @@ type SimReportHistorySummary = {
   warnings?: string[]
 }
 
+type AdminServiceSummary = {
+  run_type: string
+  total_runs: number
+  running_runs: number
+  completed_runs: number
+  failed_runs: number
+  other_runs: number
+  last_started_at: string | null
+}
+
+type AgentServiceRun = {
+  run_type: string
+  status: string
+  user_email: string
+  started_at: string
+  finished_at: string | null
+}
+
+type AgentServicesResponse = {
+  snapshot_at: string
+  services: AdminServiceSummary[]
+  runs: AgentServiceRun[]
+}
+
 const tools = [
   {
     href: '/admin/sim-report',
@@ -84,6 +108,8 @@ const tools = [
 export default function AdminPage() {
   const [lastRun, setLastRun] = useState<SimReportHistorySummary | null>(null)
   const [telemetry, setTelemetry] = useState<AdminTelemetry | null>(null)
+  const [agentServices, setAgentServices] = useState<AgentServicesResponse | null>(null)
+  const [agentLoadError, setAgentLoadError] = useState('')
 
   useEffect(() => {
     try {
@@ -98,19 +124,38 @@ export default function AdminPage() {
 
   useEffect(() => {
     let isMounted = true
-    const loadTelemetry = async () => {
+    const load = async () => {
       try {
-        const response = await api.get<AdminTelemetry>('/v1/admin/telemetry')
-        if (isMounted) setTelemetry(response.data)
+        const [telemetryResponse, servicesResponse] = await Promise.all([
+          api.get<AdminTelemetry>('/v1/admin/telemetry'),
+          api.get<AgentServicesResponse>('/v1/admin/agent-services'),
+        ])
+
+        if (!isMounted) return
+        setTelemetry(telemetryResponse.data)
+        setAgentServices(servicesResponse.data)
+        setAgentLoadError('')
       } catch {
-        if (isMounted) setTelemetry(null)
+        if (isMounted) {
+          setTelemetry(null)
+          setAgentServices(null)
+          setAgentLoadError('운영 지표(에이전트 서비스) 로딩에 실패했습니다.')
+        }
       }
     }
-    loadTelemetry()
+    load()
     return () => {
       isMounted = false
     }
   }, [])
+
+  const serviceCount = agentServices?.services.length ?? 0
+  const runningServices = agentServices?.services.reduce((sum, service) => sum + service.running_runs, 0) ?? 0
+  const failedServices = agentServices?.services.filter((service) => service.failed_runs > 0).length ?? 0
+  const latestFailedRun = agentServices?.runs.find((run) => run.status === 'failed')
+
+  const failedRunCountByType = (type: string) =>
+    agentServices?.services.find((service) => service.run_type === type)?.failed_runs ?? 0
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -153,6 +198,65 @@ export default function AdminPage() {
           <SummaryCard title="Run 이력" value={telemetry?.total_runs ?? '-'} />
           <SummaryCard title="요약팩" value={telemetry?.total_summary_packs ?? '-'} />
         </div>
+        {agentLoadError && (
+          <p className="mt-4 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{agentLoadError}</p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-medium text-zinc-100">에이전트 서비스 현황</h2>
+            <p className="mt-2 text-xs text-zinc-400">
+              snapshot: {agentServices ? new Date(agentServices.snapshot_at).toLocaleString() : 'loading...'}
+            </p>
+          </div>
+          <Link href="/admin/agent-services" className="text-xs font-medium text-cyan-200 hover:text-cyan-100">
+            상세 화면
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard title="서비스 수" value={serviceCount} />
+          <SummaryCard title="진행 중 Runs" value={runningServices} />
+          <SummaryCard title="실패 서비스 수" value={failedServices} />
+          <SummaryCard title="총 실패 런" value={failedRunCountByType('trade_csv_import') + failedRunCountByType('portfolio_csv_import') + failedRunCountByType('exchange_sync')} />
+        </div>
+        <div className="mt-4 rounded-md border border-white/[0.08] bg-black/20 p-4 text-sm text-zinc-300">
+          {agentServices ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              {agentServices.services.length === 0 ? (
+                <p className="text-zinc-500">최근 서비스 집계가 없습니다.</p>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs text-zinc-500">최근 에러가 많은 서비스</p>
+                    <ul className="mt-2 space-y-1">
+                      {agentServices.services
+                        .filter((service) => service.failed_runs > 0)
+                        .sort((a, b) => b.failed_runs - a.failed_runs)
+                        .slice(0, 3)
+                        .map((service) => (
+                          <li key={service.run_type}>
+                            {serviceName(service.run_type)} · 실패 {service.failed_runs}회
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs text-zinc-500">최근 실패 런</p>
+                    <p className="mt-2">
+                      {latestFailedRun
+                        ? `${serviceName(latestFailedRun.run_type)} (${new Date(latestFailedRun.started_at).toLocaleString()})`
+                        : '최근 실패 런 없음'}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-zinc-500">로딩중...</p>
+          )}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
@@ -189,13 +293,29 @@ export default function AdminPage() {
       </section>
 
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
-        <h2 className="text-lg font-medium text-zinc-100">개발 중</h2>
+        <h2 className="text-lg font-medium text-zinc-100">관리자 페이지 역할</h2>
         <p className="mt-2 text-sm text-zinc-400">
-          다음 단계: 에이전트 서비스 상세 화면 운영 지표 노출 확장과 구조적 장애 대응 로그 가이드를 순차 반영합니다.
+          운영 권한은 DB `users.is_admin` 단일 기준으로 판단하고, 아래 항목을 중앙화했습니다.
+        </p>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-300">
+          <li>사용자 권한: `/admin/users`에서 운영자 권한 조회/부여/회수</li>
+          <li>감사 추적: `/admin/audit-logs`에서 요청자/대상/변경자 기록 조회</li>
+          <li>운영 제어: `/admin/policies`와 `/admin/agent-services`로 제한 정책과 폴러 제어</li>
+          <li>시뮬레이션: `/admin/sim-report`는 관리자 전용으로 노출/권한 제어</li>
+        </ul>
+        <p className="mt-3 text-xs text-zinc-500">
+          권한/노출 규칙은 프론트엔드 메뉴 제어와 백엔드 경로 가드가 이중 적용되어, 관리자 경로 직접 호출 시에도 차단됩니다.
         </p>
       </section>
     </div>
   )
+}
+
+const serviceName = (runType: string) => {
+  if (runType === 'exchange_sync') return '거래소 동기화'
+  if (runType === 'trade_csv_import') return '거래 CSV Import'
+  if (runType === 'portfolio_csv_import') return '포트폴리오 CSV Import'
+  return runType
 }
 
 function SummaryCard({ title, value }: { title: string; value: string | number }) {

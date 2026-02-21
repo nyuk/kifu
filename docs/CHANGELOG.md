@@ -24,6 +24,11 @@
     and pauses execution when disabled
   - Admin UI `/admin/agent-services` now includes pause/resume/restart controls for poller operations
 - Admin operation dashboard now includes a shortcut card to policy controls from `/admin`
+- Admin route hardening switched to a shared DB-checked middleware (`middleware.RequireAdmin`) for all `/api/v1/admin/*` routes.
+- Admin dashboard (`/admin`) received additional operator summary:
+  - 에이전트 서비스 운영 지표 요약 블록
+  - 관리자 역할/노출 범위의 역할 정리 섹션
+  - 운영자 페이지 로드 시 에이전트 상태 집계 로딩 실패 피드백
 
 ### Changed
 - Admin role changes now require explicit admin endpoint access under existing `/api/v1/admin/*` guard (JWT + `is_admin` DB check).

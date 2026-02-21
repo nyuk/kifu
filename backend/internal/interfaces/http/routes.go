@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
@@ -279,25 +278,7 @@ func RegisterRoutes(
 	guidedReviews.Get("/streak", guidedReviewHandler.GetStreak)
 
 	// Admin sim report (dev/operator diagnostic utility)
-	admin := api.Group("/admin", func(c *fiber.Ctx) error {
-		userID, ok := c.Locals("userID").(uuid.UUID)
-		if !ok {
-			return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
-		}
-
-		user, err := userRepo.GetByID(c.Context(), userID)
-		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
-		}
-		if user == nil {
-			return c.Status(404).JSON(fiber.Map{"code": "USER_NOT_FOUND", "message": "user not found"})
-		}
-
-		if !user.IsAdmin {
-			return c.Status(403).JSON(fiber.Map{"code": "FORBIDDEN", "message": "admin access required"})
-		}
-		return c.Next()
-	})
+	admin := api.Group("/admin", middleware.RequireAdmin(userRepo))
 	admin.Get("/telemetry", adminMetricsHandler.Telemetry)
 	admin.Get("/agent-services", adminMetricsHandler.AgentServices)
 	admin.Post("/sim-report/run", simReportHandler.Run)

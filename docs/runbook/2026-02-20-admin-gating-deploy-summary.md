@@ -32,6 +32,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
+### Post-change checklist (operational hardening)
+- `docker compose -f docker-compose.yml -f docker-compose.prod.yml` must be used in production environments to include backend/frontend service definitions.
+- Confirm migration status (`023_add_is_admin_to_users.sql`, `025_add_admin_policies.sql`, `026_add_agent_service_poller_policy.sql`) before restarting backend.
+- Confirm `/api/v1/admin/telemetry` and `/api/v1/admin/agent-services` are reachable with admin token.
+
 ## Database migration executed
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres psql -U kifu -d kifu < backend/migrations/023_add_is_admin_to_users.sql
@@ -115,10 +120,10 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres ps
 ```
 
 ### Authority design clarification (권한 기준)
-- Current behavior: DB `users.is_admin` is the source of truth for `/admin/*` access (backend guard).
-- JWT `role` is currently derived from `is_admin` at token issue time, but request-level gate is not role-claim-based.
-- If you want strict standardization, define `is_admin` as the single authority source and keep `role` as legacy metadata only, or remove `role` usage everywhere.
-- Current status: singleization decision recorded as unresolved but no dual-behavior conflict in runtime checks.
+- Current behavior: DB `users.is_admin` is the source of truth for `/admin/*` access (request-level DB gate).
+- Request path now uses centralized middleware `middleware.RequireAdmin`, and frontend guard uses `/v1/users/me.is_admin` for admin-only route checks.
+- JWT `role` remains emitted as legacy metadata (`admin` string) and is intentionally not used for access decisions.
+- Status: 기준 단일화 완료 (DB `is_admin`).
 
 ## Known caveat handled
 - 기존 `docker compose` 실행 시 `docker-compose.yml`만 쓰면 서비스가 `postgres`만 보여 `backend/frontend`가 안 올라오는 현상

@@ -7,7 +7,7 @@ This document tracks postponed or planned work that is not part of the current p
 ## Planned
 
 - [ ] Social login (OAuth providers)
-- [ ] DB-only serverization for admin and auth authority
+- [x] DB-only serverization for admin and auth authority
 - [ ] Admin dashboard expansion:
   - Admin workspace sections
   - Access control audit and operational metrics
@@ -43,3 +43,8 @@ This document tracks postponed or planned work that is not part of the current p
   - Added `agent_service_poller_enabled` seed migration (`026_add_agent_service_poller_policy.sql`)
   - Added trade poller policy gate in `backend/internal/jobs/trade_poller.go`
   - Added pause/resume/restart controls to `/admin/agent-services`
+- [x] Admin route authority hardening
+  - Added centralized middleware `middleware.RequireAdmin` in `backend/internal/interfaces/http/middleware`
+  - `/api/v1/admin/*` now enforces DB `users.is_admin` for all routes in the group
+- [x] Admin dashboard 상세화
+  - `/admin` displays role/authority summary, agent service health snapshot, and operational ownership items
