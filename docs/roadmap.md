@@ -6,7 +6,7 @@ This document tracks postponed or planned work that is not part of the current p
 
 ## Planned
 
-- [ ] Social login (OAuth providers)
+- [ ] Social login (OAuth providers)  *(Google OAuth started; Apple/Kakao pending policy/config)*
 - [x] DB-only serverization for admin and auth authority
 - [ ] Admin dashboard expansion:
   - Admin workspace sections
@@ -48,3 +48,9 @@ This document tracks postponed or planned work that is not part of the current p
   - `/api/v1/admin/*` now enforces DB `users.is_admin` for all routes in the group
 - [x] Admin dashboard 상세화
   - `/admin` displays role/authority summary, agent service health snapshot, and operational ownership items
+
+- [x] Social login foundation (Google OAuth sign-in)
+  - Added `/api/v1/auth/social-login/google` URL issuer with signed state and `/api/v1/auth/social-login/:provider/callback`
+  - Added callback flow to auto-create social users and issue access/refresh tokens.
+  - Added callback landing route `/auth/social-callback` for token handoff into client session.
+  - Note: Apple/Kakao endpoints are not yet configured and remain `coming_soon`.

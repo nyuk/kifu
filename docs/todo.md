@@ -17,10 +17,24 @@ Operational task list for ongoing work.
   - Complete: 2026-02-21
 - [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
   - Current active priority: first batch items 1–4.
+- [ ] Social login (OAuth providers)
+  - Google OAuth start/callback flow implemented (`/api/v1/auth/social-login/google`, `/api/v1/auth/social-login/google/callback`).
+  - Apple/Kakao still pending configuration and policy review.
+  - Required env vars:
+    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+    - `SOCIAL_LOGIN_STATE_SECRET` (shared with backend, defaults to jwt secret if empty)
+    - `FRONTEND_BASE_URL` (for callback redirect base)
+  - Current callback still carries tokens via query string; harden before v1.0.
 
 ## PRODUCT BACKLOG (not exposed in README)
 
-- [ ] Social login (OAuth providers)
+- [x] Social login (OAuth providers)
+  - Google OAuth is implemented as first provider (`/api/v1/auth/social-login/google` start + callback).
+  - Apple/Kakao login remains in pending configuration mode.
+  - Required env vars:
+    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+    - `SOCIAL_LOGIN_STATE_SECRET` (recommended)
+    - `FRONTEND_BASE_URL` (optional; defaults via request headers)
 - [x] DB-only serverization for auth/session authority separation
 - [x] Account lookup and password reset flows
 - [x] Admin dashboard expansion (role-aware sections and telemetry)

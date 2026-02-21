@@ -8,6 +8,13 @@ import { api } from '../lib/api'
 import { startGuestSession, clearGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
+
+type SocialLoginStartResponse = {
+  provider: string
+  status: string
+  message: string
+  auth_url?: string
+}
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -80,8 +87,16 @@ export function Login() {
     setSocialMessage('')
     setSocialLoading(provider)
     try {
-      const response = await api.get<{ provider: string; status: string; message: string }>(`/v1/auth/social-login/${provider}`)
-      setSocialMessage(response.data?.message || `${provider} 로그인은 준비중입니다.`)
+      const nextPath = searchParams?.get('next') || searchParams?.get('from') || ''
+      const response = await api.get<SocialLoginStartResponse>(`/v1/auth/social-login/${provider}`, {
+        params: { return_to: nextPath || '/home' },
+      })
+      const next = response.data
+      if (next.status === 'ready' && next.auth_url) {
+        window.location.href = next.auth_url
+        return
+      }
+      setSocialMessage(next.message || `${provider} 로그인은 준비중입니다.`)
     } catch {
       setError('소셜 로그인은 현재 사용할 수 없습니다. 잠시 후 다시 시도해주세요.')
     } finally {

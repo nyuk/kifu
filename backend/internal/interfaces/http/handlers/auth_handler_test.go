@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -75,6 +77,83 @@ func (r *authTestSubscriptionRepo) Update(_ context.Context, _ *entities.Subscri
 	return nil
 }
 func (r *authTestSubscriptionRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
+
+type socialCallbackUserRepo struct {
+	users         map[string]*entities.User
+	getByEmailErr error
+	createCount   int
+}
+
+func (r *socialCallbackUserRepo) Create(_ context.Context, user *entities.User) error {
+	r.createCount++
+	if r.users == nil {
+		r.users = make(map[string]*entities.User)
+	}
+	r.users[user.Email] = user
+	return nil
+}
+func (r *socialCallbackUserRepo) GetByID(_ context.Context, _ uuid.UUID) (*entities.User, error) {
+	return nil, nil
+}
+func (r *socialCallbackUserRepo) GetByEmail(_ context.Context, email string) (*entities.User, error) {
+	if r.getByEmailErr != nil {
+		return nil, r.getByEmailErr
+	}
+	if r.users == nil {
+		return nil, nil
+	}
+	return r.users[email], nil
+}
+func (r *socialCallbackUserRepo) ListForAdmin(_ context.Context, _ int, _ int, _ string) ([]*entities.User, error) {
+	return nil, nil
+}
+func (r *socialCallbackUserRepo) CountForAdmin(_ context.Context, _ string) (int, error) {
+	return 0, nil
+}
+func (r *socialCallbackUserRepo) SetAdmin(_ context.Context, _ uuid.UUID, _ bool) error { return nil }
+func (r *socialCallbackUserRepo) Update(_ context.Context, _ *entities.User) error      { return nil }
+func (r *socialCallbackUserRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
+
+type socialCallbackRefreshTokenRepo struct {
+	createCount int
+}
+
+func (r *socialCallbackRefreshTokenRepo) Create(_ context.Context, _ *entities.RefreshToken) error {
+	r.createCount++
+	return nil
+}
+func (r *socialCallbackRefreshTokenRepo) GetByTokenHash(_ context.Context, _ string) (*entities.RefreshToken, error) {
+	return nil, nil
+}
+func (r *socialCallbackRefreshTokenRepo) Update(_ context.Context, _ *entities.RefreshToken) error {
+	return nil
+}
+func (r *socialCallbackRefreshTokenRepo) RevokeAllUserTokens(_ context.Context, _ uuid.UUID, _ string) error {
+	return nil
+}
+func (r *socialCallbackRefreshTokenRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
+
+type socialCallbackSubscriptionRepo struct {
+	createCount int
+}
+
+func (r *socialCallbackSubscriptionRepo) Create(_ context.Context, _ *entities.Subscription) error {
+	r.createCount++
+	return nil
+}
+func (r *socialCallbackSubscriptionRepo) GetByUserID(_ context.Context, _ uuid.UUID) (*entities.Subscription, error) {
+	return nil, nil
+}
+func (r *socialCallbackSubscriptionRepo) ListAll(_ context.Context) ([]*entities.Subscription, error) {
+	return nil, nil
+}
+func (r *socialCallbackSubscriptionRepo) DecrementQuota(_ context.Context, _ uuid.UUID, _ int) (bool, error) {
+	return false, nil
+}
+func (r *socialCallbackSubscriptionRepo) Update(_ context.Context, _ *entities.Subscription) error {
+	return nil
+}
+func (r *socialCallbackSubscriptionRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
 
 func TestAccountHelpUsernameRequest(t *testing.T) {
 	t.Parallel()
@@ -222,6 +301,170 @@ func TestSocialLoginStartUnsupportedProvider(t *testing.T) {
 	}
 }
 
+func TestSocialLoginCallbackSuccessCreatesUserAndRedirects(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("token method=%s want=%s", r.Method, http.MethodPost)
+		}
+		token := map[string]string{"access_token": "google-access-token"}
+		if err := json.NewEncoder(w).Encode(token); err != nil {
+			t.Fatalf("encode token response: %v", err)
+		}
+	})
+	mux.HandleFunc("/userinfo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("userinfo method=%s want=%s", r.Method, http.MethodGet)
+		}
+		profile := socialGoogleProfileResponse{
+			Email:       "social@example.com",
+			Name:        "Social User",
+			EmailVerify: true,
+		}
+		if err := json.NewEncoder(w).Encode(profile); err != nil {
+			t.Fatalf("encode userinfo response: %v", err)
+		}
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	oldOAuthConfig := socialOAuthConfig[socialProviderGoogle]
+	oldHTTPClient := socialHTTPClient
+	defer func() {
+		socialOAuthConfig[socialProviderGoogle] = oldOAuthConfig
+		socialHTTPClient = oldHTTPClient
+	}()
+	socialOAuthConfig[socialProviderGoogle] = socialProviderConfig{
+		AuthURL:     oldOAuthConfig.AuthURL,
+		TokenURL:    server.URL + "/token",
+		UserInfoURL: server.URL + "/userinfo",
+	}
+	socialHTTPClient = server.Client()
+
+	oldClientID, hasClientID := os.LookupEnv("GOOGLE_CLIENT_ID")
+	oldClientSecret, hasClientSecret := os.LookupEnv("GOOGLE_CLIENT_SECRET")
+	os.Setenv("GOOGLE_CLIENT_ID", "test-google-client-id")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+	defer func() {
+		if hasClientID {
+			os.Setenv("GOOGLE_CLIENT_ID", oldClientID)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_ID")
+		}
+		if hasClientSecret {
+			os.Setenv("GOOGLE_CLIENT_SECRET", oldClientSecret)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_SECRET")
+		}
+	}()
+
+	userRepo := &socialCallbackUserRepo{}
+	refreshRepo := &socialCallbackRefreshTokenRepo{}
+	subscriptionRepo := &socialCallbackSubscriptionRepo{}
+	handler := NewAuthHandler(userRepo, refreshRepo, subscriptionRepo, "test-secret")
+	state, err := handler.buildSocialState(socialProviderGoogle, "/dashboard")
+	if err != nil {
+		t.Fatalf("buildSocialState: %v", err)
+	}
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider/callback", handler.SocialLoginCallback)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/google/callback?code=auth-code&state="+state, nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusFound)
+	}
+	location, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("location parse: %v", err)
+	}
+	if location.Path != "/auth/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	}
+	q := location.Query()
+	if q.Get("next") != "/dashboard" {
+		t.Fatalf("next=%s want=%s", q.Get("next"), "/dashboard")
+	}
+	if q.Get("access_token") == "" || q.Get("refresh_token") == "" {
+		t.Fatalf("missing token in redirect query: %v", q.Encode())
+	}
+	if userRepo.createCount != 1 {
+		t.Fatalf("createCount=%d want=%d", userRepo.createCount, 1)
+	}
+	if refreshRepo.createCount != 1 {
+		t.Fatalf("refresh createCount=%d want=%d", refreshRepo.createCount, 1)
+	}
+	if subscriptionRepo.createCount != 1 {
+		t.Fatalf("subscription createCount=%d want=%d", subscriptionRepo.createCount, 1)
+	}
+}
+
+func TestSocialLoginCallbackReturnsAuthFailedWhenTokenExchangeFails(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	oldOAuthConfig := socialOAuthConfig[socialProviderGoogle]
+	oldHTTPClient := socialHTTPClient
+	defer func() {
+		socialOAuthConfig[socialProviderGoogle] = oldOAuthConfig
+		socialHTTPClient = oldHTTPClient
+	}()
+	socialOAuthConfig[socialProviderGoogle] = socialProviderConfig{
+		AuthURL:  oldOAuthConfig.AuthURL,
+		TokenURL: server.URL + "/token",
+	}
+	socialHTTPClient = server.Client()
+
+	oldClientID, hasClientID := os.LookupEnv("GOOGLE_CLIENT_ID")
+	oldClientSecret, hasClientSecret := os.LookupEnv("GOOGLE_CLIENT_SECRET")
+	os.Setenv("GOOGLE_CLIENT_ID", "test-google-client-id")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+	defer func() {
+		if hasClientID {
+			os.Setenv("GOOGLE_CLIENT_ID", oldClientID)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_ID")
+		}
+		if hasClientSecret {
+			os.Setenv("GOOGLE_CLIENT_SECRET", oldClientSecret)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_SECRET")
+		}
+	}()
+
+	handler := NewAuthHandler(&socialCallbackUserRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	state, err := handler.buildSocialState(socialProviderGoogle, "/")
+	if err != nil {
+		t.Fatalf("buildSocialState: %v", err)
+	}
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider/callback", handler.SocialLoginCallback)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/google/callback?code=auth-code&state="+state, nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusUnauthorized)
+	}
+}
+
 var _ repositories.UserRepository = &authTestUserRepo{}
 var _ repositories.RefreshTokenRepository = &authTestRefreshTokenRepo{}
 var _ repositories.SubscriptionRepository = &authTestSubscriptionRepo{}
+var _ repositories.UserRepository = &socialCallbackUserRepo{}
+var _ repositories.RefreshTokenRepository = &socialCallbackRefreshTokenRepo{}
+var _ repositories.SubscriptionRepository = &socialCallbackSubscriptionRepo{}

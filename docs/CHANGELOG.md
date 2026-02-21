@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-02-22
+
+### Added
+- Added social OAuth scaffolding for Google sign-in:
+  - Backend auth start endpoint: `GET /api/v1/auth/social-login/google`
+  - Backend callback endpoint: `GET /api/v1/auth/social-login/:provider/callback`
+  - Signed social state, token exchange, Google profile verification, social user bootstrap for first-time login
+  - New frontend callback landing page: `frontend/app/(auth)/social-callback/page.tsx`
+
+### Changed
+- Updated login screen social buttons to invoke OAuth redirect flow and pass through `return_to` target.
+
+### Files Affected
+- `backend/internal/interfaces/http/handlers/auth_handler.go`
+- `backend/internal/interfaces/http/routes.go`
+- `backend/internal/interfaces/http/handlers/auth_handler_test.go`
+- `frontend/src/components-old/Login.tsx`
+- `frontend/app/(auth)/social-callback/page.tsx`
+- `docs/roadmap.md`
+- `docs/todo.md`
+
 ## 2026-02-21
 
 ### Added
