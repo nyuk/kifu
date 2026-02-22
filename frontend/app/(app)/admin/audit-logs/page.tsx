@@ -26,12 +26,17 @@ type AdminAuditLogListResponse = {
 
 const PAGE_SIZE = 25
 const QUICK_ACTION_FILTERS = [
-  '',
-  'user.admin.update',
-  'admin.policy.update',
+  { value: '', label: '전체 액션' },
+  { value: 'user.admin.update', label: '권한 변경' },
+  { value: 'admin.policy.update', label: '정책 변경' },
 ]
 
-const QUICK_RESOURCE_FILTERS = ['', 'user', 'policy', 'admin']
+const QUICK_RESOURCE_FILTERS = [
+  { value: '', label: '전체 리소스' },
+  { value: 'user', label: 'user' },
+  { value: 'policy', label: 'policy' },
+  { value: 'admin', label: 'admin' },
+]
 
 const AUDIT_ACTION_STYLE: Record<string, string> = {
   'user.admin.update': 'border-cyan-500/60 bg-cyan-500/15 text-cyan-100',
@@ -120,6 +125,16 @@ export default function AdminAuditLogsPage() {
     setOffset(0)
   }
 
+  const selectQuickAction = (value: string) => {
+    setAction((prevAction) => (prevAction === value ? '' : value))
+    setOffset(0)
+  }
+
+  const selectQuickResource = (value: string) => {
+    setResource((prevResource) => (prevResource === value ? '' : value))
+    setOffset(0)
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header className="rounded-2xl border border-cyan-400/20 bg-white/[0.04] p-6">
@@ -151,8 +166,8 @@ export default function AdminAuditLogsPage() {
               className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 outline-none"
             >
               {QUICK_ACTION_FILTERS.map((item) => (
-                <option key={item || 'all'} value={item}>
-                  {item || '전체'}
+                <option key={item.value || 'all'} value={item.value}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -165,8 +180,8 @@ export default function AdminAuditLogsPage() {
               className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 outline-none"
             >
               {QUICK_RESOURCE_FILTERS.map((item) => (
-                <option key={item || 'all'} value={item}>
-                  {item || '전체'}
+                <option key={item.value || 'all'} value={item.value}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -188,6 +203,43 @@ export default function AdminAuditLogsPage() {
         <p className="mt-4 text-xs text-zinc-400">
           총 {total}건, 노출 {currentStart} - {currentEnd}
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {QUICK_ACTION_FILTERS.filter((item) => item.value).map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => selectQuickAction(item.value)}
+              className={`rounded-full border px-2 py-1 text-[11px] ${
+                action === item.value ? 'border-cyan-300 bg-cyan-400/20 text-cyan-100' : 'border-white/20 bg-white/5 text-zinc-300 hover:border-cyan-300/80'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+          {QUICK_RESOURCE_FILTERS.filter((item) => item.value).map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => selectQuickResource(item.value)}
+              className={`rounded-full border px-2 py-1 text-[11px] ${
+                resource === item.value
+                  ? 'border-emerald-300 bg-emerald-400/20 text-emerald-100'
+                  : 'border-white/20 bg-white/5 text-zinc-300 hover:border-emerald-300/80'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+          {action === '' && resource === '' ? null : (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ml-auto rounded-full border border-amber-300/50 bg-amber-300/10 px-2 py-1 text-[11px] text-amber-100 hover:bg-amber-300/20"
+            >
+              필터 해제
+            </button>
+          )}
+        </div>
         {message && <p className="mt-2 text-sm text-amber-200">{message}</p>}
       </section>
 
@@ -199,19 +251,20 @@ export default function AdminAuditLogsPage() {
               <th className="px-3 py-2">액터</th>
               <th className="px-3 py-2">액션</th>
               <th className="px-3 py-2">대상</th>
+              <th className="px-3 py-2">대상 상세</th>
               <th className="px-3 py-2">상세</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-3 py-6 text-zinc-400" colSpan={5}>
+                <td className="px-3 py-6 text-zinc-400" colSpan={6}>
                   로딩 중...
                 </td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-zinc-400" colSpan={5}>
+                <td className="px-3 py-6 text-zinc-400" colSpan={6}>
                   로그가 없습니다.
                 </td>
               </tr>
