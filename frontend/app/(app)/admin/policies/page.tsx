@@ -35,6 +35,17 @@ const POLICY_HINT: Record<string, string> = {
   agent_service_poller_enabled: 'true면 거래소 자동 동기화(폴러) 실행을 허용합니다.',
 }
 
+const formatDateTime = (value: string | null): string => {
+  if (!value) {
+    return '미기록'
+  }
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return '잘못된 시간'
+  }
+}
+
 export default function AdminPoliciesPage() {
   const [policies, setPolicies] = useState<AdminPolicy[]>([])
   const [loading, setLoading] = useState(true)
@@ -109,19 +120,21 @@ export default function AdminPoliciesPage() {
                 <th className="px-3 py-2">정책</th>
                 <th className="px-3 py-2">설명</th>
                 <th className="px-3 py-2">상태</th>
+                <th className="px-3 py-2">최종 반영</th>
+                <th className="px-3 py-2">반영자</th>
                 <th className="px-3 py-2">수정</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="px-3 py-4 text-zinc-400" colSpan={4}>
+                  <td className="px-3 py-4 text-zinc-400" colSpan={6}>
                     로딩 중...
                   </td>
                 </tr>
               ) : policies.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-4 text-zinc-400" colSpan={4}>
+                  <td className="px-3 py-4 text-zinc-400" colSpan={6}>
                     설정 가능한 정책이 없습니다.
                   </td>
                 </tr>
@@ -144,6 +157,12 @@ export default function AdminPoliciesPage() {
                       >
                         {policy.value ? 'ON' : 'OFF'}
                       </span>
+                    </td>
+                    <td className="px-3 py-3 text-zinc-200">
+                      <p>{formatDateTime(policy.updated_at)}</p>
+                    </td>
+                    <td className="px-3 py-3 text-zinc-400">
+                      <p>{policy.updated_by || '시스템(초기값)'}</p>
                     </td>
                     <td className="px-3 py-3">
                       <button

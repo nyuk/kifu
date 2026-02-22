@@ -12,6 +12,9 @@ Operational task list for ongoing work.
 - [x] Add pagination and page-jump in chart side bubble list (`PageJumpPager`).
   - Scope: chart side panel and related lists.
   - Complete: 2026-02-13
+- [x] Add admin policy visibility of updater/time metadata on `/admin/policies`.
+  - Scope: 정책 목록 테이블에서 `최종 반영`/`반영자` 노출.
+  - Complete: 2026-02-22
 - [x] Standardize admin access authority to DB `users.is_admin` as source of truth and remove guest-email path dependency.
   - Scope: backend admin middleware and frontend auth guard.
   - Complete: 2026-02-21
