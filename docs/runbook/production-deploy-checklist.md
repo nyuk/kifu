@@ -94,6 +94,8 @@ psql "$DATABASE_URL" -c "SELECT COUNT(*) AS summary_packs_count FROM summary_pac
   - `/api/v1/packs/{pack_id}`
 
 ### Admin/권한 smoke (add immediately after auth baseline)
+- If this admin rollout is part of deploy, run the dedicated checklist:
+  - [2026-02-22 Admin Audit Visibility Extension Checklist](./2026-02-22-admin-audit-visibility-extension-checklist.md)
 - No auth call
   - `GET /api/v1/admin/telemetry` → `401`
 - Non-admin token call
