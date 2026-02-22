@@ -20,9 +20,11 @@ if [ ! -f "$PROJECT_ROOT/$COMPOSE_FILE" ]; then
 fi
 
 echo "[info] recreate frontend from root .env (compose: $COMPOSE_FILE)"
-docker compose -f "$COMPOSE_FILE" down --remove-orphans frontend
-docker image rm -f kifu-frontend || true
-docker compose -f "$COMPOSE_FILE" build --no-cache frontend
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate frontend
+if [ "${REDEPLOY_NO_CACHE:-0}" = "1" ]; then
+  docker compose -f "$COMPOSE_FILE" build --no-cache frontend
+else
+  docker compose -f "$COMPOSE_FILE" build frontend
+fi
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps frontend
 
 echo "[done] frontend redeploy complete"

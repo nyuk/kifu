@@ -19,9 +19,23 @@ fi
 cd "$PROJECT_ROOT"
 
 echo "[info] full stack redeploy (compose: $COMPOSE_FILE)"
-docker compose -f "$COMPOSE_FILE" down --remove-orphans
-docker compose -f "$COMPOSE_FILE" build --no-cache backend frontend
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+if [ "${REDEPLOY_FULL_CLEAN:-0}" = "1" ]; then
+  echo "[info] full clean requested: recreating all containers and rebuilding without cache"
+  docker compose -f "$COMPOSE_FILE" down --remove-orphans
+  docker compose -f "$COMPOSE_FILE" build --no-cache backend frontend
+  docker compose -f "$COMPOSE_FILE" up -d --force-recreate backend frontend
+  exit 0
+fi
+
+if [ "${REDEPLOY_NO_CACHE:-0}" = "1" ]; then
+  echo "[info] cache bypass requested: rebuilding backend/frontend with --no-cache"
+  docker compose -f "$COMPOSE_FILE" build --no-cache backend frontend
+else
+  echo "[info] incremental build using Docker cache"
+  docker compose -f "$COMPOSE_FILE" build backend frontend
+fi
+
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend frontend
 docker compose -f "$COMPOSE_FILE" ps
 
 echo "[done] deployment stack restarted"
