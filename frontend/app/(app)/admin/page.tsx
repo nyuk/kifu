@@ -90,6 +90,8 @@ type AdminAuditLogResponse = {
   offset: number
 }
 
+type AuditSummaryCounts = Record<string, number>
+
 type AdminPolicy = {
   key: string
   value: boolean
@@ -200,7 +202,7 @@ export default function AdminPage() {
       }
 
       try {
-        const auditResponse = await api.get<AdminAuditLogResponse>('/v1/admin/audit-logs?limit=5&offset=0')
+        const auditResponse = await api.get<AdminAuditLogResponse>('/v1/admin/audit-logs?limit=15&offset=0')
         if (!isMounted) return
         setRecentAuditLogs(auditResponse.data.logs || [])
         setAuditLoadError('')
@@ -224,6 +226,35 @@ export default function AdminPage() {
 
   const failedRunCountByType = (type: string) =>
     agentServices?.services.find((service) => service.run_type === type)?.failed_runs ?? 0
+
+  const auditSummaryByAction = recentAuditLogs.reduce<AuditSummaryCounts>((acc, log) => {
+    const key = log.action || 'UNKNOWN'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+
+  const auditSummaryByTarget = recentAuditLogs.reduce<AuditSummaryCounts>((acc, log) => {
+    const combined = [log.action_resource, log.action_target].filter((item) => item).join('/')
+    const key = combined || 'UNKNOWN'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+
+  const auditSummaryByActor = recentAuditLogs.reduce<AuditSummaryCounts>((acc, log) => {
+    const key = log.actor_email || 'SYSTEM'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+
+  const topEntries = (entries: AuditSummaryCounts, limit = 4) =>
+    Object.entries(entries)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+
+  const topActions = topEntries(auditSummaryByAction)
+  const topTargets = topEntries(auditSummaryByTarget)
+  const topActors = topEntries(auditSummaryByActor)
 
   const getPolicyValue = (key: string): boolean => policies.find((policy) => policy.key === key)?.value ?? false
 
@@ -429,6 +460,64 @@ export default function AdminPage() {
           {auditLoadError && (
             <p className="rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{auditLoadError}</p>
           )}
+          {recentAuditLogs.length > 0 && (
+            <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-zinc-300">
+              <p className="text-xs font-medium text-zinc-100">최근 로그 요약</p>
+              <div className="mt-2 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div>
+                  <p className="text-[11px] text-zinc-400">Top 액션</p>
+                  {topActions.length === 0 ? (
+                    <p className="mt-1 text-zinc-500">-</p>
+                  ) : (
+                    <ul className="mt-1 space-y-1">
+                      {topActions.map((item) => (
+                        <li key={item.name} className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] text-cyan-100">
+                            {item.name}
+                          </span>
+                          <span className="text-zinc-200">{item.count}건</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] text-zinc-400">Top 대상</p>
+                  {topTargets.length === 0 ? (
+                    <p className="mt-1 text-zinc-500">-</p>
+                  ) : (
+                    <ul className="mt-1 space-y-1">
+                      {topTargets.map((item) => (
+                        <li key={item.name} className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-100">
+                            {item.name}
+                          </span>
+                          <span className="text-zinc-200">{item.count}건</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] text-zinc-400">Top 액터</p>
+                  {topActors.length === 0 ? (
+                    <p className="mt-1 text-zinc-500">-</p>
+                  ) : (
+                    <ul className="mt-1 space-y-1">
+                      {topActors.map((item) => (
+                        <li key={item.name} className="flex items-center gap-2">
+                          <span className="inline-flex items-center rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-100">
+                            {item.name}
+                          </span>
+                          <span className="text-zinc-200">{item.count}건</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {recentAuditLogs.length === 0 && !auditLoadError ? (
             <p className="text-sm text-zinc-400">감사 로그가 없습니다.</p>
           ) : (
@@ -439,6 +528,14 @@ export default function AdminPage() {
                   {log.actor_email || 'SYSTEM'} · {log.action} · {log.action_resource}/{log.action_target}
                 </p>
                 <p className="mt-1 text-xs text-zinc-400">대상: {log.target_email || '-'}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-100">
+                    액션 {log.action}
+                  </span>
+                  <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-100">
+                    대상 {log.action_resource}/{log.action_target}
+                  </span>
+                </div>
               </div>
             ))
           )}

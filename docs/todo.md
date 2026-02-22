@@ -18,6 +18,12 @@ Operational task list for ongoing work.
 - [x] Standardize admin access authority to DB `users.is_admin` as source of truth and remove guest-email path dependency.
   - Scope: backend admin middleware and frontend auth guard.
   - Complete: 2026-02-21
+- [x] Enrich admin dashboard with audit log summaries and policy-aware indicators.
+  - Scope: `/admin` 최근 감사 로그 Top 액션/대상/액터 요약 카드 노출.
+  - Complete: 2026-02-22
+- [x] Add audit log visual highlights on `/admin/audit-logs`.
+  - Scope: action/resource badge, risk-row emphasis, time/target visibility.
+  - Complete: 2026-02-22
 - [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
   - Current active priority: first batch items 1–4.
 - [ ] Social login (OAuth providers)

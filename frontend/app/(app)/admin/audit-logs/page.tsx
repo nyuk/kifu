@@ -33,10 +33,35 @@ const QUICK_ACTION_FILTERS = [
 
 const QUICK_RESOURCE_FILTERS = ['', 'user', 'policy', 'admin']
 
+const AUDIT_ACTION_STYLE: Record<string, string> = {
+  'user.admin.update': 'border-cyan-500/60 bg-cyan-500/15 text-cyan-100',
+  'admin.policy.update': 'border-fuchsia-500/60 bg-fuchsia-500/15 text-fuchsia-100',
+  'agent_service.action': 'border-emerald-500/60 bg-emerald-500/15 text-emerald-100',
+}
+
+const AUDIT_RESOURCE_STYLE: Record<string, string> = {
+  user: 'border-cyan-500/60 bg-cyan-500/12 text-cyan-100',
+  policy: 'border-fuchsia-500/60 bg-fuchsia-500/12 text-fuchsia-100',
+  admin: 'border-emerald-500/60 bg-emerald-500/12 text-emerald-100',
+}
+
 const formatDetails = (details: Record<string, unknown>): string => {
   if (!details || Object.keys(details).length === 0) return '-'
   return JSON.stringify(details)
 }
+
+const formatCellDate = (isoTime: string) => new Date(isoTime).toLocaleString()
+
+const normalizeResourceLabel = (resource: string, target: string) => {
+  if (resource && target) return `${resource}/${target}`
+  return resource || target || 'UNKNOWN'
+}
+
+const actionClass = (action: string): string =>
+  AUDIT_ACTION_STYLE[action] ?? 'border-white/20 bg-white/5 text-zinc-200'
+
+const resourceClass = (resource: string): string =>
+  AUDIT_RESOURCE_STYLE[resource] ?? AUDIT_RESOURCE_STYLE.admin
 
 export default function AdminAuditLogsPage() {
   const [search, setSearch] = useState('')
@@ -192,16 +217,29 @@ export default function AdminAuditLogsPage() {
               </tr>
             ) : (
               logs.map((log) => (
-                <tr key={log.id} className="border-t border-white/10">
-                  <td className="px-3 py-3 text-zinc-400">{new Date(log.created_at).toLocaleString()}</td>
+                <tr
+                  key={log.id}
+                  className={[
+                    'border-t border-white/10',
+                    log.action === 'admin.policy.update' ? 'bg-fuchsia-500/[0.06]' : '',
+                    log.action === 'user.admin.update' ? 'bg-cyan-500/[0.04]' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <td className="px-3 py-3 text-zinc-400">{formatCellDate(log.created_at)}</td>
                   <td className="px-3 py-3 text-zinc-200">
                     {log.actor_email || '-'}
                     <span className="ml-1 text-zinc-500">({log.actor_user_id || '-'})</span>
                   </td>
                   <td className="px-3 py-3 text-zinc-100">
-                    {log.action}
-                    <span className="ml-1 text-zinc-500">
-                      [{log.action_resource}/{log.action_target}]
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${actionClass(log.action || '')}`}>
+                      {log.action || '-'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-zinc-100">
+                    <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${resourceClass(log.action_resource || 'admin')}`}>
+                      {normalizeResourceLabel(log.action_resource, log.action_target)}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-zinc-200">

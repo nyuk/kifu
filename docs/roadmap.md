@@ -37,6 +37,7 @@ This document tracks postponed or planned work that is not part of the current p
   - Admin role change events are recorded in `admin_audit_logs`
   - API exposure via `GET /api/v1/admin/audit-logs`
   - Admin UI page `/admin/audit-logs` for browsing actor/target/time/details
+  - Follow-up: add action/resource highlighting and risk-row visual cues
 - [x] Operational policy controls for admin workspace
   - Added `admin_policies` table + migration (`025_add_admin_policies.sql`)
   - Added `GET /api/v1/admin/policies` and `PUT /api/v1/admin/policies`
@@ -50,6 +51,7 @@ This document tracks postponed or planned work that is not part of the current p
   - `/api/v1/admin/*` now enforces DB `users.is_admin` for all routes in the group
 - [x] Admin dashboard 상세화
   - `/admin` displays role/authority summary, agent service health snapshot, and operational ownership items
+  - Added `/admin` audit summary cards (Top action/target/actor) and alert-style badges
 - [x] Onchain critical-path incident logging (`/api/v1/onchain/quick-check`)
   - Added structured log lines in `onchain_handler.go` and `onchain_pack_service.go`
   - Logs include request trace (`request_id`,`ip`) and key dimensions (chain, address, range, cache/provider outcome, latency)
