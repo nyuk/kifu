@@ -144,6 +144,13 @@ const POLICY_LABELS: Record<string, string> = {
   agent_service_poller_enabled: '에이전트 폴러',
 }
 
+const POLICY_TOOLTIPS: Record<string, string> = {
+  admin_user_signup_enabled: '관리자 경로의 사용자 등록/초대 동작을 허용합니다.',
+  maintenance_mode: '활성 시 일반 사용자 접근이 제한됩니다.',
+  notification_delivery_enabled: '비활성 시 알림 전달 기능을 중단합니다.',
+  agent_service_poller_enabled: '비활성 시 거래소 폴러 및 자동 동기화가 정지됩니다.',
+}
+
 export default function AdminPage() {
   const [lastRun, setLastRun] = useState<SimReportHistorySummary | null>(null)
   const [telemetry, setTelemetry] = useState<AdminTelemetry | null>(null)
@@ -153,6 +160,7 @@ export default function AdminPage() {
   const [auditLoadError, setAuditLoadError] = useState('')
   const [policies, setPolicies] = useState<AdminPolicy[]>([])
   const [policyLoadError, setPolicyLoadError] = useState('')
+  const [policySavingKey, setPolicySavingKey] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -226,6 +234,32 @@ export default function AdminPage() {
 
   const activeAlerts = [isMaintenanceMode, !isNotificationDeliveryEnabled, !isAgentPollerEnabled].filter(Boolean).length
 
+  const togglePolicy = async (policy: AdminPolicy) => {
+    const nextValue = !policy.value
+    setPolicySavingKey(policy.key)
+    setPolicyLoadError('')
+    try {
+      await api.put('/v1/admin/policies', {
+        key: policy.key,
+        value: nextValue,
+      })
+      setPolicies((previous) =>
+        previous.map((item) => (item.key === policy.key ? { ...item, value: nextValue } : item)),
+      )
+    } catch {
+      setPolicyLoadError(`${policy.key} 토글 적용에 실패했습니다.`)
+    } finally {
+      setPolicySavingKey(null)
+    }
+  }
+
+  const policyCards = [
+    'maintenance_mode',
+    'notification_delivery_enabled',
+    'admin_user_signup_enabled',
+    'agent_service_poller_enabled',
+  ]
+
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <header className="rounded-2xl border border-cyan-400/20 bg-white/[0.04] p-6">
@@ -261,6 +295,32 @@ export default function AdminPage() {
         {policyLoadError && (
           <p className="mt-4 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{policyLoadError}</p>
         )}
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {policyCards.map((policyKey) => {
+            const current = policies.find((item) => item.key === policyKey)
+            if (!current) return null
+            const isSaving = policySavingKey === current.key
+            const nextValue = !current.value
+            return (
+              <div
+                key={current.key}
+                className="rounded-xl border border-white/[0.08] bg-black/20 px-3 py-3 text-sm text-zinc-300"
+              >
+                <p className="text-xs text-zinc-400">{POLICY_LABELS[current.key] ?? current.key}</p>
+                <p className="mt-1 text-sm text-zinc-100">{POLICY_TOOLTIPS[current.key] || current.description}</p>
+                <button
+                  type="button"
+                  onClick={() => togglePolicy(current)}
+                  disabled={isSaving}
+                  className={`mt-3 inline-flex rounded-md border px-3 py-1.5 text-xs font-semibold ${current.value ? 'border-rose-500/50 bg-rose-500/15 text-rose-100' : 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100'} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {isSaving ? '적용중...' : current.value ? `${POLICY_LABELS[current.key]} OFF` : `${POLICY_LABELS[current.key]} ON`}
+                </button>
+                <p className="mt-2 text-xs text-zinc-500">변경 적용 시 값: {nextValue ? 'ON' : 'OFF'}</p>
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
