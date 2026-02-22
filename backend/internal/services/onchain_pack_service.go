@@ -273,6 +273,16 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 	}
 
 	txHashes, logIDs := collectEvidenceRefs(effectiveEvents)
+	if len(txHashes) == 0 && len(effectiveEvents) > 0 {
+		warnings = append(warnings, OnchainWarning{
+			Code:     "NO_TX_HASHES",
+			Severity: "warn",
+			Detail:   "provider did not return transaction hashes in selected response window",
+		})
+		if len(warnings) > 0 {
+			status = "warning"
+		}
+	}
 	response := OnchainQuickCheckResponse{
 		SchemaVersion: onchainSchemaVersion,
 		Chain:         normalized.chain,
@@ -478,12 +488,26 @@ func collectEvidenceRefs(events []TransferEvent) ([]string, []string) {
 					txHashes = append(txHashes, txKey)
 				}
 			}
+		} else if event.BlockNumber > 0 {
+			fallback := fmt.Sprintf("block:%d:log:%d", event.BlockNumber, event.LogIndex)
+			if _, exists := txSet[fallback]; !exists {
+				txSet[fallback] = struct{}{}
+				txHashes = append(txHashes, fallback)
+			}
+		}
+
+		if event.TxHash == "" {
+			if event.BlockNumber > 0 {
+				logKey := fmt.Sprintf("block:%d:log:%d", event.BlockNumber, event.LogIndex)
+				if _, exists := logSet[logKey]; !exists {
+					logSet[logKey] = struct{}{}
+					logIDs = append(logIDs, logKey)
+				}
+			}
+			continue
 		}
 
 		logKey := strings.ToLower(strings.TrimSpace(event.TxHash)) + "|" + strconv.FormatUint(event.LogIndex, 10)
-		if event.TxHash == "" {
-			continue
-		}
 		if _, exists := logSet[logKey]; !exists {
 			logSet[logKey] = struct{}{}
 			logIDs = append(logIDs, logKey)
