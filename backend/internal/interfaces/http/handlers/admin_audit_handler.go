@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +43,9 @@ func NewAdminAuditHandler(pool *pgxpool.Pool) *AdminAuditHandler {
 
 func (h *AdminAuditHandler) List(c *fiber.Ctx) error {
 	search := strings.TrimSpace(c.Query("search"))
+	action := strings.ToLower(strings.TrimSpace(c.Query("action")))
+	resource := strings.ToLower(strings.TrimSpace(c.Query("resource")))
+
 	limit, err := parsePositiveIntOrDefault(c.Query("limit"), 50)
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid limit"})
@@ -51,7 +55,7 @@ func (h *AdminAuditHandler) List(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid offset"})
 	}
 
-	logs, total, err := h.listAuditLogs(c.Context(), limit, offset, search)
+	logs, total, err := h.listAuditLogs(c.Context(), limit, offset, search, action, resource)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
@@ -64,87 +68,11 @@ func (h *AdminAuditHandler) List(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AdminAuditHandler) listAuditLogs(ctx context.Context, limit int, offset int, search string) ([]AdminAuditLogItem, int, error) {
-	needle := strings.ToLower(search)
-	if needle != "" {
-		needle = "%" + strings.TrimSpace(needle) + "%"
-	}
+func (h *AdminAuditHandler) listAuditLogs(ctx context.Context, limit int, offset int, search string, action string, resource string) ([]AdminAuditLogItem, int, error) {
+	where, args := buildAuditLogFilters(search, action, resource)
 
-	logs := make([]AdminAuditLogItem, 0, limit)
-
-	var total int
-	var err error
-	if needle == "" {
-		total, err = h.countAdminAuditLogs(ctx, "")
-		if err != nil {
-			return nil, 0, err
-		}
-		rows, err := h.pool.Query(
-			ctx,
-			`SELECT
-				l.id,
-				l.actor_user_id,
-				actor.email,
-				l.target_user_id,
-				target.email,
-				l.action,
-				l.action_target,
-				l.action_resource,
-				l.details,
-				l.created_at
-			 FROM admin_audit_logs l
-			 LEFT JOIN users actor ON actor.id = l.actor_user_id
-			 LEFT JOIN users target ON target.id = l.target_user_id
-			 ORDER BY l.created_at DESC
-			 LIMIT $1 OFFSET $2`,
-			limit,
-			offset,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var item AdminAuditLogItem
-			var actorUserID sql.NullString
-			var targetUserID sql.NullString
-			if err := rows.Scan(
-				&item.ID,
-				&actorUserID,
-				&item.ActorEmail,
-				&targetUserID,
-				&item.TargetEmail,
-				&item.Action,
-				&item.ActionTarget,
-				&item.ActionResource,
-				&item.Details,
-				&item.CreatedAt,
-			); err != nil {
-				return nil, 0, err
-			}
-			if actorUserID.Valid {
-				item.ActorUserID = &actorUserID.String
-			}
-			if targetUserID.Valid {
-				item.TargetUserID = &targetUserID.String
-			}
-			logs = append(logs, item)
-		}
-		if err := rows.Err(); err != nil {
-			return nil, 0, err
-		}
-		return logs, total, nil
-	}
-
-	total, err = h.countAdminAuditLogs(ctx, needle)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	rows, err := h.pool.Query(
-		ctx,
-		`SELECT
+	query := `
+		SELECT
 			l.id,
 			l.actor_user_id,
 			actor.email,
@@ -157,19 +85,28 @@ func (h *AdminAuditHandler) listAuditLogs(ctx context.Context, limit int, offset
 			l.created_at
 		 FROM admin_audit_logs l
 		 LEFT JOIN users actor ON actor.id = l.actor_user_id
-		 LEFT JOIN users target ON target.id = l.target_user_id
-		 WHERE lower(actor.email) LIKE $1 OR lower(target.email) LIKE $1 OR lower(l.action) LIKE $1 OR lower(l.action_target) LIKE $1 OR lower(l.action_resource) LIKE $1
-		 ORDER BY l.created_at DESC
-		 LIMIT $2 OFFSET $3`,
-		needle,
-		limit,
-		offset,
-	)
+		 LEFT JOIN users target ON target.id = l.target_user_id`
+	if where != "" {
+		query = fmt.Sprintf("%s WHERE %s", query, where)
+	}
+	query = fmt.Sprintf("%s ORDER BY l.created_at DESC LIMIT $%d OFFSET $%d", query, len(args)+1, len(args)+2)
+
+	queryArgs := make([]any, 0, len(args)+2)
+	queryArgs = append(queryArgs, args...)
+	queryArgs = append(queryArgs, limit, offset)
+
+	total, err := h.countAdminAuditLogs(ctx, where, args)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := h.pool.Query(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
 
+	logs := make([]AdminAuditLogItem, 0, limit)
 	for rows.Next() {
 		var item AdminAuditLogItem
 		var actorUserID sql.NullString
@@ -196,25 +133,54 @@ func (h *AdminAuditHandler) listAuditLogs(ctx context.Context, limit int, offset
 		}
 		logs = append(logs, item)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
 
-	return logs, total, rows.Err()
+	return logs, total, nil
 }
 
-func (h *AdminAuditHandler) countAdminAuditLogs(ctx context.Context, needle string) (int, error) {
-	var total int
-	if needle == "" {
-		return 0, h.pool.QueryRow(ctx, "SELECT COUNT(*) FROM admin_audit_logs").Scan(&total)
+func buildAuditLogFilters(search string, action string, resource string) (string, []any) {
+	conditions := make([]string, 0, 3)
+	args := make([]any, 0, 5)
+
+	if action != "" {
+		args = append(args, action)
+		conditions = append(conditions, fmt.Sprintf("lower(l.action) = $%d", len(args)))
 	}
+
+	if resource != "" {
+		args = append(args, resource)
+		conditions = append(conditions, fmt.Sprintf("lower(l.action_resource) = $%d", len(args)))
+	}
+
+	searchNeedle := strings.TrimSpace(strings.ToLower(search))
+	if searchNeedle != "" {
+		searchNeedle = "%" + searchNeedle + "%"
+		args = append(args, searchNeedle)
+		searchIndex := len(args)
+		conditions = append(conditions, fmt.Sprintf(
+			"(lower(actor.email) LIKE $%d OR lower(target.email) LIKE $%d OR lower(l.action) LIKE $%d OR lower(l.action_target) LIKE $%d OR lower(l.action_resource) LIKE $%d)",
+			searchIndex, searchIndex, searchIndex, searchIndex, searchIndex,
+		))
+	}
+
+	return strings.Join(conditions, " AND "), args
+}
+
+func (h *AdminAuditHandler) countAdminAuditLogs(ctx context.Context, where string, args []any) (int, error) {
 	query := `
 		SELECT COUNT(*)
 		FROM admin_audit_logs l
 		LEFT JOIN users actor ON actor.id = l.actor_user_id
-		LEFT JOIN users target ON target.id = l.target_user_id
-		WHERE lower(actor.email) LIKE $1
-		   OR lower(target.email) LIKE $1
-		   OR lower(l.action) LIKE $1
-		   OR lower(l.action_target) LIKE $1
-		   OR lower(l.action_resource) LIKE $1
-	`
-	return total, h.pool.QueryRow(ctx, query, needle).Scan(&total)
+		LEFT JOIN users target ON target.id = l.target_user_id`
+	if where != "" {
+		query = fmt.Sprintf("%s WHERE %s", query, where)
+	}
+
+	var total int
+	if len(args) == 0 {
+		return 0, h.pool.QueryRow(ctx, query).Scan(&total)
+	}
+	return total, h.pool.QueryRow(ctx, query, args...).Scan(&total)
 }

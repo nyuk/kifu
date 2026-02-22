@@ -25,6 +25,13 @@ type AdminAuditLogListResponse = {
 }
 
 const PAGE_SIZE = 25
+const QUICK_ACTION_FILTERS = [
+  '',
+  'user.admin.update',
+  'admin.policy.update',
+]
+
+const QUICK_RESOURCE_FILTERS = ['', 'user', 'policy', 'admin']
 
 const formatDetails = (details: Record<string, unknown>): string => {
   if (!details || Object.keys(details).length === 0) return '-'
@@ -33,6 +40,8 @@ const formatDetails = (details: Record<string, unknown>): string => {
 
 export default function AdminAuditLogsPage() {
   const [search, setSearch] = useState('')
+  const [action, setAction] = useState('')
+  const [resource, setResource] = useState('')
   const [logs, setLogs] = useState<AdminAuditLog[]>([])
   const [limit] = useState(PAGE_SIZE)
   const [offset, setOffset] = useState(0)
@@ -46,6 +55,8 @@ export default function AdminAuditLogsPage() {
     try {
       const params = new URLSearchParams()
       if (search.trim()) params.set('search', search.trim())
+      if (action.trim()) params.set('action', action.trim())
+      if (resource.trim()) params.set('resource', resource.trim())
       params.set('limit', String(limit))
       params.set('offset', String(offset))
 
@@ -60,7 +71,7 @@ export default function AdminAuditLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, offset, limit])
+  }, [search, action, resource, offset, limit])
 
   const currentStart = useMemo(() => (total === 0 ? 0 : offset + 1), [offset, total])
   const currentEnd = useMemo(() => {
@@ -74,6 +85,13 @@ export default function AdminAuditLogsPage() {
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setOffset(0)
+  }
+
+  const clearFilters = () => {
+    setSearch('')
+    setAction('')
+    setResource('')
     setOffset(0)
   }
 
@@ -100,11 +118,46 @@ export default function AdminAuditLogsPage() {
               placeholder="액터 이메일, 대상 이메일, 액션 키워드"
             />
           </label>
+          <label className="min-w-0 flex-1">
+            <span className="mb-1 block text-xs text-zinc-400">액션</span>
+            <select
+              value={action}
+              onChange={(event) => setAction(event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 outline-none"
+            >
+              {QUICK_ACTION_FILTERS.map((item) => (
+                <option key={item || 'all'} value={item}>
+                  {item || '전체'}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0 flex-1">
+            <span className="mb-1 block text-xs text-zinc-400">리소스</span>
+            <select
+              value={resource}
+              onChange={(event) => setResource(event.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-zinc-100 outline-none"
+            >
+              {QUICK_RESOURCE_FILTERS.map((item) => (
+                <option key={item || 'all'} value={item}>
+                  {item || '전체'}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="submit"
             className="rounded-lg border border-cyan-500 bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-500"
           >
             조회
+          </button>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-lg border border-zinc-500/50 px-4 py-2 text-sm font-semibold text-zinc-200 hover:bg-zinc-700/30"
+          >
+            초기화
           </button>
         </form>
         <p className="mt-4 text-xs text-zinc-400">
