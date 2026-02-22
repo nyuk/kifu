@@ -8,8 +8,8 @@ import (
 	"math/big"
 	"regexp"
 	"sort"
-	"strings"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,6 +17,8 @@ import (
 const (
 	onchainSchemaVersion = "onchain_pack_v0"
 	defaultOnchainRange  = "30d"
+	defaultMaxTxs        = 2000
+	defaultMaxEvents     = 20000
 )
 
 var (
@@ -50,9 +52,11 @@ type OnchainProvider interface {
 }
 
 type OnchainQuickCheckRequest struct {
-	Chain   string `json:"chain"`
-	Address string `json:"address"`
-	Range   string `json:"range"`
+	Chain     string `json:"chain"`
+	Address   string `json:"address"`
+	Range     string `json:"range"`
+	MaxTxs    int    `json:"max_txs"`
+	MaxEvents int    `json:"max_events"`
 }
 
 type OnchainTokenFlow struct {
@@ -82,6 +86,8 @@ type OnchainQuickCheckResponse struct {
 	Summary       OnchainSummary   `json:"summary"`
 	Warnings      []OnchainWarning `json:"warnings"`
 	Status        string           `json:"status"`
+	TxHashes      []string         `json:"tx_hashes"`
+	LogIDs        []string         `json:"log_ids"`
 }
 
 type onchainCacheEntry struct {
@@ -114,10 +120,12 @@ func ValidateEVMAddress(address string) bool {
 }
 
 type normalizedQuickCheckRequest struct {
-	chain      string
-	address    string
-	rng        string
-	rangeDur   time.Duration
+	chain     string
+	address   string
+	rng       string
+	rangeDur  time.Duration
+	maxTxs    int
+	maxEvents int
 }
 
 func normalizeQuickCheckRequest(req OnchainQuickCheckRequest) (normalizedQuickCheckRequest, error) {
@@ -144,11 +152,20 @@ func normalizeQuickCheckRequest(req OnchainQuickCheckRequest) (normalizedQuickCh
 	}
 
 	return normalizedQuickCheckRequest{
-		chain:    chain,
-		address:  address,
-		rng:      rng,
-		rangeDur: duration,
+		chain:     chain,
+		address:   address,
+		rng:       rng,
+		rangeDur:  duration,
+		maxTxs:    normalizeLimit(req.MaxTxs, defaultMaxTxs),
+		maxEvents: normalizeLimit(req.MaxEvents, defaultMaxEvents),
 	}, nil
+}
+
+func normalizeLimit(raw, fallback int) int {
+	if raw <= 0 {
+		return fallback
+	}
+	return raw
 }
 
 func parseOnchainRange(rng string) (time.Duration, error) {
@@ -246,13 +263,16 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 		}, nil
 	}
 
-	summary, totalIn, top1In := buildOnchainSummary(normalized.address, events)
-	warnings := evaluateOnchainWarnings(summary, totalIn, top1In)
+	// Apply soft limits.
+	effectiveEvents, limitWarnings := applyEventLimits(events, normalized.maxTxs, normalized.maxEvents)
+	summary, totalIn, top1In := buildOnchainSummary(normalized.address, effectiveEvents)
+	warnings := append(evaluateOnchainWarnings(summary, totalIn, top1In), limitWarnings...)
 	status := "ok"
 	if len(warnings) > 0 {
 		status = "warning"
 	}
 
+	txHashes, logIDs := collectEvidenceRefs(effectiveEvents)
 	response := OnchainQuickCheckResponse{
 		SchemaVersion: onchainSchemaVersion,
 		Chain:         normalized.chain,
@@ -261,9 +281,10 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 		Range:         normalized.rng,
 		Summary:       summary,
 		Warnings:      warnings,
+		TxHashes:      txHashes,
+		LogIDs:        logIDs,
 		Status:        status,
 	}
-
 	s.setCached(cacheKey, response, now)
 	return response, nil
 }
@@ -419,6 +440,57 @@ func evaluateOnchainWarnings(summary OnchainSummary, totalIn *big.Int, top1In *b
 	}
 
 	return warnings
+}
+
+func applyEventLimits(events []TransferEvent, maxTxs, maxEvents int) ([]TransferEvent, []OnchainWarning) {
+	originalLen := len(events)
+	if maxEvents > 0 && len(events) > maxEvents {
+		events = events[:maxEvents]
+	}
+	if len(events) > maxTxs {
+		events = events[:maxTxs]
+	}
+
+	limitWarnings := make([]OnchainWarning, 0, 2)
+	if len(events) < originalLen {
+		limitWarnings = append(limitWarnings, OnchainWarning{
+			Code:     "MAX_EVENTS_EXCEEDED",
+			Severity: "warn",
+			Detail:   "event limit reached",
+		})
+	}
+
+	return events, limitWarnings
+}
+
+func collectEvidenceRefs(events []TransferEvent) ([]string, []string) {
+	txSet := make(map[string]struct{}, len(events))
+	logSet := make(map[string]struct{}, len(events))
+	txHashes := make([]string, 0)
+	logIDs := make([]string, 0)
+
+	for _, event := range events {
+		if event.TxHash != "" {
+			txKey := strings.ToLower(strings.TrimSpace(event.TxHash))
+			if txKey != "" {
+				if _, exists := txSet[txKey]; !exists {
+					txSet[txKey] = struct{}{}
+					txHashes = append(txHashes, txKey)
+				}
+			}
+		}
+
+		logKey := strings.ToLower(strings.TrimSpace(event.TxHash)) + "|" + strconv.FormatUint(event.LogIndex, 10)
+		if event.TxHash == "" {
+			continue
+		}
+		if _, exists := logSet[logKey]; !exists {
+			logSet[logKey] = struct{}{}
+			logIDs = append(logIDs, logKey)
+		}
+	}
+
+	return txHashes, logIDs
 }
 
 func (s *OnchainPackService) getCached(key string, now time.Time) (OnchainQuickCheckResponse, bool) {

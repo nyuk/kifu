@@ -28,11 +28,11 @@ type OnchainQuickCheckRequest struct {
 type OnchainQuickFactCheckRequest struct {
 	Chain      string          `json:"chain"`
 	Address    string          `json:"address"`
-	TimeWindow *TimeWindowSpec  `json:"timeWindow"`
+	TimeWindow *TimeWindowSpec `json:"timeWindow"`
 	TokenList  []string        `json:"tokenList,omitempty"`
-	RiskFlags  *RiskFlagsSpec   `json:"riskFlags,omitempty"`
-	Limits     *JobLimitsSpec   `json:"limits,omitempty"`
-	ClientMeta *JobClientMeta   `json:"clientMeta,omitempty"`
+	RiskFlags  *RiskFlagsSpec  `json:"riskFlags,omitempty"`
+	Limits     *JobLimitsSpec  `json:"limits,omitempty"`
+	ClientMeta *JobClientMeta  `json:"clientMeta,omitempty"`
 }
 
 type TimeWindowSpec struct {
@@ -42,11 +42,11 @@ type TimeWindowSpec struct {
 }
 
 type RiskFlagsSpec struct {
-	IncludeCounterpartySummary bool `json:"includeCounterpartySummary,omitempty"`
+	IncludeCounterpartySummary  bool `json:"includeCounterpartySummary,omitempty"`
 	IncludeContractInteractions bool `json:"includeContractInteractions,omitempty"`
-	DetectCexLikeFlows        bool `json:"detectCexLikeFlows,omitempty"`
-	IncludeNft                bool `json:"includeNft,omitempty"`
-	MaxHops                   int  `json:"maxHops,omitempty"`
+	DetectCexLikeFlows          bool `json:"detectCexLikeFlows,omitempty"`
+	IncludeNft                  bool `json:"includeNft,omitempty"`
+	MaxHops                     int  `json:"maxHops,omitempty"`
 }
 
 type JobLimitsSpec struct {
@@ -64,7 +64,7 @@ type OnchainQuickFactCheckResponse struct {
 	JobType       string             `json:"job_type"`
 	Chain         string             `json:"chain"`
 	Address       string             `json:"address"`
-	TimeWindow    *TimeWindowSpec      `json:"timeWindow"`
+	TimeWindow    *TimeWindowSpec    `json:"timeWindow"`
 	Status        string             `json:"status"`
 	Confidence    float64            `json:"confidence"`
 	ErrorCode     *string            `json:"error_code"`
@@ -85,11 +85,11 @@ type OnchainUncertainty struct {
 }
 
 type OnchainSummaryV1 struct {
-	TxCountObserved int               `json:"tx_count_observed"`
-	Native          OnchainNativeFlow  `json:"native"`
-	Tokens          []OnchainTokenV1   `json:"tokens"`
+	TxCountObserved int                  `json:"tx_count_observed"`
+	Native          OnchainNativeFlow    `json:"native"`
+	Tokens          []OnchainTokenV1     `json:"tokens"`
 	TopInteractions []OnchainInteraction `json:"top_interactions"`
-	RiskSignals     []OnchainRiskSignal `json:"risk_signals"`
+	RiskSignals     []OnchainRiskSignal  `json:"risk_signals"`
 }
 
 type OnchainNativeFlow struct {
@@ -118,9 +118,9 @@ type OnchainRiskSignal struct {
 }
 
 type OnchainEvidence struct {
-	BlockRange BlockRangeSpec `json:"block_range"`
-	TxHashes   []string      `json:"tx_hashes"`
-	LogIDs     []string      `json:"log_ids"`
+	BlockRange BlockRangeSpec  `json:"block_range"`
+	TxHashes   []string        `json:"tx_hashes"`
+	LogIDs     []string        `json:"log_ids"`
 	Sources    []OnchainSource `json:"sources"`
 }
 
@@ -136,9 +136,9 @@ type OnchainSource struct {
 }
 
 type OnchainMeta struct {
-	GeneratedAt   string       `json:"generated_at"`
-	LatencyMs     int64        `json:"latency_ms"`
-	LimitsApplied LimitSummary `json:"limits_applied"`
+	GeneratedAt    string        `json:"generated_at"`
+	LatencyMs      int64         `json:"latency_ms"`
+	LimitsApplied  LimitSummary  `json:"limits_applied"`
 	ClientMetaEcho JobClientMeta `json:"client_meta_echo"`
 }
 
@@ -293,9 +293,11 @@ func (h *OnchainHandler) QuickFactCheckJob(c *fiber.Ctx) error {
 	}
 
 	serviceResp, err := h.service.BuildQuickCheck(c.Context(), services.OnchainQuickCheckRequest{
-		Chain:   chain,
-		Address: address,
-		Range:   serviceRange,
+		Chain:     chain,
+		Address:   address,
+		Range:     serviceRange,
+		MaxTxs:    defaultJobMaxTxs(req),
+		MaxEvents: defaultJobMaxEvents(req),
 	})
 	if err != nil {
 		return writeJobServiceError(c, requestID, clientIP, chain, address, req, window, err)
@@ -514,7 +516,7 @@ func toQuickFactResponse(req OnchainQuickFactCheckRequest, chain, address string
 	reasons := []string{}
 	if src.Status == "warning" {
 		status = "warning"
-		errCode = stringPtr("partial")
+		errCode = mapQuickFactErrorCode(src)
 	}
 	if src.Status == "error" {
 		status = "error"
@@ -587,9 +589,9 @@ func toQuickFactResponse(req OnchainQuickFactCheckRequest, chain, address string
 		},
 		Evidence: OnchainEvidence{
 			BlockRange: BlockRangeSpec{From: blockFrom, To: blockTo},
-			TxHashes:   []string{},
-			LogIDs:     []string{},
-			Sources: []OnchainSource{{Type: "rpc", Name: "base-rpc", Healthy: true}},
+			TxHashes:   src.TxHashes,
+			LogIDs:     src.LogIDs,
+			Sources:    []OnchainSource{{Type: "rpc", Name: "base-rpc", Healthy: true}},
 		},
 		Meta: OnchainMeta{
 			GeneratedAt: time.Now().UTC().Format(time.RFC3339),
@@ -601,6 +603,23 @@ func toQuickFactResponse(req OnchainQuickFactCheckRequest, chain, address string
 			ClientMetaEcho: requestMeta(req),
 		},
 	}
+}
+
+func mapQuickFactErrorCode(src services.OnchainQuickCheckResponse) *string {
+	if src.Status != "warning" {
+		return nil
+	}
+	for _, warning := range src.Warnings {
+		switch warning.Code {
+		case "LOW_ACTIVITY":
+			return stringPtr("insufficient_data")
+		case "MAX_EVENTS_EXCEEDED":
+			return stringPtr("partial")
+		case "TOO_MANY_UNIQUE_TOKENS":
+			return stringPtr("partial")
+		}
+	}
+	return stringPtr("partial")
 }
 
 func requestMeta(req OnchainQuickFactCheckRequest) JobClientMeta {
