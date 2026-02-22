@@ -17,6 +17,11 @@ if [ -z "$EMAIL" ] || [ -z "$PASSWORD" ]; then
 fi
 
 clean_url="${API_BASE%/}"
+if [[ "$clean_url" == */api/v1 ]]; then
+  API_V1_BASE="$clean_url"
+else
+  API_V1_BASE="${clean_url}/api/v1"
+fi
 
 login_resp="$(mktemp)"
 jobs_resp="$(mktemp)"
@@ -24,7 +29,7 @@ trap 'rm -f "$login_resp" "$jobs_resp"' EXIT
 
 echo "[1] login"
 login_code=$(
-  curl -sS -o "$login_resp" -w "%{http_code}" -X POST "$clean_url/api/v1/auth/login" \
+  curl -sS -o "$login_resp" -w "%{http_code}" -X POST "$API_V1_BASE/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
 )
@@ -44,7 +49,7 @@ fi
 echo "[OK] got token"
 
 echo "[2] health"
-health_code=$(curl -sS -o /tmp/kifu_health.txt -w "%{http_code}" "$clean_url/health")
+health_code=$(curl -sS -o /tmp/kifu_health.txt -w "%{http_code}" "$API_V1_BASE/health")
 if [ "$health_code" != "200" ]; then
   echo "[FAIL] health returned $health_code"
   cat /tmp/kifu_health.txt
@@ -55,7 +60,7 @@ echo "[OK] health=200"
 echo "[3] user profile"
 me_code=$(curl -sS -o /tmp/kifu_me.txt -w "%{http_code}" \
   -H "Authorization: Bearer $token" \
-  "$clean_url/api/v1/users/me")
+  "$API_V1_BASE/users/me")
 if [ "$me_code" != "200" ]; then
   echo "[FAIL] /users/me returned $me_code"
   cat /tmp/kifu_me.txt
@@ -66,7 +71,7 @@ echo "[OK] users/me=200"
 echo "[4] onchain quick fact check"
 jobs_payload="{\"chain\":\"$CHAIN\",\"address\":\"$ADDRESS\",\"timeWindow\":{\"lookbackSec\":$LOOKBACK},\"limits\":{\"maxTxs\":$MAX_TXS,\"maxEvents\":$MAX_EVENTS}}"
 job_code=$(
-  curl -sS -o "$jobs_resp" -w "%{http_code}" -X POST "$clean_url/api/v1/jobs/onchain-quick-fact-check" \
+  curl -sS -o "$jobs_resp" -w "%{http_code}" -X POST "$API_V1_BASE/jobs/onchain-quick-fact-check" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $token" \
     -d "$jobs_payload"
