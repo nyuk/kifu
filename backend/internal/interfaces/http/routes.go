@@ -263,6 +263,10 @@ func RegisterRoutes(
 
 	onchain := api.Group("/onchain")
 	onchain.Post("/quick-check", onchainHandler.QuickCheck)
+	onchain.Post("/quick-fact-check-compact", onchainHandler.QuickFactCheckJob)
+
+	jobs := api.Group("/jobs")
+	jobs.Post("/onchain-quick-fact-check", onchainHandler.QuickFactCheckJob)
 
 	connections := api.Group("/connections")
 	connections.Post("/", connectionHandler.Create)
