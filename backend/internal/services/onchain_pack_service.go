@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -21,6 +22,7 @@ const (
 var (
 	onchainRange7d       = 7 * 24 * time.Hour
 	onchainRange30d      = 30 * 24 * time.Hour
+	onchainRangeMax      = 30 * 24 * time.Hour
 	onchainCacheTTL      = 10 * time.Minute
 	onchainBucketSize    = 10 * time.Minute
 	onchainProviderLimit = 180 * time.Second
@@ -112,9 +114,10 @@ func ValidateEVMAddress(address string) bool {
 }
 
 type normalizedQuickCheckRequest struct {
-	chain   string
-	address string
-	rng     string
+	chain      string
+	address    string
+	rng        string
+	rangeDur   time.Duration
 }
 
 func normalizeQuickCheckRequest(req OnchainQuickCheckRequest) (normalizedQuickCheckRequest, error) {
@@ -132,22 +135,53 @@ func normalizeQuickCheckRequest(req OnchainQuickCheckRequest) (normalizedQuickCh
 	if rng == "" {
 		rng = defaultOnchainRange
 	}
-	if rng != "7d" && rng != "30d" {
+	duration, parseErr := parseOnchainRange(rng)
+	if parseErr != nil {
+		return normalizedQuickCheckRequest{}, ErrInvalidRange
+	}
+	if duration <= 0 || duration > onchainRangeMax {
 		return normalizedQuickCheckRequest{}, ErrInvalidRange
 	}
 
 	return normalizedQuickCheckRequest{
-		chain:   chain,
-		address: address,
-		rng:     rng,
+		chain:    chain,
+		address:  address,
+		rng:      rng,
+		rangeDur: duration,
 	}, nil
 }
 
-func onchainRangeDuration(rng string) time.Duration {
-	if rng == "7d" {
-		return onchainRange7d
+func parseOnchainRange(rng string) (time.Duration, error) {
+	switch rng {
+	case "7d":
+		return onchainRange7d, nil
+	case "30d":
+		return onchainRange30d, nil
 	}
-	return onchainRange30d
+
+	if rng == "" {
+		return 0, fmt.Errorf("empty range")
+	}
+
+	unit := rng[len(rng)-1]
+	valueText := rng[:len(rng)-1]
+	value, err := strconv.ParseInt(strings.TrimSpace(valueText), 10, 64)
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("invalid range")
+	}
+
+	switch unit {
+	case 's':
+		return time.Duration(value) * time.Second, nil
+	case 'm':
+		return time.Duration(value) * time.Minute, nil
+	case 'h':
+		return time.Duration(value) * time.Hour, nil
+	case 'd':
+		return time.Duration(value*24) * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("invalid range")
+	}
 }
 
 func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQuickCheckRequest) (OnchainQuickCheckResponse, error) {
@@ -172,8 +206,21 @@ func (s *OnchainPackService) BuildQuickCheck(ctx context.Context, req OnchainQui
 	}
 	log.Printf("[incident:onchain] severity=info event=service.cache_miss chain=%s address=%s range=%s bucket=%d", normalized.chain, normalized.address, normalized.rng, bucket.Unix())
 
-	startTime := now.Add(-onchainRangeDuration(normalized.rng))
-	providerCtx, cancel := context.WithTimeout(ctx, s.providerTimeout)
+	startTime := now.Add(-normalized.rangeDur)
+	providerTimeout := s.providerTimeout
+	switch {
+	case normalized.rangeDur <= 10*time.Minute:
+		providerTimeout = 45 * time.Second
+	case normalized.rangeDur <= 30*time.Minute:
+		if providerTimeout > 60*time.Second {
+			providerTimeout = 60 * time.Second
+		}
+	default:
+		if providerTimeout > 120*time.Second {
+			providerTimeout = 120 * time.Second
+		}
+	}
+	providerCtx, cancel := context.WithTimeout(ctx, providerTimeout)
 	defer cancel()
 
 	providerStart := time.Now()

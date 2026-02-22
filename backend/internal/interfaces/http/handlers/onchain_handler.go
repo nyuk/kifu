@@ -470,11 +470,7 @@ func resolveJobTimeWindow(window *TimeWindowSpec) (resolved TimeWindowSpec, mapp
 		}
 
 		resolved = TimeWindowSpec{From: ptrString(from.UTC().Format(time.RFC3339)), To: ptrString(to.UTC().Format(time.RFC3339))}
-		if to.Sub(from) <= 7*24*time.Hour {
-			mappedRange = "7d"
-		} else {
-			mappedRange = "30d"
-		}
+		mappedRange = formatOnchainRange(to.Sub(from))
 		return resolved, mappedRange, nil
 	}
 
@@ -482,18 +478,34 @@ func resolveJobTimeWindow(window *TimeWindowSpec) (resolved TimeWindowSpec, mapp
 		if *window.LookbackSec <= 0 {
 			return TimeWindowSpec{}, "", fmt.Errorf("lookbackSec must be positive")
 		}
-		if time.Duration(*window.LookbackSec)*time.Second > maxWindow {
+		lookback := time.Duration(*window.LookbackSec) * time.Second
+		if lookback > maxWindow {
 			return TimeWindowSpec{}, "", fmt.Errorf("time window too large")
 		}
 
 		to := now
-		from := to.Add(-time.Duration(*window.LookbackSec) * time.Second)
+		from := to.Add(-lookback)
 		resolved = TimeWindowSpec{From: ptrString(from.Format(time.RFC3339)), To: ptrString(to.Format(time.RFC3339))}
-		mappedRange = "7d"
+		mappedRange = formatOnchainRange(lookback)
 		return resolved, mappedRange, nil
 	}
 
 	return TimeWindowSpec{}, "", fmt.Errorf("timeWindow requires from/to or lookbackSec")
+}
+
+func formatOnchainRange(duration time.Duration) string {
+	switch duration {
+	case 7 * 24 * time.Hour:
+		return "7d"
+	case 30 * 24 * time.Hour:
+		return "30d"
+	default:
+		seconds := int64(duration.Seconds())
+		if seconds <= 0 {
+			return "0s"
+		}
+		return fmt.Sprintf("%ds", seconds)
+	}
 }
 
 func toQuickFactResponse(req OnchainQuickFactCheckRequest, chain, address string, src services.OnchainQuickCheckResponse, start time.Time, window TimeWindowSpec) OnchainQuickFactCheckResponse {
