@@ -1,0 +1,3 @@
+virtuals-acp==0.3.20
+python-dotenv
+requests
