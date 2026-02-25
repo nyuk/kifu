@@ -172,6 +172,10 @@ def seller():
             payload_str = JOB_PAYLOAD_CACHE.get(job.id) or getattr(memo_to_sign, "content", None) or "{}"
             payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
 
+            # Butler는 {"name":..., "requirement": {...}} 형태로 보냄 → requirement만 추출
+            if "requirement" in payload:
+                payload = payload["requirement"]
+
             result_json = call_kifu_quickcheck(payload)
 
             logger.info(
