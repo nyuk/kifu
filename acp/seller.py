@@ -38,6 +38,10 @@ def validate_requirement(payload_str) -> Optional[str]:
     if not payload:
         return "Invalid request: empty payload. Required fields: chain, address, timeWindow."
 
+    # Butler는 {"name":..., "requirement": {...}} 형태로 보냄 → requirement 안을 확인
+    if "requirement" in payload:
+        payload = payload["requirement"]
+
     # 필수 필드 확인
     missing = [f for f in ("chain", "address", "timeWindow") if f not in payload]
     if missing:
