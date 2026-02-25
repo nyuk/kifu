@@ -25,6 +25,47 @@ load_dotenv(override=True)
 REJECT_JOB_IN_REQUEST_PHASE = False
 REJECT_JOB_IN_OTHER_PHASE = False
 
+SUPPORTED_CHAINS = {"ethereum", "base", "arbitrum", "optimism", "polygon", "solana"}
+
+def validate_requirement(payload_str) -> Optional[str]:
+    """요청 유효성 검사. 문제 있으면 rejection 메시지 반환, 없으면 None."""
+    import re
+    try:
+        payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
+    except (json.JSONDecodeError, TypeError):
+        return "Invalid request: payload must be valid JSON."
+
+    if not payload:
+        return "Invalid request: empty payload. Required fields: chain, address, timeWindow."
+
+    # 필수 필드 확인
+    missing = [f for f in ("chain", "address", "timeWindow") if f not in payload]
+    if missing:
+        return f"Invalid request: missing required field(s): {', '.join(missing)}."
+
+    # 체인 지원 여부
+    chain = str(payload.get("chain", "")).lower()
+    if chain not in SUPPORTED_CHAINS:
+        return f"Unsupported chain: '{chain}'. Supported chains: {', '.join(sorted(SUPPORTED_CHAINS))}."
+
+    # 주소 형식 검사
+    address = payload.get("address", "")
+    if chain == "solana":
+        if not (32 <= len(address) <= 44 and re.match(r"^[1-9A-HJ-NP-Za-km-z]+$", address)):
+            return f"Invalid Solana address format: '{address}'."
+    else:
+        if not re.match(r"^0x[0-9a-fA-F]{40}$", address):
+            return f"Invalid EVM address: '{address}'. Expected 0x + 40 hex characters."
+
+    # timeWindow 검사
+    time_window = payload.get("timeWindow", {})
+    has_lookback = "lookbackSec" in time_window
+    has_from_to = "from" in time_window and "to" in time_window
+    if not has_lookback and not has_from_to:
+        return "Invalid request: timeWindow must include 'lookbackSec' or both 'from' and 'to'."
+
+    return None
+
 KIFU_API_BASE = os.getenv("KIFU_API_BASE", "").rstrip("/")
 KIFU_EMAIL = os.getenv("KIFU_EMAIL", "guest.preview@kifu.local")
 KIFU_PASSWORD = os.getenv("KIFU_PASSWORD", "guest1234")
@@ -94,6 +135,13 @@ def seller():
 
             if REJECT_JOB_IN_REQUEST_PHASE:
                 job.reject("Job requirement does not meet agent capability")
+                return
+
+            # 입력값 유효성 검사
+            reject_reason = validate_requirement(payload_str)
+            if reject_reason:
+                logger.info(f"Job {job.id} rejected: {reject_reason}")
+                job.reject(reject_reason)
                 return
 
             job.accept("Accepted")
