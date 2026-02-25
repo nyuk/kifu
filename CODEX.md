@@ -162,6 +162,74 @@ When an endpoint returns errors, check in this order:
 - `docs/adr/*` — architecture decision records
 - `QA_CHECKLIST.md` — verification checklist
 
+## ACP Seller Agent (Virtuals Protocol)
+
+The `acp/` directory contains the Virtuals Protocol ACP seller agent, deployed as a separate Docker service alongside the main kifu stack.
+
+### Agent Info
+
+| Field | Value |
+|---|---|
+| Agent Name | Onchain Quick Fact Check (Agent ID: 6575) |
+| Service | `onchainQuickFactCheckV4` |
+| Seller Wallet | `0x49ada45F1d9a62E944bcD72AA5610E6965F12b9f` (entity_id=2) |
+| Buyer Wallet | `0x6aeb3b3d6ebAa57464d05e4235E543ce21C7467D` (entity_id=1) |
+| Price | 0.01 USDC (fixed), SLA 10 min |
+| SDK | `virtuals-acp==0.3.20` (Python) |
+| ACP Config | `BASE_MAINNET_CONFIG_V2` (x402 signature bug workaround) |
+
+### Files
+
+- `acp/seller.py` — ACP seller agent (main service)
+- `acp/buyer.py` — test buyer for self-evaluation / graduation loop
+- `acp/buyer_negative_test.py` — sends invalid request to demo rejection logic
+- `acp/schema` — full job input/output JSON schema
+- `acp/.env` — secrets (git-ignored, must be created manually on server)
+- `acp/.env.example` — template
+
+### Docker
+
+The seller runs as `acp-seller` service in `docker-compose.prod.yml`.
+
+```bash
+# Deploy / redeploy
+docker compose -f docker-compose.prod.yml up -d --build acp-seller
+
+# Logs
+docker logs kifu-acp-seller -f
+```
+
+### KIFU API Integration
+
+The seller calls the kifu backend's fact-check API at `https://kifu.moneyvessel.kr`:
+- Auth: `POST /api/v1/auth/login` → JWT (auto-refreshed 60s before expiry)
+- Job endpoint: `POST /api/v1/jobs/onchain-quick-fact-check`
+
+### Critical: Butler Payload Format
+
+When jobs arrive via Sandbox Butler (not direct buyer.py), the payload is wrapped:
+
+```json
+{"name": "onchainQuickFactCheckV4", "requirement": {...}, "priceValue": 0.01, "priceType": "fixed"}
+```
+
+Both validation and KIFU API call must extract `payload["requirement"]` before use. Already handled in `seller.py`.
+
+### Rejection Logic
+
+`validate_requirement()` in `seller.py` rejects at REQUEST phase for:
+- Missing required fields (`chain`, `address`, `timeWindow`)
+- Unsupported chain (supported: `ethereum`, `base`, `arbitrum`, `optimism`, `polygon`, `solana`)
+- Invalid EVM address format (must be `0x` + 40 hex chars)
+- Invalid `timeWindow` (must have `lookbackSec` or both `from`/`to`)
+
+### Graduation Status
+
+- 10 successful jobs completed ✅
+- Graduation form submitted 2026-02-26 — awaiting review (7 business days)
+
+---
+
 ## Workflow Note
 
 This project uses a dual-AI workflow:
