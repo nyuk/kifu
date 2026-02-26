@@ -45,8 +45,10 @@ async function createAuthedUser() {
   await api.dispose()
 
   return {
+    api,
     accessToken: body.access_token,
     refreshToken: body.refresh_token,
+    email,
   }
 }
 
@@ -59,6 +61,31 @@ async function verifyAuthenticatedPages(page: any, route: string) {
 
   const main = page.locator('main')
   await expect(main).toBeVisible({ timeout: 10_000 })
+}
+
+async function importTodayTradeCsv(api: any, accessToken: string, exchange: string, symbol: string) {
+  const tradeTime = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const csv = [
+    'exchange,symbol,side,quantity,price,trade_time',
+    `${exchange},${symbol},BUY,0.01,1000,${tradeTime}`,
+  ].join('\n')
+
+  const response = await api.post('/api/v1/trades/import', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    multipart: {
+      file: {
+        name: 'trades.csv',
+        mimeType: 'text/csv',
+        buffer: Buffer.from(csv, 'utf8'),
+      },
+    },
+  })
+
+  if (response.status() !== 200) {
+    throw new Error(`trade import failed: ${response.status()} ${await response.text()}`)
+  }
 }
 
 test('kifu core routes smoke', async ({ page }: { page: any }) => {
@@ -98,4 +125,36 @@ test('kifu core routes smoke', async ({ page }: { page: any }) => {
     // ensure shell/nav renders after auth
     await expect(page.getByRole('link', { name: /Home|홈/ })).toBeVisible()
   }
+
+  await tokens.api.dispose()
+})
+
+test('home reflects today trade after user-like import flow', async ({ page }: { page: any }) => {
+  const tokens = await createAuthedUser()
+
+  await importTodayTradeCsv(tokens.api, tokens.accessToken, 'binance_futures', 'ETHUSDT')
+
+  await page.addInitScript(
+    (payload: any) => {
+      window.localStorage.setItem(
+        payload.storageKey,
+        JSON.stringify({
+          state: {
+            accessToken: payload.accessToken,
+            refreshToken: payload.refreshToken,
+            isAuthenticated: true,
+          },
+          version: 0,
+        }),
+      )
+    },
+    { storageKey: authStorageKey, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+  )
+
+  await page.goto('/home', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('main')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('오늘 기록된 거래가 없습니다.')).toHaveCount(0)
+  await expect(page.getByText('ETHUSDT')).toBeVisible({ timeout: 15_000 })
+
+  await tokens.api.dispose()
 })

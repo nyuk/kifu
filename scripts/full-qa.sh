@@ -13,6 +13,13 @@ if ! bash "$PROJECT_ROOT/scripts/predeploy-e2e-test.sh" "$API_URL"; then
 fi
 echo "✓ API smoke suite passed"
 
+echo "==> Step 1b: Today-trade home smoke (guided/safety)"
+if ! bash "$PROJECT_ROOT/scripts/smoke-home-today-trade.sh" "$API_URL"; then
+  echo "[FAIL] Today-trade smoke failed"
+  exit 1
+fi
+echo "✓ Today-trade smoke passed"
+
 echo "==> Step 2: UI smoke (Playwright)"
 cd "$PROJECT_ROOT/frontend"
 BACKEND_API_URL="${API_URL%/api/v1}"
