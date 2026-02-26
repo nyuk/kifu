@@ -702,6 +702,7 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 
 		for page := 1; page <= 50; page++ {
 			pageHasFull := false
+			pageRawCount := 0
 			states := []string{"done", "cancel"}
 			for _, stateValue := range states {
 				params := url.Values{}
@@ -766,6 +767,7 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 
 				totalRaw += len(raw)
 				windowRawCount += len(raw)
+				pageRawCount += len(raw)
 				if page == 1 && windowCount <= 2 {
 					log.Printf(
 						"trade poller: stage=upbit_window_probe mode=%s window_index=%d state=%s page=%d raw=%d window_start=%d window_end=%d",
@@ -788,7 +790,8 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 					}
 				}
 				if len(raw) == 0 {
-					break
+					// Do not break here: the other state ("cancel"/"done") can still contain fills.
+					continue
 				}
 
 				for _, order := range raw {
@@ -944,6 +947,9 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 				if len(raw) >= upbitLimit {
 					pageHasFull = true
 				}
+			}
+			if pageRawCount == 0 {
+				break
 			}
 			if !pageHasFull {
 				break
