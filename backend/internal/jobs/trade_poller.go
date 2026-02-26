@@ -57,8 +57,9 @@ type TradePoller struct {
 }
 
 type SyncOptions struct {
-	FullBackfill bool
-	HistoryDays  int
+	FullBackfill      bool
+	HistoryDays       int
+	IncludeAllSymbols bool
 }
 
 type normalizedTrade struct {
@@ -266,16 +267,21 @@ func (p *TradePoller) pollOnce(ctx context.Context, cred *entities.ExchangeCrede
 		symbols = normalizeUpbitSymbols(symbols)
 	} else if cred.Exchange == binanceFuturesID || cred.Exchange == binanceSpotID {
 		symbols = normalizeBinanceSymbols(symbols, cred.Exchange)
-		symbols = prioritizeBinanceSymbols(symbols, 20)
+		if options != nil && options.IncludeAllSymbols {
+			log.Printf("trade poller: stage=binance_symbol_limit_skipped exchange=%s user_id=%s symbols=%d", cred.Exchange, cred.UserID.String(), len(symbols))
+		} else {
+			symbols = prioritizeBinanceSymbols(symbols, 20)
+		}
 	} else if len(symbols) > 20 {
 		log.Printf("trade poller: user %s has %d symbols, limiting to 20", cred.UserID.String(), len(symbols))
 		symbols = symbols[:20]
 	}
 	log.Printf(
-		"trade poller: stage=poll_once exchange=%s user_id=%s full_backfill=%t history_days=%d raw_symbols=%d normalized_symbols=%d",
+		"trade poller: stage=poll_once exchange=%s user_id=%s full_backfill=%t include_all_symbols=%t history_days=%d raw_symbols=%d normalized_symbols=%d",
 		cred.Exchange,
 		cred.UserID.String(),
 		options != nil && options.FullBackfill,
+		options != nil && options.IncludeAllSymbols,
 		func() int {
 			if options == nil {
 				return 0

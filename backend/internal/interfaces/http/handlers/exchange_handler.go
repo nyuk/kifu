@@ -407,15 +407,12 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 	}
 
 	var syncErr error
-	if fullBackfill {
-		if advanced, ok := h.syncer.(ExchangeSyncerWithOptions); ok {
-			syncErr = advanced.SyncCredentialOnceWithOptions(c.Context(), cred, jobs.SyncOptions{
-				FullBackfill: true,
-				HistoryDays:  historyDays,
-			})
-		} else {
-			syncErr = h.syncer.SyncCredentialOnce(c.Context(), cred)
-		}
+	if advanced, ok := h.syncer.(ExchangeSyncerWithOptions); ok {
+		syncErr = advanced.SyncCredentialOnceWithOptions(c.Context(), cred, jobs.SyncOptions{
+			FullBackfill:      fullBackfill,
+			HistoryDays:       historyDays,
+			IncludeAllSymbols: true,
+		})
 	} else {
 		syncErr = h.syncer.SyncCredentialOnce(c.Context(), cred)
 	}
@@ -451,12 +448,12 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 	}
 	runFinishedAt := time.Now().UTC()
 	_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "completed", &runFinishedAt, runMetaJSON(map[string]any{
-		"run_id":        run.RunID.String(),
-		"exchange":      cred.Exchange,
-		"before_count":  beforeCount,
-		"after_count":   afterCount,
+		"run_id":         run.RunID.String(),
+		"exchange":       cred.Exchange,
+		"before_count":   beforeCount,
+		"after_count":    afterCount,
 		"inserted_count": inserted,
-		"http_status":   200,
+		"http_status":    200,
 	}))
 
 	return c.Status(200).JSON(ExchangeSyncResponse{
