@@ -243,6 +243,7 @@ func (p *TradePoller) pollOnce(ctx context.Context, cred *entities.ExchangeCrede
 	if err != nil {
 		return err
 	}
+	rawSymbolCount := len(symbols)
 	if len(symbols) == 0 {
 		defaultSymbol := "BTCUSDT"
 		if cred.Exchange == upbitExchangeID {
@@ -271,6 +272,20 @@ func (p *TradePoller) pollOnce(ctx context.Context, cred *entities.ExchangeCrede
 	} else if cred.Exchange == binanceFuturesID || cred.Exchange == binanceSpotID {
 		symbols = normalizeBinanceSymbols(symbols, cred.Exchange)
 	}
+	log.Printf(
+		"trade poller: stage=poll_once exchange=%s user_id=%s full_backfill=%t history_days=%d raw_symbols=%d normalized_symbols=%d",
+		cred.Exchange,
+		cred.UserID.String(),
+		options != nil && options.FullBackfill,
+		func() int {
+			if options == nil {
+				return 0
+			}
+			return options.HistoryDays
+		}(),
+		rawSymbolCount,
+		len(symbols),
+	)
 
 	if cred.Exchange == upbitExchangeID {
 		virtualSymbol := &entities.UserSymbol{
@@ -364,9 +379,33 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 	} else {
 		startTime = time.Now().Add(-7 * 24 * time.Hour).UnixMilli()
 	}
+	log.Printf(
+		"trade poller: stage=sync_prepare exchange=%s user_id=%s symbol=%s state_exists=%t state_last_trade_id=%d state_last_sync_at=%s use_from_id=%t from_id=%d start_time=%d",
+		exchange,
+		userID.String(),
+		symbol.Symbol,
+		state != nil,
+		func() int64 {
+			if state == nil {
+				return 0
+			}
+			return state.LastTradeID
+		}(),
+		func() string {
+			if state == nil {
+				return ""
+			}
+			return state.LastSyncAt.UTC().Format(time.RFC3339Nano)
+		}(),
+		useFromID,
+		fromID,
+		startTime,
+	)
 
 	var latestID int64
+	page := 0
 	for {
+		page++
 		var trades []normalizedTrade
 		var lastID int64
 		switch exchange {
@@ -380,8 +419,31 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 			return ErrUnsupportedExchange
 		}
 		if err != nil {
+			log.Printf(
+				"trade poller: stage=sync_request_error exchange=%s user_id=%s symbol=%s page=%d use_from_id=%t from_id=%d start_time=%d err=%v",
+				exchange,
+				userID.String(),
+				symbol.Symbol,
+				page,
+				useFromID,
+				fromID,
+				startTime,
+				err,
+			)
 			return err
 		}
+		log.Printf(
+			"trade poller: stage=sync_request_result exchange=%s user_id=%s symbol=%s page=%d trades=%d last_id=%d use_from_id=%t from_id=%d start_time=%d",
+			exchange,
+			userID.String(),
+			symbol.Symbol,
+			page,
+			len(trades),
+			lastID,
+			useFromID,
+			fromID,
+			startTime,
+		)
 		if len(trades) == 0 {
 			break
 		}
@@ -390,9 +452,29 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 			latestID = lastID
 		}
 
-		if err := p.persistTrades(ctx, userID, exchange, symbol, trades); err != nil {
+		inserted, duplicates, err := p.persistTrades(ctx, userID, exchange, symbol, trades)
+		if err != nil {
+			log.Printf(
+				"trade poller: stage=sync_persist_error exchange=%s user_id=%s symbol=%s page=%d trades=%d err=%v",
+				exchange,
+				userID.String(),
+				symbol.Symbol,
+				page,
+				len(trades),
+				err,
+			)
 			return err
 		}
+		log.Printf(
+			"trade poller: stage=sync_persist_result exchange=%s user_id=%s symbol=%s page=%d requested=%d inserted=%d duplicate=%d",
+			exchange,
+			userID.String(),
+			symbol.Symbol,
+			page,
+			len(trades),
+			inserted,
+			duplicates,
+		)
 
 		if len(trades) < 1000 {
 			break
@@ -422,8 +504,23 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 		if err := p.syncStateRepo.Upsert(ctx, stateToSave); err != nil {
 			return err
 		}
+		log.Printf(
+			"trade poller: stage=sync_state_upsert exchange=%s user_id=%s symbol=%s last_trade_id=%d last_sync_at=%s",
+			exchange,
+			userID.String(),
+			symbol.Symbol,
+			latestID,
+			lastSync.Format(time.RFC3339Nano),
+		)
 	}
 
+	log.Printf(
+		"trade poller: stage=sync_complete exchange=%s user_id=%s symbol=%s latest_id=%d",
+		exchange,
+		userID.String(),
+		symbol.Symbol,
+		latestID,
+	)
 	return nil
 }
 
@@ -585,6 +682,15 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 		// Full-backfill default: fetch up to 10 years.
 		oldestMs = nowMs - int64(3650*24*time.Hour/time.Millisecond)
 	}
+	log.Printf(
+		"trade poller: stage=upbit_scan_start mode=%s start_time=%d oldest_ms=%d now_ms=%d all_krw=%t all_markets=%t",
+		mode,
+		startTime,
+		oldestMs,
+		nowMs,
+		allKRW,
+		allMarkets,
+	)
 
 	for windowEnd := nowMs; windowEnd > oldestMs; windowEnd -= upbitWindowSizeMs {
 		windowStart := windowEnd - upbitWindowSizeMs
@@ -660,6 +766,18 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 
 				totalRaw += len(raw)
 				windowRawCount += len(raw)
+				if page == 1 && windowCount <= 2 {
+					log.Printf(
+						"trade poller: stage=upbit_window_probe mode=%s window_index=%d state=%s page=%d raw=%d window_start=%d window_end=%d",
+						mode,
+						windowCount,
+						stateValue,
+						page,
+						len(raw),
+						windowStart,
+						windowEnd,
+					)
+				}
 				if len(raw) > 0 {
 					for _, order := range raw {
 						if strings.EqualFold(order.Market, "KRW-ADA") || strings.EqualFold(order.Market, "ADA-KRW") {
@@ -921,7 +1039,7 @@ func resolveUpbitTradeTime(order upbitClosedOrder) (time.Time, error) {
 	return resolved, nil
 }
 
-func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol, trades []normalizedTrade) error {
+func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol, trades []normalizedTrade) (int, int, error) {
 	if p.userSymbolRepo != nil && len(trades) > 0 {
 		timeframe := "1d"
 		if symbol != nil && symbol.TimeframeDefault != "" {
@@ -948,6 +1066,8 @@ func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, excha
 		}
 	}
 
+	inserted := 0
+	duplicates := 0
 	for _, trade := range trades {
 		tradeTime := time.UnixMilli(trade.TradeTime).UTC()
 		candleTime := floorToTimeframe(tradeTime, symbol.TimeframeDefault)
@@ -990,10 +1110,12 @@ func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, excha
 
 		if err := p.insertBubbleTradeTx(ctx, bubble, tradeRecord); err != nil {
 			if errors.Is(err, errDuplicateTrade) {
+				duplicates++
 				continue
 			}
-			return err
+			return inserted, duplicates, err
 		}
+		inserted++
 
 		if p.portfolioRepo != nil {
 			if err := p.ensureTradeEvent(ctx, userID, exchange, tradeRecord); err != nil {
@@ -1002,7 +1124,7 @@ func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, excha
 		}
 	}
 
-	return nil
+	return inserted, duplicates, nil
 }
 
 func (p *TradePoller) insertBubbleTradeTx(ctx context.Context, bubble *entities.Bubble, trade *entities.Trade) error {
@@ -1302,7 +1424,8 @@ func (p *TradePoller) handleMockTrades(ctx context.Context, userID uuid.UUID, ex
 		return nil
 	}
 
-	return p.persistTrades(ctx, userID, exchange, symbol, filtered)
+	_, _, err = p.persistTrades(ctx, userID, exchange, symbol, filtered)
+	return err
 }
 
 func signParams(secret string, params url.Values) string {
