@@ -39,8 +39,5 @@ export default defineConfig({
   ],
   // For the smoke suite we only need to assert app shell and route readiness.
   outputDir: '.playwright/results',
-  globalSetup: async () => {
-    process.env.BACKEND_API_URL = backendUrl
-    process.env.FRONTEND_BASE_URL = frontendBaseUrl
-  },
+  globalSetup: './tests/global-setup.ts',
 })
