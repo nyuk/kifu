@@ -153,55 +153,19 @@ export function Trades() {
     }
   }, [tradeSummary, total])
 
-  const futuresActionById = useMemo(() => {
-    const map = new Map<string, string>()
-    const sorted = [...items]
-      .filter((item) => item.exchange === 'binance_futures')
-      .sort((a, b) => new Date(a.trade_time).getTime() - new Date(b.trade_time).getTime())
+  const futuresActionLabel = (trade: TradeItem) => {
+    if (trade.exchange !== 'binance_futures') return trade.side.toUpperCase()
 
-    const positionBySymbol = new Map<string, number>()
-    for (const trade of sorted) {
-      const qty = Number(trade.quantity) || 0
-      const side = trade.side.toUpperCase()
-      const symbolKey = trade.symbol
-      const prev = positionBySymbol.get(symbolKey) ?? 0
-      let next = prev
-      let label = side
+    const positionSide = trade.position_side?.toUpperCase()
+    const openClose = trade.open_close?.toUpperCase()
 
-      if (side === 'BUY') {
-        if (prev < 0) {
-          const closeSize = Math.min(Math.abs(prev), qty)
-          const openSize = Math.max(0, qty - closeSize)
-          label = openSize > 0 ? '롱 오픈' : '숏 클로즈'
-        } else {
-          label = '롱 오픈'
-        }
-        next = prev + qty
-      } else if (side === 'SELL') {
-        if (prev > 0) {
-          const closeSize = Math.min(prev, qty)
-          const openSize = Math.max(0, qty - closeSize)
-          label = openSize > 0 ? '숏 오픈' : '롱 클로즈'
-        } else {
-          label = '숏 오픈'
-        }
-        next = prev - qty
-      }
+    if (positionSide === 'LONG' && openClose === 'OPEN') return '롱 오픈'
+    if (positionSide === 'LONG' && openClose === 'CLOSE') return '롱 클로즈'
+    if (positionSide === 'SHORT' && openClose === 'OPEN') return '숏 오픈'
+    if (positionSide === 'SHORT' && openClose === 'CLOSE') return '숏 클로즈'
 
-      if (trade.position_side && trade.open_close) {
-        const ps = trade.position_side.toUpperCase()
-        const oc = trade.open_close.toUpperCase()
-        if (ps === 'LONG' && oc === 'OPEN') label = '롱 오픈'
-        if (ps === 'LONG' && oc === 'CLOSE') label = '롱 클로즈'
-        if (ps === 'SHORT' && oc === 'OPEN') label = '숏 오픈'
-        if (ps === 'SHORT' && oc === 'CLOSE') label = '숏 클로즈'
-      }
-
-      map.set(trade.id, label)
-      positionBySymbol.set(symbolKey, next)
-    }
-    return map
-  }, [items])
+    return trade.side.toUpperCase()
+  }
 
   const jumpToPage = () => {
     const parsedPage = Number.parseInt(pageInput, 10)
@@ -323,9 +287,7 @@ export function Trades() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-bold ${trade.side.toUpperCase() === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>
-                        {trade.exchange === 'binance_futures'
-                          ? futuresActionById.get(trade.id) ?? trade.side.toUpperCase()
-                          : trade.side.toUpperCase()}
+                        {futuresActionLabel(trade)}
                       </span>
                       <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200">
                         {trade.symbol}
