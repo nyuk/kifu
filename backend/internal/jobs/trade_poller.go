@@ -334,16 +334,15 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 			useFromID = true
 			fromID = 0
 		} else if exchange == upbitExchangeID {
-			// Upbit full backfill: all history by default, but respect explicit history_days when provided.
-			if options.HistoryDays > 0 {
-				historyDays := options.HistoryDays
-				if historyDays > 3650 {
-					historyDays = 3650
-				}
-				startTime = time.Now().Add(time.Duration(-historyDays) * 24 * time.Hour).UnixMilli()
-			} else {
-				startTime = 0
+			// Upbit full backfill: set an explicit window and keep scanning until the requested range starts.
+			historyDays := options.HistoryDays
+			if historyDays == 0 {
+				historyDays = 365
 			}
+			if historyDays > 3650 {
+				historyDays = 3650
+			}
+			startTime = time.Now().Add(time.Duration(-historyDays) * 24 * time.Hour).UnixMilli()
 		} else {
 			historyDays := options.HistoryDays
 			if historyDays <= 0 {
@@ -692,7 +691,7 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 						}
 						continue
 					}
-					createdAt, err := time.Parse(time.RFC3339, strings.TrimSpace(order.CreatedAt))
+					createdAt, err := parseUpbitTime(order.CreatedAt)
 					if err != nil {
 						if isAda {
 							log.Printf("trade poller: upbit skip (bad time) uuid=%s market=%s created_at=%q",
@@ -852,6 +851,16 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 		log.Printf("trade poller: upbit %s has no KRW fills (non_krw=%d), falling back to ALL_MARKETS", mode, nonKRWCount)
 		return p.requestUpbitTrades(ctx, apiKey, apiSecret, "ALL_MARKETS", startTime, useFromID)
 	}
+
+	if startTime > 0 && len(trades) == 0 {
+		log.Printf(
+			"trade poller: upbit %s returned 0 with start_time=%d, retrying without time window",
+			mode,
+			startTime,
+		)
+		return p.requestUpbitTrades(ctx, apiKey, apiSecret, symbol, 0, useFromID)
+	}
+
 	log.Printf(
 		"trade poller: upbit %s summary fetched=%d raw=%d windows=%d krw_seen=%d non_krw_seen=%d start_time=%d skipped_qty=%d skipped_price=%d skipped_side=%d skipped_time=%d",
 		mode, len(trades), totalRaw, windowCount, krwCount, nonKRWCount, startTime, skippedEmptyQty, skippedEmptyPrice, skippedInvalidSide, skippedBadTime,
@@ -864,6 +873,27 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 	}
 
 	return trades, lastID, nil
+}
+
+func parseUpbitTime(raw string) (time.Time, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return time.Time{}, errors.New("upbit order created_at is empty")
+	}
+
+	formats := []string{
+		time.RFC3339,
+		time.RFC3339Nano,
+		"2006-01-02T15:04:05",
+	}
+
+	for _, layout := range formats {
+		if parsed, err := time.Parse(layout, trimmed); err == nil {
+			return parsed, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("unsupported upbit created_at format: %q", trimmed)
 }
 
 func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol, trades []normalizedTrade) error {
@@ -1321,11 +1351,7 @@ func normalizeBinanceSymbols(symbols []*entities.UserSymbol, exchange string) []
 	}
 
 	for _, symbol := range symbols {
-		market := strings.ToUpper(strings.TrimSpace(symbol.Symbol))
-		// If user tracks KRW pairs (e.g., XRPKRW from Upbit), try USDT equivalent on Binance.
-		if strings.HasSuffix(market, "KRW") && len(market) > 3 {
-			market = strings.TrimSuffix(market, "KRW") + "USDT"
-		}
+		market := normalizeBinanceSymbolCandidate(strings.ToUpper(strings.TrimSpace(symbol.Symbol)))
 		if !isSupportedBinanceSymbol(market, exchange) {
 			continue
 		}
@@ -1349,6 +1375,38 @@ func normalizeBinanceSymbols(symbols []*entities.UserSymbol, exchange string) []
 	}
 
 	return out
+}
+
+func normalizeBinanceSymbolCandidate(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	if strings.Contains(trimmed, "/") {
+		trimmed = strings.ReplaceAll(trimmed, "/", "-")
+	}
+	if strings.Contains(trimmed, "-") {
+		parts := strings.Split(trimmed, "-")
+		if len(parts) != 2 {
+			return ""
+		}
+		base := strings.TrimSpace(parts[0])
+		quote := strings.TrimSpace(parts[1])
+		if base == "" || quote == "" {
+			return ""
+		}
+		if strings.EqualFold(quote, "KRW") {
+			return base + "USDT"
+		}
+		return base + quote
+	}
+
+	if strings.HasSuffix(trimmed, "KRW") && len(trimmed) > 3 {
+		return strings.TrimSuffix(trimmed, "KRW") + "USDT"
+	}
+
+	return trimmed
 }
 
 func isSupportedBinanceSymbol(symbol string, exchange string) bool {
