@@ -45,7 +45,7 @@ func (h *GuidedReviewHandler) GetToday(c *fiber.Ctx) error {
 		date = dateRaw
 	}
 
-	review, items, err := h.repo.GetOrCreateToday(c.Context(), userID, date)
+	review, items, err := h.repo.GetOrCreateToday(c.Context(), userID, date, timezone)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}

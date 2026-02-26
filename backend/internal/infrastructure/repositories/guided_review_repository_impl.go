@@ -28,7 +28,7 @@ func NewGuidedReviewRepository(pool *pgxpool.Pool) repositories.GuidedReviewRepo
 	return &GuidedReviewRepositoryImpl{pool: pool}
 }
 
-func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userID uuid.UUID, date string) (*entities.GuidedReview, []*entities.GuidedReviewItem, error) {
+func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userID uuid.UUID, date string, timezone string) (*entities.GuidedReview, []*entities.GuidedReviewItem, error) {
 	// Try to get existing review for the date
 	var review entities.GuidedReview
 	err := r.pool.QueryRow(ctx, `
@@ -57,7 +57,7 @@ func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userI
 		}
 
 		// Auto-create items from trades for this date
-		if err := r.createItemsFromTrades(ctx, userID, review.ID, date); err != nil {
+		if err := r.createItemsFromTrades(ctx, userID, review.ID, date, timezone); err != nil {
 			return nil, nil, fmt.Errorf("create items from trades: %w", err)
 		}
 	} else if err != nil {
@@ -73,7 +73,7 @@ func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userI
 	// Recovery path: if a review row exists without items (e.g., partial create from previous error),
 	// try to backfill items from trades and reload once.
 	if len(items) == 0 {
-		if err := r.createItemsFromTrades(ctx, userID, review.ID, date); err != nil {
+		if err := r.createItemsFromTrades(ctx, userID, review.ID, date, timezone); err != nil {
 			return nil, nil, fmt.Errorf("backfill items from trades: %w", err)
 		}
 		items, err = r.loadItems(ctx, review.ID)
@@ -83,13 +83,13 @@ func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userI
 	}
 
 	// If yesterday had post-complete trades that were not reviewed, carry them into today's review.
-	if err := r.appendRolloverFromPreviousDay(ctx, userID, review.ID, date); err != nil {
+	if err := r.appendRolloverFromPreviousDay(ctx, userID, review.ID, date, timezone); err != nil {
 		return nil, nil, fmt.Errorf("append rollover: %w", err)
 	}
 
 	// If today's review is completed and new trades occurred after completion, add supplement items.
 	if review.Status == entities.GuidedReviewStatusCompleted {
-		if err := r.appendSupplementItems(ctx, userID, review.ID, date, review.CompletedAt); err != nil {
+		if err := r.appendSupplementItems(ctx, userID, review.ID, date, timezone, review.CompletedAt); err != nil {
 			return nil, nil, fmt.Errorf("append supplement: %w", err)
 		}
 	}
@@ -102,7 +102,7 @@ func (r *GuidedReviewRepositoryImpl) GetOrCreateToday(ctx context.Context, userI
 	return &review, items, nil
 }
 
-func (r *GuidedReviewRepositoryImpl) aggregateTradesAfter(ctx context.Context, userID uuid.UUID, date string, after *time.Time) (map[string]reviewTradeAgg, error) {
+func (r *GuidedReviewRepositoryImpl) aggregateTradesAfter(ctx context.Context, userID uuid.UUID, date string, timezone string, after *time.Time) (map[string]reviewTradeAgg, error) {
 	base := `
 		WITH base AS (
 			SELECT
@@ -115,11 +115,11 @@ func (r *GuidedReviewRepositoryImpl) aggregateTradesAfter(ctx context.Context, u
 				END AS pnl
 			FROM trades
 			WHERE user_id = $1
-			  AND trade_time::date = $2::date
-	`
-	args := []any{userID, date}
+			  AND (trade_time AT TIME ZONE $3)::date = $2::date
+		`
+	args := []any{userID, date, timezone}
 	if after != nil {
-		base += ` AND trade_time > $3 `
+		base += ` AND trade_time > $4 `
 		args = append(args, *after)
 	}
 	base += `
@@ -202,11 +202,11 @@ func (r *GuidedReviewRepositoryImpl) aggregateReviewItemsByPrefix(ctx context.Co
 	return result, rows.Err()
 }
 
-func (r *GuidedReviewRepositoryImpl) appendSupplementItems(ctx context.Context, userID, reviewID uuid.UUID, date string, completedAt *time.Time) error {
+func (r *GuidedReviewRepositoryImpl) appendSupplementItems(ctx context.Context, userID, reviewID uuid.UUID, date string, timezone string, completedAt *time.Time) error {
 	if completedAt == nil {
 		return nil
 	}
-	tradesAfter, err := r.aggregateTradesAfter(ctx, userID, date, completedAt)
+	tradesAfter, err := r.aggregateTradesAfter(ctx, userID, date, timezone, completedAt)
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (r *GuidedReviewRepositoryImpl) appendSupplementItems(ctx context.Context, 
 	return nil
 }
 
-func (r *GuidedReviewRepositoryImpl) appendRolloverFromPreviousDay(ctx context.Context, userID, todayReviewID uuid.UUID, date string) error {
+func (r *GuidedReviewRepositoryImpl) appendRolloverFromPreviousDay(ctx context.Context, userID, todayReviewID uuid.UUID, date string, timezone string) error {
 	currentDate, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return nil
@@ -296,7 +296,7 @@ func (r *GuidedReviewRepositoryImpl) appendRolloverFromPreviousDay(ctx context.C
 		return err
 	}
 
-	prevAfter, err := r.aggregateTradesAfter(ctx, userID, prevDate, prevCompletedAt)
+	prevAfter, err := r.aggregateTradesAfter(ctx, userID, prevDate, timezone, prevCompletedAt)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (r *GuidedReviewRepositoryImpl) appendRolloverFromPreviousDay(ctx context.C
 	return nil
 }
 
-func (r *GuidedReviewRepositoryImpl) createItemsFromTrades(ctx context.Context, userID, reviewID uuid.UUID, date string) error {
+func (r *GuidedReviewRepositoryImpl) createItemsFromTrades(ctx context.Context, userID, reviewID uuid.UUID, date string, timezone string) error {
 	// Query trades for this user on this date, grouped by symbol.
 	// For guided review count, merge split fills into one "order-like" bundle when
 	// same symbol+side trades occur within 90 seconds.
@@ -344,9 +344,9 @@ func (r *GuidedReviewRepositoryImpl) createItemsFromTrades(ctx context.Context, 
 					WHEN realized_pnl::text ~ '^-?[0-9]+(\.[0-9]+)?$' THEN CAST(realized_pnl::text AS NUMERIC)
 					ELSE 0
 				END AS pnl
-			FROM trades
-			WHERE user_id = $1
-			  AND trade_time::date = $2::date
+				FROM trades
+				WHERE user_id = $1
+				  AND (trade_time AT TIME ZONE $3)::date = $2::date
 		),
 		marked AS (
 			SELECT
@@ -381,7 +381,7 @@ func (r *GuidedReviewRepositoryImpl) createItemsFromTrades(ctx context.Context, 
 		FROM bundled
 		GROUP BY symbol
 		ORDER BY COUNT(DISTINCT side || ':' || bundle_idx::text) DESC
-	`, userID, date)
+		`, userID, date, timezone)
 	if err != nil {
 		return fmt.Errorf("query trades: %w", err)
 	}

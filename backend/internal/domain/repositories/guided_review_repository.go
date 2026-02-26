@@ -16,7 +16,7 @@ type SubmitItemInput struct {
 }
 
 type GuidedReviewRepository interface {
-	GetOrCreateToday(ctx context.Context, userID uuid.UUID, date string) (*entities.GuidedReview, []*entities.GuidedReviewItem, error)
+	GetOrCreateToday(ctx context.Context, userID uuid.UUID, date string, timezone string) (*entities.GuidedReview, []*entities.GuidedReviewItem, error)
 	SubmitItem(ctx context.Context, userID uuid.UUID, itemID uuid.UUID, input SubmitItemInput) error
 	CompleteReview(ctx context.Context, userID uuid.UUID, reviewID uuid.UUID) (*entities.UserStreak, error)
 	GetStreak(ctx context.Context, userID uuid.UUID) (*entities.UserStreak, error)

@@ -351,7 +351,7 @@ func (h *SimReportHandler) Run(c *fiber.Ctx) error {
 			}
 		}
 
-		review, items, reviewErr := h.guidedReviewRepo.GetOrCreateToday(c.Context(), executionUserID, currentDateText)
+		review, items, reviewErr := h.guidedReviewRepo.GetOrCreateToday(c.Context(), executionUserID, currentDateText, timezone)
 		if reviewErr != nil {
 			dayResult.Error = reviewErr.Error()
 			dayResult.Steps = append(dayResult.Steps, SimStepResult{Step: "guided_review_load", OK: false, Message: reviewErr.Error()})
