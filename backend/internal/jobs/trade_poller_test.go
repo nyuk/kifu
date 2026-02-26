@@ -66,3 +66,22 @@ func TestParseUpbitTime(t *testing.T) {
 	}
 }
 
+func TestResolveUpbitTradeTimeUsesLatestFillTime(t *testing.T) {
+	order := upbitClosedOrder{
+		CreatedAt: "2026-02-11T07:23:00+00:00",
+		Trades: []upbitOrderTrade{
+			{CreatedAt: "2026-02-11T07:23:58+00:00"},
+			{CreatedAt: "2026-02-11T07:24:14+00:00"},
+		},
+	}
+
+	got, err := resolveUpbitTradeTime(order)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want, _ := time.Parse(time.RFC3339, "2026-02-11T07:24:14+00:00")
+	if !got.Equal(want) {
+		t.Fatalf("resolved trade time=%s want=%s", got.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
+	}
+}

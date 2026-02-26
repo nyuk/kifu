@@ -112,8 +112,9 @@ type upbitClosedOrder struct {
 }
 
 type upbitOrderTrade struct {
-	Price  string `json:"price"`
-	Volume string `json:"volume"`
+	Price     string `json:"price"`
+	Volume    string `json:"volume"`
+	CreatedAt string `json:"created_at"`
 }
 
 type mockTrade struct {
@@ -691,7 +692,7 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 						}
 						continue
 					}
-					createdAt, err := parseUpbitTime(order.CreatedAt)
+					tradeAt, err := resolveUpbitTradeTime(order)
 					if err != nil {
 						if isAda {
 							log.Printf("trade poller: upbit skip (bad time) uuid=%s market=%s created_at=%q",
@@ -700,10 +701,10 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 						skippedBadTime++
 						continue
 					}
-					if startTime > 0 && createdAt.UnixMilli() < startTime {
+					if startTime > 0 && tradeAt.UnixMilli() < startTime {
 						if isAda {
 							log.Printf("trade poller: upbit skip (before startTime) uuid=%s market=%s created_at=%s startTime=%d",
-								order.UUID, order.Market, createdAt.Format(time.RFC3339), startTime)
+								order.UUID, order.Market, tradeAt.Format(time.RFC3339), startTime)
 						}
 						continue
 					}
@@ -803,9 +804,9 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 					}
 					seen[key] = struct{}{}
 
-					tradeID := hashStringToInt64(order.UUID + "|" + order.Market + "|" + side + "|" + createdAt.Format(time.RFC3339Nano))
-					if createdAt.UnixMilli() > lastID {
-						lastID = createdAt.UnixMilli()
+					tradeID := hashStringToInt64(order.UUID + "|" + order.Market + "|" + side + "|" + tradeAt.Format(time.RFC3339Nano))
+					if tradeAt.UnixMilli() > lastID {
+						lastID = tradeAt.UnixMilli()
 					}
 
 					trades = append(trades, normalizedTrade{
@@ -814,7 +815,7 @@ func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, api
 						Side:      side,
 						Quantity:  qty,
 						Price:     price,
-						TradeTime: createdAt.UnixMilli(),
+						TradeTime: tradeAt.UnixMilli(),
 					})
 					if isAda {
 						log.Printf("trade poller: upbit ADA included uuid=%s side=%s qty=%s price=%s state=%s ord_type=%s",
@@ -894,6 +895,30 @@ func parseUpbitTime(raw string) (time.Time, error) {
 	}
 
 	return time.Time{}, fmt.Errorf("unsupported upbit created_at format: %q", trimmed)
+}
+
+func resolveUpbitTradeTime(order upbitClosedOrder) (time.Time, error) {
+	baseTime, err := parseUpbitTime(order.CreatedAt)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	resolved := baseTime
+	for _, fill := range order.Trades {
+		fillTimeRaw := strings.TrimSpace(fill.CreatedAt)
+		if fillTimeRaw == "" {
+			continue
+		}
+		fillTime, parseErr := parseUpbitTime(fillTimeRaw)
+		if parseErr != nil {
+			continue
+		}
+		if fillTime.After(resolved) {
+			resolved = fillTime
+		}
+	}
+
+	return resolved, nil
 }
 
 func (p *TradePoller) persistTrades(ctx context.Context, userID uuid.UUID, exchange string, symbol *entities.UserSymbol, trades []normalizedTrade) error {
