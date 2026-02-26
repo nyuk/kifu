@@ -262,15 +262,14 @@ func (p *TradePoller) pollOnce(ctx context.Context, cred *entities.ExchangeCrede
 		symbols = []*entities.UserSymbol{defaultEntry}
 	}
 
-	if len(symbols) > 20 {
-		log.Printf("trade poller: user %s has %d symbols, limiting to 20", cred.UserID.String(), len(symbols))
-		symbols = symbols[:20]
-	}
-
 	if cred.Exchange == upbitExchangeID {
 		symbols = normalizeUpbitSymbols(symbols)
 	} else if cred.Exchange == binanceFuturesID || cred.Exchange == binanceSpotID {
 		symbols = normalizeBinanceSymbols(symbols, cred.Exchange)
+		symbols = prioritizeBinanceSymbols(symbols, 20)
+	} else if len(symbols) > 20 {
+		log.Printf("trade poller: user %s has %d symbols, limiting to 20", cred.UserID.String(), len(symbols))
+		symbols = symbols[:20]
 	}
 	log.Printf(
 		"trade poller: stage=poll_once exchange=%s user_id=%s full_backfill=%t history_days=%d raw_symbols=%d normalized_symbols=%d",
@@ -1526,6 +1525,44 @@ func normalizeBinanceSymbols(symbols []*entities.UserSymbol, exchange string) []
 			TimeframeDefault: "1h",
 			CreatedAt:        time.Now().UTC(),
 		})
+	}
+
+	return out
+}
+
+func prioritizeBinanceSymbols(symbols []*entities.UserSymbol, limit int) []*entities.UserSymbol {
+	if len(symbols) <= limit {
+		return symbols
+	}
+
+	priority := []string{"BTCUSDT", "ETHUSDT"}
+	seen := make(map[string]struct{}, len(symbols))
+	out := make([]*entities.UserSymbol, 0, limit)
+
+	for _, key := range priority {
+		for _, symbol := range symbols {
+			if strings.EqualFold(strings.TrimSpace(symbol.Symbol), key) {
+				normalized := strings.ToUpper(strings.TrimSpace(symbol.Symbol))
+				if _, ok := seen[normalized]; ok {
+					break
+				}
+				out = append(out, symbol)
+				seen[normalized] = struct{}{}
+				break
+			}
+		}
+	}
+
+	for _, symbol := range symbols {
+		if len(out) >= limit {
+			break
+		}
+		normalized := strings.ToUpper(strings.TrimSpace(symbol.Symbol))
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		out = append(out, symbol)
+		seen[normalized] = struct{}{}
 	}
 
 	return out
