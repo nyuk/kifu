@@ -99,6 +99,7 @@ export function ExchangeConnectionManager() {
   const [packMap, setPackMap] = useState<Record<string, SummaryPackResponse>>({})
   const [packLoadingMap, setPackLoadingMap] = useState<Record<string, boolean>>({})
   const [packErrorMap, setPackErrorMap] = useState<Record<string, string>>({})
+  const [, setElapsedTick] = useState(0)
 
   const [exchange, setExchange] = useState<ExchangeOption>('binance_futures')
   const [apiKey, setApiKey] = useState('')
@@ -138,26 +139,11 @@ export function ExchangeConnectionManager() {
   useEffect(() => {
     const hasSyncing = Object.values(syncingMap).some(Boolean)
     if (!hasSyncing) return
-    const timer = window.setInterval(() => { }, 1000) // Force re-render not needed if not using tick? Wait, tick causes re-render for timer.
-    // Actually, we need tick to force re-render for the "X seconds elapsed" display.
-    // Let's keep tick but make it used or remove the timer if not needed.
-    // The "X seconds elapsed" uses Date.now(), so we DO need a re-render.
-    // So 'tick' IS used effectively to trigger re-render, even if the value isn't read directly in render (though it might be implicit).
-    // Ah, the lint said "value is never read".
-    // I should read it or just ignore.
-    // Let's just remove the lint error by not removing the logic if it's needed for UI update.
-    // But the lint says 'tick' is unused.
-    // Let's check line 334: `Math.max ... Date.now() ...`
-    // This depends on re-render.
-    // If I remove `setTick`, the component won't re-render every second.
-    // So I must keep the timer.
-    // To silence lint, I can just use `tick` in a useEffect or something trivial, or just ignore it.
-    // Or better, use a `useforceUpdate`.
-    // I'll leave it for now or just revert the removal plan if I realized this.
-    // actually I already removed the state declaration in the previous tool call.
-    // So I need to remove the effect that sets it too.
+    const timer = window.setInterval(() => {
+      setElapsedTick((prev) => prev + 1)
+    }, 1000)
     return () => window.clearInterval(timer)
-  }, [syncingMap])
+  }, [setElapsedTick, syncingMap])
 
   const onConnect = async () => {
     if (guestMode) return
