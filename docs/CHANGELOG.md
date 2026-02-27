@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-02-27
+
+### Changed
+- Stabilized local Playwright smoke execution for home today-trade verification:
+  - Fixed premature `APIRequestContext` disposal in `qa-smoke.spec.ts`.
+  - Reworked today-trade smoke assertion to verify `trades/summary` response consistency instead of brittle UI text timing.
+  - Fixed `waitForResponse` ordering to register response listener before navigation.
+- Improved Playwright config compatibility for older runtime/parser expectations by switching `globalSetup` to path-based loading (`./tests/global-setup.ts`).
+- Expanded backend default CORS origins for local dev smoke ports:
+  - Added `http://localhost:3001`, `http://127.0.0.1:3001`
+  - Added explicit `127.0.0.1` variants for existing local ports.
+
+### Files Affected
+- `frontend/tests/qa-smoke.spec.ts`
+- `frontend/playwright.config.ts`
+- `frontend/tests/global-setup.ts`
+- `backend/internal/app/app.go`
+
 ## 2026-02-22
 
 ### Added
