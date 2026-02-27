@@ -22,6 +22,7 @@ func RegisterRoutes(
 	app *fiber.App,
 	pool *pgxpool.Pool,
 	userRepo repositories.UserRepository,
+	userIdentityRepo repositories.UserIdentityRepository,
 	refreshTokenRepo repositories.RefreshTokenRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
 	exchangeRepo repositories.ExchangeCredentialRepository,
@@ -58,7 +59,7 @@ func RegisterRoutes(
 		return c.JSON(fiber.Map{"status": "healthy"})
 	})
 
-	authHandler := handlers.NewAuthHandler(userRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
+	authHandler := handlers.NewAuthHandler(userRepo, userIdentityRepo, refreshTokenRepo, subscriptionRepo, jwtSecret)
 	userHandler := handlers.NewUserHandler(userRepo, subscriptionRepo)
 	exchangeHandler := handlers.NewExchangeHandler(exchangeRepo, tradeRepo, encryptionKey, exchangeSyncer, runRepo)
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)

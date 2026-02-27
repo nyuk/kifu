@@ -19,6 +19,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
@@ -26,6 +27,7 @@ import (
 
 type AuthHandler struct {
 	userRepo         repositories.UserRepository
+	userIdentityRepo repositories.UserIdentityRepository
 	refreshTokenRepo repositories.RefreshTokenRepository
 	subscriptionRepo repositories.SubscriptionRepository
 	jwtSecret        string
@@ -33,12 +35,14 @@ type AuthHandler struct {
 
 func NewAuthHandler(
 	userRepo repositories.UserRepository,
+	userIdentityRepo repositories.UserIdentityRepository,
 	refreshTokenRepo repositories.RefreshTokenRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
 	jwtSecret string,
 ) *AuthHandler {
 	return &AuthHandler{
 		userRepo:         userRepo,
+		userIdentityRepo: userIdentityRepo,
 		refreshTokenRepo: refreshTokenRepo,
 		subscriptionRepo: subscriptionRepo,
 		jwtSecret:        jwtSecret,
@@ -83,6 +87,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		ID:           uuid.New(),
 		Email:        strings.ToLower(req.Email),
 		PasswordHash: passwordHash,
+		PasswordSet:  true,
 		Name:         req.Name,
 		IsAdmin:      false,
 		CreatedAt:    now,
@@ -132,6 +137,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	}
 	if user == nil {
 		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid credentials"})
+	}
+	if !user.PasswordSet {
+		return c.Status(403).JSON(fiber.Map{"code": "PASSWORD_LOGIN_DISABLED", "message": "password login is disabled for this account"})
 	}
 
 	if err := auth.ComparePassword(user.PasswordHash, req.Password); err != nil {
@@ -278,8 +286,9 @@ const (
 )
 
 type socialLoginUser struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	Email          string `json:"email"`
+	Name           string `json:"name"`
+	ProviderUserID string `json:"provider_user_id"`
 }
 
 type SocialLoginResponse struct {
@@ -419,7 +428,7 @@ func (h *AuthHandler) SocialLoginCallback(c *fiber.Ctx) error {
 	if err != nil {
 		return h.redirectSocialCallbackError(c, next, "AUTH_FAILED", err.Error())
 	}
-	user, err := h.getOrCreateSocialUser(c.Context(), profile.Email, profile.Name)
+	user, err := h.resolveSocialUser(c.Context(), provider, profile)
 	if err != nil {
 		if errors.Is(err, errSocialAccountLinkRequired) {
 			return h.redirectSocialCallbackError(c, next, "ACCOUNT_LINK_REQUIRED", "existing account found; please login with password first")
@@ -686,13 +695,36 @@ func (h *AuthHandler) fetchGoogleProfile(ctx context.Context, cfg socialProvider
 	if name == "" {
 		name = strings.TrimSpace(strings.SplitN(email, "@", 2)[0])
 	}
-	return socialLoginUser{Email: email, Name: name}, nil
+	return socialLoginUser{
+		Email:          email,
+		Name:           name,
+		ProviderUserID: strings.TrimSpace(userInfo.Sub),
+	}, nil
 }
 
-func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, name string) (*entities.User, error) {
-	email = strings.ToLower(strings.TrimSpace(email))
+func (h *AuthHandler) resolveSocialUser(ctx context.Context, provider string, profile socialLoginUser) (*entities.User, error) {
+	email := strings.ToLower(strings.TrimSpace(profile.Email))
 	if email == "" {
 		return nil, errors.New("oauth email is empty")
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	providerUserID := strings.TrimSpace(profile.ProviderUserID)
+
+	if h.userIdentityRepo != nil && providerUserID != "" {
+		identity, err := h.userIdentityRepo.GetByProviderUserID(ctx, provider, providerUserID)
+		if err != nil {
+			return nil, err
+		}
+		if identity != nil {
+			user, err := h.userRepo.GetByID(ctx, identity.UserID)
+			if err != nil {
+				return nil, err
+			}
+			if user == nil {
+				return nil, errors.New("social identity is linked to missing user")
+			}
+			return user, nil
+		}
 	}
 
 	user, err := h.userRepo.GetByEmail(ctx, email)
@@ -703,9 +735,23 @@ func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, n
 		if !socialLoginAutoLinkByEmail() {
 			return nil, errSocialAccountLinkRequired
 		}
+		if err := h.ensureSocialIdentityLink(ctx, user, provider, providerUserID, email); err != nil {
+			return nil, err
+		}
 		return user, nil
 	}
 
+	newUser, err := h.createSocialUser(ctx, email, profile.Name)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.ensureSocialIdentityLink(ctx, newUser, provider, providerUserID, email); err != nil {
+		return nil, err
+	}
+	return newUser, nil
+}
+
+func (h *AuthHandler) createSocialUser(ctx context.Context, email string, name string) (*entities.User, error) {
 	randomPassword := make([]byte, 32)
 	if _, err := rand.Read(randomPassword); err != nil {
 		return nil, err
@@ -727,6 +773,7 @@ func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, n
 		ID:            uuid.New(),
 		Email:         email,
 		PasswordHash:  passwordHash,
+		PasswordSet:   false,
 		Name:          finalName,
 		AIAllowlisted: false,
 		IsAdmin:       false,
@@ -748,6 +795,58 @@ func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, n
 		return nil, err
 	}
 	return newUser, nil
+}
+
+func (h *AuthHandler) ensureSocialIdentityLink(ctx context.Context, user *entities.User, provider string, providerUserID string, email string) error {
+	if h.userIdentityRepo == nil {
+		return nil
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	providerUserID = strings.TrimSpace(providerUserID)
+	if provider == "" || providerUserID == "" {
+		return nil
+	}
+
+	existingByProviderID, err := h.userIdentityRepo.GetByProviderUserID(ctx, provider, providerUserID)
+	if err != nil {
+		return err
+	}
+	if existingByProviderID != nil {
+		if existingByProviderID.UserID != user.ID {
+			return errors.New("social identity already linked to another user")
+		}
+		return nil
+	}
+
+	existingByUserProvider, err := h.userIdentityRepo.GetByUserAndProvider(ctx, user.ID, provider)
+	if err != nil {
+		return err
+	}
+	if existingByUserProvider != nil {
+		if existingByUserProvider.ProviderUserID != providerUserID {
+			return errors.New("user already has different social identity for provider")
+		}
+		return nil
+	}
+
+	identity := &entities.UserIdentity{
+		ID:             uuid.New(),
+		UserID:         user.ID,
+		Provider:       provider,
+		ProviderUserID: providerUserID,
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
+	}
+	if email = strings.TrimSpace(strings.ToLower(email)); email != "" {
+		identity.Email = &email
+	}
+	if err := h.userIdentityRepo.Create(ctx, identity); err != nil {
+		if isPGUniqueViolation(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func socialLoginAutoLinkByEmail() bool {
@@ -822,6 +921,11 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func isPGUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 func requestBase(c *fiber.Ctx) string {

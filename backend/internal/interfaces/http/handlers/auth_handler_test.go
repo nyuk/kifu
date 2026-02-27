@@ -78,6 +78,18 @@ func (r *authTestSubscriptionRepo) Update(_ context.Context, _ *entities.Subscri
 }
 func (r *authTestSubscriptionRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
 
+type authTestUserIdentityRepo struct{}
+
+func (r *authTestUserIdentityRepo) Create(_ context.Context, _ *entities.UserIdentity) error {
+	return nil
+}
+func (r *authTestUserIdentityRepo) GetByProviderUserID(_ context.Context, _ string, _ string) (*entities.UserIdentity, error) {
+	return nil, nil
+}
+func (r *authTestUserIdentityRepo) GetByUserAndProvider(_ context.Context, _ uuid.UUID, _ string) (*entities.UserIdentity, error) {
+	return nil, nil
+}
+
 type socialCallbackUserRepo struct {
 	users         map[string]*entities.User
 	getByEmailErr error
@@ -166,7 +178,7 @@ func TestAccountHelpUsernameRequest(t *testing.T) {
 			},
 		},
 	}
-	handler := NewAuthHandler(userRepo, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(userRepo, &authTestUserIdentityRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
 	app := fiber.New()
 	app.Post("/api/v1/auth/account-help", handler.AccountHelp)
 
@@ -194,7 +206,7 @@ func TestAccountHelpUsernameRequest(t *testing.T) {
 func TestAccountHelpMissingEmail(t *testing.T) {
 	t.Parallel()
 
-	handler := NewAuthHandler(&authTestUserRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(&authTestUserRepo{}, &authTestUserIdentityRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
 	app := fiber.New()
 	app.Post("/api/v1/auth/account-help", handler.AccountHelp)
 
@@ -214,7 +226,7 @@ func TestAccountHelpMissingEmail(t *testing.T) {
 func TestAccountHelpUnknownEmailIsAccepted(t *testing.T) {
 	t.Parallel()
 
-	handler := NewAuthHandler(&authTestUserRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(&authTestUserRepo{}, &authTestUserIdentityRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
 	app := fiber.New()
 	app.Post("/api/v1/auth/account-help", handler.AccountHelp)
 
@@ -237,7 +249,7 @@ func TestAccountHelpInternalError(t *testing.T) {
 	userRepo := &authTestUserRepo{
 		err: errors.New("db down"),
 	}
-	handler := NewAuthHandler(userRepo, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(userRepo, &authTestUserIdentityRepo{}, &authTestRefreshTokenRepo{}, &authTestSubscriptionRepo{}, "test-secret")
 	app := fiber.New()
 	app.Post("/api/v1/auth/account-help", handler.AccountHelp)
 
@@ -361,7 +373,7 @@ func TestSocialLoginCallbackSuccessCreatesUserAndRedirects(t *testing.T) {
 	userRepo := &socialCallbackUserRepo{}
 	refreshRepo := &socialCallbackRefreshTokenRepo{}
 	subscriptionRepo := &socialCallbackSubscriptionRepo{}
-	handler := NewAuthHandler(userRepo, refreshRepo, subscriptionRepo, "test-secret")
+	handler := NewAuthHandler(userRepo, &authTestUserIdentityRepo{}, refreshRepo, subscriptionRepo, "test-secret")
 	state, err := handler.buildSocialState(socialProviderGoogle, "/dashboard")
 	if err != nil {
 		t.Fatalf("buildSocialState: %v", err)
@@ -442,7 +454,7 @@ func TestSocialLoginCallbackReturnsAuthFailedWhenTokenExchangeFails(t *testing.T
 		}
 	}()
 
-	handler := NewAuthHandler(&socialCallbackUserRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(&socialCallbackUserRepo{}, &authTestUserIdentityRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
 	state, err := handler.buildSocialState(socialProviderGoogle, "/")
 	if err != nil {
 		t.Fatalf("buildSocialState: %v", err)
@@ -474,7 +486,7 @@ func TestSocialLoginCallbackReturnsAuthFailedWhenTokenExchangeFails(t *testing.T
 }
 
 func TestSocialLoginCallbackProviderCancelRedirectsToFrontendCallback(t *testing.T) {
-	handler := NewAuthHandler(&socialCallbackUserRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(&socialCallbackUserRepo{}, &authTestUserIdentityRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
 	app := fiber.New()
 	app.Get("/api/v1/auth/social-login/:provider/callback", handler.SocialLoginCallback)
 
@@ -566,7 +578,7 @@ func TestSocialLoginCallbackAutoLinkDisabledRequiresManualLink(t *testing.T) {
 			},
 		},
 	}
-	handler := NewAuthHandler(userRepo, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	handler := NewAuthHandler(userRepo, &authTestUserIdentityRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
 	state, err := handler.buildSocialState(socialProviderGoogle, "/home")
 	if err != nil {
 		t.Fatalf("buildSocialState: %v", err)
@@ -595,6 +607,7 @@ func TestSocialLoginCallbackAutoLinkDisabledRequiresManualLink(t *testing.T) {
 }
 
 var _ repositories.UserRepository = &authTestUserRepo{}
+var _ repositories.UserIdentityRepository = &authTestUserIdentityRepo{}
 var _ repositories.RefreshTokenRepository = &authTestRefreshTokenRepo{}
 var _ repositories.SubscriptionRepository = &authTestSubscriptionRepo{}
 var _ repositories.UserRepository = &socialCallbackUserRepo{}

@@ -54,6 +54,7 @@ func Run() error {
 	defer pool.Close()
 
 	userRepo := repositories.NewUserRepository(pool)
+	userIdentityRepo := repositories.NewUserIdentityRepository(pool)
 	refreshTokenRepo := repositories.NewRefreshTokenRepository(pool)
 	subscriptionRepo := repositories.NewSubscriptionRepository(pool)
 	exchangeRepo := repositories.NewExchangeCredentialRepository(pool)
@@ -157,6 +158,7 @@ func Run() error {
 		app,
 		pool,
 		userRepo,
+		userIdentityRepo,
 		refreshTokenRepo,
 		subscriptionRepo,
 		exchangeRepo,

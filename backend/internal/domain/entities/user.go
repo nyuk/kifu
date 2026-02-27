@@ -10,6 +10,7 @@ type User struct {
 	ID            uuid.UUID `json:"id"`
 	Email         string    `json:"email"`
 	PasswordHash  string    `json:"-"`
+	PasswordSet   bool      `json:"password_set"`
 	Name          string    `json:"name"`
 	AIAllowlisted bool      `json:"ai_allowlisted"`
 	IsAdmin       bool      `json:"is_admin"`
