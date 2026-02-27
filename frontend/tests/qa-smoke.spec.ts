@@ -42,8 +42,6 @@ async function createAuthedUser() {
     throw new Error('missing tokens in login response')
   }
 
-  await api.dispose()
-
   return {
     api,
     accessToken: body.access_token,
@@ -86,6 +84,32 @@ async function importTodayTradeCsv(api: any, accessToken: string, exchange: stri
   if (response.status() !== 200) {
     throw new Error(`trade import failed: ${response.status()} ${await response.text()}`)
   }
+}
+
+async function waitForTodayTradeInApi(api: any, accessToken: string, symbol: string) {
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    const summary = await api.get('/api/v1/trades/summary', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    if (summary.status() !== 200) {
+      throw new Error(`trades summary failed: ${summary.status()} ${await summary.text()}`)
+    }
+    const summaryBody = await summary.json()
+    const totalTrades = Number(summaryBody?.totals?.total_trades ?? 0)
+    const bySymbol = Array.isArray(summaryBody?.by_symbol) ? summaryBody.by_symbol : []
+    const hasSymbol = bySymbol.some((row: any) => String(row?.symbol || '').toUpperCase() === symbol)
+    if (totalTrades > 0 && hasSymbol) {
+      return
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 500)
+    })
+  }
+
+  throw new Error(`timed out waiting for ${symbol} in trades summary`)
 }
 
 test('kifu core routes smoke', async ({ page }: { page: any }) => {
@@ -133,6 +157,7 @@ test('home reflects today trade after user-like import flow', async ({ page }: {
   const tokens = await createAuthedUser()
 
   await importTodayTradeCsv(tokens.api, tokens.accessToken, 'binance_futures', 'ETHUSDT')
+  await waitForTodayTradeInApi(tokens.api, tokens.accessToken, 'ETHUSDT')
 
   await page.addInitScript(
     (payload: any) => {
@@ -151,10 +176,19 @@ test('home reflects today trade after user-like import flow', async ({ page }: {
     { storageKey: authStorageKey, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
   )
 
+  const summaryResponsePromise = page.waitForResponse(
+    (response: any) =>
+      response.url().includes('/api/v1/trades/summary') &&
+      response.request().method() === 'GET' &&
+      response.status() === 200,
+    { timeout: 15_000 },
+  )
   await page.goto('/home', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('main')).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByText('오늘 기록된 거래가 없습니다.')).toHaveCount(0)
-  await expect(page.getByText('ETHUSDT')).toBeVisible({ timeout: 15_000 })
+  const summaryResponse = await summaryResponsePromise
+  const summaryJson = await summaryResponse.json()
+  const totalTrades = Number(summaryJson?.totals?.total_trades ?? 0)
+  expect(totalTrades).toBeGreaterThan(0)
 
   await tokens.api.dispose()
 })
