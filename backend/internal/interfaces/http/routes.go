@@ -139,6 +139,7 @@ func RegisterRoutes(
 	users := api.Group("/users")
 	users.Get("/me", userHandler.GetProfile)
 	users.Put("/me", userHandler.UpdateProfile)
+	users.Post("/me/password", userHandler.SetPassword)
 	users.Get("/me/subscription", userHandler.GetSubscription)
 	users.Get("/me/symbols", marketHandler.GetUserSymbols)
 	users.Put("/me/symbols", marketHandler.UpdateUserSymbols)

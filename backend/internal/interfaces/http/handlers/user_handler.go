@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
 )
 
 type UserHandler struct {
@@ -35,6 +36,7 @@ type UserProfileResponse struct {
 	ID            uuid.UUID         `json:"id"`
 	Email         string            `json:"email"`
 	Name          string            `json:"name"`
+	PasswordSet   bool              `json:"password_set"`
 	AIAllowlisted bool              `json:"ai_allowlisted"`
 	IsAdmin       bool              `json:"is_admin"`
 	CreatedAt     time.Time         `json:"created_at"`
@@ -43,6 +45,11 @@ type UserProfileResponse struct {
 
 type UpdateProfileRequest struct {
 	Name string `json:"name"`
+}
+
+type SetPasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 type SubscriptionResponse struct {
@@ -88,6 +95,7 @@ func (h *UserHandler) GetProfile(c *fiber.Ctx) error {
 		ID:            user.ID,
 		Email:         user.Email,
 		Name:          user.Name,
+		PasswordSet:   user.PasswordSet,
 		AIAllowlisted: user.AIAllowlisted,
 		IsAdmin:       user.IsAdmin,
 		CreatedAt:     user.CreatedAt,
@@ -147,6 +155,7 @@ func (h *UserHandler) UpdateProfile(c *fiber.Ctx) error {
 		ID:            user.ID,
 		Email:         user.Email,
 		Name:          user.Name,
+		PasswordSet:   user.PasswordSet,
 		AIAllowlisted: user.AIAllowlisted,
 		IsAdmin:       user.IsAdmin,
 		CreatedAt:     user.CreatedAt,
@@ -180,4 +189,53 @@ func (h *UserHandler) GetSubscription(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(response)
+}
+
+// SetPassword sets or changes the authenticated user's password.
+// - For password_set=false accounts (social-only), current_password is not required.
+// - For password_set=true accounts, current_password must match.
+func (h *UserHandler) SetPassword(c *fiber.Ctx) error {
+	userID, err := ExtractUserID(c)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid or missing JWT"})
+	}
+
+	var req SetPasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
+	}
+	if req.NewPassword == "" {
+		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "new_password is required"})
+	}
+
+	user, err := h.userRepo.GetByID(c.Context(), userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+	if user == nil {
+		return c.Status(404).JSON(fiber.Map{"code": "USER_NOT_FOUND", "message": "user not found"})
+	}
+
+	if user.PasswordSet {
+		if req.CurrentPassword == "" {
+			return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "current_password is required"})
+		}
+		if err := auth.ComparePassword(user.PasswordHash, req.CurrentPassword); err != nil {
+			return c.Status(401).JSON(fiber.Map{"code": "UNAUTHORIZED", "message": "invalid current password"})
+		}
+	}
+
+	passwordHash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	user.PasswordHash = passwordHash
+	user.PasswordSet = true
+	user.UpdatedAt = time.Now().UTC()
+	if err := h.userRepo.Update(c.Context(), user); err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	return c.Status(200).JSON(fiber.Map{"message": "password updated"})
 }
