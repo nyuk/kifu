@@ -457,8 +457,140 @@ func TestSocialLoginCallbackReturnsAuthFailedWhenTokenExchangeFails(t *testing.T
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusUnauthorized)
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusFound)
+	}
+	location, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("location parse: %v", err)
+	}
+	if location.Path != "/auth/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	}
+	q := location.Query()
+	if q.Get("error") != "AUTH_FAILED" {
+		t.Fatalf("error=%s want=%s", q.Get("error"), "AUTH_FAILED")
+	}
+}
+
+func TestSocialLoginCallbackProviderCancelRedirectsToFrontendCallback(t *testing.T) {
+	handler := NewAuthHandler(&socialCallbackUserRepo{}, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider/callback", handler.SocialLoginCallback)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/google/callback?error=access_denied&error_description=user+canceled", nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusFound)
+	}
+	location, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("location parse: %v", err)
+	}
+	if location.Path != "/auth/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	}
+	q := location.Query()
+	if q.Get("error") != "AUTH_ERROR" {
+		t.Fatalf("error=%s want=%s", q.Get("error"), "AUTH_ERROR")
+	}
+	if q.Get("error_description") != "user canceled" {
+		t.Fatalf("error_description=%s want=%s", q.Get("error_description"), "user canceled")
+	}
+}
+
+func TestSocialLoginCallbackAutoLinkDisabledRequiresManualLink(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		token := map[string]string{"access_token": "google-access-token"}
+		_ = json.NewEncoder(w).Encode(token)
+	})
+	mux.HandleFunc("/userinfo", func(w http.ResponseWriter, r *http.Request) {
+		profile := socialGoogleProfileResponse{
+			Email:       "existing@example.com",
+			Name:        "Existing User",
+			EmailVerify: true,
+		}
+		_ = json.NewEncoder(w).Encode(profile)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	oldOAuthConfig := socialOAuthConfig[socialProviderGoogle]
+	oldHTTPClient := socialHTTPClient
+	oldClientID, hasClientID := os.LookupEnv("GOOGLE_CLIENT_ID")
+	oldClientSecret, hasClientSecret := os.LookupEnv("GOOGLE_CLIENT_SECRET")
+	oldAutoLink, hasAutoLink := os.LookupEnv("SOCIAL_LOGIN_AUTO_LINK_BY_EMAIL")
+	defer func() {
+		socialOAuthConfig[socialProviderGoogle] = oldOAuthConfig
+		socialHTTPClient = oldHTTPClient
+		if hasClientID {
+			os.Setenv("GOOGLE_CLIENT_ID", oldClientID)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_ID")
+		}
+		if hasClientSecret {
+			os.Setenv("GOOGLE_CLIENT_SECRET", oldClientSecret)
+		} else {
+			os.Unsetenv("GOOGLE_CLIENT_SECRET")
+		}
+		if hasAutoLink {
+			os.Setenv("SOCIAL_LOGIN_AUTO_LINK_BY_EMAIL", oldAutoLink)
+		} else {
+			os.Unsetenv("SOCIAL_LOGIN_AUTO_LINK_BY_EMAIL")
+		}
+	}()
+
+	socialOAuthConfig[socialProviderGoogle] = socialProviderConfig{
+		AuthURL:     oldOAuthConfig.AuthURL,
+		TokenURL:    server.URL + "/token",
+		UserInfoURL: server.URL + "/userinfo",
+	}
+	socialHTTPClient = server.Client()
+	os.Setenv("GOOGLE_CLIENT_ID", "test-google-client-id")
+	os.Setenv("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+	os.Setenv("SOCIAL_LOGIN_AUTO_LINK_BY_EMAIL", "false")
+
+	userRepo := &socialCallbackUserRepo{
+		users: map[string]*entities.User{
+			"existing@example.com": {
+				ID:           uuid.New(),
+				Email:        "existing@example.com",
+				PasswordHash: "hashed-password",
+				Name:         "Existing",
+			},
+		},
+	}
+	handler := NewAuthHandler(userRepo, &socialCallbackRefreshTokenRepo{}, &socialCallbackSubscriptionRepo{}, "test-secret")
+	state, err := handler.buildSocialState(socialProviderGoogle, "/home")
+	if err != nil {
+		t.Fatalf("buildSocialState: %v", err)
+	}
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider/callback", handler.SocialLoginCallback)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/google/callback?code=auth-code&state="+state, nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusFound)
+	}
+	location, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("location parse: %v", err)
+	}
+	q := location.Query()
+	if q.Get("error") != "ACCOUNT_LINK_REQUIRED" {
+		t.Fatalf("error=%s want=%s", q.Get("error"), "ACCOUNT_LINK_REQUIRED")
 	}
 }
 

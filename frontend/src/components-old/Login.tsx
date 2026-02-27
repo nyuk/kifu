@@ -175,7 +175,7 @@ export function Login() {
 
           <section className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">소셜 로그인</p>
-            <p className="mt-2 text-xs text-zinc-400">준비 중인 기능입니다. 정책 확정 후 순차 오픈 예정입니다.</p>
+            <p className="mt-2 text-xs text-zinc-400">Google은 사용 가능합니다. Apple/Kakao는 순차 오픈 예정입니다.</p>
             <div className="mt-3 flex flex-col gap-2">
               <button
                 type="button"

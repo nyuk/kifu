@@ -329,6 +329,8 @@ const (
 	socialLoginSuccessPath      = "/home"
 )
 
+var errSocialAccountLinkRequired = errors.New("social account link requires manual verification")
+
 var (
 	socialLoginProviders = map[string]struct{}{
 		socialProviderGoogle: {},
@@ -391,29 +393,38 @@ func (h *AuthHandler) SocialLoginCallback(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_PROVIDER", "message": "unsupported social provider"})
 	}
 	if errText := strings.TrimSpace(c.Query("error")); errText != "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "AUTH_ERROR", "message": errText})
+		detail := strings.TrimSpace(c.Query("error_description"))
+		return h.redirectSocialCallbackError(c, socialLoginSuccessPath, "AUTH_ERROR", firstNonEmpty(detail, errText))
 	}
 
 	state, err := h.parseSocialState(c.Query("state"))
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_STATE", "message": "invalid social login state"})
+		return h.redirectSocialCallbackError(c, socialLoginSuccessPath, "INVALID_STATE", "invalid social login state")
 	}
 	if state.Provider != provider {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_STATE", "message": "provider mismatch"})
+		return h.redirectSocialCallbackError(c, socialLoginSuccessPath, "INVALID_STATE", "provider mismatch")
+	}
+
+	next := strings.TrimSpace(state.ReturnTo)
+	if next == "" || !strings.HasPrefix(next, "/") {
+		next = socialLoginSuccessPath
 	}
 
 	code := strings.TrimSpace(c.Query("code"))
 	if code == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "authorization code is required"})
+		return h.redirectSocialCallbackError(c, next, "INVALID_REQUEST", "authorization code is required")
 	}
 
 	profile, err := h.fetchSocialProfile(c.Context(), c, provider, code)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(fiber.Map{"code": "AUTH_FAILED", "message": err.Error()})
+		return h.redirectSocialCallbackError(c, next, "AUTH_FAILED", err.Error())
 	}
 	user, err := h.getOrCreateSocialUser(c.Context(), profile.Email, profile.Name)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		if errors.Is(err, errSocialAccountLinkRequired) {
+			return h.redirectSocialCallbackError(c, next, "ACCOUNT_LINK_REQUIRED", "existing account found; please login with password first")
+		}
+		return h.redirectSocialCallbackError(c, next, "INTERNAL_ERROR", "failed to finalize social login")
 	}
 
 	accessToken, refreshToken, err := h.issueTokens(c.Context(), user)
@@ -421,10 +432,6 @@ func (h *AuthHandler) SocialLoginCallback(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
-	next := strings.TrimSpace(state.ReturnTo)
-	if next == "" || !strings.HasPrefix(next, "/") {
-		next = socialLoginSuccessPath
-	}
 	values := url.Values{
 		"access_token":  []string{accessToken},
 		"refresh_token": []string{refreshToken},
@@ -693,6 +700,9 @@ func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, n
 		return nil, err
 	}
 	if user != nil {
+		if !socialLoginAutoLinkByEmail() {
+			return nil, errSocialAccountLinkRequired
+		}
 		return user, nil
 	}
 
@@ -740,6 +750,14 @@ func (h *AuthHandler) getOrCreateSocialUser(ctx context.Context, email string, n
 	return newUser, nil
 }
 
+func socialLoginAutoLinkByEmail() bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv("SOCIAL_LOGIN_AUTO_LINK_BY_EMAIL")))
+	if raw == "" {
+		return true
+	}
+	return raw != "false" && raw != "0" && raw != "off" && raw != "no"
+}
+
 func (h *AuthHandler) issueTokens(ctx context.Context, user *entities.User) (string, string, error) {
 	accessToken, err := auth.GenerateAccessToken(user.ID, auth.AdminRoleFromBool(user.IsAdmin), h.jwtSecret)
 	if err != nil {
@@ -783,6 +801,27 @@ func (h *AuthHandler) socialLoginCallbackBase(c *fiber.Ctx) string {
 	base = strings.TrimSuffix(base, "/api")
 	base = strings.TrimSuffix(base, "/")
 	return base
+}
+
+func (h *AuthHandler) redirectSocialCallbackError(c *fiber.Ctx, next string, code string, message string) error {
+	values := url.Values{
+		"error":             []string{code},
+		"error_description": []string{message},
+	}
+	if strings.HasPrefix(next, "/") {
+		values.Set("next", next)
+	}
+	return c.Redirect(h.socialLoginCallbackBase(c)+socialLoginCallbackPath+"?"+values.Encode(), http.StatusFound)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func requestBase(c *fiber.Ctx) string {

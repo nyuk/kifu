@@ -15,7 +15,18 @@ export default function SocialCallbackPage() {
     const providerError = searchParams?.get('error')
     if (providerError) {
       const detail = searchParams?.get('error_description')
-      setError(detail ? `${providerError}: ${detail}` : providerError)
+      const normalized = providerError.trim().toUpperCase()
+      const mapped =
+        normalized === 'ACCOUNT_LINK_REQUIRED'
+          ? '같은 이메일 계정이 이미 있습니다. 먼저 이메일/비밀번호로 로그인한 뒤 계정 연결을 진행해주세요.'
+          : normalized === 'INVALID_STATE'
+            ? '로그인 세션이 만료되었거나 상태 검증에 실패했습니다. 다시 시도해주세요.'
+            : normalized === 'AUTH_FAILED'
+              ? '소셜 인증 처리에 실패했습니다. 잠시 후 다시 시도해주세요.'
+              : normalized === 'AUTH_ERROR'
+                ? '소셜 로그인 과정이 취소되었거나 공급자에서 오류가 발생했습니다.'
+                : ''
+      setError(mapped || (detail ? `${providerError}: ${detail}` : providerError))
       setMessage('')
       return
     }
@@ -42,7 +53,7 @@ export default function SocialCallbackPage() {
           <p className="text-sm font-semibold text-rose-200">소셜 로그인 실패</p>
           <p className="mt-3 text-sm leading-relaxed text-rose-100">{error}</p>
           <div className="mt-4 space-y-2 text-sm">
-            <Link href="/login" className="block font-semibold text-emerald-300 hover:text-emerald-200">
+            <Link href={`/login${searchParams?.get('next') ? `?next=${encodeURIComponent(searchParams.get('next') || '')}` : ''}`} className="block font-semibold text-emerald-300 hover:text-emerald-200">
               로그인 페이지로 이동
             </Link>
             <button
