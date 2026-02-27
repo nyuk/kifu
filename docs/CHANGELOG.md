@@ -3,6 +3,10 @@
 ## 2026-02-27
 
 ### Changed
+- Completed social account password-bridge flow:
+  - Social-created users now persist `password_set=false` until they set a local password.
+  - Settings page now exposes password setup/change UI and calls `POST /api/v1/users/me/password`.
+  - Password login is blocked for social-only users until password setup is completed.
 - Stabilized local Playwright smoke execution for home today-trade verification:
   - Fixed premature `APIRequestContext` disposal in `qa-smoke.spec.ts`.
   - Reworked today-trade smoke assertion to verify `trades/summary` response consistency instead of brittle UI text timing.
@@ -13,6 +17,12 @@
   - Added explicit `127.0.0.1` variants for existing local ports.
 
 ### Files Affected
+- `frontend/src/components-old/Settings.tsx`
+- `backend/internal/interfaces/http/handlers/user_handler.go`
+- `backend/internal/interfaces/http/handlers/auth_handler.go`
+- `backend/internal/infrastructure/repositories/user_repository_impl.go`
+- `backend/internal/infrastructure/repositories/user_identity_repository_impl.go`
+- `backend/migrations/027_add_user_identities_and_password_set.sql`
 - `frontend/tests/qa-smoke.spec.ts`
 - `frontend/playwright.config.ts`
 - `frontend/tests/global-setup.ts`

@@ -28,6 +28,8 @@ Operational task list for ongoing work.
   - Current active priority: first batch items 1–4.
 - [ ] Social login (OAuth providers)
   - Google OAuth start/callback flow implemented (`/api/v1/auth/social-login/google`, `/api/v1/auth/social-login/google/callback`).
+  - Social identity tracking table added (`user_identities`) and auto-link policy applied.
+  - Social-only account password bridge added (`POST /api/v1/users/me/password`, `password_set` flag).
   - Apple/Kakao still pending configuration and policy review.
   - Required env vars:
     - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`

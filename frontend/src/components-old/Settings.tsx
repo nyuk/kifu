@@ -148,8 +148,14 @@ export function Settings() {
   const clearTokens = useAuthStore((state) => state.clearTokens)
   const accessToken = useAuthStore((state) => state.accessToken)
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
+  const [passwordSet, setPasswordSet] = useState<boolean | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [guestMode, setGuestMode] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     setGuestMode(isGuestSession())
@@ -160,16 +166,18 @@ export function Settings() {
     const load = async () => {
       if (!accessToken) return
       try {
-        const response = await api.get<{ email?: string; is_admin?: boolean }>('/v1/users/me')
+        const response = await api.get<{ email?: string; is_admin?: boolean; password_set?: boolean }>('/v1/users/me')
         if (isActive) {
           const email = response.data?.email
           setProfileEmail(email || null)
+          setPasswordSet(Boolean(response.data?.password_set))
           setIsAdmin(Boolean(response.data?.is_admin))
           setGuestMode(isGuestSession())
         }
       } catch {
         if (isActive) {
           setProfileEmail(null)
+          setPasswordSet(null)
           setIsAdmin(false)
           setGuestMode(isGuestSession())
         }
@@ -180,6 +188,34 @@ export function Settings() {
       isActive = false
     }
   }, [accessToken])
+
+  const submitPassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setPasswordError('')
+    setPasswordMessage('')
+    if (!newPassword.trim()) {
+      setPasswordError('새 비밀번호를 입력해주세요.')
+      return
+    }
+    setPasswordSaving(true)
+    try {
+      const payload: { current_password?: string; new_password: string } = {
+        new_password: newPassword,
+      }
+      if (passwordSet) {
+        payload.current_password = currentPassword
+      }
+      await api.post('/v1/users/me/password', payload)
+      setPasswordMessage('비밀번호가 저장되었습니다. 다음 로그인부터 비밀번호 로그인도 사용할 수 있습니다.')
+      setCurrentPassword('')
+      setNewPassword('')
+      setPasswordSet(true)
+    } catch (err: any) {
+      setPasswordError(err?.response?.data?.message || '비밀번호 저장에 실패했습니다.')
+    } finally {
+      setPasswordSaving(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -207,6 +243,47 @@ export function Settings() {
           <p className="mt-3 text-xs text-zinc-500">
             로그인 계정: {profileEmail || (accessToken ? '불러오는 중...' : '로그인 정보 없음')}
           </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            비밀번호 상태: {passwordSet === null ? '확인 중...' : passwordSet ? '설정됨' : '미설정(소셜 전용)'}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Password</p>
+          <p className="mt-3 text-lg font-semibold text-zinc-200">비밀번호 설정/변경</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            소셜 계정은 여기서 비밀번호를 설정하면 이메일/비밀번호 로그인도 함께 사용할 수 있습니다.
+          </p>
+          <form onSubmit={submitPassword} className="mt-4 grid gap-3 md:max-w-xl">
+            {passwordSet && (
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                placeholder="현재 비밀번호"
+                className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 text-sm text-zinc-100 outline-none focus:border-emerald-400/60"
+                required
+              />
+            )}
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="새 비밀번호"
+              className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 text-sm text-zinc-100 outline-none focus:border-emerald-400/60"
+              required
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="inline-flex h-10 items-center rounded-lg border border-emerald-300/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:opacity-60"
+              >
+                {passwordSaving ? '저장 중...' : passwordSet ? '비밀번호 변경' : '비밀번호 설정'}
+              </button>
+            </div>
+            {passwordError && <p className="text-sm text-rose-300">{passwordError}</p>}
+            {passwordMessage && <p className="text-sm text-emerald-300">{passwordMessage}</p>}
+          </form>
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Exchanges</p>
