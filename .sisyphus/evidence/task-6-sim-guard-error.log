@@ -1,0 +1,11 @@
+[task-6] 2026-02-28T09:01:36Z guard/warning check
+http_status=200
+response:
+{"run_id":"f50b65a7-b2fe-440f-b7d5-a2014a957c61","seed":1772269292866342000,"timezone":"UTC","start_date":"2026-02-28","end_date":"2026-02-28","days":1,"started_at":"2026-02-28T09:01:32.86639Z","finished_at":"2026-02-28T09:01:32.926477Z","totals":{"trades_created":0,"bubbles_created":0,"outcomes_created":0,"ai_opinions_created":0,"accuracy_rows":0,"ai_notes_created":0,"trade_events_created":0,"trade_events_skipped":5,"stock_events_created":0,"review_days_touched":1,"review_days_complete":1,"items_total":10,"items_submitted":5,"no_trade_days":1,"notes_created":0,"manual_positions_created":0,"user_symbols_updated":5,"alert_rules_created":0,"ai_probe_pass":0,"ai_probe_fail":1},"streak":{"current":1,"longest":1,"last_review_day":"2026-02-28"},"effective_user":{"mode":"self","user_id":"ed967bf7-1dc2-49f5-b190-218c612b9830","email":"task6_1772269285@kifu.test","reset_performed":false},"results":[{"date":"2026-02-28","no_trade_day":true,"trades_created":0,"bubbles_created":0,"review_id":"ee2e09cf-30a8-45fb-b403-c3a130ca50ee","review_status":"completed","items":10,"submitted":5,"completed":true,"steps":[{"step":"trade_phase","ok":true,"message":"no-trade day"},{"step":"guided_review_load","ok":true,"message":"loaded"},{"step":"guided_review_submit","ok":true,"message":"submitted=5"},{"step":"guided_review_complete","ok":true,"message":"completed"},{"step":"ai_probe","ok":false,"message":"ERROR: column \"provider_type\" does not exist (SQLSTATE 42703)"}]}],"warnings":["2026-02-28 ai probe failed: ERROR: column \"provider_type\" does not exist (SQLSTATE 42703)"]}
+db:disable:
+time="2026-02-28T18:01:29+09:00" level=warning msg="/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+UPDATE 3
+
+db:restore:
+time="2026-02-28T18:01:32+09:00" level=warning msg="/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+UPDATE 3

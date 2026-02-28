@@ -68,15 +68,15 @@ func RegisterRoutes(
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo, portfolioRepo)
 	// Create AI services and register provider adapters
-		credentialResolver := services.NewAICredentialResolver(userAIKeyRepo, aiProviderRepo, encryptionKey)
-		aiRegistry := ai_providers.NewProviderRegistry(nil)
-		// Register provider adapters
-		httpClient := &http.Client{Timeout: 30 * time.Second}
-		aiRegistry.RegisterClient("openai", ai_providers.NewOpenAIClient(httpClient))
-		aiRegistry.RegisterClient("anthropic", ai_providers.NewClaudeClient(httpClient))
-		aiRegistry.RegisterClient("google", ai_providers.NewGeminiClient(httpClient))
-		aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)
-		aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
+	credentialResolver := services.NewAICredentialResolver(userAIKeyRepo, aiProviderRepo, encryptionKey)
+	aiRegistry := ai_providers.NewProviderRegistry(nil)
+	// Register provider adapters
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	aiRegistry.RegisterClient("openai", ai_providers.NewOpenAIClient(httpClient))
+	aiRegistry.RegisterClient("anthropic", ai_providers.NewClaudeClient(httpClient))
+	aiRegistry.RegisterClient("google", ai_providers.NewGeminiClient(httpClient))
+	aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)
+	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
@@ -120,6 +120,7 @@ func RegisterRoutes(
 		outcomeRepo,
 		aiOpinionRepo,
 		accuracyRepo,
+		encryptionKey,
 	)
 	adminMetricsHandler := handlers.NewAdminMetricsHandler(pool)
 	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo, pool)

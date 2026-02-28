@@ -392,7 +392,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 원인 메시지 손실
     - Evidence: `.sisyphus/evidence/task-5-alert-error.log`
 
-- [ ] 6. AI probe 경로(시뮬) 통합 및 실제 호출 게이트웨이화
+- [x] 6. AI probe 경로(시뮬) 통합 및 실제 호출 게이트웨이화
 
   **What to do**:
   - `backend/internal/interfaces/http/handlers/sim_report_handler.go`의 `runAIProbe`/`isProviderAvailableForUser` 로직을 공통 provider service로 연결한다.

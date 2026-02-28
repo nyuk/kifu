@@ -6,37 +6,52 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
+	"github.com/moneyvessel/kifu/internal/domain/interfaces"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/infrastructure/ai_providers"
 	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 type SimReportHandler struct {
-	pool             *pgxpool.Pool
-	userRepo         repositories.UserRepository
-	subscriptionRepo repositories.SubscriptionRepository
-	tradeRepo        repositories.TradeRepository
-	bubbleRepo       repositories.BubbleRepository
-	guidedReviewRepo repositories.GuidedReviewRepository
-	noteRepo         repositories.ReviewNoteRepository
-	alertRuleRepo    repositories.AlertRuleRepository
-	aiProviderRepo   repositories.AIProviderRepository
-	userAIKeyRepo    repositories.UserAIKeyRepository
-	userSymbolRepo   repositories.UserSymbolRepository
-	portfolioRepo    repositories.PortfolioRepository
-	manualPosRepo    repositories.ManualPositionRepository
-	outcomeRepo      repositories.OutcomeRepository
-	aiOpinionRepo    repositories.AIOpinionRepository
-	accuracyRepo     repositories.AIOpinionAccuracyRepository
+	pool                *pgxpool.Pool
+	userRepo            repositories.UserRepository
+	subscriptionRepo    repositories.SubscriptionRepository
+	tradeRepo           repositories.TradeRepository
+	bubbleRepo          repositories.BubbleRepository
+	guidedReviewRepo    repositories.GuidedReviewRepository
+	noteRepo            repositories.ReviewNoteRepository
+	alertRuleRepo       repositories.AlertRuleRepository
+	aiProviderRepo      repositories.AIProviderRepository
+	userAIKeyRepo       repositories.UserAIKeyRepository
+	userSymbolRepo      repositories.UserSymbolRepository
+	portfolioRepo       repositories.PortfolioRepository
+	manualPosRepo       repositories.ManualPositionRepository
+	outcomeRepo         repositories.OutcomeRepository
+	aiOpinionRepo       repositories.AIOpinionRepository
+	accuracyRepo        repositories.AIOpinionAccuracyRepository
+	credentialResolver  *services.AICredentialResolver
+	aiInvocationService *services.AIInvocationService
+	availabilityCacheMu sync.RWMutex
+	availabilityCache   map[string]simProviderAvailabilityCacheItem
+	availabilityTTL     time.Duration
+}
+
+type simProviderAvailabilityCacheItem struct {
+	available bool
+	expiresAt time.Time
 }
 
 func NewSimReportHandler(
@@ -56,24 +71,37 @@ func NewSimReportHandler(
 	outcomeRepo repositories.OutcomeRepository,
 	aiOpinionRepo repositories.AIOpinionRepository,
 	accuracyRepo repositories.AIOpinionAccuracyRepository,
+	encryptionKey []byte,
 ) *SimReportHandler {
+	credentialResolver := services.NewAICredentialResolver(userAIKeyRepo, aiProviderRepo, encryptionKey)
+	aiRegistry := ai_providers.NewProviderRegistry(nil)
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	aiRegistry.RegisterClient(entities.ProviderTypeOpenAI, ai_providers.NewOpenAIClient(httpClient))
+	aiRegistry.RegisterClient(entities.ProviderTypeAnthropic, ai_providers.NewClaudeClient(httpClient))
+	aiRegistry.RegisterClient(entities.ProviderTypeGoogle, ai_providers.NewGeminiClient(httpClient))
+	aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)
+
 	return &SimReportHandler{
-		pool:             pool,
-		userRepo:         userRepo,
-		subscriptionRepo: subscriptionRepo,
-		tradeRepo:        tradeRepo,
-		bubbleRepo:       bubbleRepo,
-		guidedReviewRepo: guidedReviewRepo,
-		noteRepo:         noteRepo,
-		alertRuleRepo:    alertRuleRepo,
-		aiProviderRepo:   aiProviderRepo,
-		userAIKeyRepo:    userAIKeyRepo,
-		userSymbolRepo:   userSymbolRepo,
-		portfolioRepo:    portfolioRepo,
-		manualPosRepo:    manualPosRepo,
-		outcomeRepo:      outcomeRepo,
-		aiOpinionRepo:    aiOpinionRepo,
-		accuracyRepo:     accuracyRepo,
+		pool:                pool,
+		userRepo:            userRepo,
+		subscriptionRepo:    subscriptionRepo,
+		tradeRepo:           tradeRepo,
+		bubbleRepo:          bubbleRepo,
+		guidedReviewRepo:    guidedReviewRepo,
+		noteRepo:            noteRepo,
+		alertRuleRepo:       alertRuleRepo,
+		aiProviderRepo:      aiProviderRepo,
+		userAIKeyRepo:       userAIKeyRepo,
+		userSymbolRepo:      userSymbolRepo,
+		portfolioRepo:       portfolioRepo,
+		manualPosRepo:       manualPosRepo,
+		outcomeRepo:         outcomeRepo,
+		aiOpinionRepo:       aiOpinionRepo,
+		accuracyRepo:        accuracyRepo,
+		credentialResolver:  credentialResolver,
+		aiInvocationService: aiInvocationService,
+		availabilityCache:   make(map[string]simProviderAvailabilityCacheItem),
+		availabilityTTL:     20 * time.Second,
 	}
 }
 
@@ -772,33 +800,101 @@ func (h *SimReportHandler) runAIProbe(ctx context.Context, userID uuid.UUID) (bo
 	if len(available) == 0 {
 		return false, fmt.Sprintf("no keys configured (missing=%s)", strings.Join(missing, ",")), nil
 	}
-	if len(missing) == 0 {
-		return true, fmt.Sprintf("all providers available (%s)", strings.Join(available, ",")), nil
+
+	// Keep compatibility: default probe is dry-run (availability check only).
+	probeExecute := strings.EqualFold(strings.TrimSpace(os.Getenv("SIM_AI_PROBE_EXECUTE")), "true")
+	if !probeExecute {
+		if len(missing) == 0 {
+			return true, fmt.Sprintf("all providers available (%s)", strings.Join(available, ",")), nil
+		}
+		return true, fmt.Sprintf("partial providers available (%s), missing (%s)", strings.Join(available, ","), strings.Join(missing, ",")), nil
 	}
-	return true, fmt.Sprintf("partial providers available (%s), missing (%s)", strings.Join(available, ","), strings.Join(missing, ",")), nil
+
+	// Optional real probe execution path (guarded by SIM_AI_PROBE_EXECUTE=true).
+	probeProvider := available[0]
+	probeModel := ""
+	for _, provider := range providers {
+		if provider.Name == probeProvider {
+			probeModel = strings.TrimSpace(provider.Model)
+			break
+		}
+	}
+	if probeModel == "" {
+		return false, "", fmt.Errorf("probe model not configured for provider: %s", probeProvider)
+	}
+	result, invokeErr := h.aiInvocationService.InvokeProvider(
+		ctx,
+		userID,
+		probeProvider,
+		probeModel,
+		[]interfaces.AIMessage{{Role: "user", Content: "probe: respond with one short token"}},
+		nil,
+	)
+	if invokeErr != nil {
+		return false, "", fmt.Errorf("ai probe invoke failed (%s): %w", probeProvider, invokeErr)
+	}
+	if strings.TrimSpace(result.Content) == "" {
+		return false, "", fmt.Errorf("ai probe empty response (%s)", probeProvider)
+	}
+
+	if len(missing) == 0 {
+		return true, fmt.Sprintf("probe ok provider=%s all available (%s)", probeProvider, strings.Join(available, ",")), nil
+	}
+	return true, fmt.Sprintf("probe ok provider=%s partial available (%s), missing (%s)", probeProvider, strings.Join(available, ","), strings.Join(missing, ",")), nil
 }
 
 func (h *SimReportHandler) isProviderAvailableForUser(ctx context.Context, userID uuid.UUID, provider string) (bool, error) {
-	switch strings.ToLower(strings.TrimSpace(provider)) {
-	case "openai":
-		if strings.TrimSpace(os.Getenv("OPENAI_API_KEY")) != "" {
-			return true, nil
-		}
-	case "claude":
-		if strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")) != "" {
-			return true, nil
-		}
-	case "gemini":
-		if strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) != "" {
-			return true, nil
-		}
+	key := simProviderAvailabilityCacheKey(userID, provider)
+	if available, ok := h.getProviderAvailabilityFromCache(key); ok {
+		return available, nil
 	}
 
-	key, err := h.userAIKeyRepo.GetByUserAndProvider(ctx, userID, provider)
+	name := strings.ToLower(strings.TrimSpace(provider))
+	providerConfig, err := h.aiProviderRepo.GetByName(ctx, name)
 	if err != nil {
 		return false, err
 	}
-	return key != nil && strings.TrimSpace(key.APIKeyEnc) != "", nil
+	if providerConfig == nil || !providerConfig.Enabled {
+		h.setProviderAvailabilityCache(key, false)
+		return false, nil
+	}
+
+	credential, err := h.credentialResolver.ResolveCredential(ctx, userID, name)
+	if err != nil {
+		return false, err
+	}
+	available := strings.TrimSpace(credential) != ""
+	h.setProviderAvailabilityCache(key, available)
+	return available, nil
+}
+
+func simProviderAvailabilityCacheKey(userID uuid.UUID, provider string) string {
+	return fmt.Sprintf("%s:%s:enabled", userID.String(), strings.ToLower(strings.TrimSpace(provider)))
+}
+
+func (h *SimReportHandler) getProviderAvailabilityFromCache(key string) (bool, bool) {
+	h.availabilityCacheMu.RLock()
+	item, ok := h.availabilityCache[key]
+	h.availabilityCacheMu.RUnlock()
+	if !ok {
+		return false, false
+	}
+	if time.Now().After(item.expiresAt) {
+		h.availabilityCacheMu.Lock()
+		delete(h.availabilityCache, key)
+		h.availabilityCacheMu.Unlock()
+		return false, false
+	}
+	return item.available, true
+}
+
+func (h *SimReportHandler) setProviderAvailabilityCache(key string, available bool) {
+	h.availabilityCacheMu.Lock()
+	h.availabilityCache[key] = simProviderAvailabilityCacheItem{
+		available: available,
+		expiresAt: time.Now().Add(h.availabilityTTL),
+	}
+	h.availabilityCacheMu.Unlock()
 }
 
 func (h *SimReportHandler) ensureSandboxUser(
