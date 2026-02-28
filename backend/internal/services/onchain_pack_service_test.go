@@ -228,7 +228,10 @@ func TestOnchainSummaryDeterministicWithProviderMock(t *testing.T) {
 	if resp.Summary.TopOut[1].Token != "0x1111111111111111111111111111111111111111" || resp.Summary.TopOut[1].Amount != "20" {
 		t.Fatalf("top_out[1]=%+v want token1 amount 20", resp.Summary.TopOut[1])
 	}
-	if resp.Status != "ok" {
-		t.Fatalf("status=%s want=ok", resp.Status)
+	if !warningExists(resp.Warnings, "NO_TX_HASHES") {
+		t.Fatalf("expected NO_TX_HASHES warning, got %#v", resp.Warnings)
+	}
+	if resp.Status != "warning" {
+		t.Fatalf("status=%s want=warning", resp.Status)
 	}
 }

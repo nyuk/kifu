@@ -10,7 +10,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
-	domainrepos "github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
 	"github.com/moneyvessel/kifu/internal/infrastructure/database"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"
