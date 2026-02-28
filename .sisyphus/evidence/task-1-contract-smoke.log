@@ -1,0 +1,6 @@
+?   	github.com/moneyvessel/kifu/internal/domain/entities	[no test files]
+?   	github.com/moneyvessel/kifu/internal/domain/interfaces	[no test files]
+?   	github.com/moneyvessel/kifu/internal/domain/repositories	[no test files]
+16:type AIInvocationOption struct {
+25:type AIInvocation struct {
+51:type AIInvocationResult struct {
