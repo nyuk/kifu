@@ -3,6 +3,10 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -53,6 +57,21 @@ type AdminMetricsHandler struct {
 	pool *pgxpool.Pool
 }
 
+type agentRunFilters struct {
+	RunType string
+	Status  string
+	Limit   int
+}
+
+var (
+	agentRunStatusSet = map[string]struct{}{
+		"running":   {},
+		"completed": {},
+		"failed":    {},
+	}
+	agentRunTypeRegex = regexp.MustCompile(`^[a-z0-9_]{1,50}$`)
+)
+
 func NewAdminMetricsHandler(pool *pgxpool.Pool) *AdminMetricsHandler {
 	return &AdminMetricsHandler{pool: pool}
 }
@@ -101,6 +120,14 @@ func (h *AdminMetricsHandler) Telemetry(c *fiber.Ctx) error {
 }
 
 func (h *AdminMetricsHandler) AgentServices(c *fiber.Ctx) error {
+	filters, err := parseAgentRunFilters(c)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"code":    "INVALID_REQUEST",
+			"message": err.Error(),
+		})
+	}
+
 	services, err := h.fetchAgentServices(c)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -109,7 +136,7 @@ func (h *AdminMetricsHandler) AgentServices(c *fiber.Ctx) error {
 		})
 	}
 
-	runs, err := h.fetchAgentRuns(c, 50)
+	runs, err := h.fetchAgentRuns(c, filters)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"code":    "INTERNAL_ERROR",
@@ -164,7 +191,7 @@ func (h *AdminMetricsHandler) fetchAgentServices(c *fiber.Ctx) ([]AdminServiceSu
 	return services, nil
 }
 
-func (h *AdminMetricsHandler) fetchAgentRuns(c *fiber.Ctx, limit int) ([]AdminServiceRun, error) {
+func (h *AdminMetricsHandler) fetchAgentRuns(c *fiber.Ctx, filters agentRunFilters) ([]AdminServiceRun, error) {
 	query := `
 		SELECT
 			r.run_id,
@@ -177,11 +204,25 @@ func (h *AdminMetricsHandler) fetchAgentRuns(c *fiber.Ctx, limit int) ([]AdminSe
 			COALESCE(r.meta, '{}'::jsonb)
 		FROM runs r
 		LEFT JOIN users u ON u.id = r.user_id
-		ORDER BY r.started_at DESC
-		LIMIT $1
 	`
 
-	rows, err := h.pool.Query(c.Context(), query, limit)
+	whereParts := make([]string, 0, 2)
+	args := make([]any, 0, 3)
+	if filters.RunType != "" {
+		args = append(args, filters.RunType)
+		whereParts = append(whereParts, fmt.Sprintf("r.run_type = $%d", len(args)))
+	}
+	if filters.Status != "" {
+		args = append(args, filters.Status)
+		whereParts = append(whereParts, fmt.Sprintf("r.status = $%d", len(args)))
+	}
+	if len(whereParts) > 0 {
+		query += " WHERE " + strings.Join(whereParts, " AND ")
+	}
+	args = append(args, filters.Limit)
+	query += fmt.Sprintf(" ORDER BY r.started_at DESC LIMIT $%d", len(args))
+
+	rows, err := h.pool.Query(c.Context(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -221,4 +262,43 @@ func (h *AdminMetricsHandler) fetchAgentRuns(c *fiber.Ctx, limit int) ([]AdminSe
 	}
 
 	return runs, nil
+}
+
+func parseAgentRunFilters(c *fiber.Ctx) (agentRunFilters, error) {
+	return parseAgentRunFiltersValues(
+		strings.TrimSpace(c.Query("run_type")),
+		strings.TrimSpace(c.Query("status")),
+		strings.TrimSpace(c.Query("limit")),
+	)
+}
+
+func parseAgentRunFiltersValues(rawRunType string, rawStatus string, rawLimit string) (agentRunFilters, error) {
+	limit, err := parsePositiveIntOrDefault(rawLimit, 50)
+	if err != nil {
+		return agentRunFilters{}, fmt.Errorf("invalid limit")
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	status := strings.ToLower(strings.TrimSpace(rawStatus))
+	if status == "all" {
+		status = ""
+	}
+	if status != "" {
+		if _, ok := agentRunStatusSet[status]; !ok {
+			return agentRunFilters{}, fmt.Errorf("invalid status")
+		}
+	}
+
+	runType := strings.ToLower(strings.TrimSpace(rawRunType))
+	if runType != "" && !agentRunTypeRegex.MatchString(runType) {
+		return agentRunFilters{}, fmt.Errorf("invalid run_type")
+	}
+
+	return agentRunFilters{
+		RunType: runType,
+		Status:  status,
+		Limit:   limit,
+	}, nil
 }
