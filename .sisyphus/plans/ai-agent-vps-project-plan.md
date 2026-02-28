@@ -178,7 +178,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 기본값 미설정 또는 Responses API만 참조
     - Evidence: `.sisyphus/evidence/task-1-default-client.log`
 
-- [ ] 2. Provider 저장소/레지스트리 조회 계층 정비
+- [x] 2. Provider 저장소/레지스트리 조회 계층 정비
 
   **What to do**:
   - `backend/internal/infrastructure/repositories` 또는 신규 `services/ai_operator`에 provider 조회 레이어를 추가해 active/default provider를 일관되게 해석한다.

@@ -1,0 +1,55 @@
+=== RUN   TestAIProviderRepositoryGetByName
+=== RUN   TestAIProviderRepositoryGetByName/provider_found
+    ai_provider_repository_impl_test.go:19: Test: GetByName should return provider with full metadata
+=== RUN   TestAIProviderRepositoryGetByName/provider_not_found
+    ai_provider_repository_impl_test.go:24: Test: GetByName should return nil for nonexistent provider
+--- PASS: TestAIProviderRepositoryGetByName (0.00s)
+    --- PASS: TestAIProviderRepositoryGetByName/provider_found (0.00s)
+    --- PASS: TestAIProviderRepositoryGetByName/provider_not_found (0.00s)
+=== RUN   TestAIProviderRepositoryGetByID
+=== RUN   TestAIProviderRepositoryGetByID/provider_found_by_id
+    ai_provider_repository_impl_test.go:32: Test: GetByID should return provider by UUID
+=== RUN   TestAIProviderRepositoryGetByID/provider_not_found_by_id
+    ai_provider_repository_impl_test.go:37: Test: GetByID should return nil for invalid UUID
+--- PASS: TestAIProviderRepositoryGetByID (0.00s)
+    --- PASS: TestAIProviderRepositoryGetByID/provider_found_by_id (0.00s)
+    --- PASS: TestAIProviderRepositoryGetByID/provider_not_found_by_id (0.00s)
+=== RUN   TestAIProviderRepositoryGetDefault
+=== RUN   TestAIProviderRepositoryGetDefault/default_provider_exists
+    ai_provider_repository_impl_test.go:45: Test: GetDefault should return the default provider
+=== RUN   TestAIProviderRepositoryGetDefault/no_default_provider
+    ai_provider_repository_impl_test.go:50: Test: GetDefault should return nil when no default provider exists
+--- PASS: TestAIProviderRepositoryGetDefault (0.00s)
+    --- PASS: TestAIProviderRepositoryGetDefault/default_provider_exists (0.00s)
+    --- PASS: TestAIProviderRepositoryGetDefault/no_default_provider (0.00s)
+=== RUN   TestAIProviderRepositoryListActive
+=== RUN   TestAIProviderRepositoryListActive/list_active_providers
+    ai_provider_repository_impl_test.go:59: Test: ListActive should return all enabled providers
+=== RUN   TestAIProviderRepositoryListActive/empty_list_when_no_active
+    ai_provider_repository_impl_test.go:64: Test: ListActive should return empty slice when no active providers
+--- PASS: TestAIProviderRepositoryListActive (0.00s)
+    --- PASS: TestAIProviderRepositoryListActive/list_active_providers (0.00s)
+    --- PASS: TestAIProviderRepositoryListActive/empty_list_when_no_active (0.00s)
+=== RUN   TestAIProviderRepositoryValidatePolicy
+=== RUN   TestAIProviderRepositoryValidatePolicy/policy_allows_enabled_provider
+    ai_provider_repository_impl_test.go:72: Test: ValidatePolicy should allow enabled providers
+=== RUN   TestAIProviderRepositoryValidatePolicy/policy_denies_disabled_provider
+    ai_provider_repository_impl_test.go:77: Test: ValidatePolicy should deny disabled providers
+=== RUN   TestAIProviderRepositoryValidatePolicy/policy_denies_nonexistent_provider
+    ai_provider_repository_impl_test.go:82: Test: ValidatePolicy should deny nonexistent providers
+--- PASS: TestAIProviderRepositoryValidatePolicy (0.00s)
+    --- PASS: TestAIProviderRepositoryValidatePolicy/policy_allows_enabled_provider (0.00s)
+    --- PASS: TestAIProviderRepositoryValidatePolicy/policy_denies_disabled_provider (0.00s)
+    --- PASS: TestAIProviderRepositoryValidatePolicy/policy_denies_nonexistent_provider (0.00s)
+=== RUN   TestProviderMetadataFields
+=== RUN   TestProviderMetadataFields/provider_has_all_metadata_fields
+    ai_provider_repository_impl_test.go:147: ✓ All provider metadata fields accessible: &{ID:405f9f7c-dbb8-47e9-bb0b-39b0f9e14439 Name:openai Model:gpt-4 Enabled:true IsDefault:true CreatedAt:2026-02-28 16:25:36.1882194 +0900 KST m=+0.004126401 ProviderType:openai BaseURL:https://api.openai.com/v1 DefaultEndpoint:chat/completions TimeoutSeconds:30 RetryPolicy:{MaxRetries:3 BaseBackoffMs:500 MaxBackoffMs:10000} ResponsesAPIEnabled:false}
+--- PASS: TestProviderMetadataFields (0.02s)
+    --- PASS: TestProviderMetadataFields/provider_has_all_metadata_fields (0.02s)
+=== RUN   TestProviderRepositoryInterface
+=== RUN   TestProviderRepositoryInterface/interface_methods_exist
+    ai_provider_repository_impl_test.go:156: ✓ AIProviderRepository interface has all required methods
+--- PASS: TestProviderRepositoryInterface (0.00s)
+    --- PASS: TestProviderRepositoryInterface/interface_methods_exist (0.00s)
+PASS
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/repositories	(cached)

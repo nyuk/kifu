@@ -1,0 +1,45 @@
+=== RUN   TestCredentialResolverPriority
+=== RUN   TestCredentialResolverPriority/priority_1_user_provided_key
+    ai_credential_resolver_test.go:14: ✓ Priority 1: User-provided API key (highest priority)
+=== RUN   TestCredentialResolverPriority/priority_2_system_environment_variable
+    ai_credential_resolver_test.go:20: ✓ Priority 2: System environment variable (lowest priority)
+=== RUN   TestCredentialResolverPriority/no_credential_returns_empty
+    ai_credential_resolver_test.go:25: ✓ No credential: returns empty string
+--- PASS: TestCredentialResolverPriority (0.00s)
+    --- PASS: TestCredentialResolverPriority/priority_1_user_provided_key (0.00s)
+    --- PASS: TestCredentialResolverPriority/priority_2_system_environment_variable (0.00s)
+    --- PASS: TestCredentialResolverPriority/no_credential_returns_empty (0.00s)
+=== RUN   TestGetSystemCredential
+=== RUN   TestGetSystemCredential/openai_credential
+    ai_credential_resolver_test.go:49: ✓ OpenAI credential resolved: sk-test-openai-key
+=== RUN   TestGetSystemCredential/anthropic_credential
+    ai_credential_resolver_test.go:59: ✓ Anthropic credential resolved: sk-test-anthropic-key
+=== RUN   TestGetSystemCredential/gemini_credential
+    ai_credential_resolver_test.go:69: ✓ Gemini credential resolved: test-gemini-key
+=== RUN   TestGetSystemCredential/unknown_provider_returns_empty
+    ai_credential_resolver_test.go:78: ✓ Unknown provider returns empty string
+--- PASS: TestGetSystemCredential (0.00s)
+    --- PASS: TestGetSystemCredential/openai_credential (0.00s)
+    --- PASS: TestGetSystemCredential/anthropic_credential (0.00s)
+    --- PASS: TestGetSystemCredential/gemini_credential (0.00s)
+    --- PASS: TestGetSystemCredential/unknown_provider_returns_empty (0.00s)
+=== RUN   TestCredentialResolverInterface
+=== RUN   TestCredentialResolverInterface/resolver_methods_exist
+    ai_credential_resolver_test.go:124: ✓ AICredentialResolver has all required methods
+--- PASS: TestCredentialResolverInterface (0.00s)
+    --- PASS: TestCredentialResolverInterface/resolver_methods_exist (0.00s)
+=== RUN   TestCredentialResolverWithContext
+=== RUN   TestCredentialResolverWithContext/context_cancellation_handled
+    ai_credential_resolver_test.go:165: ✓ Context cancellation is handled
+--- PASS: TestCredentialResolverWithContext (0.00s)
+    --- PASS: TestCredentialResolverWithContext/context_cancellation_handled (0.00s)
+=== RUN   TestCredentialResolverEncryption
+=== RUN   TestCredentialResolverEncryption/user_key_decryption
+    ai_credential_resolver_test.go:174: ✓ User keys are decrypted using encryption key
+=== RUN   TestCredentialResolverEncryption/decryption_error_fallback
+    ai_credential_resolver_test.go:179: ✓ Decryption errors fall back to system credential
+--- PASS: TestCredentialResolverEncryption (0.00s)
+    --- PASS: TestCredentialResolverEncryption/user_key_decryption (0.00s)
+    --- PASS: TestCredentialResolverEncryption/decryption_error_fallback (0.00s)
+PASS
+ok  	github.com/moneyvessel/kifu/internal/services	(cached)
