@@ -1,68 +1,61 @@
 # KIFU Roadmap
 
-## 2026-02-20 Snapshot
+## 2026-02-28 Snapshot
 
-This document tracks postponed or planned work that is not part of the current public feature baseline.
+This document tracks roadmap status after test-gate stabilization on `main` (`8649a01`).
 
-## Planned
+## Current Stable Scope
 
-- [ ] Social login (OAuth providers)  *(Google/Kakao/Naver implemented; Apple pending policy/config)*
-  - [x] Kakao callback account bootstrap and session issuance
-  - [x] Google callback account bootstrap and session issuance
-  - [x] Social identity linkage (`user_identities`) + duplicate/link guardrails
-  - [x] Social-only account local-password setup bridge (`password_set`, `/users/me/password`)
-  - [ ] Apple provider production config and policy
-- [x] DB-only serverization for admin and auth authority
-- [ ] Admin dashboard expansion:
-  - Admin workspace sections
-  - Access control audit and operational metrics
-- [ ] Admin workspace role-specific capabilities:
-  - User role management (promote/revoke admin and audit trail)
-  - Operational controls for agent services (safety, restart/disable, run history)
-  - Incident-level guardrail and structured log collection
-- [ ] Agent service detail service pages and lifecycle controls
-- [x] Structured incident logging on critical failure paths
+- Trading journal baseline:
+  - Exchange/CSV/manual trade ingestion
+  - Review, notes, and safety/guided review flows
+  - Portfolio and chart pages
+- Onchain quick check (`/api/v1/onchain/quick-check`)
+- Admin workspace baseline (`/admin`):
+  - Users
+  - Audit logs
+  - Policies
+  - Agent services
+  - Sim report
+- Social login policy in production:
+  - Google: enabled
+  - Non-Google providers: disabled (`coming_soon`)
 
-## Completed (not yet migrated)
+## AI Operator Plan Status (`.sisyphus/plans/ai-agent-vps-project-plan.md`)
 
-- [x] Admin simulator tool exposed only in admin workspace (`/admin`)
-- [x] Guest-mode simulator link hidden in settings
-- [x] Admin authority source extraction for role assignment
-- [x] Find ID / Reset Password flows
-- [x] Agent service detail screen skeleton (`/admin/agent-services`)
+- [x] Task 1
+- [x] Task 2
+- [x] Task 3
+- [x] Task 4
+- [x] Task 5
+- [x] Task 6 (sim-report AI probe path integration)
+- [ ] Task 7+
 
-## 2026-02-21 Progress
+## Task 7+ Entry Conditions (Document-Level Gate)
 
-- [x] Admin user management baseline API + UI scaffold
-  - Admin user listing with pagination and search
-  - Admin role grant/revoke endpoint (`PATCH /api/v1/admin/users/:id/admin`) with self-protection
-  - Admin navigation card to `/admin/users`
-  - Admin page role filtering (`전체/관리자만/비관리자`) and self-row disable in `/admin/users`
-- [x] Admin audit trail baseline
-  - Admin role change events are recorded in `admin_audit_logs`
-  - API exposure via `GET /api/v1/admin/audit-logs`
-  - Admin UI page `/admin/audit-logs` for browsing actor/target/time/details
-  - Follow-up: add action/resource highlighting and risk-row visual cues
-- [x] Operational policy controls for admin workspace
-  - Added `admin_policies` table + migration (`025_add_admin_policies.sql`)
-  - Added `GET /api/v1/admin/policies` and `PUT /api/v1/admin/policies`
-  - Added `/admin/policies` UI for operational toggles
-  - Added updated-by/time display in `/admin/policies` for audit visibility (`2026-02-22`)
-  - Added `agent_service_poller_enabled` seed migration (`026_add_agent_service_poller_policy.sql`)
-  - Added trade poller policy gate in `backend/internal/jobs/trade_poller.go`
-  - Added pause/resume/restart controls to `/admin/agent-services`
-- [x] Admin route authority hardening
-  - Added centralized middleware `middleware.RequireAdmin` in `backend/internal/interfaces/http/middleware`
-  - `/api/v1/admin/*` now enforces DB `users.is_admin` for all routes in the group
-- [x] Admin dashboard 상세화
-  - `/admin` displays role/authority summary, agent service health snapshot, and operational ownership items
-  - Added `/admin` audit summary cards (Top action/target/actor) and alert-style badges
-- [x] Onchain critical-path incident logging (`/api/v1/onchain/quick-check`)
-  - Added structured log lines in `onchain_handler.go` and `onchain_pack_service.go`
-  - Logs include request trace (`request_id`,`ip`) and key dimensions (chain, address, range, cache/provider outcome, latency)
+Task 7 and later work should start only when all of the following are confirmed:
 
-- [x] Social login foundation (Google OAuth sign-in)
-  - Added `/api/v1/auth/social-login/google` URL issuer with signed state and `/api/v1/auth/social-login/:provider/callback`
-  - Added callback flow to auto-create social users and issue access/refresh tokens.
-  - Added callback landing route `/auth/social-callback` for token handoff into client session.
-  - Note: Apple/Kakao endpoints are not yet configured and remain `coming_soon`.
+1. Test gate is green on target environment:
+   - `go test ./... -count=1` passes
+2. Policy baseline exists in DB:
+   - `admin_policies` table/migrations are applied
+3. Scope safety:
+   - No regression to Task 1-6 behavior
+   - Dry-run behavior for sim-report remains unchanged
+4. Operational policy alignment:
+   - Production social-login policy remains Google-only unless explicitly changed
+   - Admin authority source of truth remains `users.is_admin`
+
+## Next Priority (No Code in This Step)
+
+1. Task 7 design and execution plan finalization:
+   - Run tracking integration for pack generation and AI opinion routes
+2. Task 8 run-query/metrics design:
+   - Filtering and telemetry consistency on admin agent-services
+3. Task 9 policy/provider API alignment:
+   - UI-facing dynamic policy/provider data contract cleanup
+
+## Admin Workspace Design Reference
+
+- Design-only spec for next expansion:
+  - `docs/02-design/features/admin-workspace.design.md`

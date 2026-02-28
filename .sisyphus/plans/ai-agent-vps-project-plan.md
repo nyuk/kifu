@@ -16,6 +16,26 @@
 
 ---
 
+## Status Snapshot (2026-02-28)
+
+- Branch baseline: `main` (`8649a01`)
+- Test-gate baseline: stabilized and verified before this planning step
+- Task progress:
+  - [x] Task 1
+  - [x] Task 2
+  - [x] Task 3
+  - [x] Task 4
+  - [x] Task 5
+  - [x] Task 6
+  - [ ] Task 7+
+
+### Task 7+ Entry Conditions
+
+1. `go test ./... -count=1` green on target environment
+2. Task 1-6 behavior remains regression-free
+3. `admin_policies` baseline and required policy keys are available
+4. Sim-report dry-run compatibility remains intact (Task 6 guard)
+
 ## Context
 
 ### Original Request

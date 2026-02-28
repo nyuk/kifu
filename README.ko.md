@@ -23,14 +23,16 @@ KIFU는 거래/포트폴리오 활동을 다음 루프로 정리합니다.
 
 KIFU는 이를 `수집 → 기록 → 복기 → 개선` 흐름으로 통합합니다.
 
-## 핵심 기능
+## 현재 공개 기능 기준선 (2026-02-28)
 
 - 거래·포트폴리오 수집(거래소 동기화, CSV 임포트, 수동 입력)
-- AI 의견 저장 및 비교 분석
-- 감정/패턴/근거 기록용 레이어 기반 복기 세션
-- 버블 타임라인 + 차트 리플레이 대조
-- KPI 대시보드 및 성과 분석
-- 알림, 인증, 토큰 관리
+- 복기 워크스페이스(버블, 노트, Guided Review, Safety Review)
+- 거래/포지션 KPI 요약 뷰
+- 온체인 퀵 체크(Base ERC20 transfer 기반 facts pack)
+- 관리자 워크스페이스(관리자 전용 정책/감사/운영 페이지)
+- 인증:
+  - 이메일/비밀번호
+  - 구글 소셜 로그인
 
 ## 과금 개념 (Draft)
 
@@ -78,12 +80,18 @@ curl -X POST "$API/api/v1/onchain/quick-check" \
   -d '{"chain":"base","address":"0x...","range":"30d"}'
 ```
 
+## 예정/미구현 (공개 전)
+
+- 운영 환경에서의 추가 소셜 로그인 제공자(카카오/네이버/애플)
+- Opinion Credit 과금의 결제/체크아웃 전체 연동
+- 관리자 운영 기능 고도화(자동화 제어/심화 메트릭)
+
 ## 아키텍처
 
 - Backend: Go + Fiber
 - Frontend: Next.js + TypeScript
 - Data: PostgreSQL
-- AI Provider: OpenAI / Claude / Gemini
+- AI Provider: OpenAI / Claude / Gemini (서버 정책/자격 증명 기준으로 활성화)
 
 ## 빠른 시작
 

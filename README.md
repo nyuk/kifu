@@ -23,14 +23,16 @@ KIFU turns trading activity into a structured feedback loop:
 
 KIFU unifies this as: **Ingest → Record → Review → Improve**.
 
-## Core Features
+## Public Feature Baseline (2026-02-28)
 
 - Trading & portfolio ingestion (exchange sync, CSV import, manual input)
-- AI opinion capture and comparison
-- Layer-based review sessions for sentiment, pattern, and reasoning logging
-- Bubble timeline and chart replay for side-by-side analysis
-- KPI dashboards and outcome analysis
-- Alerting, secure auth, token management
+- Review workspace (bubbles, notes, guided review, safety review)
+- KPI/summary views for trades and positions
+- Onchain quick check (Base ERC20 transfer fact pack)
+- Admin workspace (admin-only routes and policy/audit pages)
+- Auth:
+  - Email/password
+  - Google social login
 
 ## Pricing Concept (Draft)
 
@@ -86,12 +88,18 @@ Verified response snapshot (2026-02-19):
 - `unique_token_count`: `6`
 - `status`: `warning` (`HIGH_CONCENTRATION`)
 
+## Planned / Not Yet Implemented
+
+- Additional social providers in production (Kakao/Naver/Apple)
+- Full billing/checkout integration for opinion-credit policy
+- Extended admin operations (advanced automation control and deeper metrics)
+
 ## Architecture
 
 - Backend: Go + Fiber
 - Frontend: Next.js + TypeScript
 - Data: PostgreSQL
-- AI Providers: OpenAI / Claude / Gemini (feature-flagged)
+- AI Providers: OpenAI / Claude / Gemini (feature-flagged by server policy and credentials)
 
 ## Quick Start
 
