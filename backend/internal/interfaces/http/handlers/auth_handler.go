@@ -540,6 +540,11 @@ func (h *AuthHandler) AccountHelp(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string) (socialProviderConfig, error) {
+	// Temporary rollout policy: only Google social login is open in production.
+	if provider != socialProviderGoogle {
+		return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+	}
+
 	cfg, ok := socialOAuthConfig[provider]
 	if !ok {
 		return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)

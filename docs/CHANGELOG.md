@@ -21,6 +21,7 @@
 - Added safe rollout flags for Naver login:
   - Backend: `SOCIAL_LOGIN_NAVER_ENABLED=true` required to activate provider
   - Frontend: `NEXT_PUBLIC_SOCIAL_LOGIN_NAVER_ENABLED=true` required to show Naver button
+- Applied temporary production policy: non-Google social providers return `coming_soon`, and login UI shows Google only.
 
 ### Files Affected
 - `backend/internal/interfaces/http/handlers/auth_handler.go`

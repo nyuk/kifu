@@ -28,6 +28,7 @@ Operational task list for ongoing work.
   - Current active priority: first batch items 1–4.
 - [ ] Social login (OAuth providers)
   - Google/Kakao/Naver OAuth start/callback flow implemented (`/api/v1/auth/social-login/{google|kakao|naver}`, callback endpoints included).
+  - Current production policy: only Google is open; non-Google providers respond as `coming_soon`.
   - Social identity tracking table added (`user_identities`) and auto-link policy applied.
   - Social-only account password bridge added (`POST /api/v1/users/me/password`, `password_set` flag).
   - Apple still pending configuration and policy review.

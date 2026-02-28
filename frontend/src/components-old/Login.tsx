@@ -28,8 +28,6 @@ export function Login() {
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const kakaoEnabled = process.env.NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED === 'true'
-  const naverEnabled = process.env.NEXT_PUBLIC_SOCIAL_LOGIN_NAVER_ENABLED === 'true'
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -84,7 +82,7 @@ export function Login() {
     }
   }
 
-  const handleSocialLogin = async (provider: 'google' | 'apple' | 'kakao' | 'naver') => {
+  const handleSocialLogin = async (provider: 'google') => {
     setError('')
     setSocialMessage('')
     setSocialLoading(provider)
@@ -177,9 +175,7 @@ export function Login() {
 
           <section className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">소셜 로그인</p>
-            <p className="mt-2 text-xs text-zinc-400">
-              Google은 사용 가능합니다. {(kakaoEnabled || naverEnabled) ? 'Kakao/Naver는 베타로 오픈되었습니다.' : 'Kakao/Naver/Apple은 순차 오픈 예정입니다.'}
-            </p>
+            <p className="mt-2 text-xs text-zinc-400">현재는 Google 로그인만 지원합니다.</p>
             <div className="mt-3 flex flex-col gap-2">
               <button
                 type="button"
@@ -189,34 +185,6 @@ export function Login() {
               >
                 {socialLoading === 'google' ? '처리 중...' : 'Google로 계속하기'}
               </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin('apple')}
-                disabled={Boolean(socialLoading)}
-                className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
-              >
-                {socialLoading === 'apple' ? '처리 중...' : 'Apple로 계속하기'}
-              </button>
-              {kakaoEnabled && (
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('kakao')}
-                  disabled={Boolean(socialLoading)}
-                  className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
-                >
-                  {socialLoading === 'kakao' ? '처리 중...' : 'Kakao로 계속하기'}
-                </button>
-              )}
-              {naverEnabled && (
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('naver')}
-                  disabled={Boolean(socialLoading)}
-                  className="rounded-lg border border-white/20 px-4 py-2 text-left text-sm transition disabled:opacity-60"
-                >
-                  {socialLoading === 'naver' ? '처리 중...' : 'Naver로 계속하기'}
-                </button>
-              )}
             </div>
             {socialMessage && (
               <p className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">

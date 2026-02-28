@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -296,7 +295,7 @@ func TestSocialLoginStartComingSoon(t *testing.T) {
 	}
 }
 
-func TestSocialLoginStartKakaoReady(t *testing.T) {
+func TestSocialLoginStartKakaoComingSoonByPolicy(t *testing.T) {
 	t.Parallel()
 
 	oldEnabled, hasEnabled := os.LookupEnv("SOCIAL_LOGIN_KAKAO_ENABLED")
@@ -348,18 +347,12 @@ func TestSocialLoginStartKakaoReady(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
 		t.Fatalf("decode response failed: %v", err)
 	}
-	if got.Status != socialLoginStatusReady {
-		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusReady)
-	}
-	if got.AuthURL == "" {
-		t.Fatal("auth_url should not be empty")
-	}
-	if !strings.Contains(got.AuthURL, "kauth.kakao.com/oauth/authorize") {
-		t.Fatalf("unexpected auth_url=%s", got.AuthURL)
+	if got.Status != socialLoginStatusComingSoon {
+		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusComingSoon)
 	}
 }
 
-func TestSocialLoginStartNaverReady(t *testing.T) {
+func TestSocialLoginStartNaverComingSoonByPolicy(t *testing.T) {
 	t.Parallel()
 
 	oldEnabled, hasEnabled := os.LookupEnv("SOCIAL_LOGIN_NAVER_ENABLED")
@@ -411,14 +404,8 @@ func TestSocialLoginStartNaverReady(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
 		t.Fatalf("decode response failed: %v", err)
 	}
-	if got.Status != socialLoginStatusReady {
-		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusReady)
-	}
-	if got.AuthURL == "" {
-		t.Fatal("auth_url should not be empty")
-	}
-	if !strings.Contains(got.AuthURL, "nid.naver.com/oauth2.0/authorize") {
-		t.Fatalf("unexpected auth_url=%s", got.AuthURL)
+	if got.Status != socialLoginStatusComingSoon {
+		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusComingSoon)
 	}
 }
 
