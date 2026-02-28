@@ -21,6 +21,11 @@ func NewSummaryPackRepository(pool *pgxpool.Pool) repositories.SummaryPackReposi
 }
 
 func (r *SummaryPackRepositoryImpl) Create(ctx context.Context, pack *entities.SummaryPack) error {
+	normalizationWarnings := pack.NormalizationWarnings
+	if normalizationWarnings == nil {
+		normalizationWarnings = []string{}
+	}
+
 	query := `
 		INSERT INTO summary_packs (
 			pack_id, user_id, source_run_id, range, schema_version, calc_version, content_hash,
@@ -38,7 +43,7 @@ func (r *SummaryPackRepositoryImpl) Create(ctx context.Context, pack *entities.S
 		pack.ReconciliationStatus,
 		pack.MissingSuspectsCount,
 		pack.DuplicateSuspectsCount,
-		pack.NormalizationWarnings,
+		normalizationWarnings,
 		pack.Payload,
 	)
 	return err
