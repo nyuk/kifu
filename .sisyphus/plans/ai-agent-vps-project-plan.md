@@ -27,7 +27,15 @@
   - [x] Task 4
   - [x] Task 5
   - [x] Task 6
-  - [ ] Task 7+
+  - [x] Task 7+
+  - [x] Task 8
+  - [x] Task 9
+  - [x] Task 10
+  - [x] Task 11
+  - [x] Task 12
+  - [x] Task 13
+  - [x] Task 14
+  - [x] F1-F4 (final verification)
 
 ### Task 7+ Entry Conditions
 
@@ -73,10 +81,10 @@
 - Admin policy/run dashboard/allowlist/인증 상태의 확장
 
 ### Definition of Done
-- [ ] 기존 OpenAI/Claude/Gemini 동작은 유지되고, 최소 하나의 로컬 OpenAI 호환 엔드포인트가 테스트 가능한 형태로 통합됨.
-- [ ] `runs`가 요약 생성 + AI 의견 생성/에이전트 단계에 대해 추적할 수 있음.
-- [ ] 정책 토글/감사 로그가 새 제어 플래그를 포괄.
-- [ ] 마케팅 디자이너 지원 최소 플로우(요약/제안 생성 + 승인 요청) 구현됨.
+- [x] 기존 OpenAI/Claude/Gemini 동작은 유지되고, 최소 하나의 로컬 OpenAI 호환 엔드포인트가 테스트 가능한 형태로 통합됨.
+- [x] `runs`가 요약 생성 + AI 의견 생성/에이전트 단계에 대해 추적할 수 있음.
+- [x] 정책 토글/감사 로그가 새 제어 플래그를 포괄.
+- [x] 마케팅 디자이너 지원 최소 플로우(요약/제안 생성 + 승인 요청) 구현됨.
 
 ### Must Have
 - 기존 정책/감사/실행로그 시스템 유지.
@@ -464,7 +472,7 @@ Wave 6 (Final verification):
     - Failure Indicators: call attempt without credential
     - Evidence: `.sisyphus/evidence/task-6-sim-guard-error.log`
 
-- [ ] 7. Pack/요약 + AI opinon 경로 run 기록 연동
+- [x] 7. Pack/요약 + AI opinon 경로 run 기록 연동
 
   **What to do**:
   - `backend/internal/interfaces/http/handlers/pack_handler.go:GenerateLatest` 및 AI opinion 생성 경로에 run 생성/완료 업데이트를 추가한다.
@@ -519,7 +527,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 실패 상태 미기록
     - Evidence: `.sisyphus/evidence/task-7-pack-run-failed.log`
 
-- [ ] 8. run 조회/메트릭 정합성 검증 API 보강
+- [x] 8. run 조회/메트릭 정합성 검증 API 보강
 
   **What to do**:
   - 기존 `/api/v1/admin/agent-services` 조회 API를 확장해 `run_type`, `status`, `limit` 쿼리로 runs 하위 배열의 필터/정렬/페이징을 지원한다.
@@ -618,7 +626,7 @@ Wave 6 (Final verification):
   - Failure: `admin/agent-services?run_type=summary_ondemand&status=failed&limit=20`
   - Expected: `runs` 배열에서 상태/메타를 직접 판정
 
-- [ ] 9. 정책/어드민 게이트 동적 데이터 노출 API 설계 및 토글 체계 확장
+- [x] 9. 정책/어드민 게이트 동적 데이터 노출 API 설계 및 토글 체계 확장
 
   **What to do**:
   - 기존 `admin_policy_handler.go`의 `allowedAdminPolicyKeys` 구조를 유지하되 AI 운영 관련 키(`ai_provider_toggle`, `ai_run_telemetry`, `ai_local_gateway`)를 추가한다.
@@ -672,7 +680,7 @@ Wave 6 (Final verification):
     - Failure Indicators: unknown key가 저장됨
     - Evidence: `.sisyphus/evidence/task-9-policy-key-block.log`
 
-- [ ] 10. 도메인 공유 컨텍스트 저장소 스키마 및 서비스 베이스라인
+- [x] 10. 도메인 공유 컨텍스트 저장소 스키마 및 서비스 베이스라인
 
   **What to do**:
   - `backend/internal/domain`에서 도메인 공용 컨텍스트(`domain_context`)를 저장/조회할 수 있는 인터페이스를 추가한다.
@@ -726,7 +734,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 무권한 노출
     - Evidence: `.sisyphus/evidence/task-10-context-acl.log`
 
-- [ ] 11. 온디맨드 주간/월간 요약 엔드포인트 및 운영 제어
+- [x] 11. 온디맨드 주간/월간 요약 엔드포인트 및 운영 제어
 
   **What to do**:
   - `pack_handler`와 신규 summary 서비스에 `7d/30d` range를 명시 지원하고 기본값 `30d` 유지.
@@ -778,7 +786,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 기본값으로 무조건 성공 처리
     - Evidence: `.sisyphus/evidence/task-11-summary-invalid-range.log`
 
-- [ ] 12. 관리자 AI provider/텔레메트리 UI 연동
+- [x] 12. 관리자 AI provider/텔레메트리 UI 연동
 
   **What to do**:
   - 프론트 관리자 화면에서 provider/도메인 공통 컨텍스트/요약 run 상태를 동적 표시한다.
@@ -834,7 +842,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 실패 무시/무한 로딩
     - Evidence: `.sisyphus/evidence/task-12-admin-ui-error.png`
 
-- [ ] 13. 정책/실행 보드 화면 확장 및 마케팅 디자인 템플릿 최소 연동
+- [x] 13. 정책/실행 보드 화면 확장 및 마케팅 디자인 템플릿 최소 연동
 
   **What to do**:
   - 마케팅/디자인 파일럿 탭에 `콘텐츠 제안 생성 -> 승인 대기 -> 실행`의 최소 워크플로우를 추가한다.
@@ -888,7 +896,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 바로 외부 발행 동작 진입
     - Evidence: `.sisyphus/evidence/task-13-marketing-block.png`
 
-- [ ] 14. 최종 검증, 롤백 포인트 설계, 운영 하드닝
+- [x] 14. 최종 검증, 롤백 포인트 설계, 운영 하드닝
 
   **What to do**:
   - Task 1~13 변경사항을 중심으로 회귀 시나리오와 rollback playbook을 한 번에 정리한다.
@@ -947,7 +955,7 @@ Wave 6 (Final verification):
 
 ## Final Verification Wave
 
-- [ ] F1. Plan Compliance Audit
+- [x] F1. Plan Compliance Audit
 
   **What to do**: 모든 필수 산출물(Provider 계약, run 타입, 정책 키, 온디맨드 range, 컨텍스트, 마케팅 승인 플로우)의 구현/문서/증적 파일을 대조한다.
   
@@ -963,7 +971,7 @@ Wave 6 (Final verification):
   
   **Acceptance Criteria**: `Must Have` 100% 충족, `Must Not` 100% 미반영, 증적 파일 누락 없음.
 
-- [ ] F2. Code Quality Review
+- [x] F2. Code Quality Review
 
   **What to do**: `go test`, `go vet`, `npm run lint`, `npm run typecheck`를 실행하고 변경 파일의 정책 위반을 점검한다.
   
@@ -988,7 +996,7 @@ Wave 6 (Final verification):
   
   **Acceptance Criteria**: 정적분석 통과, 신규 하드코딩 키/오류 처리 누락 없음.
 
-- [ ] F3. End-to-End Scenario Verification
+- [x] F3. End-to-End Scenario Verification
 
   **What to do**: Task 1~14의 핵심 시나리오를 Playwright/Bash로 재실행한다. UI 경로는 최소 2개, API 경로는 8개, 실패 케이스 포함.
   
@@ -1011,7 +1019,7 @@ Wave 6 (Final verification):
   
   **Acceptance Criteria**: `.sisyphus/evidence/`의 happy/error 증적 모두 존재, 증적 파일 누락 없음.
 
-- [ ] F4. Scope Fidelity Check
+- [x] F4. Scope Fidelity Check
 
   **What to do**: 스코프 바깥 변경(예: 거래복기 핵심 기능 무관한 UI/알고리즘 변경)과 과도한 리팩토링 유무를 검사한다.
   
@@ -1046,8 +1054,8 @@ npm run typecheck
 
 ### Final Checklist
 
-- [ ] 기존 OpenAI/Claude/Gemini 핵심 동작 유지
-- [ ] run 추적(요약/의견) 누락 없음
-- [ ] 마케팅 승인형 파일럿 최소 플로우 동작
-- [ ] policy allowlist 변경이 백엔드/프론트에 동기 반영
-- [ ] 에러 시그널 및 rollback 경로가 문서화됨
+- [x] 기존 OpenAI/Claude/Gemini 핵심 동작 유지
+- [x] run 추적(요약/의견) 누락 없음
+- [x] 마케팅 승인형 파일럿 최소 플로우 동작
+- [x] policy allowlist 변경이 백엔드/프론트에 동기 반영
+- [x] 에러 시그널 및 rollback 경로가 문서화됨
