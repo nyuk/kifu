@@ -1,0 +1,26 @@
+[Task7] failure path
+fail_email=task7_fail_1772298357@kifu.test
+== register ==
+HTTP/1.1 200 OK
+Date: Sat, 28 Feb 2026 17:05:57 GMT
+Content-Type: application/json
+Content-Length: 50
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"user_id":"48d40fb5-a3b6-4b35-b175-116f78c05932"}
+== login ==
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0OGQ0MGZiNS1hM2I2LTRiMzUtYjE3NS0xMTZmNzhjMDU5MzIiLCJyb2xlIjoiIiwiZXhwIjoxNzcyMjk5MjU3LCJpYXQiOjE3NzIyOTgzNTd9.FViVl4D5ELoKMtRPkVVVDgOKtlrbn4wZs8PEMN0zGfk","refresh_token":"Mbfojb-DvEeHy7KRY5Ug5Z8AjbYv8-_IckoN8jJYbZc="}
+token_present=true
+
+== generate-latest (expect 404 + NO_COMPLETED_RUN) ==
+HTTP/1.1 404 Not Found
+Date: Sat, 28 Feb 2026 17:05:57 GMT
+Content-Type: application/json
+Content-Length: 75
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"code":"NO_COMPLETED_RUN","message":"completed sync/import run not found"}

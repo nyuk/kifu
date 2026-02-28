@@ -1,0 +1,7 @@
+[Task7] dependency check
+79:	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, runRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
+131:	trackRun, err := h.runRepo.Create(c.Context(), userID, "summary_ondemand", "running", now, runMetaJSON)
+136:	run, err := h.runRepo.GetLatestCompletedRun(
+411:		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+572:		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+577:				result, err = h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)

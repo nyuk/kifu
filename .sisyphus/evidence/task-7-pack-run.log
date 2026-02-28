@@ -1,0 +1,36 @@
+[Task7] happy path
+ok_email=task7_ok_1772298357@kifu.test
+== register ==
+HTTP/1.1 200 OK
+Date: Sat, 28 Feb 2026 17:05:57 GMT
+Content-Type: application/json
+Content-Length: 50
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"user_id":"155cfdc6-4cce-4294-929b-6617f80a9135"}
+== login ==
+{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNTVjZmRjNi00Y2NlLTQyOTQtOTI5Yi02NjE3ZjgwYTkxMzUiLCJyb2xlIjoiIiwiZXhwIjoxNzcyMjk5MjU3LCJpYXQiOjE3NzIyOTgzNTd9.YawR1FoDTJ3VeK8Qe2CgY-tdQiO6JAzNYuy32qNRxEA","refresh_token":"ZCjCz5_W3Uf5-l4lvAv8iRjQTuEe40pF7oAFJ3XL7Xw="}
+token_present=true
+
+== create completed run via imports/trades ==
+HTTP/1.1 200 OK
+Date: Sat, 28 Feb 2026 17:05:57 GMT
+Content-Type: application/json
+Content-Length: 231
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"duplicates":0,"imported":1,"issue_count":0,"issues":[],"issues_truncated":false,"positions_refresh_error":"","positions_refreshed":true,"run_id":"7663bdc5-0b09-4a65-820d-6d582ca4ca57","skipped":0,"source":"csv","venue":"binance"}
+== generate-latest (expect 200) ==
+HTTP/1.1 200 OK
+Date: Sat, 28 Feb 2026 17:05:57 GMT
+Content-Type: application/json
+Content-Length: 169
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"pack_id":"8bcf45c6-925b-40ea-a139-b4944706928d","reconciliation_status":"ok","source_run_id":"7663bdc5-0b09-4a65-820d-6d582ca4ca57","anchor_ts":"2026-02-28T17:05:57Z"}
