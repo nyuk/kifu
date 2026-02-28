@@ -6,7 +6,7 @@ This document tracks postponed or planned work that is not part of the current p
 
 ## Planned
 
-- [ ] Social login (OAuth providers)  *(Google/Kakao implemented; Apple pending policy/config)*
+- [ ] Social login (OAuth providers)  *(Google/Kakao/Naver implemented; Apple pending policy/config)*
   - [x] Kakao callback account bootstrap and session issuance
   - [x] Google callback account bootstrap and session issuance
   - [x] Social identity linkage (`user_identities`) + duplicate/link guardrails

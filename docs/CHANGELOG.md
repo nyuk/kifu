@@ -7,6 +7,10 @@
   - `GET /api/v1/auth/social-login/kakao`
   - `GET /api/v1/auth/social-login/kakao/callback`
   - Kakao token exchange and profile mapping (`email`, `nickname`, provider id) into existing social identity linking flow.
+- Added Naver OAuth provider support in backend social login flow:
+  - `GET /api/v1/auth/social-login/naver`
+  - `GET /api/v1/auth/social-login/naver/callback`
+  - Naver token exchange and profile mapping (`email`, `name/nickname`, provider id) into existing social identity linking flow.
 
 ### Changed
 - Social auth URL builder now applies provider-specific query parameters (Google/Kakao).
@@ -14,6 +18,9 @@
 - Added safe rollout flags for Kakao login:
   - Backend: `SOCIAL_LOGIN_KAKAO_ENABLED=true` required to activate provider
   - Frontend: `NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED=true` required to show Kakao button
+- Added safe rollout flags for Naver login:
+  - Backend: `SOCIAL_LOGIN_NAVER_ENABLED=true` required to activate provider
+  - Frontend: `NEXT_PUBLIC_SOCIAL_LOGIN_NAVER_ENABLED=true` required to show Naver button
 
 ### Files Affected
 - `backend/internal/interfaces/http/handlers/auth_handler.go`

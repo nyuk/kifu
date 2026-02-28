@@ -283,6 +283,7 @@ const (
 	socialProviderGoogle    = "google"
 	socialProviderApple     = "apple"
 	socialProviderKakao     = "kakao"
+	socialProviderNaver     = "naver"
 )
 
 type socialLoginUser struct {
@@ -330,6 +331,17 @@ type socialKakaoProfileResponse struct {
 	} `json:"kakao_account"`
 }
 
+type socialNaverProfileResponse struct {
+	ResultCode string `json:"resultcode"`
+	Message    string `json:"message"`
+	Response   struct {
+		ID       string `json:"id"`
+		Email    string `json:"email"`
+		Name     string `json:"name"`
+		Nickname string `json:"nickname"`
+	} `json:"response"`
+}
+
 type socialProviderConfig struct {
 	AuthURL      string
 	TokenURL     string
@@ -357,6 +369,7 @@ var (
 		socialProviderGoogle: {},
 		socialProviderApple:  {},
 		socialProviderKakao:  {},
+		socialProviderNaver:  {},
 	}
 	socialOAuthConfig = map[string]socialProviderConfig{
 		socialProviderGoogle: {
@@ -368,6 +381,11 @@ var (
 			AuthURL:     "https://kauth.kakao.com/oauth/authorize",
 			TokenURL:    "https://kauth.kakao.com/oauth/token",
 			UserInfoURL: "https://kapi.kakao.com/v2/user/me",
+		},
+		socialProviderNaver: {
+			AuthURL:     "https://nid.naver.com/oauth2.0/authorize",
+			TokenURL:    "https://nid.naver.com/oauth2.0/token",
+			UserInfoURL: "https://openapi.naver.com/v1/nid/me",
 		},
 	}
 	socialHTTPClient = &http.Client{Timeout: 10 * time.Second}
@@ -555,6 +573,21 @@ func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string)
 			cfg.RedirectURI = fmt.Sprintf("%s://%s/api/v1/auth/social-login/%s/callback", scheme, host, provider)
 		}
 		return cfg, nil
+	case socialProviderNaver:
+		if !socialProviderEnabled(socialProviderNaver) {
+			return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+		}
+		cfg.ClientID = strings.TrimSpace(os.Getenv("NAVER_CLIENT_ID"))
+		cfg.ClientSecret = strings.TrimSpace(os.Getenv("NAVER_CLIENT_SECRET"))
+		if cfg.ClientID == "" || cfg.ClientSecret == "" {
+			return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+		}
+		cfg.RedirectURI = strings.TrimSpace(os.Getenv("NAVER_REDIRECT_URI"))
+		if cfg.RedirectURI == "" {
+			scheme, host := requestSchemeAndHost(c)
+			cfg.RedirectURI = fmt.Sprintf("%s://%s/api/v1/auth/social-login/%s/callback", scheme, host, provider)
+		}
+		return cfg, nil
 	default:
 		return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
 	}
@@ -564,6 +597,9 @@ func socialProviderEnabled(provider string) bool {
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case socialProviderKakao:
 		raw := strings.TrimSpace(strings.ToLower(os.Getenv("SOCIAL_LOGIN_KAKAO_ENABLED")))
+		return raw == "1" || raw == "true" || raw == "on" || raw == "yes"
+	case socialProviderNaver:
+		raw := strings.TrimSpace(strings.ToLower(os.Getenv("SOCIAL_LOGIN_NAVER_ENABLED")))
 		return raw == "1" || raw == "true" || raw == "on" || raw == "yes"
 	default:
 		return true
@@ -589,6 +625,8 @@ func (h *AuthHandler) socialAuthURL(provider string, cfg socialProviderConfig, s
 		params.Set("prompt", "select_account")
 	case socialProviderKakao:
 		params.Set("scope", "account_email profile_nickname")
+	case socialProviderNaver:
+		params.Set("scope", "name email")
 	default:
 		return "", errors.New(socialLoginAuthNotReady)
 	}
@@ -667,6 +705,12 @@ func (h *AuthHandler) fetchSocialProfile(ctx context.Context, c *fiber.Ctx, prov
 			return socialLoginUser{}, err
 		}
 		return h.fetchKakaoProfile(ctx, cfg, token.AccessToken)
+	case socialProviderNaver:
+		token, err := h.exchangeNaverToken(ctx, cfg, code, c.Query("state"))
+		if err != nil {
+			return socialLoginUser{}, err
+		}
+		return h.fetchNaverProfile(ctx, cfg, token.AccessToken)
 	default:
 		return socialLoginUser{}, errors.New(socialLoginAuthNotReady)
 	}
@@ -730,6 +774,50 @@ func (h *AuthHandler) exchangeKakaoToken(ctx context.Context, cfg socialProvider
 		return socialOAuthTokenResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := socialHTTPClient.Do(req)
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return socialOAuthTokenResponse{}, fmt.Errorf("oauth token exchange failed: %s", strings.TrimSpace(string(body)))
+	}
+
+	var token socialOAuthTokenResponse
+	if err := json.Unmarshal(body, &token); err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	if token.Error != "" {
+		if token.ErrorDesc != "" {
+			return socialOAuthTokenResponse{}, fmt.Errorf("%s: %s", token.Error, token.ErrorDesc)
+		}
+		return socialOAuthTokenResponse{}, errors.New(token.Error)
+	}
+	if token.AccessToken == "" {
+		return socialOAuthTokenResponse{}, errors.New("oauth access token missing")
+	}
+	return token, nil
+}
+
+func (h *AuthHandler) exchangeNaverToken(ctx context.Context, cfg socialProviderConfig, code string, state string) (socialOAuthTokenResponse, error) {
+	params := url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {cfg.ClientID},
+		"client_secret": {cfg.ClientSecret},
+		"redirect_uri":  {cfg.RedirectURI},
+		"code":          {code},
+		"state":         {state},
+	}
+	tokenURL := cfg.TokenURL + "?" + params.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenURL, nil)
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
 
 	res, err := socialHTTPClient.Do(req)
 	if err != nil {
@@ -848,6 +936,53 @@ func (h *AuthHandler) fetchKakaoProfile(ctx context.Context, cfg socialProviderC
 		Email:          email,
 		Name:           name,
 		ProviderUserID: fmt.Sprintf("%d", userInfo.ID),
+	}, nil
+}
+
+func (h *AuthHandler) fetchNaverProfile(ctx context.Context, cfg socialProviderConfig, accessToken string) (socialLoginUser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.UserInfoURL, nil)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	res, err := socialHTTPClient.Do(req)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return socialLoginUser{}, fmt.Errorf("oauth profile fetch failed: %s", strings.TrimSpace(string(body)))
+	}
+
+	var userInfo socialNaverProfileResponse
+	if err := json.Unmarshal(body, &userInfo); err != nil {
+		return socialLoginUser{}, err
+	}
+	email := strings.ToLower(strings.TrimSpace(userInfo.Response.Email))
+	if email == "" {
+		return socialLoginUser{}, errors.New("oauth profile missing email")
+	}
+	providerUserID := strings.TrimSpace(userInfo.Response.ID)
+	if providerUserID == "" {
+		return socialLoginUser{}, errors.New("oauth profile missing provider user id")
+	}
+
+	name := strings.TrimSpace(userInfo.Response.Name)
+	if name == "" {
+		name = strings.TrimSpace(userInfo.Response.Nickname)
+	}
+	if name == "" {
+		name = strings.TrimSpace(strings.SplitN(email, "@", 2)[0])
+	}
+	return socialLoginUser{
+		Email:          email,
+		Name:           name,
+		ProviderUserID: providerUserID,
 	}, nil
 }
 

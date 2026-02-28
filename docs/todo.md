@@ -27,15 +27,18 @@ Operational task list for ongoing work.
 - [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
   - Current active priority: first batch items 1–4.
 - [ ] Social login (OAuth providers)
-  - Google/Kakao OAuth start/callback flow implemented (`/api/v1/auth/social-login/{google|kakao}`, callback endpoints included).
+  - Google/Kakao/Naver OAuth start/callback flow implemented (`/api/v1/auth/social-login/{google|kakao|naver}`, callback endpoints included).
   - Social identity tracking table added (`user_identities`) and auto-link policy applied.
   - Social-only account password bridge added (`POST /api/v1/users/me/password`, `password_set` flag).
   - Apple still pending configuration and policy review.
   - Required env vars:
     - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
     - `KAKAO_CLIENT_ID` (required), `KAKAO_CLIENT_SECRET` (optional), `KAKAO_REDIRECT_URI` (optional)
+    - `NAVER_CLIENT_ID` (required), `NAVER_CLIENT_SECRET` (required), `NAVER_REDIRECT_URI` (optional)
     - `SOCIAL_LOGIN_KAKAO_ENABLED=true` (backend enable flag)
     - `NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED=true` (frontend button exposure flag)
+    - `SOCIAL_LOGIN_NAVER_ENABLED=true` (backend enable flag)
+    - `NEXT_PUBLIC_SOCIAL_LOGIN_NAVER_ENABLED=true` (frontend button exposure flag)
     - `SOCIAL_LOGIN_STATE_SECRET` (shared with backend, defaults to jwt secret if empty)
     - `FRONTEND_BASE_URL` (for callback redirect base)
   - Current callback still carries tokens via query string; harden before v1.0.

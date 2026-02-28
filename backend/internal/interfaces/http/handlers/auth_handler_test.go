@@ -359,6 +359,69 @@ func TestSocialLoginStartKakaoReady(t *testing.T) {
 	}
 }
 
+func TestSocialLoginStartNaverReady(t *testing.T) {
+	t.Parallel()
+
+	oldEnabled, hasEnabled := os.LookupEnv("SOCIAL_LOGIN_NAVER_ENABLED")
+	oldClientID, hasClientID := os.LookupEnv("NAVER_CLIENT_ID")
+	oldClientSecret, hasClientSecret := os.LookupEnv("NAVER_CLIENT_SECRET")
+	oldRedirectURI, hasRedirectURI := os.LookupEnv("NAVER_REDIRECT_URI")
+	os.Setenv("SOCIAL_LOGIN_NAVER_ENABLED", "true")
+	os.Setenv("NAVER_CLIENT_ID", "test-naver-client-id")
+	os.Setenv("NAVER_CLIENT_SECRET", "test-naver-client-secret")
+	os.Setenv("NAVER_REDIRECT_URI", "https://kifu.moneyvessel.kr/api/v1/auth/social-login/naver/callback")
+	defer func() {
+		if hasEnabled {
+			os.Setenv("SOCIAL_LOGIN_NAVER_ENABLED", oldEnabled)
+		} else {
+			os.Unsetenv("SOCIAL_LOGIN_NAVER_ENABLED")
+		}
+		if hasClientID {
+			os.Setenv("NAVER_CLIENT_ID", oldClientID)
+		} else {
+			os.Unsetenv("NAVER_CLIENT_ID")
+		}
+		if hasClientSecret {
+			os.Setenv("NAVER_CLIENT_SECRET", oldClientSecret)
+		} else {
+			os.Unsetenv("NAVER_CLIENT_SECRET")
+		}
+		if hasRedirectURI {
+			os.Setenv("NAVER_REDIRECT_URI", oldRedirectURI)
+		} else {
+			os.Unsetenv("NAVER_REDIRECT_URI")
+		}
+	}()
+
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider", (&AuthHandler{}).SocialLoginStart)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/naver?return_to=/home", nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusOK)
+	}
+
+	var got SocialLoginResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+	if got.Status != socialLoginStatusReady {
+		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusReady)
+	}
+	if got.AuthURL == "" {
+		t.Fatal("auth_url should not be empty")
+	}
+	if !strings.Contains(got.AuthURL, "nid.naver.com/oauth2.0/authorize") {
+		t.Fatalf("unexpected auth_url=%s", got.AuthURL)
+	}
+}
+
 func TestSocialLoginStartUnsupportedProvider(t *testing.T) {
 	t.Parallel()
 
