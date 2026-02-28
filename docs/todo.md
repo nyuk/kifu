@@ -34,6 +34,8 @@ Operational task list for ongoing work.
   - Required env vars:
     - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
     - `KAKAO_CLIENT_ID` (required), `KAKAO_CLIENT_SECRET` (optional), `KAKAO_REDIRECT_URI` (optional)
+    - `SOCIAL_LOGIN_KAKAO_ENABLED=true` (backend enable flag)
+    - `NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED=true` (frontend button exposure flag)
     - `SOCIAL_LOGIN_STATE_SECRET` (shared with backend, defaults to jwt secret if empty)
     - `FRONTEND_BASE_URL` (for callback redirect base)
   - Current callback still carries tokens via query string; harden before v1.0.

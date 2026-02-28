@@ -299,13 +299,20 @@ func TestSocialLoginStartComingSoon(t *testing.T) {
 func TestSocialLoginStartKakaoReady(t *testing.T) {
 	t.Parallel()
 
+	oldEnabled, hasEnabled := os.LookupEnv("SOCIAL_LOGIN_KAKAO_ENABLED")
 	oldClientID, hasClientID := os.LookupEnv("KAKAO_CLIENT_ID")
 	oldClientSecret, hasClientSecret := os.LookupEnv("KAKAO_CLIENT_SECRET")
 	oldRedirectURI, hasRedirectURI := os.LookupEnv("KAKAO_REDIRECT_URI")
+	os.Setenv("SOCIAL_LOGIN_KAKAO_ENABLED", "true")
 	os.Setenv("KAKAO_CLIENT_ID", "test-kakao-client-id")
 	os.Setenv("KAKAO_CLIENT_SECRET", "test-kakao-client-secret")
 	os.Setenv("KAKAO_REDIRECT_URI", "https://kifu.moneyvessel.kr/api/v1/auth/social-login/kakao/callback")
 	defer func() {
+		if hasEnabled {
+			os.Setenv("SOCIAL_LOGIN_KAKAO_ENABLED", oldEnabled)
+		} else {
+			os.Unsetenv("SOCIAL_LOGIN_KAKAO_ENABLED")
+		}
 		if hasClientID {
 			os.Setenv("KAKAO_CLIENT_ID", oldClientID)
 		} else {

@@ -11,6 +11,9 @@
 ### Changed
 - Social auth URL builder now applies provider-specific query parameters (Google/Kakao).
 - Login page social-login guidance updated to reflect Google/Kakao availability by configuration.
+- Added safe rollout flags for Kakao login:
+  - Backend: `SOCIAL_LOGIN_KAKAO_ENABLED=true` required to activate provider
+  - Frontend: `NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED=true` required to show Kakao button
 
 ### Files Affected
 - `backend/internal/interfaces/http/handlers/auth_handler.go`

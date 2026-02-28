@@ -541,6 +541,9 @@ func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string)
 		}
 		return cfg, nil
 	case socialProviderKakao:
+		if !socialProviderEnabled(socialProviderKakao) {
+			return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+		}
 		cfg.ClientID = strings.TrimSpace(os.Getenv("KAKAO_CLIENT_ID"))
 		cfg.ClientSecret = strings.TrimSpace(os.Getenv("KAKAO_CLIENT_SECRET"))
 		if cfg.ClientID == "" {
@@ -554,6 +557,16 @@ func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string)
 		return cfg, nil
 	default:
 		return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+	}
+}
+
+func socialProviderEnabled(provider string) bool {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case socialProviderKakao:
+		raw := strings.TrimSpace(strings.ToLower(os.Getenv("SOCIAL_LOGIN_KAKAO_ENABLED")))
+		return raw == "1" || raw == "true" || raw == "on" || raw == "yes"
+	default:
+		return true
 	}
 }
 
