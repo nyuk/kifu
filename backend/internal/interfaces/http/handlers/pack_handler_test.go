@@ -200,3 +200,81 @@ func TestPackGenerateLatestUsesCallerScopeOnly(t *testing.T) {
 	}
 }
 
+func TestValidateRange(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{name: "valid 7d", input: "7d", wantErr: false},
+		{name: "valid 30d", input: "30d", wantErr: false},
+		{name: "invalid bad", input: "bad", wantErr: true},
+		{name: "invalid 1h", input: "1h", wantErr: true},
+		{name: "empty defaults to 30d", input: "", wantErr: false},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			normalized := normalizeRange(tc.input)
+			err := validateRange(normalized)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("validateRange(%q) error=%v wantErr=%v", tc.input, err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestPackGenerateLatestRangeValidation(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	for _, tc := range []struct {
+		name       string
+		body       string
+		wantStatus int
+		wantCode   string
+	}{
+		{name: "valid 7d", body: `{"range":"7d"}`, wantStatus: http.StatusNotFound, wantCode: "NO_COMPLETED_RUN"},
+		{name: "valid 30d", body: `{"range":"30d"}`, wantStatus: http.StatusNotFound, wantCode: "NO_COMPLETED_RUN"},
+		{name: "empty defaults to 30d", body: `{}`, wantStatus: http.StatusNotFound, wantCode: "NO_COMPLETED_RUN"},
+		{name: "invalid bad", body: `{"range":"bad"}`, wantStatus: http.StatusBadRequest, wantCode: "VALIDATION_ERROR"},
+		{name: "invalid 1h", body: `{"range":"1h"}`, wantStatus: http.StatusBadRequest, wantCode: "VALIDATION_ERROR"},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			runRepo := &fakeRunRepo{err: pgx.ErrNoRows}
+			packRepo := &fakeSummaryPackRepo{}
+			handler := newTestPackHandler(runRepo, packRepo)
+			app := newAuthApp(userID, handler.GenerateLatest)
+
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/packs/generate-latest", bytes.NewBufferString(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req, -1)
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != tc.wantStatus {
+				t.Fatalf("status=%d want=%d", resp.StatusCode, tc.wantStatus)
+			}
+
+			var got struct {
+				Code string `json:"code"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+				t.Fatalf("decode response failed: %v", err)
+			}
+			if got.Code != tc.wantCode {
+				t.Fatalf("code=%s want=%s", got.Code, tc.wantCode)
+			}
+		})
+	}
+}

@@ -19,6 +19,9 @@ var allowedAdminPolicyKeys = map[string]struct{}{
 	"maintenance_mode":              {},
 	"notification_delivery_enabled": {},
 	"agent_service_poller_enabled":  {},
+	"ai_provider_toggle":            {},
+	"ai_run_telemetry":              {},
+	"ai_local_gateway":              {},
 }
 
 type AdminPolicy struct {

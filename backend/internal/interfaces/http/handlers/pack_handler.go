@@ -37,7 +37,27 @@ type PackGenerateLatestResponse struct {
 }
 
 type PackGenerateLatestRequest struct {
-	Range string `json:"range"`
+	Range    string `json:"range"`
+	DryRun   bool   `json:"dry_run"`
+	Provider string `json:"provider"`
+	Force    bool   `json:"force"`
+}
+
+var validRanges = map[string]struct{}{"7d": {}, "30d": {}}
+
+func normalizeRange(r string) string {
+	rangeValue := strings.TrimSpace(r)
+	if rangeValue == "" {
+		return "30d"
+	}
+	return rangeValue
+}
+
+func validateRange(r string) error {
+	if _, ok := validRanges[r]; !ok {
+		return errors.New("range must be 7d or 30d")
+	}
+	return nil
 }
 
 func NewPackHandler(
@@ -115,22 +135,9 @@ func (h *PackHandler) GenerateLatest(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "invalid request body"})
 	}
 
-	rangeValue := strings.TrimSpace(req.Range)
-	if rangeValue == "" {
-		rangeValue = "30d"
-	}
-
-	now := time.Now().UTC()
-	runMeta := map[string]interface{}{
-		"source_query": "latest_completed_run",
-		"provider":     "system",
-		"range":        rangeValue,
-		"policy_key":   "summary_pack_generate_latest",
-	}
-	runMetaJSON, _ := json.Marshal(runMeta)
-	trackRun, err := h.runRepo.Create(c.Context(), userID, "summary_ondemand", "running", now, runMetaJSON)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	rangeValue := normalizeRange(req.Range)
+	if err := validateRange(rangeValue); err != nil {
+		return c.Status(400).JSON(fiber.Map{"code": "VALIDATION_ERROR", "message": err.Error()})
 	}
 
 	run, err := h.runRepo.GetLatestCompletedRun(
@@ -141,23 +148,42 @@ func (h *PackHandler) GenerateLatest(c *fiber.Ctx) error {
 		"portfolio_csv_import",
 	)
 	if err != nil {
-		finishedAt := time.Now().UTC()
-		runMeta["error"] = err.Error()
-		runMeta["result"] = "failed_lookup_latest_completed_run"
-		failedMetaJSON, _ := json.Marshal(runMeta)
-		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
 		}
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 	if run == nil {
-		finishedAt := time.Now().UTC()
-		runMeta["result"] = "failed_no_completed_run"
-		failedMetaJSON, _ := json.Marshal(runMeta)
-		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
 	}
+
+	if req.DryRun {
+		return c.Status(200).JSON(fiber.Map{
+			"source_run_id": run.RunID,
+			"range":         rangeValue,
+			"dry_run":       true,
+		})
+	}
+
+	provider := strings.TrimSpace(req.Provider)
+	if provider == "" {
+		provider = "system"
+	}
+
+	now := time.Now().UTC()
+	runMeta := map[string]interface{}{
+		"source_query": "latest_completed_run",
+		"provider":     provider,
+		"range":        rangeValue,
+		"force":        req.Force,
+		"policy_key":   "summary_pack_generate_latest",
+	}
+	runMetaJSON, _ := json.Marshal(runMeta)
+	trackRun, err := h.runRepo.Create(c.Context(), userID, "summary_ondemand", "running", now, runMetaJSON)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
 	runMeta["source_run_id"] = run.RunID.String()
 	runMeta["source_run_type"] = run.RunType
 
