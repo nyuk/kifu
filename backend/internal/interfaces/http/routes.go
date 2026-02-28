@@ -76,7 +76,7 @@ func RegisterRoutes(
 	aiRegistry.RegisterClient("anthropic", ai_providers.NewClaudeClient(httpClient))
 	aiRegistry.RegisterClient("google", ai_providers.NewGeminiClient(httpClient))
 	aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)
-	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
+	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, runRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)

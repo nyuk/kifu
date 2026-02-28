@@ -24,7 +24,7 @@ type fakeRunRepo struct {
 }
 
 func (f *fakeRunRepo) Create(_ context.Context, _ uuid.UUID, _ string, _ string, _ time.Time, _ json.RawMessage) (*entities.Run, error) {
-	return nil, nil
+	return &entities.Run{RunID: uuid.New()}, nil
 }
 
 func (f *fakeRunRepo) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID) (*entities.Run, error) {
@@ -199,5 +199,4 @@ func TestPackGenerateLatestUsesCallerScopeOnly(t *testing.T) {
 		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusNotFound)
 	}
 }
-
 

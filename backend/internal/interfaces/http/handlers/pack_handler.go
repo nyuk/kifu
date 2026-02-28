@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -119,25 +120,70 @@ func (h *PackHandler) GenerateLatest(c *fiber.Ctx) error {
 		rangeValue = "30d"
 	}
 
-	run, err := h.runRepo.GetLatestCompletedRun(c.Context(), userID)
+	now := time.Now().UTC()
+	runMeta := map[string]interface{}{
+		"source_query": "latest_completed_run",
+		"provider":     "system",
+		"range":        rangeValue,
+		"policy_key":   "summary_pack_generate_latest",
+	}
+	runMetaJSON, _ := json.Marshal(runMeta)
+	trackRun, err := h.runRepo.Create(c.Context(), userID, "summary_ondemand", "running", now, runMetaJSON)
 	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	run, err := h.runRepo.GetLatestCompletedRun(
+		c.Context(),
+		userID,
+		"exchange_sync",
+		"trade_csv_import",
+		"portfolio_csv_import",
+	)
+	if err != nil {
+		finishedAt := time.Now().UTC()
+		runMeta["error"] = err.Error()
+		runMeta["result"] = "failed_lookup_latest_completed_run"
+		failedMetaJSON, _ := json.Marshal(runMeta)
+		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
 		}
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 	if run == nil {
+		finishedAt := time.Now().UTC()
+		runMeta["result"] = "failed_no_completed_run"
+		failedMetaJSON, _ := json.Marshal(runMeta)
+		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		return c.Status(404).JSON(fiber.Map{"code": "NO_COMPLETED_RUN", "message": "completed sync/import run not found"})
 	}
+	runMeta["source_run_id"] = run.RunID.String()
+	runMeta["source_run_type"] = run.RunType
 
 	pack, _, err := h.summaryPackSvc.GeneratePack(c.Context(), userID, run, rangeValue)
 	if err != nil {
+		finishedAt := time.Now().UTC()
+		runMeta["error"] = err.Error()
+		runMeta["result"] = "failed_generate_pack"
+		failedMetaJSON, _ := json.Marshal(runMeta)
+		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		return c.Status(400).JSON(fiber.Map{"code": "PACK_GENERATE_FAILED", "message": err.Error()})
 	}
 
 	if err := h.summaryPackRepo.Create(c.Context(), pack); err != nil {
+		finishedAt := time.Now().UTC()
+		runMeta["error"] = err.Error()
+		runMeta["result"] = "failed_save_pack"
+		failedMetaJSON, _ := json.Marshal(runMeta)
+		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, failedMetaJSON)
 		return c.Status(500).JSON(fiber.Map{"code": "PACK_SAVE_FAILED", "message": err.Error()})
 	}
+	finishedAt := time.Now().UTC()
+	runMeta["result"] = "completed"
+	runMeta["pack_id"] = pack.PackID.String()
+	completedMetaJSON, _ := json.Marshal(runMeta)
+	_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "completed", &finishedAt, completedMetaJSON)
 
 	anchorTs := run.StartedAt.Format(time.RFC3339)
 	if run.FinishedAt != nil {

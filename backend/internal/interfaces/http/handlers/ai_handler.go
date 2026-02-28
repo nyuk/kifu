@@ -22,8 +22,8 @@ import (
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/interfaces"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
-	"github.com/moneyvessel/kifu/internal/services"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 const (
@@ -38,23 +38,25 @@ var (
 )
 
 type AIHandler struct {
-	bubbleRepo           repositories.BubbleRepository
-	opinionRepo          repositories.AIOpinionRepository
-	providerRepo         repositories.AIProviderRepository
-	userAIKeyRepo        repositories.UserAIKeyRepository
-	userRepo             repositories.UserRepository
-	subscriptionRepo     repositories.SubscriptionRepository
-	encryptionKey        []byte
-	client               *http.Client
-	oneShotCache         *oneShotCache
-	requireAllowlist     bool
-	serviceMonthlyCap    int
-	aiInvocationService  *services.AIInvocationService
+	bubbleRepo          repositories.BubbleRepository
+	opinionRepo         repositories.AIOpinionRepository
+	runRepo             repositories.RunRepository
+	providerRepo        repositories.AIProviderRepository
+	userAIKeyRepo       repositories.UserAIKeyRepository
+	userRepo            repositories.UserRepository
+	subscriptionRepo    repositories.SubscriptionRepository
+	encryptionKey       []byte
+	client              *http.Client
+	oneShotCache        *oneShotCache
+	requireAllowlist    bool
+	serviceMonthlyCap   int
+	aiInvocationService *services.AIInvocationService
 }
 
 func NewAIHandler(
 	bubbleRepo repositories.BubbleRepository,
 	opinionRepo repositories.AIOpinionRepository,
+	runRepo repositories.RunRepository,
 	providerRepo repositories.AIProviderRepository,
 	userAIKeyRepo repositories.UserAIKeyRepository,
 	userRepo repositories.UserRepository,
@@ -69,13 +71,14 @@ func NewAIHandler(
 	}
 
 	return &AIHandler{
-		bubbleRepo:          bubbleRepo,
-		opinionRepo:         opinionRepo,
-		providerRepo:        providerRepo,
-		userAIKeyRepo:       userAIKeyRepo,
-		userRepo:            userRepo,
-		subscriptionRepo:    subscriptionRepo,
-		encryptionKey:       encryptionKey,
+		bubbleRepo:       bubbleRepo,
+		opinionRepo:      opinionRepo,
+		runRepo:          runRepo,
+		providerRepo:     providerRepo,
+		userAIKeyRepo:    userAIKeyRepo,
+		userRepo:         userRepo,
+		subscriptionRepo: subscriptionRepo,
+		encryptionKey:    encryptionKey,
 		client: &http.Client{
 			Timeout: 20 * time.Second,
 		},
@@ -319,8 +322,37 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"code": "SUBSCRIPTION_NOT_FOUND", "message": "subscription not found"})
 	}
 
+	baseRunMeta := map[string]interface{}{
+		"source_query": fmt.Sprintf("bubble_id=%s", bubble.ID.String()),
+		"provider":     strings.Join(providers, ","),
+		"range":        bubble.Timeframe,
+		"policy_key":   "ai_opinion_request",
+	}
+	baseRunMetaJSON, _ := json.Marshal(baseRunMeta)
+	trackRun, err := h.runRepo.Create(c.Context(), userID, "ai_opinion", "running", time.Now().UTC(), baseRunMetaJSON)
+	if err != nil {
+		log.Printf("[ai_handler] run create error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+	}
+	failRun := func(result string, errText string) {
+		finishedAt := time.Now().UTC()
+		meta := map[string]interface{}{
+			"source_query": baseRunMeta["source_query"],
+			"provider":     baseRunMeta["provider"],
+			"range":        baseRunMeta["range"],
+			"policy_key":   baseRunMeta["policy_key"],
+			"result":       result,
+		}
+		if errText != "" {
+			meta["error"] = errText
+		}
+		metaJSON, _ := json.Marshal(meta)
+		_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, "failed", &finishedAt, metaJSON)
+	}
+
 	candles, incomplete, err := h.fetchKlines(c.Context(), bubble.Symbol, bubble.Timeframe, bubble.CandleTime)
 	if err != nil {
+		failRun("failed_fetch_klines", err.Error())
 		return c.Status(502).JSON(fiber.Map{"code": "EXCHANGE_REQUEST_FAILED", "message": err.Error()})
 	}
 
@@ -331,22 +363,25 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		key, err := h.resolveAPIKey(c.Context(), userID, provider)
 		if err != nil {
 			log.Printf("[ai_handler] internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+			failRun("failed_resolve_api_key", err.Error())
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 		perProviderKey[provider] = key
 	}
 
-		serviceUsage := 0
-		for _, provider := range providers {
-			if h.aiInvocationService.UsesServiceKey(provider, perProviderKey[provider]) {
-				serviceUsage++
-			}
+	serviceUsage := 0
+	for _, provider := range providers {
+		if h.aiInvocationService.UsesServiceKey(provider, perProviderKey[provider]) {
+			serviceUsage++
 		}
+	}
 
 	if serviceUsage > 0 && subscription.AIQuotaRemaining < serviceUsage {
+		failRun("failed_quota_exceeded", "AI quota exceeded")
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 	}
 	if h.exceedsServiceMonthlyCap(subscription, serviceUsage) {
+		failRun("failed_beta_cap_exceeded", "monthly beta cap exceeded")
 		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
 	}
 
@@ -366,26 +401,26 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "PROVIDER_ERROR", Message: err.Error()})
 			continue
 		}
-		
+
 		// Build messages for invocation
 		messages := []interfaces.AIMessage{
 			{Role: "user", Content: prompt},
 		}
-		
+
 		// Invoke provider through unified service
 		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
 		if err != nil {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "PROVIDER_ERROR", Message: err.Error()})
 			continue
 		}
-		
+
 		// Extract response and token count
 		responseText := result.Content
 		tokensUsed := &result.TokensUsed
 		if result.TokensUsed == 0 {
 			tokensUsed = nil
 		}
-		
+
 		opinion := &entities.AIOpinion{
 			ID:             uuid.New(),
 			BubbleID:       bubble.ID,
@@ -400,14 +435,14 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "INTERNAL_ERROR", Message: err.Error()})
 			continue
 		}
-		
+
 		opinions = append(opinions, AIOpinionItem{
 			Provider:   provider,
 			Model:      model,
 			Response:   responseText,
 			TokensUsed: tokensUsed,
 		})
-		
+
 		if h.aiInvocationService.UsesServiceKey(provider, key) {
 			successfulServiceUsage++
 		}
@@ -417,12 +452,35 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, successfulServiceUsage)
 		if err != nil {
 			log.Printf("[RequestOpinions] DecrementQuota error for user=%s: %v", userID, err)
+			failRun("failed_decrement_quota", err.Error())
 			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 		if !ok {
+			failRun("failed_quota_exceeded", "AI quota exceeded")
 			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 		}
 	}
+
+	finalStatus := "completed"
+	finalResult := "completed"
+	if len(opinions) == 0 {
+		finalStatus = "failed"
+		finalResult = "failed_all_providers"
+	}
+	finishedAt := time.Now().UTC()
+	finalMeta := map[string]interface{}{
+		"source_query":            baseRunMeta["source_query"],
+		"provider":                baseRunMeta["provider"],
+		"range":                   baseRunMeta["range"],
+		"policy_key":              baseRunMeta["policy_key"],
+		"result":                  finalResult,
+		"requested_provider_cnt":  len(providers),
+		"successful_provider_cnt": len(opinions),
+		"error_cnt":               len(errorsList),
+		"data_incomplete":         incomplete,
+	}
+	finalMetaJSON, _ := json.Marshal(finalMeta)
+	_ = h.runRepo.UpdateStatus(c.Context(), trackRun.RunID, finalStatus, &finishedAt, finalMetaJSON)
 
 	return c.Status(200).JSON(AIOpinionResponse{
 		Opinions:       opinions,
@@ -492,55 +550,55 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
 	}
 
-		if h.aiInvocationService.UsesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
-			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
-		}
-		if h.aiInvocationService.UsesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
-			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
-		}
-		
-		prompt := buildOneShotPrompt(req)
-		responseText := ""
-		var tokensUsed *int
-		if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
-			responseText = mockOneShotResponse(req)
-		} else {
-			// Build messages for invocation
-			messages := []interfaces.AIMessage{
-				{Role: "user", Content: prompt},
-			}
-			
-			// Invoke provider through unified service
-			result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
-			if err != nil {
-				// Retry on 502/503/504 errors
-				if strings.Contains(err.Error(), "502") || strings.Contains(err.Error(), "503") || strings.Contains(err.Error(), "504") {
-					time.Sleep(800 * time.Millisecond)
-					result, err = h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
-				}
-			}
-			if err != nil {
-				log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
-				log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
-				return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
-			}
-			
-			responseText = result.Content
-			if result.TokensUsed > 0 {
-				tokensUsed = &result.TokensUsed
-			}
+	if h.aiInvocationService.UsesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
+		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+	}
+	if h.aiInvocationService.UsesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
+		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+	}
+
+	prompt := buildOneShotPrompt(req)
+	responseText := ""
+	var tokensUsed *int
+	if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
+		responseText = mockOneShotResponse(req)
+	} else {
+		// Build messages for invocation
+		messages := []interfaces.AIMessage{
+			{Role: "user", Content: prompt},
 		}
 
-		if h.aiInvocationService.UsesServiceKey(provider, apiKey) {
-			ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
-			if err != nil {
-				log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
-				return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
-			}
-			if !ok {
-				return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+		// Invoke provider through unified service
+		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+		if err != nil {
+			// Retry on 502/503/504 errors
+			if strings.Contains(err.Error(), "502") || strings.Contains(err.Error(), "503") || strings.Contains(err.Error(), "504") {
+				time.Sleep(800 * time.Millisecond)
+				result, err = h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
 			}
 		}
+		if err != nil {
+			log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
+			log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
+			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
+		}
+
+		responseText = result.Content
+		if result.TokensUsed > 0 {
+			tokensUsed = &result.TokensUsed
+		}
+	}
+
+	if h.aiInvocationService.UsesServiceKey(provider, apiKey) {
+		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
+		if err != nil {
+			log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+		}
+		if !ok {
+			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+		}
+	}
 
 	response := OneShotAIResponse{
 		Provider:   provider,
@@ -656,7 +714,7 @@ func (h *AIHandler) UpdateUserAIKeys(c *fiber.Ctx) error {
 		encKey, err := cryptoutil.Encrypt(apiKey, h.encryptionKey)
 		if err != nil {
 			log.Printf("[ai_handler] internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 
 		record := &entities.UserAIKey{
@@ -670,7 +728,7 @@ func (h *AIHandler) UpdateUserAIKeys(c *fiber.Ctx) error {
 
 		if err := h.userAIKeyRepo.Upsert(c.Context(), record); err != nil {
 			log.Printf("[ai_handler] internal error: %v", err)
-		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
 		}
 	}
 
@@ -768,7 +826,6 @@ func (h *AIHandler) lookupModel(ctx context.Context, provider string) (string, e
 	}
 	return item.Model, nil
 }
-
 
 type klineItem struct {
 	Time   int64  `json:"time"`
@@ -1003,4 +1060,3 @@ func isSupportedProvider(provider string) bool {
 		return false
 	}
 }
-
