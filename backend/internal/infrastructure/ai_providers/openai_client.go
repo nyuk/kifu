@@ -32,6 +32,9 @@ func (c *OpenAIClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 	if invocation == nil || invocation.Provider == nil {
 		return nil, errors.New("invocation and provider must not be nil")
 	}
+	if strings.TrimSpace(invocation.Credential) == "" {
+		return nil, errors.New("provider credential is required")
+	}
 
 	// Build request payload
 	payload := map[string]interface{}{
@@ -73,7 +76,7 @@ func (c *OpenAIClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+invocation.Provider.BaseURL) // This will be overridden by caller with actual key
+	req.Header.Set("Authorization", "Bearer "+invocation.Credential)
 
 	// Execute request
 	resp, err := c.httpClient.Do(req)

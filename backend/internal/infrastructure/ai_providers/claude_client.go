@@ -32,6 +32,9 @@ func (c *ClaudeClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 	if invocation == nil || invocation.Provider == nil {
 		return nil, errors.New("invocation and provider must not be nil")
 	}
+	if strings.TrimSpace(invocation.Credential) == "" {
+		return nil, errors.New("provider credential is required")
+	}
 
 	// Build request payload
 	payload := map[string]interface{}{
@@ -73,7 +76,7 @@ func (c *ClaudeClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", invocation.Provider.BaseURL) // This will be overridden by caller with actual key
+	req.Header.Set("x-api-key", invocation.Credential)
 	req.Header.Set("anthropic-version", "2023-06-01")
 
 	// Execute request

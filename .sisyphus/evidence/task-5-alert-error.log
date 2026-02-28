@@ -1,0 +1,14 @@
+[task-5] 2026-02-28T08:35:01Z error-path verification
+== invocation service error wrappers ==
+49:		return nil, fmt.Errorf("provider lookup failed: %w", err)
+58:		return nil, fmt.Errorf("credential resolution failed: %w", err)
+61:		return nil, fmt.Errorf("no API key configured for provider: %s", providerName)
+84:		return nil, fmt.Errorf("provider invocation failed: %w", err)
+
+== adapter credential guards ==
+backend/internal/infrastructure/ai_providers/gemini_client.go:37:		return nil, errors.New("provider credential is required")
+backend/internal/infrastructure/ai_providers/claude_client.go:36:		return nil, errors.New("provider credential is required")
+backend/internal/infrastructure/ai_providers/openai_client.go:36:		return nil, errors.New("provider credential is required")
+
+== non-google social policy check (sanity) ==
+543:	// Temporary rollout policy: only Google social login is open in production.

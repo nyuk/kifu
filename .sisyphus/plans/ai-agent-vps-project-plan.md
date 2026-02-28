@@ -339,7 +339,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 기본 provider로 폴백되어 호출됨
     - Evidence: `.sisyphus/evidence/task-4-ai-handler-error.log`
 
-- [ ] 5. Alert briefing Service provider 분기 통합
+- [x] 5. Alert briefing Service provider 분기 통합
 
   **What to do**:
   - `backend/internal/services/alert_briefing_service.go`의 provider 분기 및 API 키 해석을 Task 4에서 정한 계약으로 이동한다.

@@ -69,9 +69,10 @@ func (s *AIInvocationService) InvokeProvider(
 
 	// Step 4: Build invocation
 	invocation := &interfaces.AIInvocation{
-		Provider: provider,
-		Model:    model,
-		Messages: messages,
+		Provider:   provider,
+		Model:      model,
+		Messages:   messages,
+		Credential: credential,
 	}
 	if options != nil {
 		invocation.Options = *options

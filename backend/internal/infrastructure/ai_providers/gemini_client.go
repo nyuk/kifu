@@ -33,6 +33,9 @@ func (c *GeminiClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 	if invocation == nil || invocation.Provider == nil {
 		return nil, errors.New("invocation and provider must not be nil")
 	}
+	if strings.TrimSpace(invocation.Credential) == "" {
+		return nil, errors.New("provider credential is required")
+	}
 
 	// Build request payload
 	payload := map[string]interface{}{
@@ -66,12 +69,16 @@ func (c *GeminiClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 		baseURL = "https://generativelanguage.googleapis.com/v1beta"
 	}
 
-	// Note: API key will be added by caller; here we use placeholder
-	apiKey := "PLACEHOLDER_KEY"
-	url := fmt.Sprintf("%s/models/%s:%s?key=%s", strings.TrimSuffix(baseURL, "/"), invocation.Model, endpoint, url.QueryEscape(apiKey))
+	endpointURL := fmt.Sprintf(
+		"%s/models/%s:%s?key=%s",
+		strings.TrimSuffix(baseURL, "/"),
+		invocation.Model,
+		endpoint,
+		url.QueryEscape(invocation.Credential),
+	)
 
 	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpointURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

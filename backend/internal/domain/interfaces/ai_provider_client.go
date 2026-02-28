@@ -27,6 +27,9 @@ type AIInvocation struct {
 	Provider *entities.AIProvider `json:"-"` // resolved provider config
 	Model    string               `json:"model"`
 	Endpoint string               `json:"endpoint"` // override; empty = use provider default
+	// Credential is resolved by service layer and injected into provider adapters.
+	// It must be treated as sensitive and never logged.
+	Credential string `json:"-"`
 
 	// Payload (chat/completions style — the lingua franca)
 	Messages []AIMessage `json:"messages"`

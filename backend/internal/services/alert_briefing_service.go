@@ -1,10 +1,8 @@
 package services
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,8 +14,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
+	"github.com/moneyvessel/kifu/internal/domain/interfaces"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
-	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
+	"github.com/moneyvessel/kifu/internal/infrastructure/ai_providers"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 )
 
@@ -32,6 +31,7 @@ type AlertBriefingService struct {
 	sender       notification.Sender
 	client       *http.Client
 	appBaseURL   string
+	aiInvocation *AIInvocationService
 }
 
 func NewAlertBriefingService(
@@ -59,7 +59,22 @@ func NewAlertBriefingService(
 		sender:       sender,
 		client:       &http.Client{Timeout: 30 * time.Second},
 		appBaseURL:   appURL,
+		aiInvocation: newAlertBriefingAIInvocationService(providerRepo, userKeyRepo, encKey),
 	}
+}
+
+func newAlertBriefingAIInvocationService(
+	providerRepo repositories.AIProviderRepository,
+	userKeyRepo repositories.UserAIKeyRepository,
+	encryptionKey []byte,
+) *AIInvocationService {
+	httpClient := &http.Client{Timeout: 30 * time.Second}
+	registry := ai_providers.NewProviderRegistry(nil)
+	registry.RegisterClient(entities.ProviderTypeOpenAI, ai_providers.NewOpenAIClient(httpClient))
+	registry.RegisterClient(entities.ProviderTypeAnthropic, ai_providers.NewClaudeClient(httpClient))
+	registry.RegisterClient(entities.ProviderTypeGoogle, ai_providers.NewGeminiClient(httpClient))
+	credentialResolver := NewAICredentialResolver(userKeyRepo, providerRepo, encryptionKey)
+	return NewAIInvocationService(providerRepo, credentialResolver, registry)
 }
 
 // HandleTrigger is called by AlertMonitor when an alert fires
@@ -89,34 +104,35 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 	var briefingSummaries []string
 
 	for _, provider := range providers {
-		apiKey, err := s.resolveAPIKey(ctx, alert.UserID, provider.Name)
-		if err != nil {
-			log.Printf("alert briefing: %s key resolve error: %v", provider.Name, err)
-			continue
-		}
-		if apiKey == "" {
-			log.Printf("alert briefing: %s skipped (no API key)", provider.Name)
-			continue
-		}
-		log.Printf("alert briefing: calling %s (model: %s, key: %s...)", provider.Name, provider.Model, apiKey[:min(8, len(apiKey))])
-
 		model := provider.Model
-		responseText, tokensUsed, err := s.callProvider(ctx, provider.Name, model, apiKey, prompt)
+		if strings.TrimSpace(model) == "" {
+			log.Printf("alert briefing: %s skipped (no model)", provider.Name)
+			continue
+		}
+		messages := []interfaces.AIMessage{
+			{Role: "user", Content: prompt},
+		}
+		result, err := s.aiInvocation.InvokeProvider(ctx, alert.UserID, provider.Name, model, messages, nil)
 		if err != nil {
 			log.Printf("alert briefing: %s call failed: %v", provider.Name, err)
 			continue
 		}
+		responseText := strings.TrimSpace(result.Content)
+		var tokensUsed *int
+		if result.TokensUsed > 0 {
+			tokensUsed = &result.TokensUsed
+		}
 		log.Printf("alert briefing: %s responded (%d chars)", provider.Name, len(responseText))
 
 		briefing := &entities.AlertBriefing{
-			ID:        uuid.New(),
-			AlertID:   alert.ID,
-			Provider:  provider.Name,
-			Model:     model,
-			Prompt:    prompt,
-			Response:  responseText,
+			ID:         uuid.New(),
+			AlertID:    alert.ID,
+			Provider:   provider.Name,
+			Model:      model,
+			Prompt:     prompt,
+			Response:   responseText,
 			TokensUsed: tokensUsed,
-			CreatedAt: time.Now().UTC(),
+			CreatedAt:  time.Now().UTC(),
 		}
 
 		if err := s.briefingRepo.Create(ctx, briefing); err != nil {
@@ -248,157 +264,6 @@ func (s *AlertBriefingService) fetchKlines(ctx context.Context, symbol string, i
 	}
 
 	return items, nil
-}
-
-func (s *AlertBriefingService) resolveAPIKey(ctx context.Context, userID uuid.UUID, provider string) (string, error) {
-	key, err := s.userKeyRepo.GetByUserAndProvider(ctx, userID, provider)
-	if err != nil {
-		return "", err
-	}
-	if key != nil {
-		return cryptoutil.Decrypt(key.APIKeyEnc, s.encKey)
-	}
-
-	switch provider {
-	case "openai":
-		return strings.TrimSpace(os.Getenv("OPENAI_API_KEY")), nil
-	case "claude":
-		return strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")), nil
-	case "gemini":
-		return strings.TrimSpace(os.Getenv("GEMINI_API_KEY")), nil
-	}
-	return "", nil
-}
-
-func (s *AlertBriefingService) callProvider(ctx context.Context, provider, model, apiKey, prompt string) (string, *int, error) {
-	switch provider {
-	case "openai":
-		return s.callOpenAI(ctx, model, apiKey, prompt)
-	case "claude":
-		return s.callClaude(ctx, model, apiKey, prompt)
-	case "gemini":
-		return s.callGemini(ctx, model, apiKey, prompt)
-	}
-	return "", nil, errors.New("unsupported provider")
-}
-
-func (s *AlertBriefingService) callOpenAI(ctx context.Context, model, apiKey, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"model":       model,
-		"messages":    []map[string]string{{"role": "user", "content": prompt}},
-		"temperature": 0.3,
-	}
-	body, _ := json.Marshal(payload)
-
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("openai error %d: %s", resp.StatusCode, string(b))
-	}
-
-	var result struct {
-		Choices []struct {
-			Message struct{ Content string } `json:"message"`
-		} `json:"choices"`
-		Usage struct{ TotalTokens int `json:"total_tokens"` } `json:"usage"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	if len(result.Choices) == 0 {
-		return "", nil, errors.New("no choices")
-	}
-	t := result.Usage.TotalTokens
-	return strings.TrimSpace(result.Choices[0].Message.Content), &t, nil
-}
-
-func (s *AlertBriefingService) callClaude(ctx context.Context, model, apiKey, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"model":       model,
-		"max_tokens":  512,
-		"temperature": 0.3,
-		"messages":    []map[string]string{{"role": "user", "content": prompt}},
-	}
-	body, _ := json.Marshal(payload)
-
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("claude error %d: %s", resp.StatusCode, string(b))
-	}
-
-	var result struct {
-		Content []struct{ Text string } `json:"content"`
-		Usage   struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
-		} `json:"usage"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	if len(result.Content) == 0 {
-		return "", nil, errors.New("no content")
-	}
-	t := result.Usage.InputTokens + result.Usage.OutputTokens
-	return strings.TrimSpace(result.Content[0].Text), &t, nil
-}
-
-func (s *AlertBriefingService) callGemini(ctx context.Context, model, apiKey, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"contents": []map[string]interface{}{
-			{"parts": []map[string]string{{"text": prompt}}},
-		},
-	}
-	body, _ := json.Marshal(payload)
-
-	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, url.QueryEscape(apiKey))
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("gemini error %d: %s", resp.StatusCode, string(b))
-	}
-
-	var result struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct{ Text string } `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-		UsageMetadata struct{ TotalTokenCount int `json:"totalTokenCount"` } `json:"usageMetadata"`
-	}
-	json.NewDecoder(resp.Body).Decode(&result)
-	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
-		return "", nil, errors.New("no content")
-	}
-	t := result.UsageMetadata.TotalTokenCount
-	if t == 0 {
-		return strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text), nil, nil
-	}
-	return strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text), &t, nil
 }
 
 func buildAlertPrompt(alert *entities.Alert, candles []klineItem, positionSummary string) string {
