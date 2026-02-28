@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-02-28
+
+### Added
+- Added Kakao OAuth provider support in backend social login flow:
+  - `GET /api/v1/auth/social-login/kakao`
+  - `GET /api/v1/auth/social-login/kakao/callback`
+  - Kakao token exchange and profile mapping (`email`, `nickname`, provider id) into existing social identity linking flow.
+
+### Changed
+- Social auth URL builder now applies provider-specific query parameters (Google/Kakao).
+- Login page social-login guidance updated to reflect Google/Kakao availability by configuration.
+
+### Files Affected
+- `backend/internal/interfaces/http/handlers/auth_handler.go`
+- `backend/internal/interfaces/http/handlers/auth_handler_test.go`
+- `frontend/src/components-old/Login.tsx`
+
 ## 2026-02-27
 
 ### Changed

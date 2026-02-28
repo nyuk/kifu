@@ -6,11 +6,12 @@ This document tracks postponed or planned work that is not part of the current p
 
 ## Planned
 
-- [ ] Social login (OAuth providers)  *(Google OAuth started; Apple/Kakao pending policy/config)*
+- [ ] Social login (OAuth providers)  *(Google/Kakao implemented; Apple pending policy/config)*
+  - [x] Kakao callback account bootstrap and session issuance
   - [x] Google callback account bootstrap and session issuance
   - [x] Social identity linkage (`user_identities`) + duplicate/link guardrails
   - [x] Social-only account local-password setup bridge (`password_set`, `/users/me/password`)
-  - [ ] Apple/Kakao provider production config and policy
+  - [ ] Apple provider production config and policy
 - [x] DB-only serverization for admin and auth authority
 - [ ] Admin dashboard expansion:
   - Admin workspace sections

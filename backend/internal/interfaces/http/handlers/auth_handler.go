@@ -305,7 +305,7 @@ type socialLoginState struct {
 	Nonce     string `json:"nonce"`
 }
 
-type socialGoogleTokenResponse struct {
+type socialOAuthTokenResponse struct {
 	AccessToken string `json:"access_token"`
 	Error       string `json:"error"`
 	ErrorDesc   string `json:"error_description"`
@@ -316,6 +316,18 @@ type socialGoogleProfileResponse struct {
 	Name        string `json:"name"`
 	Sub         string `json:"sub"`
 	EmailVerify bool   `json:"email_verified"`
+}
+
+type socialKakaoProfileResponse struct {
+	ID           int64 `json:"id"`
+	KakaoAccount struct {
+		Email           string `json:"email"`
+		IsEmailVerified bool   `json:"is_email_verified"`
+		IsEmailValid    bool   `json:"is_email_valid"`
+		Profile         struct {
+			Nickname string `json:"nickname"`
+		} `json:"profile"`
+	} `json:"kakao_account"`
 }
 
 type socialProviderConfig struct {
@@ -352,6 +364,11 @@ var (
 			TokenURL:    "https://oauth2.googleapis.com/token",
 			UserInfoURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 		},
+		socialProviderKakao: {
+			AuthURL:     "https://kauth.kakao.com/oauth/authorize",
+			TokenURL:    "https://kauth.kakao.com/oauth/token",
+			UserInfoURL: "https://kapi.kakao.com/v2/user/me",
+		},
 	}
 	socialHTTPClient = &http.Client{Timeout: 10 * time.Second}
 )
@@ -380,7 +397,7 @@ func (h *AuthHandler) SocialLoginStart(c *fiber.Ctx) error {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
 
-	authURL, err := h.socialAuthURL(cfg, state)
+	authURL, err := h.socialAuthURL(provider, cfg, state)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
@@ -523,12 +540,24 @@ func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string)
 			cfg.RedirectURI = fmt.Sprintf("%s://%s/api/v1/auth/social-login/%s/callback", scheme, host, provider)
 		}
 		return cfg, nil
+	case socialProviderKakao:
+		cfg.ClientID = strings.TrimSpace(os.Getenv("KAKAO_CLIENT_ID"))
+		cfg.ClientSecret = strings.TrimSpace(os.Getenv("KAKAO_CLIENT_SECRET"))
+		if cfg.ClientID == "" {
+			return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
+		}
+		cfg.RedirectURI = strings.TrimSpace(os.Getenv("KAKAO_REDIRECT_URI"))
+		if cfg.RedirectURI == "" {
+			scheme, host := requestSchemeAndHost(c)
+			cfg.RedirectURI = fmt.Sprintf("%s://%s/api/v1/auth/social-login/%s/callback", scheme, host, provider)
+		}
+		return cfg, nil
 	default:
 		return socialProviderConfig{}, errors.New(socialLoginAuthNotReady)
 	}
 }
 
-func (h *AuthHandler) socialAuthURL(cfg socialProviderConfig, state string) (string, error) {
+func (h *AuthHandler) socialAuthURL(provider string, cfg socialProviderConfig, state string) (string, error) {
 	u, err := url.Parse(cfg.AuthURL)
 	if err != nil {
 		return "", err
@@ -537,11 +566,20 @@ func (h *AuthHandler) socialAuthURL(cfg socialProviderConfig, state string) (str
 		"client_id":     {cfg.ClientID},
 		"redirect_uri":  {cfg.RedirectURI},
 		"response_type": {"code"},
-		"scope":         {"openid email profile"},
 		"state":         {state},
-		"access_type":   {"offline"},
-		"prompt":        {"select_account"},
 	}
+
+	switch provider {
+	case socialProviderGoogle:
+		params.Set("scope", "openid email profile")
+		params.Set("access_type", "offline")
+		params.Set("prompt", "select_account")
+	case socialProviderKakao:
+		params.Set("scope", "account_email profile_nickname")
+	default:
+		return "", errors.New(socialLoginAuthNotReady)
+	}
+
 	u.RawQuery = params.Encode()
 	return u.String(), nil
 }
@@ -610,12 +648,18 @@ func (h *AuthHandler) fetchSocialProfile(ctx context.Context, c *fiber.Ctx, prov
 			return socialLoginUser{}, err
 		}
 		return h.fetchGoogleProfile(ctx, cfg, token.AccessToken)
+	case socialProviderKakao:
+		token, err := h.exchangeKakaoToken(ctx, cfg, code)
+		if err != nil {
+			return socialLoginUser{}, err
+		}
+		return h.fetchKakaoProfile(ctx, cfg, token.AccessToken)
 	default:
 		return socialLoginUser{}, errors.New(socialLoginAuthNotReady)
 	}
 }
 
-func (h *AuthHandler) exchangeGoogleToken(ctx context.Context, cfg socialProviderConfig, code string) (socialGoogleTokenResponse, error) {
+func (h *AuthHandler) exchangeGoogleToken(ctx context.Context, cfg socialProviderConfig, code string) (socialOAuthTokenResponse, error) {
 	form := url.Values{
 		"code":          {code},
 		"client_id":     {cfg.ClientID},
@@ -625,35 +669,80 @@ func (h *AuthHandler) exchangeGoogleToken(ctx context.Context, cfg socialProvide
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return socialGoogleTokenResponse{}, err
+		return socialOAuthTokenResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := socialHTTPClient.Do(req)
 	if err != nil {
-		return socialGoogleTokenResponse{}, err
+		return socialOAuthTokenResponse{}, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return socialGoogleTokenResponse{}, err
+		return socialOAuthTokenResponse{}, err
 	}
 	if res.StatusCode != http.StatusOK {
-		return socialGoogleTokenResponse{}, fmt.Errorf("oauth token exchange failed: %s", strings.TrimSpace(string(body)))
+		return socialOAuthTokenResponse{}, fmt.Errorf("oauth token exchange failed: %s", strings.TrimSpace(string(body)))
 	}
 
-	var token socialGoogleTokenResponse
+	var token socialOAuthTokenResponse
 	if err := json.Unmarshal(body, &token); err != nil {
-		return socialGoogleTokenResponse{}, err
+		return socialOAuthTokenResponse{}, err
 	}
 	if token.Error != "" {
 		if token.ErrorDesc != "" {
-			return socialGoogleTokenResponse{}, fmt.Errorf("%s: %s", token.Error, token.ErrorDesc)
+			return socialOAuthTokenResponse{}, fmt.Errorf("%s: %s", token.Error, token.ErrorDesc)
 		}
-		return socialGoogleTokenResponse{}, errors.New(token.Error)
+		return socialOAuthTokenResponse{}, errors.New(token.Error)
 	}
 	if token.AccessToken == "" {
-		return socialGoogleTokenResponse{}, errors.New("oauth access token missing")
+		return socialOAuthTokenResponse{}, errors.New("oauth access token missing")
+	}
+	return token, nil
+}
+
+func (h *AuthHandler) exchangeKakaoToken(ctx context.Context, cfg socialProviderConfig, code string) (socialOAuthTokenResponse, error) {
+	form := url.Values{
+		"grant_type":   {"authorization_code"},
+		"client_id":    {cfg.ClientID},
+		"redirect_uri": {cfg.RedirectURI},
+		"code":         {code},
+	}
+	if strings.TrimSpace(cfg.ClientSecret) != "" {
+		form.Set("client_secret", cfg.ClientSecret)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.TokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := socialHTTPClient.Do(req)
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return socialOAuthTokenResponse{}, fmt.Errorf("oauth token exchange failed: %s", strings.TrimSpace(string(body)))
+	}
+
+	var token socialOAuthTokenResponse
+	if err := json.Unmarshal(body, &token); err != nil {
+		return socialOAuthTokenResponse{}, err
+	}
+	if token.Error != "" {
+		if token.ErrorDesc != "" {
+			return socialOAuthTokenResponse{}, fmt.Errorf("%s: %s", token.Error, token.ErrorDesc)
+		}
+		return socialOAuthTokenResponse{}, errors.New(token.Error)
+	}
+	if token.AccessToken == "" {
+		return socialOAuthTokenResponse{}, errors.New("oauth access token missing")
 	}
 	return token, nil
 }
@@ -699,6 +788,53 @@ func (h *AuthHandler) fetchGoogleProfile(ctx context.Context, cfg socialProvider
 		Email:          email,
 		Name:           name,
 		ProviderUserID: strings.TrimSpace(userInfo.Sub),
+	}, nil
+}
+
+func (h *AuthHandler) fetchKakaoProfile(ctx context.Context, cfg socialProviderConfig, accessToken string) (socialLoginUser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.UserInfoURL, nil)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	res, err := socialHTTPClient.Do(req)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return socialLoginUser{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return socialLoginUser{}, fmt.Errorf("oauth profile fetch failed: %s", strings.TrimSpace(string(body)))
+	}
+
+	var userInfo socialKakaoProfileResponse
+	if err := json.Unmarshal(body, &userInfo); err != nil {
+		return socialLoginUser{}, err
+	}
+
+	email := strings.ToLower(strings.TrimSpace(userInfo.KakaoAccount.Email))
+	if email == "" {
+		return socialLoginUser{}, errors.New("oauth profile missing email")
+	}
+	if !userInfo.KakaoAccount.IsEmailVerified || !userInfo.KakaoAccount.IsEmailValid {
+		return socialLoginUser{}, errors.New("oauth profile email is not verified")
+	}
+	if userInfo.ID == 0 {
+		return socialLoginUser{}, errors.New("oauth profile missing provider user id")
+	}
+
+	name := strings.TrimSpace(userInfo.KakaoAccount.Profile.Nickname)
+	if name == "" {
+		name = strings.TrimSpace(strings.SplitN(email, "@", 2)[0])
+	}
+	return socialLoginUser{
+		Email:          email,
+		Name:           name,
+		ProviderUserID: fmt.Sprintf("%d", userInfo.ID),
 	}, nil
 }
 

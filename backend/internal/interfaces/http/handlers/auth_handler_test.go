@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -292,6 +293,62 @@ func TestSocialLoginStartComingSoon(t *testing.T) {
 	}
 	if got.Status != "coming_soon" {
 		t.Fatalf("status=%s want=%s", got.Status, "coming_soon")
+	}
+}
+
+func TestSocialLoginStartKakaoReady(t *testing.T) {
+	t.Parallel()
+
+	oldClientID, hasClientID := os.LookupEnv("KAKAO_CLIENT_ID")
+	oldClientSecret, hasClientSecret := os.LookupEnv("KAKAO_CLIENT_SECRET")
+	oldRedirectURI, hasRedirectURI := os.LookupEnv("KAKAO_REDIRECT_URI")
+	os.Setenv("KAKAO_CLIENT_ID", "test-kakao-client-id")
+	os.Setenv("KAKAO_CLIENT_SECRET", "test-kakao-client-secret")
+	os.Setenv("KAKAO_REDIRECT_URI", "https://kifu.moneyvessel.kr/api/v1/auth/social-login/kakao/callback")
+	defer func() {
+		if hasClientID {
+			os.Setenv("KAKAO_CLIENT_ID", oldClientID)
+		} else {
+			os.Unsetenv("KAKAO_CLIENT_ID")
+		}
+		if hasClientSecret {
+			os.Setenv("KAKAO_CLIENT_SECRET", oldClientSecret)
+		} else {
+			os.Unsetenv("KAKAO_CLIENT_SECRET")
+		}
+		if hasRedirectURI {
+			os.Setenv("KAKAO_REDIRECT_URI", oldRedirectURI)
+		} else {
+			os.Unsetenv("KAKAO_REDIRECT_URI")
+		}
+	}()
+
+	app := fiber.New()
+	app.Get("/api/v1/auth/social-login/:provider", (&AuthHandler{}).SocialLoginStart)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/social-login/kakao?return_to=/home", nil)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d want=%d", resp.StatusCode, http.StatusOK)
+	}
+
+	var got SocialLoginResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+	if got.Status != socialLoginStatusReady {
+		t.Fatalf("status=%s want=%s", got.Status, socialLoginStatusReady)
+	}
+	if got.AuthURL == "" {
+		t.Fatal("auth_url should not be empty")
+	}
+	if !strings.Contains(got.AuthURL, "kauth.kakao.com/oauth/authorize") {
+		t.Fatalf("unexpected auth_url=%s", got.AuthURL)
 	}
 }
 
