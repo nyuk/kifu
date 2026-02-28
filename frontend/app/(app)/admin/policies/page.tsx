@@ -26,6 +26,9 @@ const POLICY_LABELS: Record<string, string> = {
   maintenance_mode: '유지보수 모드',
   notification_delivery_enabled: '알림 전송 허용',
   agent_service_poller_enabled: '에이전트 폴러 서비스',
+  ai_provider_toggle: 'AI 프로바이더 활성화',
+  ai_run_telemetry: 'AI 실행 텔레메트리',
+  ai_local_gateway: 'AI 로컬 게이트웨이',
 }
 
 const POLICY_HINT: Record<string, string> = {
@@ -33,6 +36,9 @@ const POLICY_HINT: Record<string, string> = {
   maintenance_mode: 'true면 일반 사용자 접근을 제한하고, 비상 점검 모드로 동작합니다.',
   notification_delivery_enabled: 'false로 설정하면 알림 관련 배달 기능을 중지합니다.',
   agent_service_poller_enabled: 'true면 거래소 자동 동기화(폴러) 실행을 허용합니다.',
+  ai_provider_toggle: 'true면 AI 프로바이더 호출을 허용합니다.',
+  ai_run_telemetry: 'true면 AI 실행 이벤트의 텔레메트리를 캡처합니다.',
+  ai_local_gateway: 'true면 AI 요청을 로컬 게이트웨이로 라우팅합니다.',
 }
 
 const formatDateTime = (value: string | null): string => {
@@ -46,12 +52,21 @@ const formatDateTime = (value: string | null): string => {
   }
 }
 
+type PilotStep = 'idle' | 'generated' | 'approved' | 'executed'
+
+const MOCK_CONTENT_PREVIEW = `[샘플] KIFU 트레이딩 저널 — 이번 주 리뷰 하이라이트
+
+• 승률 68% 달성, 평균 R:R 1.4
+• AI 의견 일치율 72% (지난주 대비 +5%)
+• 가장 큰 개선 포인트: 손절 타이밍 조정`
+
 export default function AdminPoliciesPage() {
   const [policies, setPolicies] = useState<AdminPolicy[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [pilotStep, setPilotStep] = useState<PilotStep>('idle')
 
   const loadPolicies = async () => {
     setLoading(true)
@@ -180,6 +195,146 @@ export default function AdminPoliciesPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-cyan-400/20 bg-white/[0.04] p-6">
+        <h2 className="text-lg font-medium text-cyan-100">마케팅/디자인 파일럿</h2>
+        <p className="mt-2 text-xs text-zinc-400">
+          콘텐츠 제안 생성 → 승인 대기 → 수동 실행의 최소 워크플로우입니다.
+        </p>
+
+        {/* 3-step workflow indicator */}
+        <div className="mt-6 flex items-center gap-0">
+          {/* Step 1 */}
+          <div className="flex flex-col items-center">
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${'idle' !== pilotStep ? 'bg-emerald-500/25 text-emerald-200' : 'bg-sky-500/25 text-sky-200'}`}
+            >
+              1
+            </div>
+            <span
+              className={`mt-1.5 text-xs ${'idle' !== pilotStep ? 'text-emerald-300' : 'text-sky-300'}`}
+            >
+              제안 생성
+            </span>
+          </div>
+          <div
+            className={`mx-1 h-px w-10 ${pilotStep === 'generated' || pilotStep === 'approved' || pilotStep === 'executed' ? 'bg-emerald-500/40' : 'bg-zinc-700'}`}
+          />
+          {/* Step 2 */}
+          <div className="flex flex-col items-center">
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                pilotStep === 'approved' || pilotStep === 'executed'
+                  ? 'bg-emerald-500/25 text-emerald-200'
+                  : pilotStep === 'generated'
+                    ? 'bg-sky-500/25 text-sky-200'
+                    : 'bg-zinc-700/50 text-zinc-500'
+              }`}
+            >
+              2
+            </div>
+            <span
+              className={`mt-1.5 text-xs ${
+                pilotStep === 'approved' || pilotStep === 'executed'
+                  ? 'text-emerald-300'
+                  : pilotStep === 'generated'
+                    ? 'text-sky-300'
+                    : 'text-zinc-500'
+              }`}
+            >
+              승인 대기
+            </span>
+          </div>
+          <div
+            className={`mx-1 h-px w-10 ${pilotStep === 'approved' || pilotStep === 'executed' ? 'bg-emerald-500/40' : 'bg-zinc-700'}`}
+          />
+          {/* Step 3 */}
+          <div className="flex flex-col items-center">
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                pilotStep === 'executed'
+                  ? 'bg-emerald-500/25 text-emerald-200'
+                  : pilotStep === 'approved'
+                    ? 'bg-sky-500/25 text-sky-200'
+                    : 'bg-zinc-700/50 text-zinc-500'
+              }`}
+            >
+              3
+            </div>
+            <span
+              className={`mt-1.5 text-xs ${
+                pilotStep === 'executed'
+                  ? 'text-emerald-300'
+                  : pilotStep === 'approved'
+                    ? 'text-sky-300'
+                    : 'text-zinc-500'
+              }`}
+            >
+              수동 실행
+            </span>
+          </div>
+        </div>
+
+        {/* Content preview (shown after generate) */}
+        {pilotStep !== 'idle' && (
+          <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+            <p className="text-xs font-medium text-zinc-300">콘텐츠 미리보기</p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-400">
+              {MOCK_CONTENT_PREVIEW}
+            </pre>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPilotStep('generated')}
+            disabled={pilotStep !== 'idle'}
+            className="rounded-md border border-sky-500/40 bg-sky-500/15 px-4 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            제안 생성
+          </button>
+          <button
+            type="button"
+            onClick={() => setPilotStep('approved')}
+            disabled={pilotStep !== 'generated'}
+            className="rounded-md border border-cyan-500/40 bg-cyan-500/15 px-4 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            승인
+          </button>
+          <div className="group relative">
+            <button
+              type="button"
+              onClick={() => setPilotStep('executed')}
+              disabled={pilotStep !== 'approved'}
+              className="rounded-md border border-emerald-500/40 bg-emerald-500/15 px-4 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              실행
+            </button>
+            {pilotStep !== 'approved' && pilotStep !== 'executed' && (
+              <span className="absolute -top-8 left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300 shadow group-hover:block">
+                승인 후 실행 가능
+              </span>
+            )}
+          </div>
+          {pilotStep === 'executed' && (
+            <button
+              type="button"
+              onClick={() => setPilotStep('idle')}
+              className="rounded-md border border-zinc-600/40 bg-zinc-600/15 px-4 py-1.5 text-xs font-semibold text-zinc-300 hover:bg-zinc-600/25"
+            >
+              초기화
+            </button>
+          )}
+        </div>
+
+        {pilotStep === 'executed' && (
+          <p className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+            콘텐츠가 수동 실행되었습니다. (자동 게시 차단됨)
+          </p>
+        )}
       </section>
 
       {message && <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">{message}</p>}

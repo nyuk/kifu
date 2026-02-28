@@ -53,7 +53,16 @@ const serviceLabelMap: Record<string, string> = {
   exchange_sync: '거래소 동기화',
   trade_csv_import: '거래 CSV Import',
   portfolio_csv_import: '포트폴리오 CSV Import',
+  summary_ondemand: 'AI 온디맨드 요약',
+  ai_opinion: 'AI 의견 수집',
 }
+
+  const AI_POLICY_LABELS: Record<string, string> = {
+  ai_provider_toggle: 'AI 프로바이더 활성화',
+  ai_run_telemetry: 'AI 실행 텔레메트리',
+  ai_local_gateway: 'AI 로컬 게이트웨이',
+  }
+const AI_POLICY_KEYS = ['ai_provider_toggle', 'ai_run_telemetry', 'ai_local_gateway']
 
 const statusClass: Record<string, string> = {
   running: 'text-sky-200 bg-sky-400/10',
@@ -98,6 +107,8 @@ export default function AdminAgentServicesPage() {
   const [policyUpdatedAt, setPolicyUpdatedAt] = useState<string | null>(null)
   const [actionBusy, setActionBusy] = useState<'pause' | 'resume' | 'restart' | null>(null)
   const [message, setMessage] = useState('')
+  const [policies, setPolicies] = useState<AdminPolicy[]>([])
+  const [aiPolicyBusy, setAiPolicyBusy] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -110,6 +121,7 @@ export default function AdminAgentServicesPage() {
 
       setData(serviceResponse.data)
 
+      setPolicies(policyResponse.data.policies)
       const agentServicePolicy = getPolicyByKey(policyResponse.data.policies, AGENT_SERVICE_POLICY_KEY)
       if (agentServicePolicy) {
         setPolicyEnabled(agentServicePolicy.value)
@@ -119,6 +131,7 @@ export default function AdminAgentServicesPage() {
         setPolicyUpdatedAt(null)
       }
     } catch {
+ setPolicies([])
       setError('에이전트 서비스 정보를 불러오지 못했습니다.')
     } finally {
       setLoading(false)
@@ -158,6 +171,22 @@ export default function AdminAgentServicesPage() {
     }
   }
 
+  const toggleAiPolicy = async (key: string, nextValue: boolean) => {
+    setAiPolicyBusy(key)
+    setMessage('')
+    setError(null)
+    const payload: AdminPolicyUpdateRequest = { key, value: nextValue }
+    try {
+      await api.put('/v1/admin/policies', payload)
+      setMessage(`${AI_POLICY_LABELS[key] ?? key} 정책을 ${nextValue ? '활성화' : '비활성화'}했습니다.`)
+      await load()
+    } catch {
+      setError(`${AI_POLICY_LABELS[key] ?? key} 정책 변경에 실패했습니다. 다시 시도해 주세요.`)
+    } finally {
+      setAiPolicyBusy(null)
+    }
+  }
+
   useEffect(() => {
     load()
   }, [])
@@ -174,6 +203,11 @@ export default function AdminAgentServicesPage() {
     if (serviceFilter === 'all') return data.runs
     return data.runs.filter((run) => run.run_type === serviceFilter)
   }, [data, serviceFilter])
+
+  const aiPolicies = useMemo(() => {
+    if (policies.length === 0) return []
+    return AI_POLICY_KEYS.map((key) => getPolicyByKey(policies, key)).filter((p): p is AdminPolicy => p !== undefined)
+  }, [policies])
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -235,6 +269,40 @@ export default function AdminAgentServicesPage() {
           <span className={`font-semibold ${policyEnabled === true ? 'text-emerald-200' : 'text-rose-200'}`}>
             {policyEnabled === null ? '확인중...' : policyEnabled ? 'RUNNING' : 'PAUSED'}
           </span>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+        <h2 className="text-lg font-medium text-zinc-100">AI 프로바이더 정책</h2>
+        <p className="mt-2 text-sm text-zinc-400">AI 실행 관련 정책을 제어합니다.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {aiPolicies.length === 0 ? (
+            <p className="text-sm text-zinc-400">AI 정책 데이터가 없습니다.</p>
+          ) : (
+            aiPolicies.map((policy) => (
+              <div key={policy.key} className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-black/20 p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-zinc-400">{AI_POLICY_LABELS[policy.key] ?? policy.key}</p>
+                  <p className="mt-1 text-xs text-zinc-500">{policy.description || policy.key}</p>
+                  <p className={`mt-2 text-xs font-semibold ${policy.value ? 'text-emerald-200' : 'text-rose-200'}`}>
+                    {policy.value ? 'ON' : 'OFF'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleAiPolicy(policy.key, !policy.value)}
+                  disabled={aiPolicyBusy !== null}
+                  className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${
+                    policy.value
+                      ? 'border-rose-500/40 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25'
+                      : 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25'
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {aiPolicyBusy === policy.key ? '요청중...' : policy.value ? '비활성화' : '활성화'}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
