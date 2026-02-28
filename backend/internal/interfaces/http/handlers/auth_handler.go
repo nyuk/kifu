@@ -334,7 +334,7 @@ const (
 	socialLoginAuthNotReady     = "해당 소셜 로그인은 준비중입니다."
 	socialLoginSuccessMessage   = "OAuth 로그인 주소를 준비했습니다."
 	socialLoginStateTTLSeconds  = int64(10 * 60)
-	socialLoginCallbackPath     = "/auth/social-callback"
+	socialLoginCallbackPath     = "/social-callback"
 	socialLoginSuccessPath      = "/home"
 )
 

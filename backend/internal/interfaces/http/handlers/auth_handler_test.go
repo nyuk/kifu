@@ -395,8 +395,8 @@ func TestSocialLoginCallbackSuccessCreatesUserAndRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("location parse: %v", err)
 	}
-	if location.Path != "/auth/social-callback" {
-		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	if location.Path != "/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/social-callback")
 	}
 	q := location.Query()
 	if q.Get("next") != "/dashboard" {
@@ -476,8 +476,8 @@ func TestSocialLoginCallbackReturnsAuthFailedWhenTokenExchangeFails(t *testing.T
 	if err != nil {
 		t.Fatalf("location parse: %v", err)
 	}
-	if location.Path != "/auth/social-callback" {
-		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	if location.Path != "/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/social-callback")
 	}
 	q := location.Query()
 	if q.Get("error") != "AUTH_FAILED" {
@@ -504,8 +504,8 @@ func TestSocialLoginCallbackProviderCancelRedirectsToFrontendCallback(t *testing
 	if err != nil {
 		t.Fatalf("location parse: %v", err)
 	}
-	if location.Path != "/auth/social-callback" {
-		t.Fatalf("path=%s want=%s", location.Path, "/auth/social-callback")
+	if location.Path != "/social-callback" {
+		t.Fatalf("path=%s want=%s", location.Path, "/social-callback")
 	}
 	q := location.Query()
 	if q.Get("error") != "AUTH_ERROR" {
