@@ -35,7 +35,7 @@ func (f *fakeRunRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ string, _ *
 	return nil
 }
 
-func (f *fakeRunRepo) GetLatestCompletedRun(ctx context.Context, userID uuid.UUID) (*entities.Run, error) {
+func (f *fakeRunRepo) GetLatestCompletedRun(ctx context.Context, userID uuid.UUID, runTypes ...string) (*entities.Run, error) {
 	f.calls = append(f.calls, userID)
 	if f.err != nil {
 		return nil, f.err
@@ -200,4 +200,4 @@ func TestPackGenerateLatestUsesCallerScopeOnly(t *testing.T) {
 	}
 }
 
-func ptrTime(v time.Time) *time.Time { return &v }
+

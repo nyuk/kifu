@@ -190,7 +190,7 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 	reader.TrimLeadingSpace = true
 	header, err := reader.Read()
 	if err != nil {
-		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", ptrTime(time.Now().UTC()), mustJSON(map[string]any{
 			"run_id":      run.RunID.String(),
 			"venue":       venue,
 			"error":       "failed to read header",
@@ -201,7 +201,7 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 
 	cols, missing := resolveCsvColumns(header)
 	if len(missing) > 0 {
-		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+		_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", ptrTime(time.Now().UTC()), mustJSON(map[string]any{
 			"run_id":      run.RunID.String(),
 			"venue":       venue,
 			"error":       "missing columns",
@@ -231,7 +231,7 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 			break
 		}
 		if err != nil {
-			_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", nil, mustJSON(map[string]any{
+			_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "failed", ptrTime(time.Now().UTC()), mustJSON(map[string]any{
 				"run_id":      run.RunID.String(),
 				"venue":       venue,
 				"error":       "failed to read csv",
@@ -774,3 +774,5 @@ func mergeJSON(base json.RawMessage, overlay map[string]any) json.RawMessage {
 	}
 	return mustJSON(merged)
 }
+
+func ptrTime(t time.Time) *time.Time { return &t }

@@ -55,3 +55,41 @@
 - Provider name normalization (case-insensitive, whitespace-trimmed) is critical
 - Encryption key must be passed through DI for credential decryption
 - Index on (enabled, is_default) improves GetDefault() performance
+
+## [2026-02-28] Task 3: Run Repository Extension for AI Run Types
+
+### Architecture Pattern
+- **Variadic parameters** for backward compatibility: `GetLatestCompletedRun(ctx, userID, runTypes ...string)`
+- When no runTypes specified, defaults to existing types: `exchange_sync`, `trade_csv_import`, `portfolio_csv_import`
+- New AI types (`ai_summary`, `ai_opinion`) can be queried by passing them explicitly
+
+### Key Implementation Details
+1. **Interface Change**: Added variadic `runTypes ...string` parameter to `GetLatestCompletedRun`
+2. **SQL Query**: Changed from hardcoded IN clause to `ANY($2)` with array parameter for flexibility
+3. **finishedAt Enforcement**: Updated `import_handler.go` to always pass finishedAt for failed runs (was passing nil)
+4. **Helper Function**: Added `ptrTime()` helper to import_handler for time pointer conversion
+
+### Files Modified
+- `backend/internal/domain/repositories/run_repository.go` (interface)
+- `backend/internal/infrastructure/repositories/run_repository_impl.go` (implementation)
+- `backend/internal/interfaces/http/handlers/import_handler.go` (finishedAt enforcement)
+- `backend/internal/interfaces/http/handlers/pack_handler_test.go` (test mock update)
+
+### Testing Results
+- All pack handler tests pass (3 tests): backward compatibility verified
+- All handler tests pass (18 tests): no regressions
+- Build succeeds: no compilation errors
+- finishedAt now always populated for completed/failed runs
+
+### Lessons Learned
+1. **Variadic parameters** are ideal for optional filtering without breaking existing callers
+2. **pgx ANY() operator** works seamlessly with Go string slices for dynamic IN clauses
+3. **Test mocks must be updated** when interface signatures change (pack_handler_test.go)
+4. **Helper functions** (ptrTime) should be defined once and reused across handlers
+5. **finishedAt consistency** requires checking all callers of UpdateStatus, not just new code
+
+### Backward Compatibility
+- Existing callers of `GetLatestCompletedRun(ctx, userID)` work unchanged
+- Default behavior returns same run types as before
+- No API schema changes required
+- All existing tests pass without modification

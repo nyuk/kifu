@@ -1,0 +1,3 @@
+testing: warning: no tests to run
+PASS
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/repositories	(cached) [no tests to run]

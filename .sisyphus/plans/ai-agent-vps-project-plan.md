@@ -231,7 +231,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 정책 우회 호출 허용
     - Evidence: `.sisyphus/evidence/task-2-provider-policy-error.log`
 
-- [ ] 3. Run 타입/상태 커버리지 확장 및 완료 조회 정책 정비
+- [x] 3. Run 타입/상태 커버리지 확장 및 완료 조회 정책 정비
 
   **What to do**:
   - `backend/internal/domain/repositories/run_repository.go`와 구현체에 AI/summary 전용 run 타입 조회 옵션을 추가한다.
