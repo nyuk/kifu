@@ -1,0 +1,100 @@
+=== RUN   TestGetSystemCredential/gemini_credential
+    ai_credential_resolver_test.go:69: ✓ Gemini credential resolved: test-gemini-key
+=== RUN   TestGetSystemCredential/unknown_provider_returns_empty
+    ai_credential_resolver_test.go:78: ✓ Unknown provider returns empty string
+--- PASS: TestGetSystemCredential (0.00s)
+    --- PASS: TestGetSystemCredential/openai_credential (0.00s)
+    --- PASS: TestGetSystemCredential/anthropic_credential (0.00s)
+    --- PASS: TestGetSystemCredential/gemini_credential (0.00s)
+    --- PASS: TestGetSystemCredential/unknown_provider_returns_empty (0.00s)
+=== RUN   TestUsesServiceKey
+=== RUN   TestUsesServiceKey/service_key_detected
+    ai_credential_resolver_test.go:97: ✓ Service key correctly detected
+=== RUN   TestUsesServiceKey/user_key_not_service_key
+    ai_credential_resolver_test.go:107: ✓ User key correctly identified as non-service key
+=== RUN   TestUsesServiceKey/empty_key_not_service_key
+    ai_credential_resolver_test.go:116: ✓ Empty key correctly identified as non-service key
+--- PASS: TestUsesServiceKey (0.00s)
+    --- PASS: TestUsesServiceKey/service_key_detected (0.00s)
+    --- PASS: TestUsesServiceKey/user_key_not_service_key (0.00s)
+    --- PASS: TestUsesServiceKey/empty_key_not_service_key (0.00s)
+=== RUN   TestCredentialResolverInterface
+=== RUN   TestCredentialResolverInterface/resolver_methods_exist
+    ai_credential_resolver_test.go:124: ✓ AICredentialResolver has all required methods
+--- PASS: TestCredentialResolverInterface (0.00s)
+    --- PASS: TestCredentialResolverInterface/resolver_methods_exist (0.00s)
+=== RUN   TestProviderNameNormalization
+=== RUN   TestProviderNameNormalization/case_insensitive_provider_names
+    ai_credential_resolver_test.go:142: ✓ Provider names are case-insensitive
+=== RUN   TestProviderNameNormalization/whitespace_trimmed
+    ai_credential_resolver_test.go:156: ✓ Whitespace is trimmed from provider names
+--- PASS: TestProviderNameNormalization (0.00s)
+    --- PASS: TestProviderNameNormalization/case_insensitive_provider_names (0.00s)
+    --- PASS: TestProviderNameNormalization/whitespace_trimmed (0.00s)
+=== RUN   TestCredentialResolverWithContext
+=== RUN   TestCredentialResolverWithContext/context_cancellation_handled
+    ai_credential_resolver_test.go:165: ✓ Context cancellation is handled
+--- PASS: TestCredentialResolverWithContext (0.00s)
+    --- PASS: TestCredentialResolverWithContext/context_cancellation_handled (0.00s)
+=== RUN   TestCredentialResolverEncryption
+=== RUN   TestCredentialResolverEncryption/user_key_decryption
+    ai_credential_resolver_test.go:174: ✓ User keys are decrypted using encryption key
+=== RUN   TestCredentialResolverEncryption/decryption_error_fallback
+    ai_credential_resolver_test.go:179: ✓ Decryption errors fall back to system credential
+--- PASS: TestCredentialResolverEncryption (0.00s)
+    --- PASS: TestCredentialResolverEncryption/user_key_decryption (0.00s)
+    --- PASS: TestCredentialResolverEncryption/decryption_error_fallback (0.00s)
+=== RUN   TestValidateEVMAddress
+=== PAUSE TestValidateEVMAddress
+=== RUN   TestOnchainQuickCheckInvalidAddress
+=== PAUSE TestOnchainQuickCheckInvalidAddress
+=== RUN   TestOnchainWarningsLowActivity
+=== PAUSE TestOnchainWarningsLowActivity
+=== RUN   TestOnchainWarningsHighConcentration
+=== PAUSE TestOnchainWarningsHighConcentration
+=== RUN   TestOnchainWarningsTooManyUniqueTokens
+=== PAUSE TestOnchainWarningsTooManyUniqueTokens
+=== RUN   TestOnchainSummaryDeterministicWithProviderMock
+=== PAUSE TestOnchainSummaryDeterministicWithProviderMock
+=== RUN   TestSummaryPackDuplicateRule
+=== PAUSE TestSummaryPackDuplicateRule
+=== RUN   TestSummaryPackMissingRuleNoFundingModule
+=== PAUSE TestSummaryPackMissingRuleNoFundingModule
+=== RUN   TestSummaryPackMissingFundingModuleWithFuturesExchange
+=== PAUSE TestSummaryPackMissingFundingModuleWithFuturesExchange
+=== RUN   TestSummaryPackTimeSkewWarning
+=== PAUSE TestSummaryPackTimeSkewWarning
+=== RUN   TestSummaryPackSymbolMappingGapWarning
+=== PAUSE TestSummaryPackSymbolMappingGapWarning
+=== CONT  TestValidateEVMAddress
+--- PASS: TestValidateEVMAddress (0.00s)
+=== CONT  TestSummaryPackSymbolMappingGapWarning
+=== CONT  TestOnchainSummaryDeterministicWithProviderMock
+=== CONT  TestOnchainWarningsTooManyUniqueTokens
+=== CONT  TestOnchainWarningsLowActivity
+=== CONT  TestOnchainWarningsHighConcentration
+=== CONT  TestOnchainQuickCheckInvalidAddress
+=== CONT  TestSummaryPackMissingFundingModuleWithFuturesExchange
+=== CONT  TestSummaryPackMissingRuleNoFundingModule
+=== CONT  TestSummaryPackDuplicateRule
+=== CONT  TestSummaryPackTimeSkewWarning
+--- PASS: TestSummaryPackSymbolMappingGapWarning (0.00s)
+--- PASS: TestSummaryPackDuplicateRule (0.00s)
+--- PASS: TestSummaryPackTimeSkewWarning (0.00s)
+--- PASS: TestSummaryPackMissingFundingModuleWithFuturesExchange (0.00s)
+--- PASS: TestSummaryPackMissingRuleNoFundingModule (0.00s)
+2026/02/28 16:51:26 [incident:onchain] severity=info event=service.cache_miss chain=base address=0x3333333333333333333333333333333333333333 range=30d bucket=1771416000
+2026/02/28 16:51:26 [incident:onchain] severity=info event=service.cache_miss chain=base address=0x1111111111111111111111111111111111111111 range=30d bucket=1771416000
+2026/02/28 16:51:26 [incident:onchain] severity=info event=service.cache_miss chain=base address=0x2222222222222222222222222222222222222222 range=30d bucket=1771416000
+2026/02/28 16:51:26 [incident:onchain] severity=warning event=service.validation_reject chain=base address=0x1234 range=30d reason=invalid address
+2026/02/28 16:51:26 [incident:onchain] severity=info event=service.cache_miss chain=base address=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa range=30d bucket=1771416000
+--- PASS: TestOnchainQuickCheckInvalidAddress (0.02s)
+--- PASS: TestOnchainWarningsHighConcentration (0.02s)
+--- PASS: TestOnchainWarningsLowActivity (0.02s)
+=== NAME  TestOnchainSummaryDeterministicWithProviderMock
+    onchain_pack_service_test.go:232: status=warning want=ok
+--- FAIL: TestOnchainSummaryDeterministicWithProviderMock (0.02s)
+--- PASS: TestOnchainWarningsTooManyUniqueTokens (0.02s)
+FAIL
+FAIL	github.com/moneyvessel/kifu/internal/services	0.528s
+FAIL

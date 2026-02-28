@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -21,7 +20,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
+	"github.com/moneyvessel/kifu/internal/domain/interfaces"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/services"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 )
 
@@ -37,17 +38,18 @@ var (
 )
 
 type AIHandler struct {
-	bubbleRepo        repositories.BubbleRepository
-	opinionRepo       repositories.AIOpinionRepository
-	providerRepo      repositories.AIProviderRepository
-	userAIKeyRepo     repositories.UserAIKeyRepository
-	userRepo          repositories.UserRepository
-	subscriptionRepo  repositories.SubscriptionRepository
-	encryptionKey     []byte
-	client            *http.Client
-	oneShotCache      *oneShotCache
-	requireAllowlist  bool
-	serviceMonthlyCap int
+	bubbleRepo           repositories.BubbleRepository
+	opinionRepo          repositories.AIOpinionRepository
+	providerRepo         repositories.AIProviderRepository
+	userAIKeyRepo        repositories.UserAIKeyRepository
+	userRepo             repositories.UserRepository
+	subscriptionRepo     repositories.SubscriptionRepository
+	encryptionKey        []byte
+	client               *http.Client
+	oneShotCache         *oneShotCache
+	requireAllowlist     bool
+	serviceMonthlyCap    int
+	aiInvocationService  *services.AIInvocationService
 }
 
 func NewAIHandler(
@@ -58,6 +60,7 @@ func NewAIHandler(
 	userRepo repositories.UserRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
 	encryptionKey []byte,
+	aiInvocationService *services.AIInvocationService,
 ) *AIHandler {
 	requireAllowlist := envBoolWithDefault("AI_REQUIRE_ALLOWLIST", isProductionEnv())
 	serviceMonthlyCap := envIntWithDefault("AI_SERVICE_MONTHLY_CAP", 0)
@@ -66,19 +69,20 @@ func NewAIHandler(
 	}
 
 	return &AIHandler{
-		bubbleRepo:       bubbleRepo,
-		opinionRepo:      opinionRepo,
-		providerRepo:     providerRepo,
-		userAIKeyRepo:    userAIKeyRepo,
-		userRepo:         userRepo,
-		subscriptionRepo: subscriptionRepo,
-		encryptionKey:    encryptionKey,
+		bubbleRepo:          bubbleRepo,
+		opinionRepo:         opinionRepo,
+		providerRepo:        providerRepo,
+		userAIKeyRepo:       userAIKeyRepo,
+		userRepo:            userRepo,
+		subscriptionRepo:    subscriptionRepo,
+		encryptionKey:       encryptionKey,
 		client: &http.Client{
 			Timeout: 20 * time.Second,
 		},
-		oneShotCache:      newOneShotCache(60 * time.Second),
-		requireAllowlist:  requireAllowlist,
-		serviceMonthlyCap: serviceMonthlyCap,
+		oneShotCache:        newOneShotCache(60 * time.Second),
+		requireAllowlist:    requireAllowlist,
+		serviceMonthlyCap:   serviceMonthlyCap,
+		aiInvocationService: aiInvocationService,
 	}
 }
 
@@ -332,12 +336,12 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		perProviderKey[provider] = key
 	}
 
-	serviceUsage := 0
-	for _, provider := range providers {
-		if usesServiceKey(provider, perProviderKey[provider]) {
-			serviceUsage++
+		serviceUsage := 0
+		for _, provider := range providers {
+			if h.aiInvocationService.UsesServiceKey(provider, perProviderKey[provider]) {
+				serviceUsage++
+			}
 		}
-	}
 
 	if serviceUsage > 0 && subscription.AIQuotaRemaining < serviceUsage {
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
@@ -362,13 +366,26 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "PROVIDER_ERROR", Message: err.Error()})
 			continue
 		}
-
-		responseText, tokensUsed, err := h.callProvider(c.Context(), provider, model, key, prompt)
+		
+		// Build messages for invocation
+		messages := []interfaces.AIMessage{
+			{Role: "user", Content: prompt},
+		}
+		
+		// Invoke provider through unified service
+		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
 		if err != nil {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "PROVIDER_ERROR", Message: err.Error()})
 			continue
 		}
-
+		
+		// Extract response and token count
+		responseText := result.Content
+		tokensUsed := &result.TokensUsed
+		if result.TokensUsed == 0 {
+			tokensUsed = nil
+		}
+		
 		opinion := &entities.AIOpinion{
 			ID:             uuid.New(),
 			BubbleID:       bubble.ID,
@@ -383,15 +400,15 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 			errorsList = append(errorsList, AIOpinionError{Provider: provider, Code: "INTERNAL_ERROR", Message: err.Error()})
 			continue
 		}
-
+		
 		opinions = append(opinions, AIOpinionItem{
 			Provider:   provider,
 			Model:      model,
 			Response:   responseText,
 			TokensUsed: tokensUsed,
 		})
-
-		if usesServiceKey(provider, key) {
+		
+		if h.aiInvocationService.UsesServiceKey(provider, key) {
 			successfulServiceUsage++
 		}
 	}
@@ -475,43 +492,55 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
 	}
 
-	if usesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
-		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
-	}
-	if usesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
-		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
-	}
-
-	prompt := buildOneShotPrompt(req)
-	responseText := ""
-	var tokensUsed *int
-	if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
-		responseText = mockOneShotResponse(req)
-	} else {
-		responseText, tokensUsed, err = h.callProvider(c.Context(), provider, model, apiKey, prompt)
-		if err != nil {
-			if strings.Contains(err.Error(), "openai error 502") || strings.Contains(err.Error(), "openai error 503") || strings.Contains(err.Error(), "openai error 504") {
-				time.Sleep(800 * time.Millisecond)
-				responseText, tokensUsed, err = h.callProvider(c.Context(), provider, model, apiKey, prompt)
-			}
-		}
-		if err != nil {
-			log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
-			log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
-			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
-		}
-	}
-
-	if usesServiceKey(provider, apiKey) {
-		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
-		if err != nil {
-			log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
-			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
-		}
-		if !ok {
+		if h.aiInvocationService.UsesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
 			return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 		}
-	}
+		if h.aiInvocationService.UsesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
+			return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
+		}
+		
+		prompt := buildOneShotPrompt(req)
+		responseText := ""
+		var tokensUsed *int
+		if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
+			responseText = mockOneShotResponse(req)
+		} else {
+			// Build messages for invocation
+			messages := []interfaces.AIMessage{
+				{Role: "user", Content: prompt},
+			}
+			
+			// Invoke provider through unified service
+			result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+			if err != nil {
+				// Retry on 502/503/504 errors
+				if strings.Contains(err.Error(), "502") || strings.Contains(err.Error(), "503") || strings.Contains(err.Error(), "504") {
+					time.Sleep(800 * time.Millisecond)
+					result, err = h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+				}
+			}
+			if err != nil {
+				log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
+				log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
+				return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
+			}
+			
+			responseText = result.Content
+			if result.TokensUsed > 0 {
+				tokensUsed = &result.TokensUsed
+			}
+		}
+
+		if h.aiInvocationService.UsesServiceKey(provider, apiKey) {
+			ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
+			if err != nil {
+				log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
+				return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+			}
+			if !ok {
+				return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
+			}
+		}
 
 	response := OneShotAIResponse{
 		Provider:   provider,
@@ -740,198 +769,6 @@ func (h *AIHandler) lookupModel(ctx context.Context, provider string) (string, e
 	return item.Model, nil
 }
 
-func (h *AIHandler) callProvider(ctx context.Context, provider string, model string, apiKey string, prompt string) (string, *int, error) {
-	switch provider {
-	case providerOpenAI:
-		return h.callOpenAI(ctx, model, apiKey, prompt)
-	case providerClaude:
-		return h.callClaude(ctx, model, apiKey, prompt)
-	case providerGemini:
-		return h.callGemini(ctx, model, apiKey, prompt)
-	default:
-		return "", nil, errors.New("unsupported provider")
-	}
-}
-
-func (h *AIHandler) callOpenAI(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"model":             model,
-		"input":             prompt,
-		"temperature":       0.2,
-		"max_output_tokens": oneShotMaxTokens,
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/responses", bytes.NewReader(body))
-	if err != nil {
-		return "", nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	resp, err := h.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		payload, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("openai error %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
-	}
-
-	var result struct {
-		Output []struct {
-			Type    string `json:"type"`
-			Role    string `json:"role"`
-			Content []struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			} `json:"content"`
-		} `json:"output"`
-		Usage struct {
-			TotalTokens int `json:"total_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil, err
-	}
-
-	parts := make([]string, 0)
-	for _, item := range result.Output {
-		if item.Type != "message" {
-			continue
-		}
-		for _, content := range item.Content {
-			if content.Type == "output_text" && strings.TrimSpace(content.Text) != "" {
-				parts = append(parts, strings.TrimSpace(content.Text))
-			}
-		}
-	}
-	if len(parts) == 0 {
-		return "", nil, errors.New("openai returned no content")
-	}
-
-	tokens := result.Usage.TotalTokens
-	return strings.TrimSpace(strings.Join(parts, "\n")), &tokens, nil
-}
-
-func (h *AIHandler) callClaude(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"model":       model,
-		"max_tokens":  oneShotMaxTokens,
-		"temperature": 0.2,
-		"messages": []map[string]string{
-			{"role": "user", "content": prompt},
-		},
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(body))
-	if err != nil {
-		return "", nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	resp, err := h.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		payload, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("claude error %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
-	}
-
-	var result struct {
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
-		Usage struct {
-			InputTokens  int `json:"input_tokens"`
-			OutputTokens int `json:"output_tokens"`
-		} `json:"usage"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil, err
-	}
-
-	if len(result.Content) == 0 {
-		return "", nil, errors.New("claude returned no content")
-	}
-
-	tokens := result.Usage.InputTokens + result.Usage.OutputTokens
-	return strings.TrimSpace(result.Content[0].Text), &tokens, nil
-}
-
-func (h *AIHandler) callGemini(ctx context.Context, model string, apiKey string, prompt string) (string, *int, error) {
-	payload := map[string]interface{}{
-		"contents": []map[string]interface{}{
-			{"parts": []map[string]string{{"text": prompt}}},
-		},
-		"generationConfig": map[string]interface{}{
-			"temperature":     0.2,
-			"maxOutputTokens": oneShotMaxTokens,
-		},
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", nil, err
-	}
-
-	endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", model, url.QueryEscape(apiKey))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return "", nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := h.client.Do(req)
-	if err != nil {
-		return "", nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		payload, _ := io.ReadAll(resp.Body)
-		return "", nil, fmt.Errorf("gemini error %d: %s", resp.StatusCode, strings.TrimSpace(string(payload)))
-	}
-
-	var result struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-		UsageMetadata struct {
-			TotalTokenCount int `json:"totalTokenCount"`
-		} `json:"usageMetadata"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil, err
-	}
-
-	if len(result.Candidates) == 0 || len(result.Candidates[0].Content.Parts) == 0 {
-		return "", nil, errors.New("gemini returned no content")
-	}
-
-	tokens := result.UsageMetadata.TotalTokenCount
-	if tokens == 0 {
-		return strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text), nil, nil
-	}
-	return strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text), &tokens, nil
-}
 
 type klineItem struct {
 	Time   int64  `json:"time"`
@@ -1167,18 +1004,3 @@ func isSupportedProvider(provider string) bool {
 	}
 }
 
-func usesServiceKey(provider string, key string) bool {
-	if key == "" {
-		return false
-	}
-	switch provider {
-	case providerOpenAI:
-		return strings.TrimSpace(os.Getenv("OPENAI_API_KEY")) == key
-	case providerClaude:
-		return strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")) == key
-	case providerGemini:
-		return strings.TrimSpace(os.Getenv("GEMINI_API_KEY")) == key
-	default:
-		return false
-	}
-}

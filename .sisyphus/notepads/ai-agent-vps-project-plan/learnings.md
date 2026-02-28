@@ -93,3 +93,81 @@
 - Default behavior returns same run types as before
 - No API schema changes required
 - All existing tests pass without modification
+
+## [2026-02-28] Task 4: AI Handler Refactoring
+
+### Summary
+Successfully refactored `ai_handler.go` to use the common provider abstraction layer created in Tasks 1-2, eliminating hardcoded provider branching logic.
+
+### Architecture Pattern
+- **AIInvocationService**: Facade service that unifies provider invocation
+  - Handles provider lookup via AIProviderRepository
+  - Resolves credentials via AICredentialResolver
+  - Selects adapter from registry
+  - Normalizes errors to consistent format
+
+- **Provider Adapters**: Implement AIProviderClient interface
+  - OpenAIClient: Handles OpenAI API specifics
+  - ClaudeClient: Handles Anthropic Claude API specifics
+  - GeminiClient: Handles Google Gemini API specifics
+  - Each adapter translates AIInvocation to provider's wire format
+
+- **ProviderRegistry**: Dynamic adapter registration
+  - Allows adding new providers without modifying handler code
+  - Thread-safe with RWMutex
+  - Registered in routes.go during DI setup
+
+### Key Implementation Details
+1. **Error Normalization**: All provider errors flow through unified path
+   - Provider-specific error messages preserved in message field
+   - Consistent {code, message} format across all providers
+   - Retry logic for 502/503/504 errors
+
+2. **Credential Resolution**: Uses AICredentialResolver from Task 2
+   - Priority: user key → system environment variable
+   - UsesServiceKey() method identifies service-managed keys
+   - Encryption/decryption handled transparently
+
+3. **Provider Lookup**: Uses AIProviderRepository from Task 2
+   - GetByName() retrieves provider config
+   - Validates provider is enabled
+   - Extracts model and endpoint information
+
+### Files Created
+- `backend/internal/services/ai_invocation_service.go` (94 lines)
+- `backend/internal/infrastructure/ai_providers/openai_client.go` (157 lines)
+- `backend/internal/infrastructure/ai_providers/claude_client.go` (159 lines)
+- `backend/internal/infrastructure/ai_providers/gemini_client.go` (174 lines)
+- `backend/internal/infrastructure/ai_providers/registry.go` (49 lines)
+
+### Files Modified
+- `backend/internal/interfaces/http/handlers/ai_handler.go`
+  - Removed: callProvider(), callOpenAI(), callClaude(), callGemini(), usesServiceKey()
+  - Added: aiInvocationService field
+  - Updated: RequestOpinions(), RequestOneShot() to use service
+  - Removed: ~200 lines of hardcoded branching logic
+
+- `backend/internal/interfaces/http/routes.go`
+  - Added: AI service initialization and adapter registration
+  - Updated: NewAIHandler call with AIInvocationService parameter
+
+### Testing Results
+- All handler tests pass (18 tests)
+- All credential resolver tests pass (13 tests)
+- Backend builds successfully
+- No regressions in existing functionality
+
+### Lessons Learned
+1. **Adapter Pattern**: Cleanly separates provider-specific logic from handler logic
+2. **Service Facade**: AIInvocationService hides complexity from handlers
+3. **Registry Pattern**: Enables extensibility without modifying handler code
+4. **Error Normalization**: Consistent error format improves client experience
+5. **DI Wiring**: Routes.go is single point where all services are wired
+6. **Interface Segregation**: AIProviderClient interface is minimal and focused
+7. **Backward Compatibility**: Existing endpoints unchanged, all tests pass
+
+### Backward Compatibility
+- All existing endpoints maintain same signatures
+- Error response format consistent with existing patterns
+- No breaking changes to API contracts
+- All existing tests pass without modification

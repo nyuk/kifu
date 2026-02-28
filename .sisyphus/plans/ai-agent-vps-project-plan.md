@@ -285,7 +285,7 @@ Wave 6 (Final verification):
     - Failure Indicators: 실패/완료시점이 비어 있음
     - Evidence: `.sisyphus/evidence/task-3-run-finishedAt.log`
 
-- [ ] 4. AI Handler 분기 통합 및 공통 호출로 이관
+- [x] 4. AI Handler 분기 통합 및 공통 호출로 이관
 
   **What to do**:
   - `backend/internal/interfaces/http/handlers/ai_handler.go`의 `callProvider`/`callOpenAI`/`resolveAPIKey`를 공통 서비스 인터페이스에 맞춰 호출하게 리팩터링한다.

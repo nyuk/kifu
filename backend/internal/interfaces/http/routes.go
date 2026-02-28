@@ -2,6 +2,7 @@ package http
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/infrastructure/ai_providers"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	onchaininfra "github.com/moneyvessel/kifu/internal/infrastructure/onchain"
 	"github.com/moneyvessel/kifu/internal/interfaces/http/handlers"
@@ -65,7 +67,16 @@ func RegisterRoutes(
 	marketHandler := handlers.NewMarketHandler(userSymbolRepo)
 	bubbleHandler := handlers.NewBubbleHandler(bubbleRepo)
 	tradeHandler := handlers.NewTradeHandler(tradeRepo, bubbleRepo, userSymbolRepo, portfolioRepo)
-	aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey)
+	// Create AI services and register provider adapters
+		credentialResolver := services.NewAICredentialResolver(userAIKeyRepo, aiProviderRepo, encryptionKey)
+		aiRegistry := ai_providers.NewProviderRegistry(nil)
+		// Register provider adapters
+		httpClient := &http.Client{Timeout: 30 * time.Second}
+		aiRegistry.RegisterClient("openai", ai_providers.NewOpenAIClient(httpClient))
+		aiRegistry.RegisterClient("anthropic", ai_providers.NewClaudeClient(httpClient))
+		aiRegistry.RegisterClient("google", ai_providers.NewGeminiClient(httpClient))
+		aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)
+		aiHandler := handlers.NewAIHandler(bubbleRepo, aiOpinionRepo, aiProviderRepo, userAIKeyRepo, userRepo, subscriptionRepo, encryptionKey, aiInvocationService)
 	outcomeHandler := handlers.NewOutcomeHandler(bubbleRepo, outcomeRepo)
 	similarHandler := handlers.NewSimilarHandler(bubbleRepo)
 	reviewHandler := handlers.NewReviewHandler(bubbleRepo, outcomeRepo, accuracyRepo)
