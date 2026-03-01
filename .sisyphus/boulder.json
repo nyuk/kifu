@@ -1,9 +1,7 @@
 {
-  "active_plan": "/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/MoneyVessel_web/kifu-project/.sisyphus/plans/bubble-timeframe-display.md",
-  "started_at": "2026-01-29T15:32:51.185Z",
-  "session_ids": [
-    "ses_3f7f1cab3ffeZ5zQ3mQ7aAgSmI",
-    "ses_3f10e518bffeUacPMQIYB4WXxu"
-  ],
-  "plan_name": "bubble-timeframe-display"
+  "active_plan": ".sisyphus/plans/ai-agent-vps-project-plan.md",
+  "started_at": "2026-02-28T00:00:00.000Z",
+  "completed_at": "2026-03-01T00:20:00.000Z",
+  "status": "completed",
+  "plan_name": "ai-agent-vps-project-plan"
 }
