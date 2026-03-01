@@ -1,0 +1,8 @@
+=== RUN   TestDomainContextCreation
+--- PASS: TestDomainContextCreation (0.00s)
+=== RUN   TestDomainContextJSONMarshalUnmarshal
+--- PASS: TestDomainContextJSONMarshalUnmarshal (0.00s)
+PASS
+ok  	github.com/moneyvessel/kifu/internal/domain/entities	0.418s
+?   	github.com/moneyvessel/kifu/internal/domain/interfaces	[no test files]
+?   	github.com/moneyvessel/kifu/internal/domain/repositories	[no test files]

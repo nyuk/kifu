@@ -1,0 +1,73 @@
+
+> frontend@0.0.0 lint
+> eslint .
+
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\app\guest\page.tsx
+  67:20  error  React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\scripts\generateDemoData.ts
+  179:9  warning  'response' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components-old\Chart.tsx
+   228:10  warning  'positionMarkers' is assigned a value but never used                                                                                                               @typescript-eslint/no-unused-vars
+   246:10  warning  'overlayRect' is assigned a value but never used                                                                                                                   @typescript-eslint/no-unused-vars
+   903:23  warning  '_ignored' is defined but never used                                                                                                                               @typescript-eslint/no-unused-vars
+  1072:43  warning  'newVisibleTimeRange' is defined but never used                                                                                                                    @typescript-eslint/no-unused-vars
+  1115:6   warning  React Hook useEffect has missing dependencies: 'klines.length', 'loadMoreHistory', 'loading', and 'themeMode'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  1231:9   warning  'jumpToTime' is assigned a value but never used                                                                                                                    @typescript-eslint/no-unused-vars
+  1331:20  warning  'err' is defined but never used                                                                                                                                    @typescript-eslint/no-unused-vars
+  1403:14  warning  'err' is defined but never used                                                                                                                                    @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\BubbleCreateModal.tsx
+  162:6   warning  React Hook useEffect has a missing dependency: 'symbol'. Either include it or remove the dependency array. If 'setAssetClass' needs the current value of 'symbol', you can also switch to useReducer instead of useState and read 'symbol' in the reducer  react-hooks/exhaustive-deps
+  434:15  warning  Empty block statement                                                                                                                                                                                                                                      no-empty
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\home\HomeSnapshot.tsx
+  100:7   warning  'parsePercent' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  249:16  warning  'error' is defined but never used                  @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\landing\LandingPage.tsx
+  280:12  warning  'featuresTop' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+  345:8   warning  React Hook useEffect has a missing dependency: 'activeSection'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  389:11  warning  'storyActive' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\portfolio\PortfolioDashboard.tsx
+   10:15  warning  'TradeItem' is defined but never used  @typescript-eslint/no-unused-vars
+  139:14  warning  'err' is defined but never used        @typescript-eslint/no-unused-vars
+  154:14  warning  'err' is defined but never used        @typescript-eslint/no-unused-vars
+  318:14  warning  'err' is defined but never used        @typescript-eslint/no-unused-vars
+  346:14  warning  'err' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\positions\PositionManager.tsx
+  62:6  warning  React Hook useEffect has a missing dependency: 'loadPositions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\review\CalendarView.tsx
+  32:9  warning  'current' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\review\PerformanceTrendChart.tsx
+   28:16  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  109:31  warning  'idx' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\components\settings\AIKeyManager.tsx
+  50:6  warning  React Hook useEffect has a missing dependency: 'fetchKeys'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\stores\noteStore.ts
+   56:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   68:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   83:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  100:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  116:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\nyuk8\PycharmProjects\kifu\kifu\frontend\src\stores\reviewStore.ts
+  118:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  156:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 34 problems (1 error, 33 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+
+---
+
+> frontend@0.0.0 typecheck
+> tsc --noEmit
+

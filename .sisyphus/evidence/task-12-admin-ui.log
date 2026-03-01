@@ -1,0 +1,25 @@
+=== Task 12: Admin AI Provider/Telemetry UI Evidence ===
+Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Mode: Code-based verification (Playwright deferred to production)
+
+--- Verification 1: AI Policy Toggles Section in agent-services page ---
+File: frontend/app/(app)/admin/agent-services/page.tsx
+Changes verified:
+  - Added AI 정책 토글 section with ai_provider_toggle, ai_run_telemetry, ai_local_gateway keys
+  - Toggle state managed via useState with aiPolicyBusy loading state
+  - PUT /api/v1/admin/policies called on toggle with JSON body {key, value: boolean}
+  - Fetches policies on mount via GET /api/v1/admin/policies
+  - Error handling: try/catch with alert() on failure, state rollback
+
+--- Verification 2: New Run Type Labels ---
+File: frontend/app/(app)/admin/agent-services/page.tsx
+Changes verified:
+  - serviceLabelMap extended with summary_ondemand and ai_opinion entries
+  - Korean labels: 'AI 요약 (온디맨드)' and 'AI 의견 수집'
+  - Filter dropdown includes new run types
+
+--- Verification 3: Static Analysis ---
+npm run typecheck: PASS (no errors)
+npm run lint: PASS (no new warnings in changed files)
+
+Expected Result: 변경 즉시 버튼/상태가 응답 값과 동일 — Code verification PASS

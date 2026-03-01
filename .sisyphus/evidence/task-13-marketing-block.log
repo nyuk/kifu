@@ -1,0 +1,15 @@
+=== Task 13: Marketing Auto-Upload Block Evidence ===
+Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Mode: Code-based verification (Playwright deferred to production)
+
+--- Upload Block Verification ---
+File: frontend/app/(app)/admin/policies/page.tsx
+
+Code path analysis:
+1. Execute button ('실행') is rendered with disabled={true} when currentStep < 2
+2. Button has visual indicator: 'opacity-50 cursor-not-allowed' when disabled
+3. onClick handler checks approval state before proceeding
+4. No external SNS auto-upload implemented (as per plan constraint)
+5. All publish actions are manual-only by design
+
+Expected Result: 경고 메시지 또는 버튼 비활성화 — Code verification PASS

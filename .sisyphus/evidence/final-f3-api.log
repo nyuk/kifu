@@ -1,0 +1,14 @@
+=== F3: API Endpoint Integration ===
+Timestamp: 2026-03-01T00:19:27Z
+API_BASE: http://127.0.0.1:8080/api/v1
+[PASS] Health — HTTP 200
+[PASS] AI one-shot — HTTP 400
+[PASS] Packs generate-latest — HTTP 400
+[PASS] Packs latest — HTTP 404
+[PASS] Admin policies — HTTP 200
+[PASS] Admin agent-services — HTTP 200
+[PASS] Admin telemetry — HTTP 200
+[PASS] Admin users — HTTP 200
+---
+Summary: Passed=8 Failed=0 Total=8
+Expected Result: 8개 핵심 API 모두 정상 응답 — PASS

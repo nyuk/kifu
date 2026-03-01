@@ -1,0 +1,58 @@
+=== F1: Plan Compliance Audit ===
+Timestamp: 2026-03-01T00:17:15Z
+
+--- Evidence file count ---
+Task evidence files (.log): 28
+
+--- Evidence file listing ---
+-rw-r--r-- 1 nyuk8 197121  330 Feb 28 16:21 .sisyphus/evidence/task-1-contract-smoke.log
+-rw-r--r-- 1 nyuk8 197121    0 Feb 28 16:21 .sisyphus/evidence/task-1-default-client.log
+-rw-r--r-- 1 nyuk8 197121  675 Mar  1 08:20 .sisyphus/evidence/task-10-context-acl.log
+-rw-r--r-- 1 nyuk8 197121  408 Mar  1 08:20 .sisyphus/evidence/task-10-context-contract.log
+-rw-r--r-- 1 nyuk8 197121  416 Mar  1 09:16 .sisyphus/evidence/task-11-summary-7d.log
+-rw-r--r-- 1 nyuk8 197121  399 Mar  1 09:16 .sisyphus/evidence/task-11-summary-invalid-range.log
+-rw-r--r-- 1 nyuk8 197121  680 Mar  1 09:16 .sisyphus/evidence/task-12-admin-ui-error.log
+-rw-r--r-- 1 nyuk8 197121 1230 Mar  1 09:16 .sisyphus/evidence/task-12-admin-ui.log
+-rw-r--r-- 1 nyuk8 197121  693 Mar  1 09:16 .sisyphus/evidence/task-13-marketing-block.log
+-rw-r--r-- 1 nyuk8 197121 1486 Mar  1 09:16 .sisyphus/evidence/task-13-marketing-flow.log
+-rw-r--r-- 1 nyuk8 197121  492 Mar  1 09:17 .sisyphus/evidence/task-14-final-flow.log
+-rw-r--r-- 1 nyuk8 197121 2705 Mar  1 09:17 .sisyphus/evidence/task-14-rollback.log
+-rw-r--r-- 1 nyuk8 197121 4356 Feb 28 16:27 .sisyphus/evidence/task-2-provider-lookup.log
+-rw-r--r-- 1 nyuk8 197121 3049 Feb 28 16:27 .sisyphus/evidence/task-2-provider-policy-error.log
+-rw-r--r-- 1 nyuk8 197121  133 Feb 28 16:44 .sisyphus/evidence/task-3-run-finishedAt.log
+-rw-r--r-- 1 nyuk8 197121  136 Feb 28 16:44 .sisyphus/evidence/task-3-run-latest.log
+-rw-r--r-- 1 nyuk8 197121 6212 Feb 28 16:51 .sisyphus/evidence/task-4-ai-handler-error.log
+-rw-r--r-- 1 nyuk8 197121  133 Feb 28 16:53 .sisyphus/evidence/task-4-ai-handler-success.log
+-rw-r--r-- 1 nyuk8 197121  928 Feb 28 17:40 .sisyphus/evidence/task-5-alert-error.log
+-rw-r--r-- 1 nyuk8 197121  493 Feb 28 17:40 .sisyphus/evidence/task-5-alert-refactor.log
+-rw-r--r-- 1 nyuk8 197121 1697 Feb 28 22:38 .sisyphus/evidence/task-6-sim-dryrun.log
+-rw-r--r-- 1 nyuk8 197121 2192 Feb 28 22:38 .sisyphus/evidence/task-6-sim-guard-error.log
+-rw-r--r-- 1 nyuk8 197121  968 Mar  1 02:22 .sisyphus/evidence/task-7-pack-run-failed.log
+-rw-r--r-- 1 nyuk8 197121 1503 Mar  1 02:22 .sisyphus/evidence/task-7-pack-run.log
+-rw-r--r-- 1 nyuk8 197121  390 Mar  1 09:15 .sisyphus/evidence/task-8-run-default.log
+-rw-r--r-- 1 nyuk8 197121  730 Mar  1 09:15 .sisyphus/evidence/task-8-run-filter.log
+-rw-r--r-- 1 nyuk8 197121  393 Mar  1 09:15 .sisyphus/evidence/task-9-policy-key-block.log
+-rw-r--r-- 1 nyuk8 197121 4643 Mar  1 09:15 .sisyphus/evidence/task-9-policy-key-ok.log
+
+--- Final evidence files ---
+-rw-r--r-- 1 nyuk8 197121 2669 Mar  1 09:17 .sisyphus/evidence/final-f1-compliance.log
+-rw-r--r-- 1 nyuk8 197121 1471 Mar  1 08:20 .sisyphus/evidence/final-f2-go-test.log
+-rw-r--r-- 1 nyuk8 197121 6223 Mar  1 08:20 .sisyphus/evidence/final-f2-npm-lint.log
+
+--- Task coverage ---
+Task 1: 2 files — PASS
+Task 2: 2 files — PASS
+Task 3: 2 files — PASS
+Task 4: 2 files — PASS
+Task 5: 2 files — PASS
+Task 6: 2 files — PASS
+Task 7: 3 files — PASS
+Task 8: 2 files — PASS
+Task 9: 2 files — PASS
+Task 10: 2 files — PASS
+Task 11: 2 files — PASS
+Task 12: 2 files — PASS
+Task 13: 2 files — PASS
+Task 14: 2 files — PASS
+
+Expected Result: 모든 Task의 성공/실패 시나리오 증적 존재 — PASS

@@ -1,0 +1,21 @@
+?   	github.com/moneyvessel/kifu/cmd	[no test files]
+?   	github.com/moneyvessel/kifu/internal/app	[no test files]
+ok  	github.com/moneyvessel/kifu/internal/domain/entities	(cached)
+?   	github.com/moneyvessel/kifu/internal/domain/interfaces	[no test files]
+?   	github.com/moneyvessel/kifu/internal/domain/repositories	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/ai_providers	[no test files]
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/auth	(cached)
+?   	github.com/moneyvessel/kifu/internal/infrastructure/crypto	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/database	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/notification	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/onchain	[no test files]
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/repositories	(cached)
+?   	github.com/moneyvessel/kifu/internal/interfaces/http	[no test files]
+ok  	github.com/moneyvessel/kifu/internal/interfaces/http/handlers	(cached)
+?   	github.com/moneyvessel/kifu/internal/interfaces/http/middleware	[no test files]
+ok  	github.com/moneyvessel/kifu/internal/jobs	(cached)
+ok  	github.com/moneyvessel/kifu/internal/services	(cached)
+?   	github.com/moneyvessel/kifu/scripts/reset_guest_password	[no test files]
+?   	github.com/moneyvessel/kifu/scripts/seed_dummy	[no test files]
+?   	github.com/moneyvessel/kifu/scripts/seed_trades	[no test files]
+---

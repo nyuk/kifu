@@ -1,0 +1,12 @@
+=== Task 9: Unknown key block test ===
+Timestamp: 2026-03-01T00:15:57Z
+HTTP/1.1 400 Bad Request
+Date: Sun, 01 Mar 2026 00:15:57 GMT
+Content-Type: application/json
+Content-Length: 61
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"code":"INVALID_REQUEST","message":"unsupported policy key"}
+Expected Result: 400 에러 및 변경 미반영 — PASS

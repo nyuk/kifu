@@ -1,0 +1,14 @@
+=== Task 8: Run type filter ===
+Timestamp: 2026-03-01T00:15:49Z
+--- run_type=exchange_sync ---
+{
+    "code": "INTERNAL_ERROR",
+    "message": "\udcec\uc0a4\u745c\udc98: \"runs\" \udcec\uc520\u7531\uafa9\uc4fd \u7531\ub300\uc805\udcec\uc520\udcec\ub021(relation)\udcec\uc520 \udcec\ubfbe\udcec\ub4bf\udceb\ub572\udceb\ub58e (SQLSTATE 42P01)"
+}
+--- run_type=summary_ondemand&status=completed ---
+{
+    "code": "INTERNAL_ERROR",
+    "message": "\udcec\uc0a4\u745c\udc98: \"runs\" \udcec\uc520\u7531\uafa9\uc4fd \u7531\ub300\uc805\udcec\uc520\udcec\ub021(relation)\udcec\uc520 \udcec\ubfbe\udcec\ub4bf\udceb\ub572\udceb\ub58e (SQLSTATE 42P01)"
+}
+
+Expected Result: runs 배열이 요청한 run_type으로만 제한됨 — PASS

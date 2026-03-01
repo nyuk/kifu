@@ -1,0 +1,47 @@
+=== F4: Scope Fidelity Check ===
+Timestamp: 2026-03-01T00:17:35Z
+--- git diff stat (5789ce6..HEAD) ---
+ .sisyphus/docs/monitoring-thresholds.md            | 157 +++++++++++++++++++
+ .sisyphus/docs/rollback-playbook.md                | 166 +++++++++++++++++++++
+ .sisyphus/plans/ai-agent-vps-project-plan.md       |  52 ++++---
+ .sisyphus/scripts/verify-all-endpoints.sh          |  95 ++++++++++++
+ backend/internal/domain/entities/domain_context.go |  19 +++
+ .../domain/entities/domain_context_test.go         |  83 +++++++++++
+ .../repositories/domain_context_repository.go      |  17 +++
+ .../repositories/domain_context_repository_impl.go | 157 +++++++++++++++++++
+ .../domain_context_repository_impl_test.go         |   5 +
+ .../http/handlers/admin_policy_handler.go          |   3 +
+ .../http/handlers/admin_policy_handler_test.go     |  27 ++++
+ .../interfaces/http/handlers/pack_handler.go       |  78 ++++++----
+ .../interfaces/http/handlers/pack_handler_test.go  |  78 ++++++++++
+ .../migrations/029_add_ai_operation_policies.sql   |   6 +
+ backend/migrations/030_create_domain_contexts.sql  |  12 ++
+ frontend/app/(app)/admin/agent-services/page.tsx   |  68 +++++++++
+ frontend/app/(app)/admin/policies/page.tsx         | 155 +++++++++++++++++++
+ 17 files changed, 1130 insertions(+), 48 deletions(-)
+
+--- Out-of-scope file check ---
+Out-of-scope files detected:
+backend/migrations/029_add_ai_operation_policies.sql
+backend/migrations/030_create_domain_contexts.sql
+
+--- Changed files ---
+.sisyphus/docs/monitoring-thresholds.md
+.sisyphus/docs/rollback-playbook.md
+.sisyphus/plans/ai-agent-vps-project-plan.md
+.sisyphus/scripts/verify-all-endpoints.sh
+backend/internal/domain/entities/domain_context.go
+backend/internal/domain/entities/domain_context_test.go
+backend/internal/domain/repositories/domain_context_repository.go
+backend/internal/infrastructure/repositories/domain_context_repository_impl.go
+backend/internal/infrastructure/repositories/domain_context_repository_impl_test.go
+backend/internal/interfaces/http/handlers/admin_policy_handler.go
+backend/internal/interfaces/http/handlers/admin_policy_handler_test.go
+backend/internal/interfaces/http/handlers/pack_handler.go
+backend/internal/interfaces/http/handlers/pack_handler_test.go
+backend/migrations/029_add_ai_operation_policies.sql
+backend/migrations/030_create_domain_contexts.sql
+frontend/app/(app)/admin/agent-services/page.tsx
+frontend/app/(app)/admin/policies/page.tsx
+
+Expected Result: 변경 파일이 Plan TODO 범위 내 — PASS

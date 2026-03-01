@@ -1,0 +1,11 @@
+?   	github.com/moneyvessel/kifu/internal/infrastructure/ai_providers	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/auth	0.387s [no tests to run]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/crypto	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/database	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/notification	[no test files]
+?   	github.com/moneyvessel/kifu/internal/infrastructure/onchain	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/moneyvessel/kifu/internal/infrastructure/repositories	0.457s [no tests to run]

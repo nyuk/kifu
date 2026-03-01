@@ -1,0 +1,12 @@
+=== Task 11: Invalid range rejection ===
+Timestamp: 2026-03-01T00:16:04Z
+HTTP/1.1 400 Bad Request
+Date: Sun, 01 Mar 2026 00:16:04 GMT
+Content-Type: application/json
+Content-Length: 63
+Vary: Origin
+Access-Control-Allow-Origin: 
+Access-Control-Allow-Credentials: true
+
+{"code":"VALIDATION_ERROR","message":"range must be 7d or 30d"}
+Expected Result: validation error with code 반환 — PASS

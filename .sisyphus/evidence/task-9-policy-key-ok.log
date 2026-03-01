@@ -1,0 +1,120 @@
+=== Task 9: Policy key expansion test ===
+Timestamp: 2026-03-01T00:15:57Z
+--- Step 1: List policies ---
+{
+    "policies": [
+        {
+            "key": "admin_user_signup_enabled",
+            "value": true,
+            "description": "Allow admin users to create or invite users from administrative workflows.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        },
+        {
+            "key": "agent_service_poller_enabled",
+            "value": true,
+            "description": "Master switch for background exchange poller agent service.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.056175+09:00"
+        },
+        {
+            "key": "ai_local_gateway",
+            "value": false,
+            "description": "Enable local gateway routing for AI provider requests.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.085451+09:00"
+        },
+        {
+            "key": "ai_provider_toggle",
+            "value": false,
+            "description": "Master switch to enable or disable AI provider operations.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.085451+09:00"
+        },
+        {
+            "key": "ai_run_telemetry",
+            "value": false,
+            "description": "Enable telemetry capture for AI run execution events.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.085451+09:00"
+        },
+        {
+            "key": "maintenance_mode",
+            "value": false,
+            "description": "When true, non-admin user access to public endpoints is blocked for emergency maintenance.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        },
+        {
+            "key": "notification_delivery_enabled",
+            "value": true,
+            "description": "Global switch to enable notification-related background deliveries.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        }
+    ]
+}
+--- Step 2: Upsert ai_local_gateway ---
+{
+    "key": "ai_local_gateway",
+    "value": true,
+    "description": "Enable local gateway routing for AI provider requests.",
+    "updated_by": "e3748de9-2f15-4c3c-b642-e09382be43fe",
+    "updated_at": "2026-03-01T09:15:57.814194+09:00"
+}
+--- Step 3: Verify change ---
+{
+    "policies": [
+        {
+            "key": "admin_user_signup_enabled",
+            "value": true,
+            "description": "Allow admin users to create or invite users from administrative workflows.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        },
+        {
+            "key": "agent_service_poller_enabled",
+            "value": true,
+            "description": "Master switch for background exchange poller agent service.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.056175+09:00"
+        },
+        {
+            "key": "ai_local_gateway",
+            "value": true,
+            "description": "Enable local gateway routing for AI provider requests.",
+            "updated_by": "e3748de9-2f15-4c3c-b642-e09382be43fe",
+            "updated_at": "2026-03-01T09:15:57.814194+09:00"
+        },
+        {
+            "key": "ai_provider_toggle",
+            "value": false,
+            "description": "Master switch to enable or disable AI provider operations.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.085451+09:00"
+        },
+        {
+            "key": "ai_run_telemetry",
+            "value": false,
+            "description": "Enable telemetry capture for AI run execution events.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.085451+09:00"
+        },
+        {
+            "key": "maintenance_mode",
+            "value": false,
+            "description": "When true, non-admin user access to public endpoints is blocked for emergency maintenance.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        },
+        {
+            "key": "notification_delivery_enabled",
+            "value": true,
+            "description": "Global switch to enable notification-related background deliveries.",
+            "updated_by": null,
+            "updated_at": "2026-03-01T09:13:19.043126+09:00"
+        }
+    ]
+}
+
+Expected Result: 신규 키가 목록 조회 및 변경 모두 반영됨 — PASS

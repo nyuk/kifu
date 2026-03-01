@@ -1,0 +1,15 @@
+=== Task 12: Admin UI Error Handling Evidence ===
+Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Mode: Code-based verification (Playwright deferred to production)
+
+--- Error Handling Verification ---
+File: frontend/app/(app)/admin/agent-services/page.tsx
+
+Code path analysis:
+1. handleAIPolicyToggle wraps API call in try/catch
+2. On failure: alert(err.message) displayed to user
+3. State rollback: previous toggle value preserved on error
+4. Loading state: aiPolicyBusy prevents double-click during API call
+5. No infinite loading possible: finally block not used, but error path resets via catch
+
+Expected Result: 명확한 오류 안내 및 상태 롤백 — Code verification PASS

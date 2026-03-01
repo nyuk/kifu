@@ -1,0 +1,28 @@
+=== Task 13: Marketing Pilot Approval Flow Evidence ===
+Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Mode: Code-based verification (Playwright deferred to production)
+
+--- Verification 1: 3-Step Workflow UI ---
+File: frontend/app/(app)/admin/policies/page.tsx
+Changes verified:
+  - Marketing pilot section renders 3 steps: 콘텐츠 제안 생성 → 승인 대기 → 실행
+  - Each step has Korean label and description
+  - Step progress indicators with visual state (active/completed/pending)
+  - ai_marketing_pilot_enabled policy key controls section visibility
+
+--- Verification 2: AI Policy Labels & Hints ---
+Changes verified:
+  - ai_provider_toggle: 'AI 프로바이더 토글' with hint 'AI 프로바이더 운영을 활성화 또는 비활성화합니다.'
+  - ai_run_telemetry: 'AI 실행 텔레메트리' with hint 'AI 실행 이벤트에 대한 텔레메트리 캡처를 활성화합니다.'
+  - ai_local_gateway: 'AI 로컬 게이트웨이' with hint 'AI 프로바이더 요청에 대한 로컬 게이트웨이 라우팅을 활성화합니다.'
+
+--- Verification 3: Approval Gate ---
+  - Execute button disabled when step is not in 'approved' state
+  - Button shows Korean label '실행' with disabled styling until approved
+  - No auto-publish: manual publish only after approval step
+
+--- Static Analysis ---
+npm run typecheck: PASS
+npm run lint: PASS (no new warnings in changed file)
+
+Expected Result: 승인 후에만 실행 단계로 이동 — Code verification PASS

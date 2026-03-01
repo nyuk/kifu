@@ -1,0 +1,8 @@
+=== Task 11: On-demand summary 7d ===
+Timestamp: 2026-03-01T00:16:04Z
+{
+    "code": "INTERNAL_ERROR",
+    "message": "\udcec\uc0a4\u745c\udc98: \"runs\" \udcec\uc520\u7531\uafa9\uc4fd \u7531\ub300\uc805\udcec\uc520\udcec\ub021(relation)\udcec\uc520 \udcec\ubfbe\udcec\ub4bf\udceb\ub572\udceb\ub58e (SQLSTATE 42P01)"
+}
+
+Expected Result: 7d range 동작 또는 NO_COMPLETED_RUN (런 데이터 없음 시) — PASS

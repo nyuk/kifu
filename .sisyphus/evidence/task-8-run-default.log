@@ -1,0 +1,9 @@
+=== Task 8: Default agent-services (no filter) ===
+Timestamp: 2026-03-01T00:19:26Z
+{
+    "snapshot_at": "2026-03-01T00:19:26.3178798Z",
+    "services": [],
+    "runs": []
+}
+
+Expected Result: services/runs 구조 유지 — PASS
