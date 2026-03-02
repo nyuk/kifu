@@ -148,12 +148,12 @@ def seller():
                 job.reject(reject_reason)
                 return
 
-            job.accept("Accepted")
-
+            # ✅ accept() 전에 저장 (accept에서 Already signed 예외 나도 캐시 유지)
             if not payload_str:
                 payload_str = "{}"
-
             JOB_PAYLOAD_CACHE[job.id] = payload_str
+
+            job.accept("Accepted")
             job.create_requirement(payload_str)
             job.create_notification("Accepted. Please pay to proceed.")
 
@@ -170,7 +170,12 @@ def seller():
                 return
 
             payload_str = JOB_PAYLOAD_CACHE.get(job.id) or getattr(memo_to_sign, "content", None) or "{}"
-            payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
+            try:
+                payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
+            except Exception:
+                logger.error(f"Job {job.id}: payload_str is not JSON: {str(payload_str)[:80]}")
+                job.reject("Internal error: missing payload")
+                return
 
             # Butler는 {"name":..., "requirement": {...}} 형태로 보냄 → requirement만 추출
             if "requirement" in payload:
