@@ -18,6 +18,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
     useGuidedReviewStore()
   const [isOpen, setIsOpen] = useState(false)
   const [recentSymbols, setRecentSymbols] = useState<string[]>([])
+  const [hasTodayTrades, setHasTodayTrades] = useState(false)
 
   useEffect(() => {
     if (autoLoad) {
@@ -26,6 +27,13 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
     }
     const loadRecentSymbols = async () => {
       try {
+        // Use local-day start to avoid showing "non-trading day" when today's trades exist.
+        const localDayStart = new Date()
+        localDayStart.setHours(0, 0, 0, 0)
+        const todaySummaryResponse = await api.get(`/v1/trades/summary?from=${encodeURIComponent(localDayStart.toISOString())}`)
+        const todaySummary = normalizeTradeSummary(todaySummaryResponse.data)
+        setHasTodayTrades((todaySummary?.totals?.total_trades || 0) > 0)
+
         const response = await api.get('/v1/trades/summary')
         const normalized = normalizeTradeSummary(response.data)
         const top = (normalized.by_symbol || [])
@@ -36,6 +44,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
           .slice(0, 4)
         setRecentSymbols(top)
       } catch {
+        setHasTodayTrades(false)
         setRecentSymbols([])
       }
     }
@@ -54,6 +63,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
   const isCompleted = review?.status === 'completed' && !hasPendingItems
   const hasItems = totalCount > 0
   const isNoTradeDay = hasItems && items.length === 1 && (items[0].symbol === NO_TRADE_SYMBOL || items[0].trade_count === 0)
+  const showNoTradeDayBanner = isNoTradeDay && !hasTodayTrades
   const supplementPending = items.filter(
     (item) => !item.intent && (item.bundle_key || '').startsWith('SUPPLEMENT:')
   ).length
@@ -121,7 +131,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         </div>
       )}
 
-      {isNoTradeDay && !isOpen && (
+      {showNoTradeDayBanner && !isOpen && (
         <div className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3">
           <p className="text-xs font-semibold text-cyan-100">오늘은 비거래일 복기입니다.</p>
           <p className="mt-1 text-xs text-cyan-100/80">

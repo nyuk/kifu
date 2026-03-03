@@ -180,6 +180,7 @@ test('home reflects today trade after user-like import flow', async ({ page }: {
   await expect(page.locator('main')).toBeVisible({ timeout: 10_000 })
   expect(page.url()).toContain('/home')
   await expect(page.getByRole('link', { name: /Home|홈/ })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('오늘은 비거래일 복기입니다.')).toHaveCount(0)
 
   await tokens.api.dispose()
 })

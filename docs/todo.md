@@ -7,42 +7,30 @@
 
 Operational task list for ongoing work.
 
-## NOW
+## NOW (Top 3 priorities)
 
-- [x] Add pagination and page-jump in chart side bubble list (`PageJumpPager`).
-  - Scope: chart side panel and related lists.
-  - Complete: 2026-02-13
-- [x] Add admin policy visibility of updater/time metadata on `/admin/policies`.
-  - Scope: 정책 목록 테이블에서 `최종 반영`/`반영자` 노출.
-  - Complete: 2026-02-22
-- [x] Standardize admin access authority to DB `users.is_admin` as source of truth and remove guest-email path dependency.
-  - Scope: backend admin middleware and frontend auth guard.
-  - Complete: 2026-02-21
-- [x] Enrich admin dashboard with audit log summaries and policy-aware indicators.
-  - Scope: `/admin` 최근 감사 로그 Top 액션/대상/액터 요약 카드 노출.
-  - Complete: 2026-02-22
-- [x] Add audit log visual highlights on `/admin/audit-logs`.
-  - Scope: action/resource badge, risk-row emphasis, time/target visibility.
-  - Complete: 2026-02-22
-- [ ] Execute remaining work from `docs/2026-02-13-remaining-work.md`.
-  - Current active priority: first batch items 1–4.
-- [ ] Social login (OAuth providers)
-  - Google/Kakao/Naver OAuth start/callback flow implemented (`/api/v1/auth/social-login/{google|kakao|naver}`, callback endpoints included).
-  - Current production policy: only Google is open; non-Google providers respond as `coming_soon`.
-  - Social identity tracking table added (`user_identities`) and auto-link policy applied.
-  - Social-only account password bridge added (`POST /api/v1/users/me/password`, `password_set` flag).
-  - Apple still pending configuration and policy review.
-  - Required env vars:
-    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-    - `KAKAO_CLIENT_ID` (required), `KAKAO_CLIENT_SECRET` (optional), `KAKAO_REDIRECT_URI` (optional)
-    - `NAVER_CLIENT_ID` (required), `NAVER_CLIENT_SECRET` (required), `NAVER_REDIRECT_URI` (optional)
-    - `SOCIAL_LOGIN_KAKAO_ENABLED=true` (backend enable flag)
-    - `NEXT_PUBLIC_SOCIAL_LOGIN_KAKAO_ENABLED=true` (frontend button exposure flag)
-    - `SOCIAL_LOGIN_NAVER_ENABLED=true` (backend enable flag)
-    - `NEXT_PUBLIC_SOCIAL_LOGIN_NAVER_ENABLED=true` (frontend button exposure flag)
-    - `SOCIAL_LOGIN_STATE_SECRET` (shared with backend, defaults to jwt secret if empty)
-    - `FRONTEND_BASE_URL` (for callback redirect base)
-  - Current callback still carries tokens via query string; harden before v1.0.
+- [x] P1. Execute first batch (1-4) from `docs/2026-02-13-remaining-work.md`.
+  - Scope: Home readability, checklist/action visibility, bubble/action flow, narrow-screen behavior.
+  - Exit criteria: all 4 items verified and reflected in `CHECKPOINT` section below.
+  - Complete: 2026-03-03
+- [x] P2. Complete `CHECKPOINT` QA run and attach evidence.
+  - Scope: manual UI verification on desktop + 390-430px mobile width.
+  - Run command: `cd frontend && npm run e2e:checkpoint`
+  - Exit criteria: each checkpoint has run date, tester, and pass/fail note.
+  - Result: `3 passed (Playwright checkpoint suite, chromium)`
+  - Complete: 2026-03-03
+- [x] P3. Social login production hardening (Google-first policy).
+  - Scope: keep non-Google providers `coming_soon`, validate Google callback and password-bridge flow.
+  - Exit criteria: login/callback/password-bridge smoke log added to runbook.
+  - Result: Google `status=ready`, Kakao/Naver `coming_soon`, social password-bridge + email/password login verified.
+  - Complete: 2026-03-03
+- [x] P4. Fix false non-trading-day review popup on `/home`.
+  - Issue: popup appears even when user has today trades.
+  - Scope: today-trade detection, timezone boundary, guided-review popup guard condition.
+  - Exit criteria: if today trade exists, non-trading-day popup must not render.
+  - Result: home guided-review card now suppresses no-trade banner when local-day trade summary count > 0.
+  - Verified: `npm run e2e:smoke` (2 passed, 2026-03-03)
+  - Complete: 2026-03-03
 
 ## PRODUCT BACKLOG (not exposed in README)
 
@@ -56,11 +44,12 @@ Operational task list for ongoing work.
 - [x] DB-only serverization for auth/session authority separation
 - [x] Account lookup and password reset flows
 - [x] Admin dashboard expansion (role-aware sections and telemetry)
-- [ ] Agent service detail screens and operational controls
+- [x] Agent service detail screens and operational controls
   - [x] Agent 서비스 상세 화면 추가 (`/admin/agent-services`)
   - [x] Admin-only simulation access and route hardening audit notes
   - [x] Guest-mode simulator exposure audit (UI + backend route validation)
   - [x] 운영 제어 액션(재시작/일시정지) 설계 및 연결
+  - Complete: 2026-03-01
 - [x] 관리자 페이지 역할 확장 (현재 미구현)
   - [x] 사용자/권한 조회 및 admin 부여/회수 (기본 UI/API)
     - Implemented: `admin/users` 페이지, 사용자 검색/목록, admin 플래그 변경
@@ -77,29 +66,42 @@ Operational task list for ongoing work.
 
 ## CHECKPOINT (Immediate checks)
 
-- [ ] Home readability
-  - `/home` should expose key cards and labels clearly at 100% zoom.
-  - Contrast and font sizes should pass quick glance criteria.
-- [ ] Checklist and action labels visibility
-  - Status labels, badges, and counts should be visually distinct.
-  - Error/loading labels should be distinct from background.
-- [ ] Bubble/action flow
-  - Bubble creation → save → AI action path should be clear.
-  - Error feedback should remain visible for review.
-- [ ] Narrow-screen behavior
-  - No major overlap on 390–430px widths.
-  - Critical cards should fit with minimal scrolling.
+- [x] Home readability
+  - Test steps: open `/home` at 100% zoom on desktop (Chrome), refresh once, inspect above-the-fold cards.
+  - Pass criteria: key cards/labels readable without overlap; no clipped title/number text.
+  - Evidence: one screenshot + short note (`pass`/`fail` + reason).
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Checklist and action labels visibility
+  - Test steps: on `/home`, inspect checklist status chips and action buttons in default theme.
+  - Pass criteria: status/count/action labels are visually distinguishable; loading/error labels are readable.
+  - Evidence: one screenshot + short note (`pass`/`fail` + reason).
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Bubble/action flow
+  - Test steps: `/chart/BTCUSDT` -> create bubble -> save -> trigger AI action once.
+  - Pass criteria: save success is visible; AI success/failure message remains long enough to verify.
+  - Evidence: one screenshot + short note (`pass`/`fail` + reason).
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Narrow-screen behavior
+  - Test steps: set viewport to 390x844 and 430x932, check `/home`, `/chart/BTCUSDT`, `/review`.
+  - Pass criteria: no major layout overlap; primary cards/buttons remain reachable without broken stacking.
+  - Evidence: per viewport one screenshot + short note (`pass`/`fail` + reason).
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
 
 ## NEXT
 
 - [x] Improve chart bubble density and replay cleanup.
 - [x] Add user-time simulation tool (`/admin/sim-report`, 30-day mode).
-- [ ] Finalize Claude/Gemini routing policy.
+- [x] Finalize Claude/Gemini routing policy.
+  - Documented: `docs/runbook/ai-routing-policy.md`
+  - Complete: 2026-03-03
 - [x] Improve review card → chart movement behavior and filter-share labels.
 
 ## LATER
 
-- [ ] Privacy mode design: local-first, partial local storage, or hybrid.
+- [x] Privacy mode design: local-first, partial local storage, or hybrid.
+  - Decision: hybrid privacy mode (client local-first + minimal server-derived data).
+  - Documented: `docs/runbook/privacy-mode-policy.md`
+  - Complete: 2026-03-03
 - [ ] Evidence packet storage policy (ephemeral vs encrypted vault).
 - [ ] Alert and emergency-mode hardening.
 - [ ] Multi-exchange and multi-asset expansion roadmap.

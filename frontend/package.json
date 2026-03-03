@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "e2e:smoke": "playwright test tests/qa-smoke.spec.ts --project=chromium",
+    "e2e:checkpoint": "playwright test tests/checkpoint-qa.spec.ts --project=chromium",
     "e2e": "playwright test"
   },
   "dependencies": {

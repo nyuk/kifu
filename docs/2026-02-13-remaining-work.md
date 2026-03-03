@@ -9,28 +9,42 @@ This is a practical list of remaining items collected from `docs/todo.md`, recen
 
 ## Do First
 
-- [ ] Complete Home readability verification
+- [x] Complete Home readability verification
   - Confirm `/home` Quiet Routine and Closing Note cards are readable at 100% zoom within 2 seconds.
   - Remove low-contrast gray text where needed.
-- [ ] Validate checklist/action visibility
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Validate checklist/action visibility
   - Status labels and buttons in `/home`, `/review`, `/trades`, `/portfolio` should be clearly visible.
   - Keep login-failure error messaging visible for at least 3 seconds.
-- [ ] Mobile and narrow-screen check (390–430px)
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Mobile and narrow-screen check (390–430px)
   - Verify wrapping, tab controls, and side scrolling.
   - Confirm one-screen status summary remains legible.
-- [ ] Pagination stabilization
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Pagination stabilization
   - Verify jump controls and boundary behavior for charts, bubbles, alerts, and notes.
   - Move away from repeated full-chain button clicking.
+  - Verified: Playwright checkpoint suite pass (2026-03-03).
+- [x] Fix false non-trading-day review popup on home
+  - Repro: user has at least 1 trade in today window, but `/home` still shows non-trading-day review popup.
+  - Checkpoints:
+    - Verify today-window timezone alignment (Asia/Seoul vs UTC boundary).
+    - Verify trades summary source and guided-review "no trade day" condition use same day window.
+    - Verify popup suppression when `today_trade_count > 0`.
+  - Done criteria: popup appears only when today trade count is zero.
+  - Verified: `frontend/tests/qa-smoke.spec.ts` regression assertion + smoke pass (2026-03-03).
 - [ ] Re-check Claude integration conflicts
   - Confirm no unresolved merge traces in alert/review/home/shell areas.
   - Compare pending changes by functional area.
 
 ## Next
 
-- [ ] AI routing decision (Claude/Gemini policy)
+- [x] AI routing decision (Claude/Gemini policy)
   - Define provider strategy and cost policy.
-- [ ] Privacy mode design
+  - Documented: `docs/runbook/ai-routing-policy.md` (2026-03-03).
+- [x] Privacy mode design
   - Confirm local-first vs server-backed storage policy.
+  - Decision: hybrid mode, documented in `docs/runbook/privacy-mode-policy.md` (2026-03-03).
 - [ ] Alert/urgent-mode hardening
   - Improve briefing template, log/reason capture, and re-entry protection.
 - [ ] Multi-asset expansion
