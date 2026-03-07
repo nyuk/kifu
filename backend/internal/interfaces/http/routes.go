@@ -73,6 +73,7 @@ func RegisterRoutes(
 	// Register provider adapters
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	aiRegistry.RegisterClient("openai", ai_providers.NewOpenAIClient(httpClient))
+	aiRegistry.RegisterClient("openai-compatible", ai_providers.NewOpenAIClient(httpClient))
 	aiRegistry.RegisterClient("anthropic", ai_providers.NewClaudeClient(httpClient))
 	aiRegistry.RegisterClient("google", ai_providers.NewGeminiClient(httpClient))
 	aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)

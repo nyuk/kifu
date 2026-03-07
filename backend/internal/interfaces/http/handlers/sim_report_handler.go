@@ -77,6 +77,7 @@ func NewSimReportHandler(
 	aiRegistry := ai_providers.NewProviderRegistry(nil)
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	aiRegistry.RegisterClient(entities.ProviderTypeOpenAI, ai_providers.NewOpenAIClient(httpClient))
+	aiRegistry.RegisterClient(entities.ProviderTypeOpenAICompatible, ai_providers.NewOpenAIClient(httpClient))
 	aiRegistry.RegisterClient(entities.ProviderTypeAnthropic, ai_providers.NewClaudeClient(httpClient))
 	aiRegistry.RegisterClient(entities.ProviderTypeGoogle, ai_providers.NewGeminiClient(httpClient))
 	aiInvocationService := services.NewAIInvocationService(aiProviderRepo, credentialResolver, aiRegistry)

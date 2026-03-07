@@ -71,6 +71,7 @@ func newAlertBriefingAIInvocationService(
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	registry := ai_providers.NewProviderRegistry(nil)
 	registry.RegisterClient(entities.ProviderTypeOpenAI, ai_providers.NewOpenAIClient(httpClient))
+	registry.RegisterClient(entities.ProviderTypeOpenAICompatible, ai_providers.NewOpenAIClient(httpClient))
 	registry.RegisterClient(entities.ProviderTypeAnthropic, ai_providers.NewClaudeClient(httpClient))
 	registry.RegisterClient(entities.ProviderTypeGoogle, ai_providers.NewGeminiClient(httpClient))
 	credentialResolver := NewAICredentialResolver(userKeyRepo, providerRepo, encryptionKey)
