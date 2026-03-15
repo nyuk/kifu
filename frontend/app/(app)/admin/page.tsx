@@ -104,6 +104,22 @@ type AdminPolicyListResponse = {
   policies: AdminPolicy[]
 }
 
+type AdminUserSnapshot = {
+  id: string
+  email: string
+  name: string
+  is_admin: boolean
+  ai_allowlisted: boolean
+  created_at: string
+}
+
+type AdminUserSnapshotResponse = {
+  users: AdminUserSnapshot[]
+  total: number
+  limit: number
+  offset: number
+}
+
 const tools = [
   {
     href: '/admin/sim-report',
@@ -163,6 +179,9 @@ export default function AdminPage() {
   const [policies, setPolicies] = useState<AdminPolicy[]>([])
   const [policyLoadError, setPolicyLoadError] = useState('')
   const [policySavingKey, setPolicySavingKey] = useState<string | null>(null)
+  const [recentUsers, setRecentUsers] = useState<AdminUserSnapshot[]>([])
+  const [recentUsersTotal, setRecentUsersTotal] = useState(0)
+  const [userLoadError, setUserLoadError] = useState('')
 
   useEffect(() => {
     try {
@@ -179,25 +198,32 @@ export default function AdminPage() {
     let isMounted = true
     const load = async () => {
       try {
-        const [telemetryResponse, servicesResponse, policyResponse] = await Promise.all([
+        const [telemetryResponse, servicesResponse, policyResponse, usersResponse] = await Promise.all([
           api.get<AdminTelemetry>('/v1/admin/telemetry'),
           api.get<AgentServicesResponse>('/v1/admin/agent-services'),
           api.get<AdminPolicyListResponse>('/v1/admin/policies'),
+          api.get<AdminUserSnapshotResponse>('/v1/admin/users?limit=8&offset=0'),
         ])
 
         if (!isMounted) return
         setTelemetry(telemetryResponse.data)
         setAgentServices(servicesResponse.data)
         setPolicies(policyResponse.data.policies)
+        setRecentUsers(usersResponse.data.users || [])
+        setRecentUsersTotal(usersResponse.data.total || 0)
         setAgentLoadError('')
         setPolicyLoadError('')
+        setUserLoadError('')
       } catch {
         if (isMounted) {
           setTelemetry(null)
           setAgentServices(null)
           setPolicies([])
+          setRecentUsers([])
+          setRecentUsersTotal(0)
           setAgentLoadError('운영 지표(에이전트 서비스) 로딩에 실패했습니다.')
           setPolicyLoadError('운영 정책 조회에 실패했습니다.')
+          setUserLoadError('사용자 스냅샷 조회에 실패했습니다.')
         }
       }
 
@@ -387,6 +413,55 @@ export default function AdminPage() {
         </div>
         {agentLoadError && (
           <p className="mt-4 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{agentLoadError}</p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-medium text-zinc-100">최근 사용자</h2>
+            <p className="mt-2 text-xs text-zinc-400">총 {recentUsersTotal}명 중 최근 8명 표시</p>
+          </div>
+          <Link href="/admin/users" className="text-xs font-medium text-cyan-200 hover:text-cyan-100">
+            전체 사용자 보기
+          </Link>
+        </div>
+        {userLoadError && (
+          <p className="mt-4 rounded-md border border-rose-400/30 bg-rose-500/10 p-3 text-sm text-rose-200">{userLoadError}</p>
+        )}
+        {!userLoadError && (
+          <div className="mt-4 overflow-x-auto rounded-md border border-white/[0.08] bg-black/20">
+            <table className="w-full text-sm">
+              <thead className="text-left text-zinc-400">
+                <tr>
+                  <th className="px-3 py-2">이메일</th>
+                  <th className="px-3 py-2">이름</th>
+                  <th className="px-3 py-2">권한</th>
+                  <th className="px-3 py-2">AI</th>
+                  <th className="px-3 py-2">가입일</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentUsers.length === 0 ? (
+                  <tr>
+                    <td className="px-3 py-4 text-zinc-500" colSpan={5}>
+                      사용자 데이터가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  recentUsers.map((user) => (
+                    <tr key={user.id} className="border-t border-white/10 text-zinc-200">
+                      <td className="px-3 py-2">{user.email}</td>
+                      <td className="px-3 py-2">{user.name || '-'}</td>
+                      <td className="px-3 py-2">{user.is_admin ? '관리자' : '일반'}</td>
+                      <td className="px-3 py-2">{user.ai_allowlisted ? '허용' : '기본'}</td>
+                      <td className="px-3 py-2 text-zinc-400">{new Date(user.created_at).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

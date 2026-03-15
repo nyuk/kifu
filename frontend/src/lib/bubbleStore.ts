@@ -227,10 +227,16 @@ export const useBubbleStore = create<BubbleState>()(
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
         };
-        set((state) => ({
-          bubbles: [...state.bubbles, bubble],
-          totalBubbles: Math.max(state.totalBubbles, state.bubbles.length + 1),
-        }));
+        // Do not fail bubble creation when local persisted state write fails.
+        // Server has already accepted the bubble at this point.
+        try {
+          set((state) => ({
+            bubbles: [...state.bubbles, bubble],
+            totalBubbles: Math.max(state.totalBubbles, state.bubbles.length + 1),
+          }));
+        } catch (stateErr) {
+          console.warn('createBubbleRemote: local state sync failed after server create', stateErr);
+        }
         return bubble;
       },
       updateBubbleRemote: async (id, payload) => {
