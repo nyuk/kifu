@@ -98,7 +98,7 @@ function CandlestickBackground() {
 }
 
 export function LandingPage() {
-    const tgBotUrl = 'https://t.me/kifu_review_bot'
+    const tgBotUrl = 'https://t.me/kifu_main_bot'
 
     return (
         <div className="min-h-screen bg-[#0B0F14] text-white">

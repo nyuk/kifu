@@ -13,7 +13,7 @@ export default function OnboardingStartPage() {
   }, [])
 
   const authed = mounted && isAuthenticated
-  const tgBotUrl = 'https://t.me/kifu_review_bot'
+  const tgBotUrl = 'https://t.me/kifu_main_bot'
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 text-neutral-100">
