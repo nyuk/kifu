@@ -2,10 +2,12 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
+	"github.com/moneyvessel/kifu/internal/domain/repositories"
 )
 
 type TradePlanRepositoryImpl struct {
@@ -91,6 +93,29 @@ func (r *TradePlanRepositoryImpl) ListBySymbol(ctx context.Context, userID uuid.
 	return plans, nil
 }
 
+func (r *TradePlanRepositoryImpl) ListUnmatched(ctx context.Context, limit int) ([]*entities.TradePlan, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, user_id, alert_id, symbol, action, reason, reason_text, stop_loss, entry_price,
+			   status, matched_trade_id, plan_pnl_percent, chat_id, created_at, completed_at, matched_at
+		FROM trade_plans
+		WHERE status = 'complete' AND action = 'buy' AND matched_trade_id IS NULL
+		ORDER BY created_at ASC LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var plans []*entities.TradePlan
+	for rows.Next() {
+		p, err := scanTradePlan(rows)
+		if err != nil {
+			return nil, err
+		}
+		plans = append(plans, p)
+	}
+	return plans, nil
+}
+
 func (r *TradePlanRepositoryImpl) ListPending(ctx context.Context) ([]*entities.TradePlan, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, alert_id, symbol, action, reason, reason_text, stop_loss, entry_price,
@@ -110,6 +135,68 @@ func (r *TradePlanRepositoryImpl) ListPending(ctx context.Context) ([]*entities.
 		plans = append(plans, p)
 	}
 	return plans, nil
+}
+
+func (r *TradePlanRepositoryImpl) MatchWithTrades(ctx context.Context, limit int) ([]*repositories.PlanMatchResult, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT ON (p.id)
+			p.id, p.user_id, p.alert_id, p.symbol, p.action, p.reason, p.reason_text,
+			p.stop_loss, p.entry_price, p.status, p.matched_trade_id, p.plan_pnl_percent,
+			p.chat_id, p.created_at, p.completed_at, p.matched_at,
+			t.id AS trade_id, t.price AS trade_price
+		FROM trade_plans p
+		JOIN trades t ON t.user_id = p.user_id
+			AND t.symbol = p.symbol
+			AND t.side = 'BUY'
+			AND t.trade_time >= p.created_at
+			AND t.trade_time <= p.created_at + INTERVAL '24 hours'
+		WHERE p.status = 'complete'
+			AND p.action = 'buy'
+			AND p.matched_trade_id IS NULL
+		ORDER BY p.id, t.trade_time ASC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*repositories.PlanMatchResult
+	for rows.Next() {
+		var p entities.TradePlan
+		var tradeID uuid.UUID
+		var tradePrice string
+		err := rows.Scan(
+			&p.ID, &p.UserID, &p.AlertID, &p.Symbol, &p.Action,
+			&p.Reason, &p.ReasonText, &p.StopLoss, &p.EntryPrice,
+			&p.Status, &p.MatchedTradeID, &p.PlanPnLPercent,
+			&p.ChatID, &p.CreatedAt, &p.CompletedAt, &p.MatchedAt,
+			&tradeID, &tradePrice,
+		)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, &repositories.PlanMatchResult{
+			Plan:       &p,
+			TradeID:    tradeID,
+			TradePrice: tradePrice,
+		})
+	}
+	return results, nil
+}
+
+func (r *TradePlanRepositoryImpl) ExpireOld(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoff := time.Now().UTC().Add(-olderThan)
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE trade_plans
+		SET status = 'expired', completed_at = NOW()
+		WHERE status = 'complete'
+			AND action = 'buy'
+			AND matched_trade_id IS NULL
+			AND created_at < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *TradePlanRepositoryImpl) GetLatestByChatID(ctx context.Context, chatID int64, status entities.PlanStatus) (*entities.TradePlan, error) {

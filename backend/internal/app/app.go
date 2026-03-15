@@ -242,6 +242,10 @@ func Run() error {
 	positionCalc := jobs.NewPositionCalculator(portfolioRepo)
 	positionCalc.Start(context.Background())
 
+	// Plan matcher job (matches trade plans with actual Binance trades)
+	planMatcher := jobs.NewPlanMatcher(tradePlanRepo, tgSender)
+	planMatcher.Start(context.Background())
+
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)
 }
