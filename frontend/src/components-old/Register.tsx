@@ -54,19 +54,20 @@ export function Register() {
     <div className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">시작하기</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">무료 시작</p>
           <h1 className="text-3xl font-semibold text-zinc-100 lg:text-4xl">
-            당신의 매매 기록을 쌓아보세요.
+            매매 복기, 15초면 됩니다.
           </h1>
           <p className="text-base text-zinc-400">
-            진입 근거를 남기고, 결과를 복기하고, 다음 판단에 반영합니다.
+            텔레그램 봇으로 버튼 3번이면 기록 완료.<br />
+            실제 거래와 자동 비교해드립니다.
           </p>
           <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-            <p className="text-sm font-semibold text-zinc-200">시작 혜택</p>
+            <p className="text-sm font-semibold text-zinc-200">얼리 액세스 (전부 무료)</p>
             <ul className="mt-2 space-y-1 text-sm text-zinc-400">
-              <li>• 무료 플랜에서 AI 의견 체험</li>
-              <li>• 1h, 4h, 1d 복기 결과 추적</li>
-              <li>• API 키 보관함 제공</li>
+              <li>• 텔레그램 복기 봇 + 자동 매칭</li>
+              <li>• AI 의견 비교 (OpenAI, Claude, Gemini)</li>
+              <li>• 거래소 API 연동 (Binance, Upbit)</li>
             </ul>
           </div>
         </div>
