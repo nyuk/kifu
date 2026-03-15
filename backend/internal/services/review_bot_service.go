@@ -193,6 +193,9 @@ func (s *ReviewBotService) HandleReason(ctx context.Context, planIDStr string, r
 	if err != nil || plan == nil {
 		return "계획을 찾을 수 없습니다.", nil
 	}
+	if plan.Status == entities.PlanStatusComplete {
+		return "이미 완료된 계획입니다.", nil
+	}
 
 	plan.Reason = &reason
 	if err := s.planRepo.Update(ctx, plan); err != nil {
