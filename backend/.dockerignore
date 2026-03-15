@@ -1,0 +1,6 @@
+scripts/
+**/*_test.go
+.git
+.env
+.env.*
+README.md
