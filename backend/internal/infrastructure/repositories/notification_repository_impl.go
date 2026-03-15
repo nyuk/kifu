@@ -99,6 +99,25 @@ func (r *NotificationChannelRepositoryImpl) ListVerifiedByUser(ctx context.Conte
 	return channels, rows.Err()
 }
 
+func (r *NotificationChannelRepositoryImpl) GetByChatID(ctx context.Context, chatID int64) (*entities.NotificationChannel, error) {
+	query := `
+		SELECT id, user_id, channel_type, config, enabled, verified, created_at
+		FROM notification_channels
+		WHERE channel_type = 'telegram' AND verified = true AND (config->>'chat_id')::bigint = $1
+		LIMIT 1
+	`
+	var ch entities.NotificationChannel
+	err := r.pool.QueryRow(ctx, query, chatID).Scan(
+		&ch.ID, &ch.UserID, &ch.ChannelType, &ch.Config, &ch.Enabled, &ch.Verified, &ch.CreatedAt)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &ch, nil
+}
+
 // --- TelegramVerifyCode ---
 
 type TelegramVerifyCodeRepositoryImpl struct {

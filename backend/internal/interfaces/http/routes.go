@@ -46,6 +46,7 @@ func RegisterRoutes(
 	verifyCodeRepo repositories.TelegramVerifyCodeRepository,
 	tgSender *notification.TelegramSender,
 	tgBotUsername string,
+	reviewBot *services.ReviewBotService,
 	portfolioRepo repositories.PortfolioRepository,
 	manualPositionRepo repositories.ManualPositionRepository,
 	safetyRepo repositories.TradeSafetyReviewRepository,
@@ -85,7 +86,7 @@ func RegisterRoutes(
 	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 	alertRuleHandler := handlers.NewAlertRuleHandler(alertRuleRepo)
 	alertNotifHandler := handlers.NewAlertNotificationHandler(alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo)
-	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender, tgBotUsername)
+	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender, tgBotUsername, reviewBot)
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
 	importHandler := handlers.NewImportHandler(portfolioRepo, runRepo)
 	connectionHandler := handlers.NewConnectionHandler()

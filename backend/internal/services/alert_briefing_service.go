@@ -32,6 +32,12 @@ type AlertBriefingService struct {
 	client       *http.Client
 	appBaseURL   string
 	aiInvocation *AIInvocationService
+	reviewBot    *ReviewBotService
+}
+
+// SetReviewBot injects the review bot service (avoids circular dependency in init).
+func (s *AlertBriefingService) SetReviewBot(bot *ReviewBotService) {
+	s.reviewBot = bot
 }
 
 func NewAlertBriefingService(
@@ -170,6 +176,11 @@ func (s *AlertBriefingService) HandleTrigger(ctx context.Context, alert *entitie
 		log.Printf("alert briefing: send notification failed: %v", err)
 	} else {
 		_ = s.alertRepo.SetNotified(ctx, alert.ID)
+	}
+
+	// 7. Send review bot inline keyboard for trade plan recording
+	if s.reviewBot != nil {
+		s.reviewBot.SendPlanKeyboard(ctx, alert.UserID, alert)
 	}
 }
 

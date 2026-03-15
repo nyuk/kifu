@@ -13,6 +13,7 @@ type NotificationChannelRepository interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]*entities.NotificationChannel, error)
 	DeleteByUserAndType(ctx context.Context, userID uuid.UUID, channelType entities.ChannelType) error
 	ListVerifiedByUser(ctx context.Context, userID uuid.UUID) ([]*entities.NotificationChannel, error)
+	GetByChatID(ctx context.Context, chatID int64) (*entities.NotificationChannel, error)
 }
 
 type TelegramVerifyCodeRepository interface {

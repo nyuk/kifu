@@ -81,6 +81,7 @@ func Run() error {
 	manualPositionRepo := repositories.NewManualPositionRepository(pool)
 	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
 	guidedReviewRepo := repositories.NewGuidedReviewRepository(pool)
+	tradePlanRepo := repositories.NewTradePlanRepository(pool)
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
@@ -89,6 +90,12 @@ func Run() error {
 	tgBotUsername := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_USERNAME"))
 	if tgBotToken != "" {
 		tgSender = notification.NewTelegramSender(tgBotToken, channelRepo)
+	}
+
+	// Review bot service (Telegram trade plan recording)
+	var reviewBot *services.ReviewBotService
+	if tgSender != nil {
+		reviewBot = services.NewReviewBotService(tradePlanRepo, channelRepo, alertRepo, tradeRepo, tgSender)
 	}
 
 	app := fiber.New(fiber.Config{
@@ -180,6 +187,7 @@ func Run() error {
 		verifyCodeRepo,
 		tgSender,
 		tgBotUsername,
+		reviewBot,
 		portfolioRepo,
 		manualPositionRepo,
 		safetyRepo,
@@ -217,6 +225,11 @@ func Run() error {
 		alertRepo, alertBriefingRepo, aiProviderRepo, userAIKeyRepo,
 		channelRepo, tradeRepo, encKey, briefingSender,
 	)
+
+	// Hook review bot into briefing service
+	if reviewBot != nil {
+		briefingService.SetReviewBot(reviewBot)
+	}
 
 	// Alert monitor job
 	alertMonitor := jobs.NewAlertMonitor(alertRuleRepo, alertRepo, briefingService.HandleTrigger)

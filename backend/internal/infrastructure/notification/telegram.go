@@ -85,6 +85,104 @@ func (t *TelegramSender) sendMessage(ctx context.Context, chatID int64, text str
 	return nil
 }
 
+// InlineButton represents a Telegram inline keyboard button.
+type InlineButton struct {
+	Text         string `json:"text"`
+	CallbackData string `json:"callback_data"`
+}
+
+// InlineKeyboard represents a Telegram inline keyboard.
+type InlineKeyboard struct {
+	InlineKeyboard [][]InlineButton `json:"inline_keyboard"`
+}
+
+// SendWithKeyboard sends a message with inline keyboard to a user.
+func (t *TelegramSender) SendWithKeyboard(ctx context.Context, userID uuid.UUID, text string, keyboard InlineKeyboard) error {
+	channel, err := t.channelRepo.GetByUserAndType(ctx, userID, entities.ChannelTelegram)
+	if err != nil {
+		return err
+	}
+	if channel == nil || !channel.Verified || !channel.Enabled {
+		return nil
+	}
+
+	var tgConfig entities.TelegramConfig
+	if err := json.Unmarshal(channel.Config, &tgConfig); err != nil {
+		return err
+	}
+	if tgConfig.ChatID == 0 {
+		return nil
+	}
+
+	return t.sendMessageWithKeyboard(ctx, tgConfig.ChatID, text, keyboard)
+}
+
+// SendKeyboardToChatID sends a message with inline keyboard to a chat ID.
+func (t *TelegramSender) SendKeyboardToChatID(ctx context.Context, chatID int64, text string, keyboard *InlineKeyboard) error {
+	if keyboard == nil {
+		return t.sendMessage(ctx, chatID, text)
+	}
+	return t.sendMessageWithKeyboard(ctx, chatID, text, *keyboard)
+}
+
+func (t *TelegramSender) sendMessageWithKeyboard(ctx context.Context, chatID int64, text string, keyboard InlineKeyboard) error {
+	payload := map[string]interface{}{
+		"chat_id":      chatID,
+		"text":         text,
+		"parse_mode":   "HTML",
+		"reply_markup": keyboard,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	reqURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.botToken)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := t.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram sendMessage error %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	return nil
+}
+
+// AnswerCallbackQuery acknowledges a callback query from inline keyboard.
+func (t *TelegramSender) AnswerCallbackQuery(ctx context.Context, callbackQueryID string) error {
+	payload := map[string]interface{}{
+		"callback_query_id": callbackQueryID,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	reqURL := fmt.Sprintf("https://api.telegram.org/bot%s/answerCallbackQuery", t.botToken)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := t.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
 func formatTelegramMessage(msg Message) string {
 	var b strings.Builder
 
