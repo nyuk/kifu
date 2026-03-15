@@ -245,26 +245,11 @@ func (h *NotificationHandler) handleStartCommand(c *fiber.Ctx, chatID int64, cod
 }
 
 func (h *NotificationHandler) handleTestCommand(c *fiber.Ctx, chatID int64) {
-	if h.tgSender == nil {
+	if h.reviewBot == nil {
 		return
 	}
-
-	// Send a mock trade plan keyboard for E2E testing
-	testAlertID := uuid.New()
-	keyboard := notification.InlineKeyboard{
-		InlineKeyboard: [][]notification.InlineButton{
-			{
-				{Text: "매수한다", CallbackData: fmt.Sprintf("plan:buy:%s", testAlertID)},
-				{Text: "안 한다", CallbackData: fmt.Sprintf("plan:skip:%s", testAlertID)},
-			},
-		},
-	}
-
-	text := "<b>테스트 복기</b> — BTCUSDT\n\n" +
-		"이 알림을 보고 매수할 건가요?"
-
-	if err := h.tgSender.SendKeyboardToChatID(c.Context(), chatID, text, &keyboard); err != nil {
-		log.Printf("telegram test: send keyboard failed: %v", err)
+	if err := h.reviewBot.StartTestFlow(c.Context(), chatID); err != nil {
+		log.Printf("telegram test: %v", err)
 	}
 }
 

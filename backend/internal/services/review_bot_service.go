@@ -37,6 +37,53 @@ func NewReviewBotService(
 	}
 }
 
+// StartTestFlow sends a test plan keyboard for E2E testing.
+func (s *ReviewBotService) StartTestFlow(ctx context.Context, chatID int64) error {
+	channel, err := s.channelRepo.GetByChatID(ctx, chatID)
+	if err != nil || channel == nil {
+		if s.tgSender != nil {
+			_ = s.tgSender.SendToChatID(ctx, chatID, "먼저 텔레그램 연동을 해주세요.")
+		}
+		return nil
+	}
+
+	// Create a trade plan directly (skip alert creation to avoid FK issues)
+	now := time.Now().UTC()
+	entryPrice := "95000"
+	plan := &entities.TradePlan{
+		ID:         uuid.New(),
+		UserID:     channel.UserID,
+		Symbol:     "BTCUSDT",
+		Action:     entities.PlanActionBuy,
+		EntryPrice: &entryPrice,
+		Status:     entities.PlanStatusPending,
+		ChatID:     chatID,
+		CreatedAt:  now,
+	}
+
+	if err := s.planRepo.Create(ctx, plan); err != nil {
+		log.Printf("review bot: create test plan failed: %v", err)
+		return err
+	}
+
+	// Send reason keyboard directly (skip action step since it's a test)
+	keyboard := notification.InlineKeyboard{
+		InlineKeyboard: [][]notification.InlineButton{
+			{
+				{Text: "지표 도달", CallbackData: fmt.Sprintf("reason:%s:indicator", plan.ID)},
+				{Text: "트위터/뉴스", CallbackData: fmt.Sprintf("reason:%s:twitter", plan.ID)},
+			},
+			{
+				{Text: "FOMO", CallbackData: fmt.Sprintf("reason:%s:fomo", plan.ID)},
+				{Text: "직접 입력", CallbackData: fmt.Sprintf("reason:%s:custom", plan.ID)},
+			},
+		},
+	}
+
+	text := fmt.Sprintf("\xe2\x9c\x85 <b>테스트 복기</b> — BTCUSDT $%s\n\n왜 매수하나요?", entryPrice)
+	return s.tgSender.SendKeyboardToChatID(ctx, chatID, text, &keyboard)
+}
+
 // SendPlanKeyboard sends inline keyboard after an alert notification.
 func (s *ReviewBotService) SendPlanKeyboard(ctx context.Context, userID uuid.UUID, alert *entities.Alert) {
 	if s.tgSender == nil {
