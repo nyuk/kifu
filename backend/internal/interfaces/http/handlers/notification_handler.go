@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"time"
@@ -101,11 +102,13 @@ func (h *NotificationHandler) TelegramConnect(c *fiber.Ctx) error {
 func (h *NotificationHandler) TelegramWebhook(c *fiber.Ctx) error {
 	var req TelegramWebhookRequest
 	if err := c.BodyParser(&req); err != nil {
+		log.Printf("telegram webhook: parse error: %v", err)
 		return c.SendStatus(200)
 	}
 
 	// Handle callback queries (inline keyboard button presses)
 	if req.CallbackQuery != nil {
+		log.Printf("telegram webhook: callback from chat %d, data=%s", req.CallbackQuery.Message.Chat.ID, req.CallbackQuery.Data)
 		h.handleCallbackQuery(c, req.CallbackQuery)
 		return c.SendStatus(200)
 	}
@@ -117,10 +120,17 @@ func (h *NotificationHandler) TelegramWebhook(c *fiber.Ctx) error {
 
 	text := req.Message.Text
 	chatID := req.Message.Chat.ID
+	log.Printf("telegram webhook: message from chat %d: %s", chatID, text)
 
 	// /start {code} — verification flow
 	if len(text) >= 7 && text[:7] == "/start " {
 		h.handleStartCommand(c, chatID, text[7:])
+		return c.SendStatus(200)
+	}
+
+	// /test — E2E test: send mock plan keyboard
+	if text == "/test" {
+		h.handleTestCommand(c, chatID)
 		return c.SendStatus(200)
 	}
 
@@ -140,7 +150,11 @@ func (h *NotificationHandler) TelegramWebhook(c *fiber.Ctx) error {
 	}
 
 	if h.tgSender != nil {
-		_ = h.tgSender.SendToChatID(c.Context(), chatID, "사용법: /start <인증코드>")
+		_ = h.tgSender.SendToChatID(c.Context(), chatID,
+			"kifu 복기봇입니다.\n\n"+
+				"/plans — 최근 거래 계획\n"+
+				"/test — 테스트 복기 시작\n\n"+
+				"알림이 오면 자동으로 복기가 시작됩니다.")
 	}
 	return c.SendStatus(200)
 }
@@ -227,6 +241,30 @@ func (h *NotificationHandler) handleStartCommand(c *fiber.Ctx, chatID int64, cod
 			"kifu 알림이 연동되었습니다!\n\n"+
 				"알림이 오면 매수/패스 버튼으로 15초 만에 거래 복기를 기록할 수 있습니다.\n"+
 				"/plans — 최근 거래 계획 보기")
+	}
+}
+
+func (h *NotificationHandler) handleTestCommand(c *fiber.Ctx, chatID int64) {
+	if h.tgSender == nil {
+		return
+	}
+
+	// Send a mock trade plan keyboard for E2E testing
+	testAlertID := uuid.New()
+	keyboard := notification.InlineKeyboard{
+		InlineKeyboard: [][]notification.InlineButton{
+			{
+				{Text: "매수한다", CallbackData: fmt.Sprintf("plan:buy:%s", testAlertID)},
+				{Text: "안 한다", CallbackData: fmt.Sprintf("plan:skip:%s", testAlertID)},
+			},
+		},
+	}
+
+	text := "<b>테스트 복기</b> — BTCUSDT\n\n" +
+		"이 알림을 보고 매수할 건가요?"
+
+	if err := h.tgSender.SendKeyboardToChatID(c.Context(), chatID, text, &keyboard); err != nil {
+		log.Printf("telegram test: send keyboard failed: %v", err)
 	}
 }
 
