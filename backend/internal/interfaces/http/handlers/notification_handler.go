@@ -13,31 +13,38 @@ import (
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/services"
 )
 
 type NotificationHandler struct {
-	channelRepo   repositories.NotificationChannelRepository
-	verifyRepo    repositories.TelegramVerifyCodeRepository
-	tgSender      *notification.TelegramSender
-	tgBotUsername string
-	reviewBot     *services.ReviewBotService
+	channelRepo      repositories.NotificationChannelRepository
+	verifyRepo       repositories.TelegramVerifyCodeRepository
+	userRepo         repositories.UserRepository
+	subscriptionRepo repositories.SubscriptionRepository
+	tgSender         *notification.TelegramSender
+	tgBotUsername    string
+	reviewBot        *services.ReviewBotService
 }
 
 func NewNotificationHandler(
 	channelRepo repositories.NotificationChannelRepository,
 	verifyRepo repositories.TelegramVerifyCodeRepository,
+	userRepo repositories.UserRepository,
+	subscriptionRepo repositories.SubscriptionRepository,
 	tgSender *notification.TelegramSender,
 	tgBotUsername string,
 	reviewBot *services.ReviewBotService,
 ) *NotificationHandler {
 	return &NotificationHandler{
-		channelRepo:   channelRepo,
-		verifyRepo:    verifyRepo,
-		tgSender:      tgSender,
-		tgBotUsername: tgBotUsername,
-		reviewBot:     reviewBot,
+		channelRepo:      channelRepo,
+		verifyRepo:       verifyRepo,
+		userRepo:         userRepo,
+		subscriptionRepo: subscriptionRepo,
+		tgSender:         tgSender,
+		tgBotUsername:    tgBotUsername,
+		reviewBot:        reviewBot,
 	}
 }
 
@@ -122,9 +129,15 @@ func (h *NotificationHandler) TelegramWebhook(c *fiber.Ctx) error {
 	chatID := req.Message.Chat.ID
 	log.Printf("telegram webhook: message from chat %d: %s", chatID, text)
 
-	// /start {code} — verification flow
+	// /start {code} — verification flow (link existing web account)
 	if len(text) >= 7 && text[:7] == "/start " {
 		h.handleStartCommand(c, chatID, text[7:])
+		return c.SendStatus(200)
+	}
+
+	// /start (bare, no code) — auto-create telegram-only account
+	if text == "/start" {
+		h.handleBareStart(c, chatID)
 		return c.SendStatus(200)
 	}
 
@@ -241,6 +254,97 @@ func (h *NotificationHandler) handleStartCommand(c *fiber.Ctx, chatID int64, cod
 			"kifu 알림이 연동되었습니다!\n\n"+
 				"알림이 오면 매수/패스 버튼으로 15초 만에 거래 복기를 기록할 수 있습니다.\n"+
 				"/plans — 최근 거래 계획 보기")
+	}
+}
+
+func (h *NotificationHandler) handleBareStart(c *fiber.Ctx, chatID int64) {
+	// Check if this chat_id already has a linked account
+	existing, err := h.channelRepo.GetByChatID(c.Context(), chatID)
+	if err == nil && existing != nil {
+		// Already connected — welcome back
+		if h.tgSender != nil {
+			_ = h.tgSender.SendToChatID(c.Context(), chatID,
+				"다시 오셨네요! 👋\n\n"+
+					"/plans — 최근 거래 계획\n"+
+					"/test — 테스트 복기 시작\n\n"+
+					"알림이 오면 자동으로 복기가 시작됩니다.")
+		}
+		return
+	}
+
+	// Auto-create telegram-only user
+	now := time.Now().UTC()
+	userID := uuid.New()
+	syntheticEmail := fmt.Sprintf("tg_%d@telegram.local", chatID)
+
+	// Random password (user can't login with password; PasswordSet=false)
+	randomBytes := make([]byte, 32)
+	_, _ = rand.Read(randomBytes)
+	hash, err := auth.HashPassword(fmt.Sprintf("%x", randomBytes))
+	if err != nil {
+		log.Printf("telegram auto-signup: hash error: %v", err)
+		return
+	}
+
+	user := &entities.User{
+		ID:           userID,
+		Email:        syntheticEmail,
+		PasswordHash: hash,
+		PasswordSet:  false,
+		Name:         fmt.Sprintf("Trader_%d", chatID%10000),
+		IsAdmin:      false,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if err := h.userRepo.Create(c.Context(), user); err != nil {
+		log.Printf("telegram auto-signup: create user error: %v", err)
+		return
+	}
+
+	// Create free subscription
+	sub := &entities.Subscription{
+		ID:               uuid.New(),
+		UserID:           userID,
+		Tier:             "free",
+		AIQuotaRemaining: 20,
+		AIQuotaLimit:     20,
+		LastResetAt:      now,
+	}
+	if err := h.subscriptionRepo.Create(c.Context(), sub); err != nil {
+		log.Printf("telegram auto-signup: create subscription error: %v", err)
+	}
+
+	// Create verified notification channel
+	configJSON, _ := json.Marshal(entities.TelegramConfig{ChatID: chatID})
+	channel := &entities.NotificationChannel{
+		ID:          uuid.New(),
+		UserID:      userID,
+		ChannelType: entities.ChannelTelegram,
+		Config:      configJSON,
+		Enabled:     true,
+		Verified:    true,
+		CreatedAt:   now,
+	}
+	if err := h.channelRepo.Upsert(c.Context(), channel); err != nil {
+		log.Printf("telegram auto-signup: create channel error: %v", err)
+		return
+	}
+
+	log.Printf("telegram auto-signup: created user %s for chat_id %d", userID, chatID)
+
+	// Welcome message + start test flow
+	if h.tgSender != nil {
+		_ = h.tgSender.SendToChatID(c.Context(), chatID,
+			"kifu에 오신 걸 환영합니다! 🎉\n\n"+
+				"가입이 완료되었습니다. 바로 테스트 복기를 시작할게요.\n\n"+
+				"나중에 웹에서 이메일을 연결하면 대시보드에서도 볼 수 있습니다.")
+	}
+
+	// Auto-start test flow so user experiences review immediately
+	if h.reviewBot != nil {
+		if err := h.reviewBot.StartTestFlow(c.Context(), chatID); err != nil {
+			log.Printf("telegram auto-signup: test flow error: %v", err)
+		}
 	}
 }
 

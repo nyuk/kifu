@@ -86,7 +86,7 @@ func RegisterRoutes(
 	exportHandler := handlers.NewExportHandler(bubbleRepo, outcomeRepo, accuracyRepo)
 	alertRuleHandler := handlers.NewAlertRuleHandler(alertRuleRepo)
 	alertNotifHandler := handlers.NewAlertNotificationHandler(alertRepo, alertBriefingRepo, alertDecisionRepo, alertOutcomeRepo)
-	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, tgSender, tgBotUsername, reviewBot)
+	notificationHandler := handlers.NewNotificationHandler(channelRepo, verifyCodeRepo, userRepo, subscriptionRepo, tgSender, tgBotUsername, reviewBot)
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioRepo, tradeRepo)
 	importHandler := handlers.NewImportHandler(portfolioRepo, runRepo)
 	connectionHandler := handlers.NewConnectionHandler()
