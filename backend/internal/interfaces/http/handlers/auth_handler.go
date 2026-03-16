@@ -539,6 +539,65 @@ func (h *AuthHandler) AccountHelp(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(AccountHelpResponse{Message: message})
 }
 
+const guestEmail = "guest.preview@kifu.local"
+const guestName = "Guest"
+
+func (h *AuthHandler) Guest(c *fiber.Ctx) error {
+	// Find or create guest user
+	user, err := h.userRepo.GetByEmail(c.Context(), guestEmail)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	if user == nil {
+		// Auto-create guest account
+		randomPassword := make([]byte, 32)
+		if _, err := rand.Read(randomPassword); err != nil {
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+		passwordHash, err := auth.HashPassword(base64.RawURLEncoding.EncodeToString(randomPassword))
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+
+		now := time.Now()
+		user = &entities.User{
+			ID:           uuid.New(),
+			Email:        guestEmail,
+			PasswordHash: passwordHash,
+			PasswordSet:  false,
+			Name:         guestName,
+			IsAdmin:      false,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		if err := h.userRepo.Create(c.Context(), user); err != nil {
+			return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+		}
+
+		if err := h.subscriptionRepo.Create(c.Context(), &entities.Subscription{
+			ID:               uuid.New(),
+			UserID:           user.ID,
+			Tier:             "free",
+			AIQuotaRemaining: 20,
+			AIQuotaLimit:     20,
+			LastResetAt:      now,
+		}); err != nil {
+			log.Printf("[auth] guest subscription create error: %v", err)
+		}
+	}
+
+	accessToken, refreshToken, err := h.issueTokens(c.Context(), user)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
+	}
+
+	return c.Status(200).JSON(LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
+}
+
 func (h *AuthHandler) resolveSocialProviderConfig(c *fiber.Ctx, provider string) (socialProviderConfig, error) {
 	// Temporary rollout policy: only Google social login is open in production.
 	if provider != socialProviderGoogle {

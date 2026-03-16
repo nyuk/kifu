@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
 const tgBotUrl = 'https://t.me/kifu_main_bot'
 
-function TelegramMockup() {
+function TelegramMockup({ compact = false }: { compact?: boolean }) {
     const [step, setStep] = useState(0)
 
     useEffect(() => {
@@ -15,30 +15,25 @@ function TelegramMockup() {
         return () => clearInterval(timer)
     }, [])
 
+    const height = compact ? 'h-[280px]' : 'h-[360px]'
+
     return (
-        <div className="relative w-full max-w-[320px]">
-            <div className="rounded-[2.5rem] border border-neutral-200 bg-[#0e1621] p-1 shadow-2xl">
-                <div className="relative rounded-[2.2rem] bg-[#17212b] overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-3 text-[10px] text-white/50">
-                        <span>9:41</span>
-                        <div className="flex gap-1">
-                            <div className="w-3.5 h-2 rounded-sm border border-white/30" />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 border-b border-white/5 px-4 pb-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-white">K</div>
+        <div className="relative w-full max-w-[300px]">
+            <div className="rounded-[2rem] border border-neutral-200 bg-[#0e1621] p-1 shadow-2xl">
+                <div className="relative rounded-[1.8rem] bg-[#17212b] overflow-hidden">
+                    <div className="flex items-center gap-3 border-b border-white/5 px-4 py-3">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-[9px] font-bold text-white">K</div>
                         <div>
-                            <p className="text-xs font-semibold text-white">kifu bot</p>
-                            <p className="text-[10px] text-white/40">online</p>
+                            <p className="text-[11px] font-semibold text-white">kifu bot</p>
+                            <p className="text-[9px] text-white/40">online</p>
                         </div>
                     </div>
 
-                    <div className="h-[360px] px-3 py-4 space-y-3 overflow-hidden">
+                    <div className={`${height} px-3 py-3 space-y-2.5 overflow-hidden`}>
                         <div className={`transition-all duration-500 ${step >= 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2.5">
+                            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2">
                                 <p className="text-[11px] text-white/90 font-medium">BTCUSDT $95,000 도달</p>
-                                <p className="mt-1 text-[11px] text-white/60">매수할 건가요?</p>
+                                <p className="mt-1 text-[10px] text-white/60">매수할 건가요?</p>
                                 <div className="mt-2 flex gap-1.5">
                                     <span className={`rounded-md px-3 py-1 text-[10px] font-medium transition-all duration-300 ${step >= 1 ? 'bg-emerald-500 text-white' : 'bg-[#2b5278] text-[#6ab2f2]'}`}>매수한다</span>
                                     <span className="rounded-md bg-[#2b5278] px-3 py-1 text-[10px] font-medium text-[#6ab2f2]">안 한다</span>
@@ -47,396 +42,415 @@ function TelegramMockup() {
                         </div>
 
                         <div className={`transition-all duration-500 delay-100 ${step >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2.5">
-                                <p className="text-[11px] text-white/60">왜 매수하나요?</p>
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                    <span className={`rounded-md px-2.5 py-1 text-[10px] font-medium transition-all duration-300 ${step >= 3 ? 'bg-indigo-500 text-white' : 'bg-[#2b5278] text-[#6ab2f2]'}`}>지표 도달</span>
-                                    <span className="rounded-md bg-[#2b5278] px-2.5 py-1 text-[10px] font-medium text-[#6ab2f2]">뉴스</span>
-                                    <span className="rounded-md bg-[#2b5278] px-2.5 py-1 text-[10px] font-medium text-[#6ab2f2]">FOMO</span>
+                            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2">
+                                <p className="text-[10px] text-white/60">왜 매수하나요?</p>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    <span className={`rounded-md px-2 py-0.5 text-[9px] font-medium transition-all duration-300 ${step >= 3 ? 'bg-indigo-500 text-white' : 'bg-[#2b5278] text-[#6ab2f2]'}`}>지표 도달</span>
+                                    <span className="rounded-md bg-[#2b5278] px-2 py-0.5 text-[9px] font-medium text-[#6ab2f2]">뉴스</span>
+                                    <span className="rounded-md bg-[#2b5278] px-2 py-0.5 text-[9px] font-medium text-[#6ab2f2]">FOMO</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className={`transition-all duration-500 delay-200 ${step >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                            <div className="max-w-[85%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2.5">
-                                <p className="text-[11px] text-white/60">손절가를 입력하세요:</p>
+                            <div className="max-w-[80%] rounded-xl rounded-tl-sm bg-[#212d3b] px-3 py-2">
+                                <p className="text-[10px] text-white/60">손절가:</p>
                             </div>
-                            <div className="flex justify-end mt-1.5">
-                                <div className="rounded-xl rounded-tr-sm bg-[#2b5278] px-3 py-2">
-                                    <p className="text-[11px] text-white/90">90000</p>
+                            <div className="flex justify-end mt-1">
+                                <div className="rounded-xl rounded-tr-sm bg-[#2b5278] px-3 py-1.5">
+                                    <p className="text-[10px] text-white/90">90000</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className={`transition-all duration-500 delay-300 ${step >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                            <div className="max-w-[90%] rounded-xl rounded-tl-sm bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/20 px-3 py-2.5">
-                                <p className="text-[11px] font-semibold text-emerald-400">거래 계획 저장 완료!</p>
-                                <div className="mt-1.5 space-y-0.5 text-[10px] text-white/50">
+                            <div className="max-w-[90%] rounded-xl rounded-tl-sm bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/20 px-3 py-2">
+                                <p className="text-[10px] font-semibold text-emerald-400">거래 계획 저장 완료!</p>
+                                <div className="mt-1 space-y-0.5 text-[9px] text-white/50">
                                     <p>BTCUSDT · $95,000 · 손절 $90,000</p>
                                     <p>이유: 지표 도달</p>
                                 </div>
-                                <p className="mt-1.5 text-[9px] text-white/30">실제 거래와 자동 비교됩니다</p>
+                                <p className="mt-1 text-[8px] text-white/30">실제 거래와 자동 비교됩니다</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-b from-indigo-200/40 via-transparent to-cyan-200/30 blur-2xl" />
         </div>
     )
 }
 
+function CountUp({ target, suffix = '' }: { target: number; suffix?: string }) {
+    const [count, setCount] = useState(0)
+    const ref = useRef<HTMLSpanElement>(null)
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    let start = 0
+                    const duration = 1200
+                    const step = target / (duration / 16)
+                    const animate = () => {
+                        start += step
+                        if (start >= target) {
+                            setCount(target)
+                        } else {
+                            setCount(Math.floor(start))
+                            requestAnimationFrame(animate)
+                        }
+                    }
+                    animate()
+                    observer.disconnect()
+                }
+            },
+            { threshold: 0.5 }
+        )
+        if (ref.current) observer.observe(ref.current)
+        return () => observer.disconnect()
+    }, [target])
+
+    return <span ref={ref}>{count}{suffix}</span>
+}
+
 export function LandingPage() {
     return (
-        <div className="min-h-screen bg-white text-neutral-900 antialiased">
-            {/* Nav */}
-            <nav className="fixed top-0 z-50 w-full border-b border-neutral-100 bg-white/80 backdrop-blur-md">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-                    <span className="text-lg font-bold tracking-wide text-indigo-600">KIFU</span>
-                    <div className="flex items-center gap-6 text-sm text-neutral-500">
-                        <Link href="#how" className="hidden sm:block hover:text-neutral-900 transition-colors">사용법</Link>
-                        <Link href="#features" className="hidden sm:block hover:text-neutral-900 transition-colors">기능</Link>
-                        <Link href="/login" className="hover:text-neutral-900 transition-colors">로그인</Link>
-                        <Link
-                            href="/register"
-                            className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
-                        >
-                            무료 시작
-                        </Link>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Hero */}
-            <section className="relative min-h-screen overflow-hidden">
-                {/* Light gradient mesh */}
-                <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute -top-[30%] -left-[15%] w-[70%] h-[70%] rounded-full bg-indigo-100/60 blur-[100px] animate-blob" />
-                    <div className="absolute -top-[10%] -right-[15%] w-[60%] h-[60%] rounded-full bg-cyan-100/50 blur-[100px] animate-blob animation-delay-2000" />
-                    <div className="absolute -bottom-[30%] left-[20%] w-[50%] h-[50%] rounded-full bg-violet-100/40 blur-[100px] animate-blob animation-delay-4000" />
-                </div>
-
-                <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-16 px-6 pt-32 pb-20 lg:grid-cols-[1.2fr_0.8fr] lg:pt-40">
-                    {/* Left: Copy */}
-                    <div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold text-emerald-700">
-                            얼리 액세스 무료
-                        </div>
-
-                        <h1 className="mt-8 text-4xl font-bold leading-tight text-neutral-900 md:text-6xl">
-                            매매했으면
-                            <br />
-                            <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-600 bg-clip-text text-transparent">
-                                15초만 복기하세요
-                            </span>
-                        </h1>
-
-                        <p className="mt-6 max-w-lg text-lg leading-relaxed text-neutral-500">
-                            텔레그램에서 버튼 3번이면 끝.
-                            <br />
-                            매수 이유, 손절가를 기록하고, 실제 거래와 자동 비교합니다.
-                        </p>
-
-                        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-                            <a
-                                href={tgBotUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group inline-flex items-center justify-center gap-2 rounded-full bg-[#2AABEE] px-8 py-3.5 text-sm font-bold text-white transition-all hover:bg-[#229ED9] hover:shadow-lg hover:shadow-[#2AABEE]/30"
-                            >
-                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                                텔레그램으로 시작
-                            </a>
-                            <Link
-                                href="/register"
-                                className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-8 py-3.5 text-sm font-semibold text-neutral-700 transition-all hover:border-neutral-400 hover:bg-neutral-50"
-                            >
-                                웹에서 시작
-                            </Link>
-                        </div>
-
-                        <p className="mt-4 text-xs text-neutral-400">
-                            가입 없이 텔레그램에서 바로 체험 가능
-                        </p>
-
-                        <div className="mt-12 grid grid-cols-3 gap-8 text-center">
-                            {[
-                                { value: '15초', label: '복기 완료' },
-                                { value: '버튼 3번', label: '기록 끝' },
-                                { value: '자동', label: '실거래 비교' },
-                            ].map((stat) => (
-                                <div key={stat.label}>
-                                    <p className="text-2xl font-bold text-indigo-600 md:text-3xl">{stat.value}</p>
-                                    <p className="mt-1 text-xs text-neutral-400">{stat.label}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Right: Telegram mockup */}
-                    <div className="flex justify-center lg:justify-end">
-                        <TelegramMockup />
-                    </div>
-                </div>
-            </section>
-
-            {/* How it works */}
-            <section id="how" className="border-t border-neutral-100 bg-neutral-50 py-24">
-                <div className="mx-auto max-w-5xl px-6">
-                    <div className="text-center mb-16">
-                        <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">HOW IT WORKS</p>
-                        <h2 className="mt-3 text-3xl font-bold text-neutral-900 md:text-4xl">
-                            알림 오면, 복기 시작
-                        </h2>
-                        <p className="mt-4 text-neutral-500 max-w-xl mx-auto">
-                            가격 알림이 울리면 텔레그램 봇이 자동으로 복기를 시작합니다.
-                        </p>
-                    </div>
-
-                    {/* Telegram flow mockup - static version */}
-                    <div className="mx-auto max-w-sm space-y-4">
-                        {/* Bot message 1 */}
-                        <div className="rounded-2xl rounded-tl-md border border-neutral-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs text-neutral-400 mb-2">kifu bot</p>
-                            <p className="text-sm text-neutral-800">
-                                <span className="font-semibold">BTCUSDT</span> $95,000 도달
-                            </p>
-                            <p className="mt-2 text-sm text-neutral-600">이 알림을 보고 매수할 건가요?</p>
-                            <div className="mt-3 flex gap-2">
-                                <span className="rounded-lg bg-emerald-100 border border-emerald-200 px-4 py-2 text-xs font-semibold text-emerald-700">매수한다</span>
-                                <span className="rounded-lg bg-neutral-100 border border-neutral-200 px-4 py-2 text-xs font-semibold text-neutral-500">안 한다</span>
-                            </div>
-                        </div>
-
-                        {/* Step indicator */}
-                        <div className="flex items-center justify-center gap-2 text-neutral-400">
-                            <div className="h-px w-8 bg-neutral-200" />
-                            <span className="text-xs">5초</span>
-                            <div className="h-px w-8 bg-neutral-200" />
-                        </div>
-
-                        {/* Bot message 2 */}
-                        <div className="rounded-2xl rounded-tl-md border border-neutral-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs text-neutral-400 mb-2">kifu bot</p>
-                            <p className="text-sm text-neutral-600">왜 매수하나요?</p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <span className="rounded-lg bg-indigo-100 border border-indigo-200 px-3 py-1.5 text-xs text-indigo-700">지표 도달</span>
-                                <span className="rounded-lg bg-indigo-100 border border-indigo-200 px-3 py-1.5 text-xs text-indigo-700">트위터/뉴스</span>
-                                <span className="rounded-lg bg-amber-100 border border-amber-200 px-3 py-1.5 text-xs text-amber-700">FOMO</span>
-                                <span className="rounded-lg bg-neutral-100 border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500">직접 입력</span>
-                            </div>
-                        </div>
-
-                        {/* Step indicator */}
-                        <div className="flex items-center justify-center gap-2 text-neutral-400">
-                            <div className="h-px w-8 bg-neutral-200" />
-                            <span className="text-xs">5초</span>
-                            <div className="h-px w-8 bg-neutral-200" />
-                        </div>
-
-                        {/* Bot message 3 */}
-                        <div className="rounded-2xl rounded-tl-md border border-neutral-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs text-neutral-400 mb-2">kifu bot</p>
-                            <p className="text-sm text-neutral-600">손절가를 입력해주세요 (숫자만):</p>
-                        </div>
-
-                        {/* User response */}
-                        <div className="flex justify-end">
-                            <div className="rounded-2xl rounded-tr-md bg-indigo-50 border border-indigo-200 px-4 py-2">
-                                <p className="text-sm text-neutral-800">90000</p>
-                            </div>
-                        </div>
-
-                        {/* Step indicator */}
-                        <div className="flex items-center justify-center gap-2 text-neutral-400">
-                            <div className="h-px w-8 bg-neutral-200" />
-                            <span className="text-xs">5초</span>
-                            <div className="h-px w-8 bg-neutral-200" />
-                        </div>
-
-                        {/* Completion */}
-                        <div className="rounded-2xl rounded-tl-md border border-emerald-200 bg-emerald-50 p-4">
-                            <p className="text-xs text-neutral-400 mb-2">kifu bot</p>
-                            <p className="text-sm font-semibold text-emerald-700 mb-2">거래 계획 저장 완료!</p>
-                            <div className="space-y-1 text-xs text-neutral-600">
-                                <p>BTCUSDT</p>
-                                <p>진입: $95,000</p>
-                                <p>손절: $90,000</p>
-                                <p>이유: 지표 도달</p>
-                            </div>
-                            <p className="mt-3 text-xs text-neutral-400">나중에 실제 거래와 자동 비교해드릴게요.</p>
-                        </div>
-                    </div>
-
-                    <div className="mt-12 text-center">
+        <div className="min-h-screen bg-white text-neutral-900 antialiased overflow-x-hidden">
+            {/* Minimal Nav — transparent, floating */}
+            <nav className="fixed top-0 z-50 w-full">
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+                    <span className="text-lg font-bold tracking-wider text-neutral-900">KIFU</span>
+                    <div className="flex items-center gap-4">
+                        <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">로그인</Link>
                         <a
                             href={tgBotUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-full bg-[#2AABEE] px-6 py-3 text-sm font-bold text-white hover:bg-[#229ED9] transition-colors"
+                            className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors"
                         >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                            직접 체험하기
+                            시작하기
                         </a>
+                    </div>
+                </div>
+            </nav>
+
+            {/* ─── HERO: Full-screen centered statement ─── */}
+            <section className="relative min-h-screen flex flex-col items-center justify-center px-6">
+                {/* Subtle gradient orbs */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] rounded-full bg-indigo-50 blur-[120px] animate-blob" />
+                    <div className="absolute bottom-[10%] right-[10%] w-[400px] h-[400px] rounded-full bg-cyan-50 blur-[100px] animate-blob animation-delay-2000" />
+                </div>
+
+                <div className="relative z-10 text-center max-w-4xl">
+                    <p className="text-sm font-medium tracking-[0.2em] text-indigo-500 uppercase mb-8">
+                        Trading Review, Automated
+                    </p>
+
+                    <h1 className="text-5xl font-bold leading-[1.1] tracking-tight text-neutral-900 md:text-7xl lg:text-8xl">
+                        매매했으면
+                        <br />
+                        <span className="bg-gradient-to-r from-indigo-600 via-violet-500 to-cyan-500 bg-clip-text text-transparent">
+                            복기하세요
+                        </span>
+                    </h1>
+
+                    <p className="mt-8 text-lg text-neutral-400 max-w-md mx-auto leading-relaxed md:text-xl">
+                        텔레그램에서 버튼 3번.
+                        <br />
+                        15초면 거래 복기가 끝납니다.
+                    </p>
+
+                    <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                        <a
+                            href={tgBotUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group inline-flex items-center gap-2.5 rounded-full bg-[#2AABEE] px-8 py-4 text-sm font-bold text-white transition-all hover:shadow-xl hover:shadow-[#2AABEE]/20 hover:-translate-y-0.5"
+                        >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                            텔레그램으로 시작
+                            <span className="text-white/60 text-xs font-normal">가입 불필요</span>
+                        </a>
+                    </div>
+                </div>
+
+                {/* Scroll indicator */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-neutral-300">
+                    <span className="text-[10px] tracking-widest uppercase">Scroll</span>
+                    <div className="w-px h-8 bg-gradient-to-b from-neutral-300 to-transparent" />
+                </div>
+            </section>
+
+            {/* ─── STATEMENT STRIP ─── */}
+            <section className="border-y border-neutral-100 bg-neutral-950 py-20 md:py-28">
+                <div className="mx-auto max-w-5xl px-6 text-center">
+                    <p className="text-2xl font-light leading-relaxed text-white/80 md:text-4xl md:leading-relaxed">
+                        &ldquo;왜 샀어?&rdquo; 라는 질문에
+                        <br />
+                        <span className="text-white font-semibold">3초 안에 대답</span>할 수 있나요?
+                    </p>
+                    <p className="mt-8 text-sm text-white/30 max-w-md mx-auto leading-relaxed">
+                        대부분의 트레이더는 매매 이유를 기록하지 않습니다.
+                        <br />
+                        기록하지 않으면 같은 실수를 반복합니다.
+                    </p>
+                </div>
+            </section>
+
+            {/* ─── BENTO GRID: Product showcase ─── */}
+            <section className="py-24 md:py-32">
+                <div className="mx-auto max-w-6xl px-6">
+                    <div className="grid gap-4 md:grid-cols-12 md:grid-rows-[auto_auto_auto]">
+                        {/* Large card: Telegram mockup — spans 7 cols, 2 rows */}
+                        <div className="md:col-span-7 md:row-span-2 rounded-3xl border border-neutral-100 bg-gradient-to-br from-[#0e1621] to-[#1a2332] p-8 flex flex-col">
+                            <div className="mb-6">
+                                <span className="inline-block rounded-full bg-[#2AABEE]/10 px-3 py-1 text-[11px] font-semibold text-[#2AABEE] tracking-wide">TELEGRAM BOT</span>
+                                <h3 className="mt-3 text-xl font-bold text-white">알림이 오면, 복기 시작</h3>
+                                <p className="mt-2 text-sm text-white/40 leading-relaxed">
+                                    가격 알림이 울리면 봇이 자동으로 물어봅니다.
+                                    <br />
+                                    매수/패스 → 이유 → 손절가. 끝.
+                                </p>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center">
+                                <TelegramMockup />
+                            </div>
+                        </div>
+
+                        {/* Stats card — spans 5 cols */}
+                        <div className="md:col-span-5 rounded-3xl border border-neutral-100 bg-neutral-50 p-8 flex flex-col justify-center">
+                            <span className="text-[11px] font-semibold text-neutral-400 tracking-wide uppercase">소요 시간</span>
+                            <div className="mt-6 space-y-6">
+                                <div>
+                                    <p className="text-5xl font-bold text-neutral-900 md:text-6xl">
+                                        <CountUp target={15} suffix="초" />
+                                    </p>
+                                    <p className="mt-1 text-sm text-neutral-400">복기 완료까지</p>
+                                </div>
+                                <div className="h-px bg-neutral-200" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-2xl font-bold text-neutral-900">3번</p>
+                                        <p className="mt-1 text-xs text-neutral-400">버튼 탭</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-bold text-neutral-900">0개</p>
+                                        <p className="mt-1 text-xs text-neutral-400">입력 필드</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Auto-match card */}
+                        <div className="md:col-span-5 rounded-3xl border border-emerald-100 bg-emerald-50/50 p-8">
+                            <div className="flex items-start gap-4">
+                                <div className="rounded-2xl bg-emerald-100 p-3">
+                                    <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-neutral-900">자동 거래 매칭</h4>
+                                    <p className="mt-2 text-sm text-neutral-500 leading-relaxed">
+                                        기록한 계획을 Binance 실거래와 자동 비교.
+                                        <br />
+                                        계획대로 했는지, 결과가 어땠는지.
+                                    </p>
+                                </div>
+                            </div>
+                            {/* Mini comparison visual */}
+                            <div className="mt-6 grid grid-cols-2 gap-3">
+                                <div className="rounded-xl bg-white p-3 border border-emerald-100">
+                                    <p className="text-[10px] text-neutral-400 mb-1">계획</p>
+                                    <p className="text-sm font-semibold text-neutral-800">BTC 매수 $95K</p>
+                                    <p className="text-xs text-neutral-400">손절 $90K</p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 border border-emerald-100">
+                                    <p className="text-[10px] text-neutral-400 mb-1">실제</p>
+                                    <p className="text-sm font-semibold text-emerald-600">BTC 매수 $95.1K</p>
+                                    <p className="text-xs text-emerald-500">+4.2%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Pattern analysis — wide */}
+                        <div className="md:col-span-7 rounded-3xl border border-neutral-100 bg-white p-8">
+                            <div className="flex items-start gap-4 mb-6">
+                                <div className="rounded-2xl bg-violet-100 p-3">
+                                    <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-neutral-900">패턴이 숫자로 보입니다</h4>
+                                    <p className="mt-1 text-sm text-neutral-500">나의 매매 습관을 데이터로 확인하세요.</p>
+                                </div>
+                            </div>
+                            {/* Pattern visual */}
+                            <div className="space-y-3">
+                                {[
+                                    { reason: 'FOMO', count: 12, winRate: 25, color: 'bg-red-400' },
+                                    { reason: '지표 도달', count: 34, winRate: 68, color: 'bg-emerald-400' },
+                                    { reason: '뉴스/트위터', count: 8, winRate: 38, color: 'bg-amber-400' },
+                                ].map((p) => (
+                                    <div key={p.reason} className="flex items-center gap-4">
+                                        <span className="text-sm text-neutral-600 w-24 shrink-0">{p.reason}</span>
+                                        <div className="flex-1 h-8 bg-neutral-50 rounded-lg overflow-hidden relative">
+                                            <div
+                                                className={`h-full ${p.color} rounded-lg transition-all duration-1000`}
+                                                style={{ width: `${p.winRate}%` }}
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                                                승률 {p.winRate}% · {p.count}건
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* AI opinions — narrow */}
+                        <div className="md:col-span-5 rounded-3xl border border-neutral-100 bg-gradient-to-br from-violet-50 to-indigo-50 p-8">
+                            <span className="inline-block rounded-full bg-violet-100 px-3 py-1 text-[11px] font-semibold text-violet-600 tracking-wide">AI OPINIONS</span>
+                            <h4 className="mt-3 text-lg font-bold text-neutral-900">AI 3개에게 동시에 물어보기</h4>
+                            <p className="mt-2 text-sm text-neutral-500 leading-relaxed">
+                                OpenAI, Claude, Gemini가 같은 차트를 보고 각각 의견을 줍니다. 나중에 누가 맞았는지도 확인.
+                            </p>
+                            <div className="mt-6 space-y-2">
+                                {[
+                                    { name: 'GPT-4', opinion: '매수', confidence: '72%', color: 'border-emerald-200 bg-emerald-50' },
+                                    { name: 'Claude', opinion: '관망', confidence: '65%', color: 'border-amber-200 bg-amber-50' },
+                                    { name: 'Gemini', opinion: '매수', confidence: '58%', color: 'border-emerald-200 bg-emerald-50' },
+                                ].map((ai) => (
+                                    <div key={ai.name} className={`flex items-center justify-between rounded-xl border px-4 py-2.5 ${ai.color}`}>
+                                        <span className="text-xs font-medium text-neutral-700">{ai.name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-neutral-800">{ai.opinion}</span>
+                                            <span className="text-[10px] text-neutral-400">{ai.confidence}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* Features */}
-            <section id="features" className="border-t border-neutral-100 bg-white py-24">
+            {/* ─── BIG STATEMENT: "예측을 팔지 않습니다" ─── */}
+            <section className="py-24 md:py-32 border-y border-neutral-100">
                 <div className="mx-auto max-w-5xl px-6">
-                    <div className="text-center mb-16">
-                        <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">FEATURES</p>
-                        <h2 className="mt-3 text-3xl font-bold text-neutral-900 md:text-4xl">
-                            기록하고, 비교하고, 개선하세요
-                        </h2>
+                    <div className="grid gap-16 md:grid-cols-[1fr_1px_1fr] items-start">
+                        <div>
+                            <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-6">기존 방식</p>
+                            <ul className="space-y-4">
+                                {[
+                                    '매매 후 까먹음',
+                                    '같은 실수 반복',
+                                    '엑셀에 기록하다 포기',
+                                    'FOMO인지 확신인지 구분 불가',
+                                ].map((item) => (
+                                    <li key={item} className="flex items-start gap-3 text-neutral-400">
+                                        <span className="mt-0.5 text-red-300 text-lg leading-none">×</span>
+                                        <span className="text-sm leading-relaxed">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className="hidden md:block w-px bg-neutral-200 self-stretch" />
+
+                        <div>
+                            <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-6">KIFU</p>
+                            <ul className="space-y-4">
+                                {[
+                                    '알림 오면 15초 만에 기록',
+                                    '패턴이 숫자로 보임',
+                                    '텔레그램 버튼이라 귀찮지 않음',
+                                    '계획 vs 실제 자동 비교',
+                                ].map((item) => (
+                                    <li key={item} className="flex items-start gap-3 text-neutral-700">
+                                        <span className="mt-0.5 text-emerald-400 text-lg leading-none">→</span>
+                                        <span className="text-sm leading-relaxed">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="mt-20 text-center">
+                        <h2 className="text-3xl font-bold text-neutral-900 md:text-5xl">
+                            예측을 팔지 않습니다
+                        </h2>
+                        <p className="mt-4 text-neutral-400 max-w-md mx-auto">
+                            매매 실력은 신호가 아니라 복기에서 나옵니다.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* ─── FEATURES STRIP: horizontal scroll on mobile ─── */}
+            <section className="py-24 bg-neutral-50 border-b border-neutral-100">
+                <div className="mx-auto max-w-6xl px-6">
+                    <p className="text-xs font-semibold text-neutral-400 uppercase tracking-[0.2em] mb-12">더 많은 기능</p>
+
+                    <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible scrollbar-none">
                         {[
-                            {
-                                icon: '💬',
-                                title: '텔레그램 복기 봇',
-                                desc: '알림이 오면 매수/패스 → 이유 → 손절가. 버튼 3번, 15초면 복기 완료.',
-                                accent: 'border-[#2AABEE]/30 bg-[#2AABEE]/5',
-                            },
-                            {
-                                icon: '🔄',
-                                title: '자동 거래 매칭',
-                                desc: '기록한 계획을 실제 Binance 거래와 자동 비교. 계획대로 했는지 알려줍니다.',
-                                accent: 'border-emerald-300/50 bg-emerald-50',
-                            },
-                            {
-                                icon: '📊',
-                                title: '패턴 분석',
-                                desc: '"이 종목에서 FOMO로 5번 매수, 평균 -3.2%." 자신의 패턴을 숫자로 봅니다.',
-                                accent: 'border-cyan-300/50 bg-cyan-50',
-                            },
-                            {
-                                icon: '🔔',
-                                title: '가격 알림',
-                                desc: '지정가 도달, MA 크로스 등 조건을 설정하면 텔레그램으로 알림 + 복기 시작.',
-                                accent: 'border-amber-300/50 bg-amber-50',
-                            },
-                            {
-                                icon: '🤖',
-                                title: 'AI 의견 비교',
-                                desc: 'OpenAI, Claude, Gemini에게 동시에 물어보고 의견을 나란히 비교합니다.',
-                                accent: 'border-purple-300/50 bg-purple-50',
-                            },
-                            {
-                                icon: '📈',
-                                title: '거래소 연동',
-                                desc: 'Binance Futures/Spot, Upbit API로 거래내역을 자동 수집합니다.',
-                                accent: 'border-rose-300/50 bg-rose-50',
-                            },
-                        ].map((feature) => (
-                            <div
-                                key={feature.title}
-                                className={`rounded-2xl border p-6 transition-all hover:-translate-y-1 hover:shadow-lg ${feature.accent}`}
-                            >
-                                <span className="text-2xl">{feature.icon}</span>
-                                <h4 className="mt-3 text-lg font-semibold text-neutral-900">{feature.title}</h4>
-                                <p className="mt-2 text-sm text-neutral-500 leading-relaxed">{feature.desc}</p>
+                            { icon: '🔔', title: '가격 알림', desc: '지정가, MA 크로스 등 조건 설정 → 텔레그램 알림 + 자동 복기' },
+                            { icon: '📈', title: '거래소 연동', desc: 'Binance Futures/Spot, Upbit API 자동 수집' },
+                            { icon: '📋', title: '포트폴리오', desc: '전체 포지션 현황과 타임라인 한눈에' },
+                            { icon: '📄', title: '리포트', desc: 'Summary Pack으로 기간별 매매 성과 분석' },
+                        ].map((f) => (
+                            <div key={f.title} className="min-w-[240px] md:min-w-0 rounded-2xl bg-white border border-neutral-100 p-6 hover:border-neutral-200 hover:shadow-sm transition-all">
+                                <span className="text-2xl">{f.icon}</span>
+                                <h4 className="mt-3 text-sm font-bold text-neutral-900">{f.title}</h4>
+                                <p className="mt-2 text-xs text-neutral-400 leading-relaxed">{f.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* Why kifu */}
-            <section className="border-t border-neutral-100 bg-neutral-50 py-24">
-                <div className="mx-auto max-w-4xl px-6">
-                    <div className="text-center mb-16">
-                        <p className="text-sm font-bold uppercase tracking-[0.2em] text-indigo-600">WHY KIFU</p>
-                        <h2 className="mt-3 text-3xl font-bold text-neutral-900 md:text-4xl">
-                            예측을 팔지 않습니다
-                        </h2>
-                        <p className="mt-4 text-neutral-500 max-w-xl mx-auto">
-                            매매 실력은 신호가 아니라 복기에서 나옵니다.
-                            <br />
-                            KIFU는 당신의 판단을 기록하고, 실수 패턴을 줄여줍니다.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
-                            <p className="text-sm font-semibold text-red-600 mb-3">기존 방식</p>
-                            <ul className="space-y-2 text-sm text-neutral-500">
-                                <li className="flex gap-2"><span className="text-red-400">✕</span> 매매 후 까먹음</li>
-                                <li className="flex gap-2"><span className="text-red-400">✕</span> 같은 실수 반복</li>
-                                <li className="flex gap-2"><span className="text-red-400">✕</span> 엑셀에 기록하다 포기</li>
-                                <li className="flex gap-2"><span className="text-red-400">✕</span> FOMO인지 확신인지 구분 불가</li>
-                            </ul>
-                        </div>
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-                            <p className="text-sm font-semibold text-emerald-600 mb-3">KIFU</p>
-                            <ul className="space-y-2 text-sm text-neutral-600">
-                                <li className="flex gap-2"><span className="text-emerald-500">✓</span> 알림 오면 15초 만에 기록</li>
-                                <li className="flex gap-2"><span className="text-emerald-500">✓</span> 패턴이 숫자로 보임</li>
-                                <li className="flex gap-2"><span className="text-emerald-500">✓</span> 텔레그램 버튼이라 귀찮지 않음</li>
-                                <li className="flex gap-2"><span className="text-emerald-500">✓</span> 계획 vs 실제 자동 비교</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Pricing */}
-            <section className="border-t border-neutral-100 bg-white py-24">
+            {/* ─── CTA: Full-width dark ─── */}
+            <section className="bg-neutral-950 py-24 md:py-32">
                 <div className="mx-auto max-w-3xl px-6 text-center">
-                    <h2 className="text-3xl font-bold text-neutral-900">지금은 전부 무료</h2>
-                    <p className="mt-4 text-neutral-500">
-                        얼리 액세스 기간 동안 모든 기능을 무료로 사용할 수 있습니다.
+                    <span className="inline-block rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400 mb-8">
+                        얼리 액세스 — 전 기능 무료
+                    </span>
+
+                    <h2 className="text-3xl font-bold text-white md:text-5xl leading-tight">
+                        다음 매매부터
+                        <br />
+                        복기를 시작하세요
+                    </h2>
+
+                    <p className="mt-6 text-neutral-500 max-w-md mx-auto">
+                        가입 없이 텔레그램에서 바로 체험할 수 있습니다.
                     </p>
 
-                    <div className="mt-12 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-left">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600">Early Access</span>
-                                <h3 className="mt-1 text-2xl font-bold text-neutral-900">무료</h3>
-                            </div>
-                            <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">현재</span>
-                        </div>
-                        <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                            {[
-                                '텔레그램 복기 봇',
-                                '자동 거래 매칭',
-                                '패턴 분석',
-                                '가격 알림',
-                                'AI 의견 비교',
-                                '거래소 연동 (Binance, Upbit)',
-                            ].map((item) => (
-                                <li key={item} className="flex items-center gap-2 text-sm text-neutral-600">
-                                    <span className="text-emerald-500">✓</span> {item}
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                            <a
-                                href={tgBotUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2AABEE] px-6 py-3 text-sm font-bold text-white hover:bg-[#229ED9] transition-colors"
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                                텔레그램으로 시작
-                            </a>
-                            <Link
-                                href="/register"
-                                className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-6 py-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
-                            >
-                                웹에서 가입
-                            </Link>
-                        </div>
+                    <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center">
+                        <a
+                            href={tgBotUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group inline-flex items-center justify-center gap-2.5 rounded-full bg-[#2AABEE] px-8 py-4 text-sm font-bold text-white transition-all hover:shadow-xl hover:shadow-[#2AABEE]/20 hover:-translate-y-0.5"
+                        >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                            텔레그램으로 시작
+                        </a>
+                        <Link
+                            href="/register"
+                            className="inline-flex items-center justify-center rounded-full border border-white/20 px-8 py-4 text-sm font-semibold text-white/80 hover:bg-white/5 transition-colors"
+                        >
+                            웹에서 가입
+                        </Link>
                     </div>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="border-t border-neutral-100 bg-white py-12 text-center text-xs text-neutral-400">
-                <p>&copy; 2026 KIFU. All rights reserved.</p>
-                <p className="mt-2">매매 복기를 습관으로</p>
+            {/* ─── Footer ─── */}
+            <footer className="bg-neutral-950 border-t border-white/5 py-8 text-center">
+                <p className="text-xs text-neutral-600">&copy; 2026 KIFU · 매매 복기를 습관으로</p>
             </footer>
         </div>
     )

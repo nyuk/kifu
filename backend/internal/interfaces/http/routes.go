@@ -147,6 +147,7 @@ func RegisterRoutes(
 	auth.Post("/refresh", authHandler.Refresh)
 	auth.Post("/logout", authHandler.Logout)
 	auth.Post("/account-help", authHandler.AccountHelp)
+	auth.Post("/guest", authHandler.Guest)
 	auth.Get("/social-login/:provider", authHandler.SocialLoginStart)
 	auth.Get("/social-login/:provider/callback", authHandler.SocialLoginCallback)
 

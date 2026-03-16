@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
-import { clearGuestSession } from '../lib/guestSession'
+import { clearGuestSession, startGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
+
+const tgBotUrl = 'https://t.me/kifu_main_bot'
 
 export function Register() {
   const [name, setName] = useState('')
@@ -15,6 +17,7 @@ export function Register() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isGuestLoading, setIsGuestLoading] = useState(false)
   const setTokens = useAuthStore((state) => state.setTokens)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
@@ -43,94 +46,143 @@ export function Register() {
         defaultPath: '/onboarding/start',
       })
       window.location.replace(next)
-    } catch (err: any) {
-      setError(err?.response?.data?.message || '회원가입에 실패했습니다. 다시 시도해주세요.')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(message || '회원가입에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleGuestContinue = async () => {
+    setError('')
+    setIsGuestLoading(true)
+    try {
+      const response = await api.post('/v1/auth/guest')
+      resetSessionData()
+      setTokens(response.data.access_token, response.data.refresh_token)
+      startGuestSession()
+      router.push('/home')
+    } catch {
+      setError('게스트 로그인에 실패했습니다.')
+    } finally {
+      setIsGuestLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-12 text-zinc-100">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 lg:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">무료 시작</p>
-          <h1 className="text-3xl font-semibold text-zinc-100 lg:text-4xl">
-            매매 복기, 15초면 됩니다.
-          </h1>
-          <p className="text-base text-zinc-400">
-            텔레그램 봇으로 버튼 3번이면 기록 완료.<br />
-            실제 거래와 자동 비교해드립니다.
-          </p>
-          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-            <p className="text-sm font-semibold text-zinc-200">얼리 액세스 (전부 무료)</p>
-            <ul className="mt-2 space-y-1 text-sm text-zinc-400">
-              <li>• 텔레그램 복기 봇 + 자동 매칭</li>
-              <li>• AI 의견 비교 (OpenAI, Claude, Gemini)</li>
-              <li>• 거래소 API 연동 (Binance, Upbit)</li>
-            </ul>
+    <div className="min-h-screen bg-white">
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-5 max-w-7xl mx-auto">
+        <Link href="/" className="text-lg font-bold tracking-wider text-neutral-900">KIFU</Link>
+        <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+          로그인
+        </Link>
+      </nav>
+
+      <div className="flex min-h-[calc(100vh-72px)] items-center justify-center px-4 pb-12">
+        <div className="w-full max-w-sm">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-neutral-900">회원가입</h1>
+            <p className="mt-2 text-sm text-neutral-400">무료로 매매 복기를 시작하세요.</p>
           </div>
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-8"
-        >
-          <div>
-            <h2 className="text-2xl font-semibold">회원가입</h2>
-            <p className="mt-1 text-sm text-zinc-400">무료로 시작할 수 있습니다.</p>
-          </div>
+
+          {/* Error */}
           {error && (
-            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
-          <label className="text-sm text-zinc-300">
-            이름
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
-              placeholder="사용할 이름"
-            />
-          </label>
-          <label className="text-sm text-zinc-300">
-            이메일
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
-              placeholder="you@trader.com"
-            />
-          </label>
-          <label className="text-sm text-zinc-300">
-            비밀번호
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-4 py-2 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
-              placeholder="비밀번호를 입력하세요"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="mt-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? '생성 중...' : '회원가입'}
-          </button>
-          <p className="text-sm text-zinc-400">
-            이미 계정이 있나요?{' '}
-            <Link href="/login" className="font-semibold text-zinc-100">
-              로그인
-            </Link>
-          </p>
-        </form>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1.5">이름</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 transition-all"
+                placeholder="사용할 이름"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1.5">이메일</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 transition-all"
+                placeholder="hello@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-neutral-500 mb-1.5">비밀번호</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400 transition-all"
+                placeholder="6자 이상"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isLoading ? '가입 중...' : '회원가입'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative flex items-center my-6">
+            <div className="h-px flex-1 bg-neutral-200" />
+            <span className="px-3 text-xs text-neutral-400">또는</span>
+            <div className="h-px flex-1 bg-neutral-200" />
+          </div>
+
+          {/* Guest & Telegram */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={handleGuestContinue}
+              disabled={isGuestLoading || isLoading}
+              className="w-full h-11 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-600 hover:bg-neutral-50 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isGuestLoading ? '게스트 세션 시작 중...' : '게스트로 둘러보기'}
+            </button>
+
+            <a
+              href={tgBotUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full h-11 rounded-xl bg-[#2AABEE] text-white text-sm font-semibold hover:bg-[#229ED9] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              텔레그램으로 시작 (가입 불필요)
+            </a>
+          </div>
+
+          {/* Early access info */}
+          <div className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="text-xs font-semibold text-emerald-700">얼리 액세스 — 전 기능 무료</p>
+            <p className="mt-1 text-xs text-emerald-600/70">텔레그램 복기 봇, AI 의견 비교, 거래소 연동 모두 포함</p>
+          </div>
+
+          {/* Links */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-neutral-400">
+              이미 계정이 있나요?{' '}
+              <Link href="/login" className="font-semibold text-neutral-900 hover:underline">로그인</Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

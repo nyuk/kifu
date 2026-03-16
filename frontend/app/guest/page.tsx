@@ -77,22 +77,13 @@ export default function GuestPage() {
   const handleGuestStart = async () => {
     setStarting(true)
     setStartError(null)
-    const guestEmail = process.env.NEXT_PUBLIC_GUEST_EMAIL?.trim()
-    const guestPassword = process.env.NEXT_PUBLIC_GUEST_PASSWORD?.trim()
-
-    if (!guestEmail || !guestPassword) {
-      setStarting(false)
-      setStartError('게스트 계정 환경변수가 설정되지 않았습니다. NEXT_PUBLIC_GUEST_EMAIL, NEXT_PUBLIC_GUEST_PASSWORD를 확인하세요.')
-      return
-    }
-
     try {
-      const response = await api.post('/v1/auth/login', { email: guestEmail, password: guestPassword })
+      const response = await api.post('/v1/auth/guest')
       setTokens(response.data.access_token, response.data.refresh_token)
       startGuestSession()
       router.push('/home')
-    } catch (err: any) {
-      const message = err?.response?.data?.message || '게스트 시작에 실패했습니다. 잠시 후 다시 시도해주세요.'
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '게스트 시작에 실패했습니다. 잠시 후 다시 시도해주세요.'
       setStartError(message)
     } finally {
       setStarting(false)

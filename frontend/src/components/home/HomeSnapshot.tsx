@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { api } from '../../lib/api'
 import { isGuestSession } from '../../lib/guestSession'
 import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
@@ -10,8 +10,7 @@ import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import { useReviewStore } from '../../stores/reviewStore'
-import { parseAiSections } from '../../lib/aiResponseFormat'
-import type { AccuracyResponse, NotesListResponse, ReviewNote } from '../../types/review'
+import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeGuidedReviewCard } from './HomeGuidedReviewCard'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
@@ -34,37 +33,6 @@ type BubbleListResponse = {
   limit: number
   total: number
   items: BubbleItem[]
-}
-
-type AINoteCard = ReviewNote & {
-  symbol?: string
-  timeframe?: string
-  candle_time?: string
-  venue_name?: string
-  source_label?: string
-}
-
-const parseSourceBadge = (tags: string[] = []) => {
-  const normalized = tags.map((tag) => tag.toLowerCase())
-  if (normalized.includes('alert') || normalized.includes('alerting')) return 'ALERT'
-  if (normalized.includes('one-shot') || normalized.includes('one-shot-note')) return 'One-shot'
-  if (normalized.includes('technical')) return 'Technical'
-  if (normalized.includes('summary')) return '요약'
-  if (normalized.includes('brief') || normalized.includes('detailed')) return '요약'
-  return 'One-shot'
-}
-
-const SOURCE_BADGE_CLASS = 'rounded-full border border-emerald-300/35 bg-emerald-500/12 px-2 py-0.5 text-emerald-200'
-const VENUE_BADGE_CLASS = 'rounded-full border border-sky-300/35 bg-sky-500/12 px-2 py-0.5 text-sky-200'
-
-const normalizeVenueLabel = (value?: string) => {
-  if (!value) return ''
-  const lowered = value.toLowerCase()
-  if (lowered.includes('binance')) return 'Binance'
-  if (lowered.includes('upbit')) return 'Upbit'
-  if (lowered.includes('kis')) return 'KIS'
-  if (lowered.includes('tradingview') || lowered.includes('mock')) return '시스템'
-  return value
 }
 
 const periodLabels: Record<string, string> = {
@@ -97,21 +65,11 @@ const formatDateTime = (value?: string) => {
   })
 }
 
-const parsePercent = (value?: string | number) => {
-  if (value === undefined || value === null) return 0
-  if (typeof value === 'number') return value
-  const normalized = value.replace('%', '').trim()
-  const parsed = Number(normalized)
-  return Number.isNaN(parsed) ? 0 : parsed
-}
-
 const toneByNumber = (value: number) => {
   if (value > 0) return 'text-lime-300'
   if (value < 0) return 'text-rose-300'
   return 'text-neutral-200'
 }
-
-
 
 const getCurrency = (summary: TradeSummaryResponse | null) => {
   const exchanges = (summary?.by_exchange || [])
@@ -140,13 +98,6 @@ const getTopProvider = (accuracy: AccuracyResponse | null) => {
   return accuracy.ranking[0]
 }
 
-const SummaryCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-white/[0.06] bg-[#1c1917]/60 p-6 backdrop-blur-md shadow-xl shadow-black/20">
-    <p className="text-xs uppercase tracking-[0.3em] text-stone-500 font-bold">{title}</p>
-    <div className="mt-5">{children}</div>
-  </div>
-)
-
 const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
   const segments = [
     { key: 'bad', active: mode === 'bad' },
@@ -170,14 +121,12 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
             }`}
         />
       ))}
-      <span className="ml-2 text-[10px] uppercase tracking-[0.3em] text-neutral-400">State</span>
     </div>
   )
 }
 
 export function HomeSnapshot() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const guidedReview = useGuidedReviewStore((state) => state.review)
   const guidedLoading = useGuidedReviewStore((state) => state.isLoading)
   const fetchGuidedToday = useGuidedReviewStore((state) => state.fetchToday)
@@ -197,17 +146,11 @@ export function HomeSnapshot() {
   const [bubblesLoading, setBubblesLoading] = useState(false)
   const [bubblesError, setBubblesError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [visualMode, setVisualMode] = useState<'auto' | 'good' | 'ok' | 'bad' | 'idle'>('auto')
   const [animatedPnl, setAnimatedPnl] = useState(0)
   const prevPnlRef = useRef(0)
   const [currencyMode, setCurrencyMode] = useState<'auto' | 'usdt' | 'krw'>('auto')
   const [onboardingProfile, setOnboardingProfile] = useState<ReturnType<typeof readOnboardingProfile>>(null)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [aiNotes, setAiNotes] = useState<AINoteCard[]>([])
-  const [aiNotesLoading, setAiNotesLoading] = useState(false)
-  const [aiSymbolFilter, setAiSymbolFilter] = useState('ALL')
-  const [aiTimeframeFilter, setAiTimeframeFilter] = useState('ALL')
-  const [aiFilterHydrated, setAiFilterHydrated] = useState(false)
   const [guestMode, setGuestMode] = useState(false)
   const [guestModeReady, setGuestModeReady] = useState(false)
 
@@ -246,7 +189,7 @@ export function HomeSnapshot() {
         if (isActive) {
           setRecentBubbles(response.data.items)
         }
-      } catch (error) {
+      } catch {
         if (isActive) {
           setBubblesError('최근 버블을 불러오지 못했습니다.')
         }
@@ -307,47 +250,6 @@ export function HomeSnapshot() {
   }, [filters.period, filters.venue, filters.symbol, refreshTick])
 
   useEffect(() => {
-    let isActive = true
-    const loadAiNotes = async () => {
-      setAiNotesLoading(true)
-      try {
-        const [notesResponse, bubblesResponse] = await Promise.all([
-          api.get<NotesListResponse>('/v1/notes?page=1&limit=80'),
-          api.get<BubbleListResponse>('/v1/bubbles?page=1&limit=200&sort=desc'),
-        ])
-        const notes = notesResponse.data?.notes || []
-        const bubbles = bubblesResponse.data?.items || []
-        const bubbleMap = new Map(bubbles.map((bubble) => [bubble.id, bubble]))
-        const aiOnly = notes.filter((note) => {
-          const title = note.title || ''
-          const hasTag = (note.tags || []).some((tag) => tag.toLowerCase() === 'ai')
-          return hasTag || title.includes('AI')
-        })
-        const enriched = aiOnly.map((note) => {
-          const bubble = note.bubble_id ? bubbleMap.get(note.bubble_id) : undefined
-          return {
-            ...note,
-            symbol: bubble?.symbol,
-            timeframe: bubble?.timeframe,
-            candle_time: bubble?.candle_time,
-            venue_name: bubble?.venue_name,
-            source_label: parseSourceBadge(note.tags || []),
-          }
-        })
-        if (isActive) setAiNotes(enriched.slice(0, 20))
-      } catch {
-        if (isActive) setAiNotes([])
-      } finally {
-        if (isActive) setAiNotesLoading(false)
-      }
-    }
-    loadAiNotes()
-    return () => {
-      isActive = false
-    }
-  }, [refreshTick])
-
-  useEffect(() => {
     const handleRefresh = () => {
       setRefreshTick((prev) => prev + 1)
       fetchStats()
@@ -384,49 +286,8 @@ export function HomeSnapshot() {
   const snapshotPeriod = periodLabels[filters.period] ?? '최근'
   const summary = stats?.overall
   const topProvider = useMemo(() => getTopProvider(accuracy), [accuracy])
-  const accuracyLabel = topProvider ? `${topProvider.provider} ${formatPercent(topProvider.accuracy)}` : '-'
+  const accuracyLabel = topProvider ? `${topProvider.provider} ${formatPercent(topProvider.accuracy)}` : null
   const totalOpinions = accuracy?.total_opinions ?? 0
-  const aiSymbolOptions = useMemo(() => {
-    const options = Array.from(new Set(aiNotes.map((note) => note.symbol).filter(Boolean)))
-    return ['ALL', ...options] as string[]
-  }, [aiNotes])
-  const aiTimeframeOptions = useMemo(() => {
-    const options = Array.from(new Set(aiNotes.map((note) => note.timeframe).filter(Boolean)))
-    return ['ALL', ...options] as string[]
-  }, [aiNotes])
-  const filteredAiNotes = useMemo(() => {
-    return aiNotes.filter((note) => {
-      if (aiSymbolFilter !== 'ALL' && note.symbol !== aiSymbolFilter) return false
-      if (aiTimeframeFilter !== 'ALL' && note.timeframe !== aiTimeframeFilter) return false
-      return true
-    })
-  }, [aiNotes, aiSymbolFilter, aiTimeframeFilter])
-
-  useEffect(() => {
-    const qSymbol = searchParams.get('ai_symbol')
-    const qTf = searchParams.get('ai_tf')
-    if (qSymbol && qSymbol.trim()) setAiSymbolFilter(qSymbol)
-    if (qTf && qTf.trim()) setAiTimeframeFilter(qTf)
-    setAiFilterHydrated(true)
-    // hydrate once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!aiFilterHydrated) return
-    const currentSymbol = searchParams.get('ai_symbol') || 'ALL'
-    const currentTf = searchParams.get('ai_tf') || 'ALL'
-    if (currentSymbol === aiSymbolFilter && currentTf === aiTimeframeFilter) return
-
-    const next = new URLSearchParams(searchParams.toString())
-    if (aiSymbolFilter === 'ALL') next.delete('ai_symbol')
-    else next.set('ai_symbol', aiSymbolFilter)
-    if (aiTimeframeFilter === 'ALL') next.delete('ai_tf')
-    else next.set('ai_tf', aiTimeframeFilter)
-
-    const query = next.toString()
-    router.replace(query ? `/home?${query}` : '/home', { scroll: false })
-  }, [aiFilterHydrated, aiSymbolFilter, aiTimeframeFilter, searchParams, router])
   const tradeTotals = tradeSummary?.totals
   const bySide = useMemo(() => {
     const source = tradeSummary?.by_side || []
@@ -439,33 +300,20 @@ export function HomeSnapshot() {
       sellCount: findCount('SELL'),
     }
   }, [tradeSummary])
-  const topExchange = useMemo(() => {
-    const rows = tradeSummary?.by_exchange || []
-    if (rows.length === 0) return null
-    return [...rows].sort((a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0))[0]
-  }, [tradeSummary])
-  const topSymbol = useMemo(() => {
-    const rows = tradeSummary?.by_symbol || []
-    if (rows.length === 0) return null
-    return [...rows].sort((a, b) => Number(b.total_trades || b.trade_count || 0) - Number(a.total_trades || a.trade_count || 0))[0]
-  }, [tradeSummary])
+
   const currency = currencyMode === 'auto' ? getCurrency(tradeSummary) : currencyPreset(currencyMode)
   const totalPnlNumeric = Number(tradeTotals?.realized_pnl_total || 0)
   const pnlTone = toneByNumber(totalPnlNumeric)
-  const pnlGlow = totalPnlNumeric >= 0 ? 'shadow-lg shadow-lime-500/20' : 'shadow-lg shadow-rose-500/20'
   const bubbleCount = stats?.total_bubbles ?? 0
   const tradesCount = tradeTotals?.total_trades ?? 0
   const isNoAction = bubbleCount === 0 && tradesCount === 0
-  const resolvedMode = visualMode === 'auto'
-    ? isNoAction
-      ? 'idle'
-      : totalPnlNumeric >= 1
-        ? 'good'
-        : totalPnlNumeric <= -1
-          ? 'bad'
-          : 'ok'
-    : visualMode
-  const stateTone = 'bg-transparent'
+  const resolvedMode = isNoAction
+    ? 'idle'
+    : totalPnlNumeric >= 1
+      ? 'good'
+      : totalPnlNumeric <= -1
+        ? 'bad'
+        : 'ok'
   const heroText =
     resolvedMode === 'good'
       ? '오늘의 리듬이 선명합니다. 이 느낌을 기록하세요.'
@@ -482,6 +330,7 @@ export function HomeSnapshot() {
         : resolvedMode === 'ok'
           ? 'text-emerald-200'
           : 'text-indigo-200'
+
   const routineItems = [
     {
       key: 'market',
@@ -536,24 +385,25 @@ export function HomeSnapshot() {
   }, [shouldForceGuidedModal])
 
   return (
-    <div className={`min-h-screen text-zinc-100 p-4 md:p-8 ${stateTone} transition-colors duration-700 ease-out`}>
+    <div className="min-h-screen text-zinc-100 p-4 md:p-8 transition-colors duration-700 ease-out">
       <div className="w-full flex flex-col gap-6">
+
+        {/* Header */}
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500">Library Ritual</p>
-            <h1 className="text-3xl font-semibold text-stone-200">서재 모드</h1>
-            <p className="text-sm text-stone-400">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
-            <p className="text-xs text-stone-600">기간 기준: 캔들 시간</p>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">Library Ritual</p>
+            <h1 className="text-2xl font-semibold text-stone-200">서재 모드</h1>
+            <p className="text-sm text-stone-500">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-2 shadow-[0_1px_0_rgba(255,255,255,0.06)_inset]">
-            <div className="home-chip-group">
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-white/[0.06] bg-white/[0.03] p-0.5">
               {(['7d', '30d', 'all'] as const).map((period) => (
                 <button
                   key={period}
                   type="button"
                   onClick={() => setFilters({ period })}
-                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${filters.period === period
-                    ? 'bg-[#44403c] text-stone-100 shadow-sm border border-stone-500/30'
+                  className={`rounded-md px-3 py-1 text-[11px] font-medium transition-all ${filters.period === period
+                    ? 'bg-stone-700/80 text-stone-100 shadow-sm'
                     : 'text-stone-500 hover:text-stone-300'
                     }`}
                 >
@@ -561,18 +411,18 @@ export function HomeSnapshot() {
                 </button>
               ))}
             </div>
-            <div className="home-chip-group">
+            <div className="flex rounded-lg border border-white/[0.06] bg-white/[0.03] p-0.5">
               {([
                 { key: 'auto', label: '자동' },
-                { key: 'usdt', label: 'USDT' },
-                { key: 'krw', label: 'KRW' },
+                { key: 'usdt', label: '$' },
+                { key: 'krw', label: '₩' },
               ] as const).map((item) => (
                 <button
                   key={item.key}
                   type="button"
                   onClick={() => setCurrencyMode(item.key)}
-                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-all ${currencyMode === item.key
-                    ? 'bg-[#44403c] text-stone-100 shadow-sm border border-stone-500/30'
+                  className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${currencyMode === item.key
+                    ? 'bg-stone-700/80 text-stone-100 shadow-sm'
                     : 'text-stone-500 hover:text-stone-300'
                     }`}
                 >
@@ -580,397 +430,193 @@ export function HomeSnapshot() {
                 </button>
               ))}
             </div>
-            <div className="text-xs text-zinc-500">
-              업데이트: {lastUpdated ? lastUpdated.toLocaleString('ko-KR') : '불러오는 중...'}
-            </div>
+            <span className="text-[10px] text-stone-600">
+              {lastUpdated ? lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '...'}
+            </span>
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
-          <div className="home-library-panel">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500 font-bold">Quiet Routine</p>
-            <h2 className="mt-2 text-xl font-bold text-stone-200">오늘의 3가지 질문</h2>
-            <div className="mt-5 space-y-2">
-              {routineItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className="group flex items-center justify-between rounded-xl border border-white/[0.03] bg-white/[0.02] px-5 py-3.5 transition hover:bg-white/[0.04] hover:border-white/[0.08]"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-stone-300 group-hover:text-stone-100 transition-colors">{item.title}</p>
-                    <p className="text-xs text-stone-500">{item.hint}</p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${item.done
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                      : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
-                      }`}
-                  >
-                    {item.done ? '완료' : '대기'}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="home-library-panel">
-            <p className="text-xs uppercase tracking-[0.3em] text-stone-500 font-bold">Closing Note</p>
-            <h2 className="mt-2 text-xl font-bold text-stone-200">오늘의 마감</h2>
-            <p className="mt-2 text-sm text-stone-400 leading-relaxed">
-              긴급 대응과 판단 흐름을 한 장으로 정리합니다.
-            </p>
-            <div className="mt-5 space-y-2">
-              <Link href="/alert" className="block rounded-lg border border-white/5 bg-white/[0.03] px-4 py-3 text-xs font-semibold text-stone-300 transition hover:bg-white/[0.06] hover:text-stone-100 text-center">
-                긴급 브리핑 다시보기
-              </Link>
-              <Link href="/review" className="block rounded-lg border border-white/5 bg-white/[0.03] px-4 py-3 text-xs font-semibold text-stone-300 transition hover:bg-white/[0.06] hover:text-stone-100 text-center">
-                복기 노트 남기기
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-xs text-zinc-300">
-          <span className="text-zinc-500">무드 미리보기:</span>
-          {([
-            { key: 'auto', label: '자동' },
-            { key: 'good', label: '좋음' },
-            { key: 'ok', label: '그럭저럭' },
-            { key: 'bad', label: '안좋음' },
-            { key: 'idle', label: '무행동' },
-          ] as const).map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setVisualMode(item.key)}
-              className={`rounded-full border px-3 py-1 transition text-[11px] font-medium ${visualMode === item.key
-                ? 'border-white bg-white text-black'
-                : 'border-white/10 bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-neutral-200'
-                }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </section>
-
-        <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-black/20 via-white/[0.04] to-lime-900/30 p-6 lg:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3">
-              <p className="text-xs uppercase tracking-[0.3em] text-neutral-400">Focus Memory</p>
-              <p className={`text-sm ${heroAccent}`}>
-                {heroText}
-              </p>
-              <p className="text-sm text-neutral-300">결과와 AI 의견을 한 장에 모아둡니다.</p>
+        {/* Hero — single PnL focus */}
+        <section className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-black/30 via-white/[0.02] to-transparent p-6 lg:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3 lg:max-w-md">
               <StatusGauge mode={resolvedMode} />
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-neutral-700/80 bg-white/[0.05] px-3 py-1 text-xs text-neutral-300">
-                  최근 버블 {formatNumber(stats?.total_bubbles ?? 0)}개
+              <p className={`text-sm leading-relaxed ${heroAccent}`}>{heroText}</p>
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
+                  거래 {tradesCount.toLocaleString()}건
                 </span>
-                <span className="rounded-full border border-neutral-700/80 bg-white/[0.05] px-3 py-1 text-xs text-neutral-300">
-                  AI 의견 {formatNumber(totalOpinions)}개
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
+                  BUY {bySide.buyCount} · SELL {bySide.sellCount}
                 </span>
-                {topProvider && (
-                  <span className="rounded-full border border-lime-400/40 bg-lime-500/10 px-3 py-1 text-xs text-lime-200">
-                    최고 정확도 {accuracyLabel}
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
+                  버블 {formatNumber(bubbleCount)}개
+                </span>
+                {accuracyLabel && (
+                  <span className="rounded-full border border-lime-400/30 bg-lime-500/8 px-2.5 py-0.5 text-lime-300">
+                    AI {accuracyLabel}
                   </span>
                 )}
               </div>
             </div>
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5 text-center lg:min-w-[220px]">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">핵심 PnL</p>
-              <div className="relative mt-3 rounded-xl border border-white/[0.06] bg-white/[0.05] px-4 py-3">
-                <div className="pointer-events-none absolute inset-0 rounded-xl bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.06)_50%,transparent_100%)] opacity-50" />
-                <div className="pointer-events-none absolute inset-0 rounded-xl bg-[repeating-linear-gradient(transparent,transparent_6px,rgba(255,255,255,0.04)_7px)] opacity-40" />
-                <p className={`relative text-4xl font-semibold tracking-widest ${pnlTone} ${pnlGlow} font-mono`}>
-                  {formatCurrency(animatedPnl, currency.symbol)}
-                </p>
-              </div>
-              <p className="mt-2 text-xs text-zinc-500">오늘 흐름을 한 눈에</p>
+            <div className="text-center lg:text-right">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-2">PnL</p>
+              <p className={`text-4xl font-semibold tracking-tight font-mono ${pnlTone}`}>
+                {formatCurrency(animatedPnl, currency.symbol)}
+              </p>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">실거래</p>
-            <p className="mt-2 text-2xl font-semibold text-sky-300">{tradesCount.toLocaleString()}건</p>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">매수/매도</p>
-            <p className="mt-2 text-sm font-semibold text-zinc-100">
-              BUY {bySide.buyCount.toLocaleString()} · SELL {bySide.sellCount.toLocaleString()}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 거래소</p>
-            <p className="mt-2 text-sm font-semibold text-amber-200">
-              {topExchange ? `${topExchange.exchange} · ${(topExchange.total_trades || topExchange.trade_count || 0).toLocaleString()}건` : '-'}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">주요 심볼</p>
-            <p className="mt-2 text-sm font-semibold text-emerald-200">
-              {topSymbol ? `${topSymbol.symbol} · ${(topSymbol.total_trades || topSymbol.trade_count || 0).toLocaleString()}건` : '-'}
-            </p>
+        {/* Routine — 3 questions */}
+        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">Quiet Routine</p>
+          <div className="grid gap-2 lg:grid-cols-3">
+            {routineItems.map((item) => (
+              <Link
+                key={item.key}
+                href={item.href}
+                className="group flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.05] hover:border-white/[0.08]"
+              >
+                <div>
+                  <p className="text-sm font-medium text-stone-300 group-hover:text-stone-100 transition-colors">{item.title}</p>
+                  <p className="text-[11px] text-stone-600">{item.hint}</p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.done
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-amber-500/10 text-amber-400'
+                    }`}
+                >
+                  {item.done ? '완료' : '대기'}
+                </span>
+              </Link>
+            ))}
           </div>
         </section>
 
-        {onboardingProfile && (tradesCount === 0 || bubbleCount === 0) && (
-          <section className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        {/* Stats — compact 2-column */}
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">기록 요약</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-amber-200/80">Onboarding Profile</p>
-                <p className="mt-1 text-lg font-semibold text-amber-100">{onboardingProfile.tendency}</p>
-                <p className="mt-1 text-xs text-amber-100/70">
-                  LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
-                </p>
-                <p className="mt-2 text-xs text-amber-100/80">
-                  오늘 루틴 1개: 최근 24시간 변동이 큰 캔들에 말풍선 1개만 남기기
+                <p className="text-[11px] text-stone-600">총 버블</p>
+                <p className="text-xl font-semibold text-stone-200">{formatNumber(stats?.total_bubbles ?? 0)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-stone-600">결과 있음</p>
+                <p className="text-xl font-semibold text-stone-200">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-stone-600">승률</p>
+                <p className={`text-xl font-semibold ${summary && summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
+                  {formatPercent(summary?.win_rate)}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href="/chart?onboarding=1" className="rounded-lg border border-amber-200/40 px-3 py-2 text-xs font-semibold text-amber-100">
-                  오늘 루틴 시작
+              <div>
+                <p className="text-[11px] text-stone-600">평균 손익</p>
+                <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? totalPnlNumeric / tradesCount : 0)}`}>
+                  {tradesCount ? formatCurrency(totalPnlNumeric / tradesCount, currency.symbol) : '-'}
+                </p>
+              </div>
+            </div>
+            {isLoading && <p className="mt-3 text-[11px] text-stone-600">통계를 불러오는 중...</p>}
+          </div>
+
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">AI 의견</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <div>
+                <p className="text-[11px] text-stone-600">수집된 의견</p>
+                <p className="text-xl font-semibold text-stone-200">{formatNumber(totalOpinions)}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-stone-600">최고 정확도</p>
+                <p className="text-xl font-semibold text-stone-200">{accuracyLabel ?? '-'}</p>
+              </div>
+            </div>
+            <p className="mt-4 text-[11px] text-stone-600 leading-relaxed">
+              AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
+            </p>
+            <Link
+              href="/review"
+              className="mt-3 inline-block rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-stone-400 transition hover:text-stone-200 hover:border-white/[0.1]"
+            >
+              복기 대시보드에서 상세 보기
+            </Link>
+            {isLoadingAccuracy && <p className="mt-3 text-[11px] text-stone-600">불러오는 중...</p>}
+          </div>
+        </section>
+
+        {/* Onboarding nudge */}
+        {onboardingProfile && (tradesCount === 0 || bubbleCount === 0) && (
+          <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-amber-400/60">Onboarding</p>
+                <p className="mt-1 text-sm font-semibold text-amber-200">{onboardingProfile.tendency}</p>
+                <p className="mt-1 text-[11px] text-amber-300/60">
+                  LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link href="/chart?onboarding=1" className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
+                  루틴 시작
                 </Link>
-                <Link href="/settings" className="rounded-lg border border-amber-200/40 px-3 py-2 text-xs font-semibold text-amber-100">
-                  거래소 연결하기
+                <Link href="/settings" className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
+                  거래소 연결
                 </Link>
               </div>
             </div>
           </section>
         )}
 
+        {/* External components */}
         <PositionManager />
-
         <HomeSafetyCheckCard />
-
         {!guestMode && guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <SummaryCard title="내 기록 요약">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-zinc-500">총 버블</p>
-                <p className="text-2xl font-semibold">{formatNumber(stats?.total_bubbles ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">결과 있음</p>
-                <p className="text-2xl font-semibold">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">승률</p>
-                <p className={`text-xl font-semibold ${summary && summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
-                  {formatPercent(summary?.win_rate)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">평균 손익</p>
-                <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? totalPnlNumeric / tradesCount : 0)}`}>
-                  {tradesCount
-                    ? formatCurrency(totalPnlNumeric / tradesCount, currency.symbol)
-                    : '-'}
-                </p>
-              </div>
-            </div>
-            {isLoading && <p className="mt-4 text-xs text-zinc-500">통계를 불러오는 중...</p>}
-          </SummaryCard>
-
-          <SummaryCard title="AI 의견 요약">
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-zinc-500">요청된 의견</p>
-                <p className="text-2xl font-semibold">{formatNumber(totalOpinions)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500">현재 1위 정확도</p>
-                <p className="text-xl font-semibold">{accuracyLabel}</p>
-              </div>
-              <p className="text-xs text-zinc-500">
-                AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={aiSymbolFilter}
-                  onChange={(event) => setAiSymbolFilter(event.target.value)}
-                  className="rounded border border-white/[0.08] bg-white/[0.06] px-2 py-1 text-[11px] text-neutral-200"
-                >
-                  {aiSymbolOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'ALL' ? '심볼 전체' : option}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={aiTimeframeFilter}
-                  onChange={(event) => setAiTimeframeFilter(event.target.value)}
-                  className="rounded border border-white/[0.08] bg-white/[0.06] px-2 py-1 text-[11px] text-neutral-200"
-                >
-                  {aiTimeframeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'ALL' ? '타임프레임 전체' : option}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[11px] text-zinc-500">{filteredAiNotes.length}건</span>
-              </div>
-              {!aiNotesLoading && filteredAiNotes.slice(0, 2).map((note) => {
-                const sections = parseAiSections(note.content || '')
-                const body = sections[0]?.body || note.content
-                return (
-                  <div key={note.id} className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-1 text-[10px] text-zinc-500">
-                      {note.source_label && (
-                        <span className={SOURCE_BADGE_CLASS}>
-                          {note.source_label}
-                        </span>
-                      )}
-                      {note.venue_name && (
-                        <span className={VENUE_BADGE_CLASS}>
-                          {normalizeVenueLabel(note.venue_name)}
-                        </span>
-                      )}
-                      {note.symbol && <span>{note.symbol}</span>}
-                      {note.timeframe && <span>· {note.timeframe}</span>}
-                      {note.symbol && note.candle_time && (
-                        <>
-                          <span>·</span>
-                          <Link
-                            href={`/chart/${note.symbol}?focus_ts=${encodeURIComponent(note.candle_time)}&focus_tf=${encodeURIComponent(note.timeframe || '1d')}`}
-                            className="text-emerald-300 hover:text-emerald-200"
-                          >
-                            차트 이동
-                          </Link>
-                        </>
-                      )}
-                      {note.bubble_id && (
-                        <>
-                          <span>·</span>
-                          <Link
-                            href={`/bubbles?bubble_id=${note.bubble_id}`}
-                            className="text-cyan-300 hover:text-cyan-200"
-                          >
-                            관련 버블
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-xs text-neutral-300">{body}</p>
-                  </div>
-                )
-              })}
-            </div>
-            {isLoadingAccuracy && <p className="mt-4 text-xs text-zinc-500">AI 통계를 불러오는 중...</p>}
-            {aiNotesLoading && <p className="mt-2 text-xs text-zinc-500">AI 요약 불러오는 중...</p>}
-          </SummaryCard>
-
-          <SummaryCard title="다음 행동">
-            <div className="space-y-3">
-              <Link
-                href="/chart"
-                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
-              >
-                버블 기록하기
-                <span className="text-xs text-zinc-500">현재 판단 저장</span>
-              </Link>
-              <Link
-                href="/review"
-                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
-              >
-                복기 대시보드
-                <span className="text-xs text-zinc-500">성과 확인</span>
-              </Link>
-              <Link
-                href="/bubbles"
-                className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-white/[0.12] hover:bg-white/[0.08]"
-              >
-                버블 라이브러리
-                <span className="text-xs text-zinc-500">패턴 비교</span>
-              </Link>
-            </div>
-          </SummaryCard>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">최근 버블</p>
-              <Link href="/bubbles" className="text-xs text-neutral-400 hover:text-neutral-200">
-                전체 보기
-              </Link>
-            </div>
-            <div className="mt-4 space-y-3">
-              {bubblesLoading && <p className="text-xs text-zinc-500">불러오는 중...</p>}
-              {bubblesError && <p className="text-xs text-red-300">{bubblesError}</p>}
-              {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
-                <p className="text-xs text-zinc-500">아직 기록된 버블이 없습니다.</p>
-              )}
-              {!bubblesLoading &&
-                !bubblesError &&
-                recentBubbles.map((bubble) => (
-                  <div
-                    key={bubble.id}
-                    className="flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-black/20 p-4 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold">{bubble.symbol}</p>
-                      <p className="text-xs text-zinc-500">
-                        {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">{bubble.price}</p>
-                      <p className="text-xs text-zinc-500">
-                        {bubble.memo ? bubble.memo : bubble.tags?.slice(0, 2).join(', ') || '메모 없음'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-            </div>
+        {/* Recent bubbles */}
+        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">최근 버블</p>
+            <Link href="/bubbles" className="text-[11px] text-stone-500 hover:text-stone-300 transition">
+              전체 보기
+            </Link>
           </div>
-
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-            <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">오늘의 기억</p>
-            <div className="mt-4 space-y-4 text-sm text-neutral-300">
-              <div>
-                <p className="text-xs text-zinc-500">순 손익</p>
-                <p className={`text-2xl font-semibold ${toneByNumber(totalPnlNumeric)}`}>
-                  {tradesCount ? formatCurrency(totalPnlNumeric, currency.symbol) : '-'}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>총 매수</span>
-                  <span className="text-neutral-200">
-                    {tradesCount ? `${bySide.buyCount.toLocaleString()}건` : '-'}
-                  </span>
+          {bubblesLoading && <p className="text-[11px] text-stone-600">불러오는 중...</p>}
+          {bubblesError && <p className="text-[11px] text-rose-400">{bubblesError}</p>}
+          {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
+            <p className="text-[11px] text-stone-600">아직 기록된 버블이 없습니다.</p>
+          )}
+          {!bubblesLoading && !bubblesError && recentBubbles.length > 0 && (
+            <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
+              {recentBubbles.map((bubble) => (
+                <div
+                  key={bubble.id}
+                  className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-stone-200">{bubble.symbol}</p>
+                    <p className="text-[11px] text-stone-600">
+                      {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-stone-300">{bubble.price}</p>
+                    <p className="text-[11px] text-stone-600 max-w-[120px] truncate">
+                      {bubble.memo || bubble.tags?.slice(0, 2).join(', ') || ''}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>총 매도</span>
-                  <span className="text-neutral-200">
-                    {tradesCount ? `${bySide.sellCount.toLocaleString()}건` : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-zinc-500">
-                  <span>체결 수</span>
-                  <span className="text-neutral-200">
-                    {tradesCount ? `${tradesCount.toLocaleString()}건` : '-'}
-                  </span>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-500">
-                스냅샷이 흐려지기 전에 한 줄이라도 복기 노트를 남겨보세요.
-              </p>
-              <Link
-                href="/review"
-                className="inline-flex items-center justify-center rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-950"
-              >
-                복기 노트 작성
-              </Link>
+              ))}
             </div>
-          </div>
+          )}
         </section>
       </div>
 
+      {/* Guided review modal */}
       {shouldForceGuidedModal && (
         <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm">
           <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8">
