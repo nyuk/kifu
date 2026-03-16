@@ -3,6 +3,7 @@ import '../src/index.css'
 import { ToastProvider } from '../src/components/ui/Toast'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://kifu.moneyvessel.kr'),
   title: 'KIFU — 매매 복기를 자동화하세요',
   description: '텔레그램에서 버튼 3번, 15초면 거래 복기 완료. AI가 매매 패턴을 분석하고 실제 거래와 자동 비교합니다.',
   icons: {
