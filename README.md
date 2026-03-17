@@ -148,6 +148,7 @@ GitHub repository **description** supports a single text field, so use English a
 ## Marketing
 
 - X(Twitter) playbook: `docs/marketing/twitter-playbook.md`
+- Marketing OS quickstart: `docs/marketing/marketing-os-quickstart.md`
 - Post queue sample: `docs/marketing/x-post-queue.sample.json`
 - Core message: "turn trading records into decision-quality feedback"
 

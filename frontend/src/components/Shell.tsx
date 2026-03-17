@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
-import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck } from 'lucide-react'
+import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck, Megaphone } from 'lucide-react'
 
 type ShellTheme = 'neutral' | 'forest' | 'warm'
 const SHELL_THEME_KEY = 'kifu-shell-theme-v1'
@@ -86,6 +86,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { icon: Boxes, label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
     { icon: Zap, label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
     { icon: FileText, label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
+    { icon: Megaphone, label: '마케팅', href: '/marketing', color: 'text-amber-300', activeColor: 'bg-amber-300/10 text-amber-200' },
     { icon: TrendingUp, label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
     { icon: Settings, label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]

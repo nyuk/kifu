@@ -59,6 +59,7 @@ func RegisterRoutes(
 	summaryPackService *services.SummaryPackService,
 	monthlyReportRepo repositories.MonthlyReportRepository,
 	monthlyReportService *services.MonthlyReportService,
+	marketingRepo repositories.MarketingRepository,
 ) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "healthy"})
@@ -281,11 +282,19 @@ func RegisterRoutes(
 	packs.Get("/:pack_id", packHandler.GetByID)
 
 	monthlyReportHandler := handlers.NewMonthlyReportHandler(monthlyReportService, monthlyReportRepo)
+	marketingService := services.NewMarketingService(marketingRepo)
+	marketingHandler := handlers.NewMarketingHandler(marketingService)
 	reports := api.Group("/reports")
 	reports.Get("/monthly", monthlyReportHandler.GetLatest)
 	reports.Get("/monthly/list", monthlyReportHandler.ListReports)
 	reports.Get("/monthly/:year/:month", monthlyReportHandler.GetByMonth)
 	reports.Post("/monthly/generate", monthlyReportHandler.GenerateNow)
+
+	marketing := api.Group("/marketing")
+	marketing.Get("/workspace", marketingHandler.GetWorkspace)
+	marketing.Post("/ideas", marketingHandler.CreateIdea)
+	marketing.Post("/ideas/:id/drafts", marketingHandler.GenerateDraft)
+	marketing.Patch("/drafts/:id", marketingHandler.UpdateDraft)
 
 	onchain := api.Group("/onchain")
 	onchain.Post("/quick-check", onchainHandler.QuickCheck)

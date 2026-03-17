@@ -82,6 +82,7 @@ func Run() error {
 	safetyRepo := repositories.NewTradeSafetyReviewRepository(pool)
 	guidedReviewRepo := repositories.NewGuidedReviewRepository(pool)
 	tradePlanRepo := repositories.NewTradePlanRepository(pool)
+	marketingRepo := repositories.NewMarketingRepository(pool)
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
@@ -205,6 +206,7 @@ func Run() error {
 		summaryPackService,
 		monthlyReportRepo,
 		monthlyReportService,
+		marketingRepo,
 	)
 
 	go poller.Start(context.Background())
