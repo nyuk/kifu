@@ -53,11 +53,18 @@ export function HomeMonthlyReportCard() {
   if (!report) return null
 
   const p = report.payload
+  if (!p) return null
   const comp = p.comparison
-  const pnlTone = p.trade_summary.realized_pnl >= 0 ? 'text-lime-300' : 'text-rose-300'
-  const winRateTone = p.trade_summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'
-  const topAI = p.ai_accuracy.by_provider.length > 0
-    ? p.ai_accuracy.by_provider.reduce((best, cur) => cur.accuracy > best.accuracy ? cur : best, p.ai_accuracy.by_provider[0])
+  const tradeSummary = p.trade_summary ?? { realized_pnl: 0, win_rate: 0, total_trades: 0, buy_count: 0, sell_count: 0, avg_pnl: 0 }
+  const decisionStats = p.decision_stats ?? { total_bubbles: 0, bubbles_with_outcome: 0, bubble_win_rate: 0, avg_bubble_pnl: 0 }
+  const aiAccuracy = p.ai_accuracy ?? { total_opinions: 0, by_provider: [] }
+  const topSymbols = p.top_symbols ?? []
+  const mistakeReport = p.mistake_report ?? { total_reviewed: 0, mistake_count: 0, intended_count: 0, unsure_count: 0, top_mistakes: [] }
+  const providers = Array.isArray(aiAccuracy.by_provider) ? aiAccuracy.by_provider : []
+  const pnlTone = tradeSummary.realized_pnl >= 0 ? 'text-lime-300' : 'text-rose-300'
+  const winRateTone = tradeSummary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'
+  const topAI = providers.length > 0
+    ? providers.reduce((best, cur) => cur.accuracy > best.accuracy ? cur : best, providers[0])
     : null
 
   return (
@@ -81,7 +88,7 @@ export function HomeMonthlyReportCard() {
         <div>
           <p className="text-[11px] text-stone-600">실현 손익</p>
           <p className={`text-xl font-semibold ${pnlTone}`}>
-            {formatPnl(p.trade_summary.realized_pnl)}
+            {formatPnl(tradeSummary.realized_pnl)}
           </p>
           {comp && (
             <p className={`text-[10px] mt-0.5 ${changeIndicator(comp.pnl_change).color}`}>
@@ -93,7 +100,7 @@ export function HomeMonthlyReportCard() {
         <div>
           <p className="text-[11px] text-stone-600">승률</p>
           <p className={`text-xl font-semibold ${winRateTone}`}>
-            {p.trade_summary.win_rate.toFixed(1)}%
+            {tradeSummary.win_rate.toFixed(1)}%
           </p>
           {comp && (
             <p className={`text-[10px] mt-0.5 ${changeIndicator(comp.win_rate_change).color}`}>
@@ -105,7 +112,7 @@ export function HomeMonthlyReportCard() {
         <div>
           <p className="text-[11px] text-stone-600">거래 / 버블</p>
           <p className="text-xl font-semibold text-stone-200">
-            {p.trade_summary.total_trades} / {p.decision_stats.total_bubbles}
+            {tradeSummary.total_trades} / {decisionStats.total_bubbles}
           </p>
         </div>
 
@@ -122,9 +129,9 @@ export function HomeMonthlyReportCard() {
         </div>
       </div>
 
-      {p.top_symbols.length > 0 && (
+      {topSymbols.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {p.top_symbols.slice(0, 5).map((s) => (
+          {topSymbols.slice(0, 5).map((s) => (
             <span
               key={s.symbol}
               className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
@@ -139,13 +146,13 @@ export function HomeMonthlyReportCard() {
         </div>
       )}
 
-      {p.mistake_report.mistake_count > 0 && (
+      {mistakeReport.mistake_count > 0 && (
         <div className="mt-3 rounded-xl border border-amber-500/15 bg-amber-500/5 px-4 py-2.5">
           <p className="text-[11px] text-amber-300/80">
-            이번 달 실수 <span className="font-semibold text-amber-200">{p.mistake_report.mistake_count}건</span> 감지
-            {p.mistake_report.top_mistakes.length > 0 && (
+            이번 달 실수 <span className="font-semibold text-amber-200">{mistakeReport.mistake_count}건</span> 감지
+            {(mistakeReport.top_mistakes ?? []).length > 0 && (
               <span className="ml-1 text-amber-400/60">
-                — {p.mistake_report.top_mistakes.map((m) => `${m.symbol} ${m.side}`).join(', ')}
+                — {mistakeReport.top_mistakes.map((m) => `${m.symbol} ${m.side}`).join(', ')}
               </span>
             )}
           </p>

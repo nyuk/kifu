@@ -60,7 +60,7 @@ export function HomeSimilarPatterns() {
         // 첫 번째 버블에 대해 유사 패턴 검색
         for (const bubble of bubbles) {
           try {
-            const res = await api.get<SimilarResponse>(`/v1/bubbles/${bubble.id}/similar?period=all`)
+            const res = await api.get<SimilarResponse>(`/v1/bubbles/${bubble.id}/similar?period=1d`)
             if (res.data.similar_count > 1) { // 자기 자신 제외 1건 이상
               if (active) {
                 setPattern({ sourceBubble: bubble, similar: res.data })

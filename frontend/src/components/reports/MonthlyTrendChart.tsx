@@ -17,19 +17,21 @@ type ChartPoint = {
 
 function extractPoints(reports: MonthlyReport[]): ChartPoint[] {
   return [...reports]
+    .filter((r) => r.payload)
     .sort((a, b) => a.year * 100 + a.month - (b.year * 100 + b.month))
     .map((r) => {
       const p = r.payload
-      const topAI = p.ai_accuracy.by_provider.length > 0
-        ? Math.max(...p.ai_accuracy.by_provider.map((prov) => prov.accuracy))
+      const providers = Array.isArray(p.ai_accuracy?.by_provider) ? p.ai_accuracy.by_provider : []
+      const topAI = providers.length > 0
+        ? Math.max(...providers.map((prov) => prov.accuracy))
         : 0
       return {
-        label: `${MONTH_SHORT[p.period.month]}`,
-        pnl: p.trade_summary.realized_pnl,
-        winRate: p.trade_summary.win_rate,
+        label: `${MONTH_SHORT[p.period?.month ?? 0]}`,
+        pnl: p.trade_summary?.realized_pnl ?? 0,
+        winRate: p.trade_summary?.win_rate ?? 0,
         aiAccuracy: topAI,
-        tradeCount: p.trade_summary.total_trades,
-        bubbleCount: p.decision_stats.total_bubbles,
+        tradeCount: p.trade_summary?.total_trades ?? 0,
+        bubbleCount: p.decision_stats?.total_bubbles ?? 0,
       }
     })
 }
@@ -47,7 +49,7 @@ export function MonthlyTrendChart() {
     const load = async () => {
       try {
         const res = await api.get<MonthlyReportListResponse>('/v1/reports/monthly/list?limit=12')
-        if (active) setReports(res.data.reports || [])
+        if (active) setReports(Array.isArray(res.data?.reports) ? res.data.reports : [])
       } catch {
         // no data
       } finally {
