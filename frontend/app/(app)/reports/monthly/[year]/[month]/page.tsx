@@ -107,6 +107,13 @@ export default function MonthlyReportDetailPage() {
 
   const p = report.payload
   const comp = p.comparison
+  const tradeSummary = p.trade_summary ?? { realized_pnl: 0, win_rate: 0, total_trades: 0, buy_count: 0, sell_count: 0, avg_pnl: 0 }
+  const decisionStats = p.decision_stats ?? { total_bubbles: 0, bubbles_with_outcome: 0, bubble_win_rate: 0, avg_bubble_pnl: 0 }
+  const aiAccuracy = p.ai_accuracy ?? { total_opinions: 0, by_provider: [] }
+  const providers = Array.isArray(aiAccuracy.by_provider) ? aiAccuracy.by_provider : []
+  const topSymbols = Array.isArray(p.top_symbols) ? p.top_symbols : []
+  const mistakeReport = p.mistake_report ?? { total_reviewed: 0, mistake_count: 0, intended_count: 0, unsure_count: 0, top_mistakes: [] }
+  const topMistakes = Array.isArray(mistakeReport.top_mistakes) ? mistakeReport.top_mistakes : []
 
   return (
     <div className="min-h-screen text-zinc-100 p-4 md:p-8">
@@ -142,30 +149,30 @@ export default function MonthlyReportDetailPage() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatBlock
               label="실현 손익"
-              value={formatPnl(p.trade_summary.realized_pnl)}
-              valueClass={pnlColor(p.trade_summary.realized_pnl)}
+              value={formatPnl(tradeSummary.realized_pnl)}
+              valueClass={pnlColor(tradeSummary.realized_pnl)}
               sub={comp ? changeLabel(comp.pnl_change) : undefined}
             />
             <StatBlock
               label="승률"
-              value={`${p.trade_summary.win_rate.toFixed(1)}%`}
-              valueClass={p.trade_summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}
+              value={`${tradeSummary.win_rate.toFixed(1)}%`}
+              valueClass={tradeSummary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}
               sub={comp ? changeLabel(comp.win_rate_change, '%p') : undefined}
             />
             <StatBlock
               label="총 거래"
-              value={`${p.trade_summary.total_trades}건`}
+              value={`${tradeSummary.total_trades}건`}
               valueClass="text-stone-200"
             />
             <StatBlock
               label="평균 손익"
-              value={formatPnl(p.trade_summary.avg_pnl)}
-              valueClass={pnlColor(p.trade_summary.avg_pnl)}
+              value={formatPnl(tradeSummary.avg_pnl)}
+              valueClass={pnlColor(tradeSummary.avg_pnl)}
             />
           </div>
           <div className="mt-4 flex gap-4 text-[11px] text-stone-500">
-            <span>BUY {p.trade_summary.buy_count}건</span>
-            <span>SELL {p.trade_summary.sell_count}건</span>
+            <span>BUY {tradeSummary.buy_count}건</span>
+            <span>SELL {tradeSummary.sell_count}건</span>
           </div>
         </section>
 
@@ -173,30 +180,30 @@ export default function MonthlyReportDetailPage() {
         <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
           <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">판단 기록</p>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatBlock label="총 버블" value={`${p.decision_stats.total_bubbles}개`} valueClass="text-stone-200" />
-            <StatBlock label="결과 있음" value={`${p.decision_stats.bubbles_with_outcome}개`} valueClass="text-stone-200" />
+            <StatBlock label="총 버블" value={`${decisionStats.total_bubbles}개`} valueClass="text-stone-200" />
+            <StatBlock label="결과 있음" value={`${decisionStats.bubbles_with_outcome}개`} valueClass="text-stone-200" />
             <StatBlock
               label="버블 승률"
-              value={`${p.decision_stats.bubble_win_rate.toFixed(1)}%`}
-              valueClass={p.decision_stats.bubble_win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}
+              value={`${decisionStats.bubble_win_rate.toFixed(1)}%`}
+              valueClass={decisionStats.bubble_win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}
             />
             <StatBlock
               label="평균 버블 PnL"
-              value={formatPnl(p.decision_stats.avg_bubble_pnl)}
-              valueClass={pnlColor(p.decision_stats.avg_bubble_pnl)}
+              value={formatPnl(decisionStats.avg_bubble_pnl)}
+              valueClass={pnlColor(decisionStats.avg_bubble_pnl)}
             />
           </div>
         </section>
 
         {/* AI Accuracy */}
-        {p.ai_accuracy.total_opinions > 0 && (
+        {aiAccuracy.total_opinions > 0 && (
           <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">AI 정확도</p>
             <p className="text-[11px] text-stone-500 mb-3">
-              총 의견 {p.ai_accuracy.total_opinions}건
+              총 의견 {aiAccuracy.total_opinions}건
             </p>
             <div className="grid gap-3 lg:grid-cols-3">
-              {p.ai_accuracy.by_provider.map((prov) => (
+              {providers.map((prov) => (
                 <div
                   key={prov.provider}
                   className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4"
@@ -215,11 +222,11 @@ export default function MonthlyReportDetailPage() {
         )}
 
         {/* Top Symbols */}
-        {p.top_symbols.length > 0 && (
+        {topSymbols.length > 0 && (
           <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">심볼별 성과</p>
             <div className="space-y-2">
-              {p.top_symbols.map((s) => (
+              {topSymbols.map((s) => (
                 <div
                   key={s.symbol}
                   className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
@@ -243,27 +250,27 @@ export default function MonthlyReportDetailPage() {
         )}
 
         {/* Mistake Report */}
-        {p.mistake_report.total_reviewed > 0 && (
+        {mistakeReport.total_reviewed > 0 && (
           <section className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-amber-400/60 mb-4">실수 분석</p>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
                 <p className="text-[11px] text-amber-300/60">검토 건수</p>
-                <p className="text-lg font-semibold text-amber-200">{p.mistake_report.total_reviewed}</p>
+                <p className="text-lg font-semibold text-amber-200">{mistakeReport.total_reviewed}</p>
               </div>
               <div>
                 <p className="text-[11px] text-amber-300/60">실수</p>
-                <p className="text-lg font-semibold text-rose-300">{p.mistake_report.mistake_count}</p>
+                <p className="text-lg font-semibold text-rose-300">{mistakeReport.mistake_count}</p>
               </div>
               <div>
                 <p className="text-[11px] text-amber-300/60">의도대로</p>
-                <p className="text-lg font-semibold text-lime-300">{p.mistake_report.intended_count}</p>
+                <p className="text-lg font-semibold text-lime-300">{mistakeReport.intended_count}</p>
               </div>
             </div>
-            {p.mistake_report.top_mistakes.length > 0 && (
+            {topMistakes.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-[11px] text-amber-300/60">반복 실수 패턴</p>
-                {p.mistake_report.top_mistakes.map((m, i) => (
+                {topMistakes.map((m, i) => (
                   <div key={`${m.symbol}-${m.side}-${i}`} className="flex items-center gap-2 text-sm text-amber-200">
                     <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px]">{m.count}회</span>
                     <span>{m.symbol} {m.side}</span>
