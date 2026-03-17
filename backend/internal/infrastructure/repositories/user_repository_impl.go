@@ -184,3 +184,27 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, query, id)
 	return err
 }
+
+func (r *UserRepositoryImpl) ListActive(ctx context.Context) ([]*entities.User, error) {
+	query := `
+		SELECT id, email, password_hash, password_set, name, ai_allowlisted, is_admin, created_at, updated_at
+		FROM users
+		WHERE email NOT LIKE 'guest.%'
+		ORDER BY created_at
+	`
+	rows, err := r.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*entities.User
+	for rows.Next() {
+		var u entities.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.PasswordSet, &u.Name, &u.AIAllowlisted, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, &u)
+	}
+	return users, nil
+}

@@ -16,4 +16,5 @@ type UserRepository interface {
 	SetAdmin(ctx context.Context, id uuid.UUID, isAdmin bool) error
 	Update(ctx context.Context, user *entities.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	ListActive(ctx context.Context) ([]*entities.User, error)
 }

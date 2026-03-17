@@ -13,7 +13,10 @@ import { useReviewStore } from '../../stores/reviewStore'
 import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeGuidedReviewCard } from './HomeGuidedReviewCard'
+import { HomeMonthlyReportCard } from './HomeMonthlyReportCard'
 import { HomeSafetyCheckCard } from './HomeSafetyCheckCard'
+import { HomeSimilarPatterns } from './HomeSimilarPatterns'
+import { MonthlyTrendChart } from '../reports/MonthlyTrendChart'
 import { PositionManager } from '../positions/PositionManager'
 
 type BubbleItem = {
@@ -548,6 +551,13 @@ export function HomeSnapshot() {
             {isLoadingAccuracy && <p className="mt-3 text-[11px] text-stone-600">불러오는 중...</p>}
           </div>
         </section>
+
+        {/* Monthly report + trend */}
+        {!guestMode && <HomeMonthlyReportCard />}
+        {!guestMode && <MonthlyTrendChart />}
+
+        {/* Similar patterns alert */}
+        {!guestMode && <HomeSimilarPatterns />}
 
         {/* Onboarding nudge */}
         {onboardingProfile && (tradesCount === 0 || bubbleCount === 0) && (

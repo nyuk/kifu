@@ -161,6 +161,11 @@ func Run() error {
 
 	summaryPackService := services.NewSummaryPackService(tradeRepo)
 
+	monthlyReportRepo := repositories.NewMonthlyReportRepository(pool)
+	monthlyReportService := services.NewMonthlyReportService(
+		monthlyReportRepo, tradeRepo, bubbleRepo, accuracyRepo, safetyRepo,
+	)
+
 	http.RegisterRoutes(
 		app,
 		pool,
@@ -198,6 +203,8 @@ func Run() error {
 		runRepo,
 		summaryPackRepo,
 		summaryPackService,
+		monthlyReportRepo,
+		monthlyReportService,
 	)
 
 	go poller.Start(context.Background())
@@ -245,6 +252,10 @@ func Run() error {
 	// Plan matcher job (matches trade plans with actual Binance trades)
 	planMatcher := jobs.NewPlanMatcher(tradePlanRepo, tgSender)
 	planMatcher.Start(context.Background())
+
+	// Monthly report auto-generation job
+	monthlyReportJob := jobs.NewMonthlyReportJob(monthlyReportService, userRepo, monthlyReportRepo)
+	monthlyReportJob.Start(context.Background())
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)
