@@ -113,18 +113,18 @@ export function HomeSimilarPatterns() {
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 text-center">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3 text-center">
           <p className="text-[10px] text-stone-600">과거 승률</p>
           <p className={`text-lg font-semibold ${winRateTone}`}>{winRate.toFixed(0)}%</p>
           <p className="text-[10px] text-stone-600">{summary.wins}승 {summary.losses}패</p>
         </div>
-        <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 text-center">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3 text-center">
           <p className="text-[10px] text-stone-600">평균 PnL</p>
           <p className={`text-lg font-semibold ${pnlTone}`}>
             {summary.avg_pnl >= 0 ? '+' : ''}{summary.avg_pnl.toFixed(2)}%
           </p>
         </div>
-        <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 text-center">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3 text-center">
           <p className="text-[10px] text-stone-600">유사 건수</p>
           <p className="text-lg font-semibold text-stone-200">{similar.similar_count - 1}건</p>
         </div>
@@ -145,7 +145,7 @@ export function HomeSimilarPatterns() {
             <Link
               key={b.id}
               href={`/bubbles?bubble_id=${b.id}`}
-              className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-2.5 hover:bg-white/[0.04] transition"
+              className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-2.5 hover:bg-white/[0.04] transition"
             >
               <div>
                 <p className="text-sm text-stone-300">{b.symbol} · {b.timeframe}</p>

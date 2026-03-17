@@ -3,7 +3,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Space Grotesk"', 'ui-sans-serif', 'system-ui'],
+        sans: ['"Space Grotesk"', '"Pretendard Variable"', '"Pretendard"', 'ui-sans-serif', 'system-ui'],
       },
     },
   },

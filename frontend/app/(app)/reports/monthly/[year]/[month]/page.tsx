@@ -13,8 +13,8 @@ const MONTH_NAMES = [
 ]
 
 const formatPnl = (value: number) => {
-  const sign = value >= 0 ? '+' : ''
-  return `${sign}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+  const sign = value >= 0 ? '+$' : '-$'
+  return `${sign}${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
 const pnlColor = (value: number) => {
@@ -144,7 +144,7 @@ export default function MonthlyReportDetailPage() {
         </div>
 
         {/* Trade Summary */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-6">
           <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">거래 요약</p>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatBlock
@@ -177,7 +177,7 @@ export default function MonthlyReportDetailPage() {
         </section>
 
         {/* Decision Stats */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-6">
           <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">판단 기록</p>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatBlock label="총 버블" value={`${decisionStats.total_bubbles}개`} valueClass="text-stone-200" />
@@ -197,7 +197,7 @@ export default function MonthlyReportDetailPage() {
 
         {/* AI Accuracy */}
         {aiAccuracy.total_opinions > 0 && (
-          <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">AI 정확도</p>
             <p className="text-[11px] text-stone-500 mb-3">
               총 의견 {aiAccuracy.total_opinions}건
@@ -206,7 +206,7 @@ export default function MonthlyReportDetailPage() {
               {providers.map((prov) => (
                 <div
                   key={prov.provider}
-                  className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-4"
+                  className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-4"
                 >
                   <p className="text-sm font-medium text-stone-300">{prov.provider}</p>
                   <p className={`mt-1 text-2xl font-semibold ${prov.accuracy >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
@@ -223,13 +223,13 @@ export default function MonthlyReportDetailPage() {
 
         {/* Top Symbols */}
         {topSymbols.length > 0 && (
-          <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">심볼별 성과</p>
             <div className="space-y-2">
               {topSymbols.map((s) => (
                 <div
                   key={s.symbol}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
+                  className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3"
                 >
                   <div>
                     <p className="text-sm font-medium text-stone-200">{s.symbol}</p>
@@ -286,7 +286,7 @@ export default function MonthlyReportDetailPage() {
 
         {/* Month-over-month Comparison */}
         {comp && (
-          <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.05] p-6">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">전월 대비</p>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               <CompBlock label="손익 변화" value={comp.pnl_change} suffix="" />
@@ -339,7 +339,7 @@ function CompBlock({
   const color = value > 0 ? 'text-lime-300' : value < 0 ? 'text-rose-300' : 'text-stone-400'
 
   return (
-    <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-3 text-center">
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-3 text-center">
       <p className="text-[10px] text-stone-600 mb-1">{label}</p>
       <p className={`text-lg font-semibold ${color}`}>{formatted}{suffix}</p>
     </div>

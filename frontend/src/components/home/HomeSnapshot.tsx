@@ -472,14 +472,14 @@ export function HomeSnapshot() {
         </section>
 
         {/* Routine — 3 questions */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
           <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">Quiet Routine</p>
           <div className="grid gap-2 lg:grid-cols-3">
             {routineItems.map((item) => (
               <Link
                 key={item.key}
                 href={item.href}
-                className="group flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 transition hover:bg-white/[0.05] hover:border-white/[0.08]"
+                className="group flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 transition hover:bg-white/[0.05] hover:border-white/[0.08]"
               >
                 <div>
                   <p className="text-sm font-medium text-stone-300 group-hover:text-stone-100 transition-colors">{item.title}</p>
@@ -500,7 +500,7 @@ export function HomeSnapshot() {
 
         {/* Stats — compact 2-column */}
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">기록 요약</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div>
@@ -527,7 +527,7 @@ export function HomeSnapshot() {
             {isLoading && <p className="mt-3 text-[11px] text-stone-600">통계를 불러오는 중...</p>}
           </div>
 
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">AI 의견</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div>
@@ -588,7 +588,7 @@ export function HomeSnapshot() {
         {!guestMode && guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
 
         {/* Recent bubbles */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">최근 버블</p>
             <Link href="/bubbles" className="text-[11px] text-stone-500 hover:text-stone-300 transition">
@@ -605,7 +605,7 @@ export function HomeSnapshot() {
               {recentBubbles.map((bubble) => (
                 <div
                   key={bubble.id}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
+                  className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3"
                 >
                   <div>
                     <p className="text-sm font-medium text-stone-200">{bubble.symbol}</p>

@@ -62,7 +62,7 @@ export function MonthlyTrendChart() {
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+      <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
         <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-3">Monthly Trend</p>
         <p className="text-[11px] text-stone-600">불러오는 중...</p>
       </section>
@@ -85,7 +85,7 @@ export function MonthlyTrendChart() {
   }
 
   return (
-    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">Monthly Trend</p>
         <div className="flex rounded-lg border border-white/[0.06] bg-white/[0.03] p-0.5">
@@ -107,7 +107,7 @@ export function MonthlyTrendChart() {
       </div>
 
       {/* Bar chart */}
-      <div className="relative" style={{ height: BAR_HEIGHT + 32 }}>
+      <div className="relative overflow-hidden" style={{ height: BAR_HEIGHT + 32 }}>
         {/* Zero line for PnL */}
         {!isPercent && (
           <div
@@ -116,12 +116,13 @@ export function MonthlyTrendChart() {
           />
         )}
 
-        <div className="flex items-end gap-1 h-full pt-2 pb-6">
+        <div className="flex gap-1 h-full pt-2 pb-6">
           {points.map((point, i) => {
             const val = values[i]
+            const maxBarH = BAR_HEIGHT / 2 - 8
             const barH = isPercent
-              ? (val / 100) * BAR_HEIGHT * 0.9
-              : (Math.abs(val) / maxVal) * (BAR_HEIGHT / 2) * 0.9
+              ? (val / 100) * BAR_HEIGHT * 0.85
+              : (Math.abs(val) / maxVal) * maxBarH
 
             const isPositive = val >= 0
             const barColor = isPositive
@@ -131,40 +132,39 @@ export function MonthlyTrendChart() {
             return (
               <div
                 key={point.label + i}
-                className="flex-1 flex flex-col items-center relative group"
+                className="flex-1 relative group"
+                style={{ height: '100%' }}
               >
                 {/* Bar */}
                 {isPercent ? (
                   <div
-                    className={`w-full max-w-[28px] rounded-t transition-all ${barColor}`}
+                    className={`absolute left-1/2 -translate-x-1/2 w-full max-w-[28px] rounded-t transition-all ${barColor}`}
                     style={{
                       height: Math.max(barH, 2),
-                      position: 'absolute',
                       bottom: 24,
                     }}
                   />
                 ) : (
                   <div
-                    className={`w-full max-w-[28px] rounded transition-all ${barColor}`}
+                    className={`absolute left-1/2 -translate-x-1/2 w-full max-w-[28px] rounded transition-all ${barColor}`}
                     style={{
                       height: Math.max(barH, 2),
-                      position: 'absolute',
                       ...(isPositive
-                        ? { bottom: BAR_HEIGHT / 2 + 4 }
-                        : { top: BAR_HEIGHT / 2 + 4 }),
+                        ? { bottom: BAR_HEIGHT / 2 + 2 }
+                        : { top: BAR_HEIGHT / 2 + 2 }),
                     }}
                   />
                 )}
 
                 {/* Label */}
-                <span className="absolute bottom-0 text-[9px] text-stone-600">{point.label}</span>
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-[9px] text-stone-600 whitespace-nowrap">{point.label}</span>
 
                 {/* Tooltip */}
                 <div className="absolute bottom-full mb-1 hidden group-hover:block z-10">
                   <div className="bg-stone-800 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap shadow-lg">
                     <p className="text-stone-300 font-medium">{point.label}</p>
                     <p className={isPositive ? 'text-lime-300' : 'text-rose-300'}>
-                      {tab === 'pnl' ? (val >= 0 ? '+' : '') + val.toLocaleString(undefined, { maximumFractionDigits: 0 }) : val.toFixed(1) + '%'}
+                      {tab === 'pnl' ? (val >= 0 ? '+$' : '-$') + Math.abs(val).toLocaleString(undefined, { maximumFractionDigits: 0 }) : val.toFixed(1) + '%'}
                     </p>
                     <p className="text-stone-500">거래 {point.tradeCount} · 버블 {point.bubbleCount}</p>
                   </div>
@@ -178,12 +178,14 @@ export function MonthlyTrendChart() {
       {/* Summary row */}
       <div className="mt-2 flex justify-between text-[10px] text-stone-500">
         <span>{points.length}개월 데이터</span>
-        {tab === 'pnl' && (
-          <span>
-            총 {values.reduce((a, b) => a + b, 0) >= 0 ? '+' : ''}
-            {values.reduce((a, b) => a + b, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </span>
-        )}
+        {tab === 'pnl' && (() => {
+          const total = values.reduce((a, b) => a + b, 0)
+          return (
+            <span>
+              총 {total >= 0 ? '+$' : '-$'}{Math.abs(total).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          )
+        })()}
         {tab === 'winRate' && (
           <span>
             평균 {(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)}%

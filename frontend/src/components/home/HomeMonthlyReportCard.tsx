@@ -11,8 +11,9 @@ const MONTH_NAMES = [
 ]
 
 const formatPnl = (value: number) => {
-  const sign = value >= 0 ? '+' : ''
-  return `${sign}${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  const sign = value >= 0 ? '+' : '-'
+  const abs = Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 0 })
+  return `${sign}$${abs}`
 }
 
 const changeIndicator = (value: number) => {
@@ -43,7 +44,7 @@ export function HomeMonthlyReportCard() {
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+      <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
         <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-3">Monthly Report</p>
         <p className="text-[11px] text-stone-600">불러오는 중...</p>
       </section>
@@ -68,7 +69,7 @@ export function HomeMonthlyReportCard() {
     : null
 
   return (
-    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+    <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">Monthly Report</p>

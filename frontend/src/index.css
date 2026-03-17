@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 @tailwind base;
 @tailwind components;
@@ -104,15 +105,21 @@ body {
 }
 
 .app-shell .text-zinc-400,
-.app-shell .text-zinc-500,
-.app-shell .text-zinc-600,
 .app-shell .text-neutral-400,
+.app-shell .text-stone-400 {
+  color: #a8afc0;
+}
+
+.app-shell .text-zinc-500,
 .app-shell .text-neutral-500,
+.app-shell .text-stone-500 {
+  color: #8891a4;
+}
+
+.app-shell .text-zinc-600,
 .app-shell .text-neutral-600,
-.app-shell .text-stone-400,
-.app-shell .text-stone-500,
 .app-shell .text-stone-600 {
-  color: #bcc2d1;
+  color: #6b7280;
 }
 
 @layer utilities {
