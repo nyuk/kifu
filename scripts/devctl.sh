@@ -11,6 +11,9 @@ BACKEND_PID_FILE="${PROJECT_ROOT}/backend/.devctl-backend.pid"
 BACKEND_LOG_FILE="${PROJECT_ROOT}/backend/.devctl-backend.log"
 FRONTEND_PID_FILE="${PROJECT_ROOT}/frontend/.devctl-frontend.pid"
 FRONTEND_LOG_FILE="${PROJECT_ROOT}/frontend/.devctl-frontend.log"
+BACKEND_MODE="${DEVCTL_BACKEND_MODE:-local}"
+FRONTEND_MODE="${DEVCTL_FRONTEND_MODE:-local}"
+QUICKSTART_FILE="${PROJECT_ROOT}/KIFU-QUICKSTART.md"
 
 cd "${PROJECT_ROOT}"
 
@@ -59,6 +62,12 @@ pid_alive() {
   [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1
 }
 
+listener_pid() {
+  local port="${1:-}"
+  [[ -n "${port}" ]] || return 0
+  lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null | head -n 1 || true
+}
+
 stop_local_pid() {
   local pid_file="${1:-}"
   local name="${2:-process}"
@@ -77,8 +86,32 @@ stop_local_pid() {
   fi
 }
 
+stop_process_on_port() {
+  local port="${1:-}"
+  local name="${2:-process}"
+  local pids
+
+  [[ -n "${port}" ]] || return 0
+
+  pids="$(lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  [[ -n "${pids}" ]] || return 0
+
+  for pid in ${pids}; do
+    if pid_alive "${pid}"; then
+      kill "${pid}" >/dev/null 2>&1 || true
+      sleep 0.5
+      if pid_alive "${pid}"; then
+        kill -9 "${pid}" >/dev/null 2>&1 || true
+      fi
+    fi
+  done
+
+  log "stopped ${name} listener(s) on port ${port}"
+}
+
 start_backend_local() {
   stop_local_pid "${BACKEND_PID_FILE}" "backend"
+  stop_process_on_port 8080 "backend"
   log "start backend in local mode (go run)"
   (
     cd "${PROJECT_ROOT}/backend"
@@ -90,6 +123,7 @@ start_backend_local() {
 
 start_frontend_local() {
   stop_local_pid "${FRONTEND_PID_FILE}" "frontend"
+  stop_process_on_port 5173 "frontend"
   log "start frontend in local mode (npm run dev)"
   (
     cd "${PROJECT_ROOT}/frontend"
@@ -103,6 +137,10 @@ require_docker() {
   if ! docker info >/dev/null 2>&1; then
     die "docker daemon is not running. start Docker Desktop first."
   fi
+}
+
+docker_available() {
+  docker info >/dev/null 2>&1
 }
 
 ensure_acp_env() {
@@ -119,41 +157,77 @@ require_clean_git_for_update() {
   fi
 }
 
+prefer_local_backend() {
+  [[ "${BACKEND_MODE}" != "docker" ]]
+}
+
+prefer_local_frontend() {
+  [[ "${FRONTEND_MODE}" != "docker" ]]
+}
+
 service_start() {
   local target="${1:-}"
-  require_docker
-  ensure_acp_env
   case "${target}" in
     backend)
-      log "restart backend (stop + up -d --force-recreate)"
-      dc stop backend >/dev/null 2>&1 || true
-      if ! dc up -d --force-recreate --no-build --no-deps backend; then
-        if has_backend_dockerfile; then
-          log "backend image missing or stale; building backend once..."
-          dc build backend
-          dc up -d --force-recreate --no-build --no-deps backend
-        else
-          log "backend Dockerfile missing; fallback to local mode."
-          start_backend_local
+      stop_local_pid "${BACKEND_PID_FILE}" "backend"
+      stop_process_on_port 8080 "backend"
+      if prefer_local_backend; then
+        if docker_available; then
+          dc stop backend >/dev/null 2>&1 || true
         fi
+        log "backend mode=local"
+        start_backend_local
+      elif docker_available; then
+        ensure_acp_env
+        log "restart backend (stop + up -d --force-recreate)"
+        dc stop backend >/dev/null 2>&1 || true
+        if ! dc up -d --force-recreate --no-build --no-deps backend; then
+          if has_backend_dockerfile; then
+            log "backend image missing or stale; building backend once..."
+            dc build backend
+            dc up -d --force-recreate --no-build --no-deps backend
+          else
+            log "backend Dockerfile missing; fallback to local mode."
+            start_backend_local
+          fi
+        fi
+      else
+        log "docker daemon unavailable; backend local mode."
+        start_backend_local
       fi
       ;;
     frontend)
-      log "restart frontend (stop + up -d --force-recreate)"
-      dc stop frontend >/dev/null 2>&1 || true
-      if ! dc up -d --force-recreate --no-build --no-deps frontend; then
-        if has_frontend_dockerfile; then
-          log "frontend image missing or stale; building frontend once..."
-          dc build frontend
-          dc up -d --force-recreate --no-build --no-deps frontend
-        else
-          log "frontend Dockerfile missing; fallback to local mode."
-          start_frontend_local
+      stop_local_pid "${FRONTEND_PID_FILE}" "frontend"
+      stop_process_on_port 5173 "frontend"
+      if prefer_local_frontend; then
+        if docker_available; then
+          dc stop frontend >/dev/null 2>&1 || true
         fi
+        log "frontend mode=local"
+        start_frontend_local
+      elif docker_available; then
+        ensure_acp_env
+        log "restart frontend (stop + up -d --force-recreate)"
+        dc stop frontend >/dev/null 2>&1 || true
+        if ! dc up -d --force-recreate --no-build --no-deps frontend; then
+          if has_frontend_dockerfile; then
+            log "frontend image missing or stale; building frontend once..."
+            dc build frontend
+            dc up -d --force-recreate --no-build --no-deps frontend
+          else
+            log "frontend Dockerfile missing; fallback to local mode."
+            start_frontend_local
+          fi
+        fi
+      else
+        log "docker daemon unavailable; frontend local mode."
+        start_frontend_local
       fi
       ;;
     all)
-      log "restart stack (postgres/backend/frontend)"
+      require_docker
+      ensure_acp_env
+      log "restart stack (postgres + local services)"
       service_stop all >/dev/null 2>&1 || true
       # postgres is always managed by base compose (no build needed)
       dc_base up -d postgres
@@ -168,23 +242,32 @@ service_start() {
 
 service_stop() {
   local target="${1:-}"
-  require_docker
   case "${target}" in
     backend|frontend|postgres)
+      if [[ "${target}" == "postgres" ]]; then
+        require_docker
+      fi
       log "stop ${target}"
-      dc stop "${target}" || true
+      if docker_available; then
+        dc stop "${target}" || true
+      fi
       if [[ "${target}" == "backend" ]]; then
         stop_local_pid "${BACKEND_PID_FILE}" "backend"
+        stop_process_on_port 8080 "backend"
       fi
       if [[ "${target}" == "frontend" ]]; then
         stop_local_pid "${FRONTEND_PID_FILE}" "frontend"
+        stop_process_on_port 5173 "frontend"
       fi
       ;;
     all)
+      require_docker
       log "stop frontend/backend/postgres"
       dc stop frontend backend postgres || true
       stop_local_pid "${BACKEND_PID_FILE}" "backend"
       stop_local_pid "${FRONTEND_PID_FILE}" "frontend"
+      stop_process_on_port 8080 "backend"
+      stop_process_on_port 5173 "frontend"
       ;;
     *)
       die "invalid stop target: ${target} (backend|frontend|postgres|all)"
@@ -198,16 +281,31 @@ service_restart() {
 }
 
 service_status() {
-  require_docker
-  dc_base ps
+  local backend_listener_pid
+  local frontend_listener_pid
+
+  backend_listener_pid="$(listener_pid 8080)"
+  frontend_listener_pid="$(listener_pid 5173)"
+
+  if docker_available; then
+    dc_base ps
+  else
+    echo "docker: unavailable"
+  fi
+  echo "backend-mode: ${BACKEND_MODE}"
+  echo "frontend-mode: ${FRONTEND_MODE}"
   if [[ -f "${BACKEND_PID_FILE}" ]]; then
     local bp
     bp="$(cat "${BACKEND_PID_FILE}" 2>/dev/null || true)"
     if pid_alive "${bp}"; then
       echo "local-backend: running (pid=${bp})"
+    elif [[ -n "${backend_listener_pid}" ]]; then
+      echo "local-backend: running (listener pid=${backend_listener_pid}, pid file stale)"
     else
       echo "local-backend: stale pid file"
     fi
+  elif [[ -n "${backend_listener_pid}" ]]; then
+    echo "local-backend: running (listener pid=${backend_listener_pid})"
   else
     echo "local-backend: not running"
   fi
@@ -216,9 +314,13 @@ service_status() {
     fp="$(cat "${FRONTEND_PID_FILE}" 2>/dev/null || true)"
     if pid_alive "${fp}"; then
       echo "local-frontend: running (pid=${fp})"
+    elif [[ -n "${frontend_listener_pid}" ]]; then
+      echo "local-frontend: running (listener pid=${frontend_listener_pid}, pid file stale)"
     else
       echo "local-frontend: stale pid file"
     fi
+  elif [[ -n "${frontend_listener_pid}" ]]; then
+    echo "local-frontend: running (listener pid=${frontend_listener_pid})"
   else
     echo "local-frontend: not running"
   fi
@@ -226,7 +328,6 @@ service_status() {
 
 service_logs() {
   local target="${1:-all}"
-  require_docker
   log "streaming logs. press Ctrl+C to return to menu."
   case "${target}" in
     backend|frontend|postgres)
@@ -235,10 +336,12 @@ service_logs() {
       elif [[ "${target}" == "frontend" && -f "${FRONTEND_LOG_FILE}" ]]; then
         tail -f "${FRONTEND_LOG_FILE}"
       else
+        require_docker
         dc logs -f --tail=200 "${target}"
       fi
       ;;
     all)
+      require_docker
       dc logs -f --tail=200
       ;;
     *)
@@ -285,6 +388,39 @@ backend_health_check() {
   echo
 }
 
+show_quick_guide() {
+  cat <<EOF
+=====================================
+ KIFU Quick Guide
+=====================================
+ One door:
+   ${PROJECT_ROOT}/KIFU-Control.command
+   ${PROJECT_ROOT}/scripts/devctl.sh
+
+ Local dev rule:
+   postgres = docker
+   backend  = local
+   frontend = local
+
+ Most used:
+   ./scripts/devctl.sh restart backend
+   ./scripts/devctl.sh restart frontend
+   ./scripts/devctl.sh status
+   ./scripts/devctl.sh logs backend
+   ./scripts/devctl.sh logs frontend
+
+ If something feels broken:
+   1) ./scripts/devctl.sh status
+   2) ./scripts/devctl.sh logs backend
+   3) ./scripts/devctl.sh logs frontend
+   4) ./scripts/devctl.sh health
+
+ Saved guide:
+   ${QUICKSTART_FILE}
+=====================================
+EOF
+}
+
 show_menu() {
   cat <<'EOF'
 =====================================
@@ -308,6 +444,7 @@ show_menu() {
 16) Git short status
 17) Full QA run (scripts/full-qa.sh)
 18) Backend health check (/health)
+19) Quick guide
  0) Exit
 EOF
 }
@@ -358,6 +495,7 @@ run_menu_choice() {
       read -r -p "Health URL [http://127.0.0.1:8080/health]: " health_url
       backend_health_check "${health_url:-http://127.0.0.1:8080/health}"
       ;;
+    19) show_quick_guide ;;
     0) exit 0 ;;
     *)
       log "invalid selection: ${choice}"
@@ -381,6 +519,11 @@ Usage:
   ./scripts/devctl.sh git status
   ./scripts/devctl.sh qa [api_url] [frontend_url]
   ./scripts/devctl.sh health [health_url]
+  ./scripts/devctl.sh guide
+
+Recommended:
+  Double-click KIFU-Control.command
+  Or read: KIFU-QUICKSTART.md
 EOF
 }
 
@@ -427,6 +570,9 @@ main() {
       ;;
     health)
       backend_health_check "${2:-http://127.0.0.1:8080/health}"
+      ;;
+    guide)
+      show_quick_guide
       ;;
     help|-h|--help)
       usage
