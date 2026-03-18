@@ -43,7 +43,7 @@ export function Register() {
       const next = resolveAuthRedirectPath({
         next: searchParams?.get('next'),
         from: searchParams?.get('from'),
-        defaultPath: '/onboarding/start',
+        defaultPath: '/home',
       })
       window.location.replace(next)
     } catch (err: unknown) {

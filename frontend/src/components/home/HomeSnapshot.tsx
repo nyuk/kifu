@@ -5,11 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '../../lib/api'
 import { isGuestSession } from '../../lib/guestSession'
-import { onboardingProfileStoragePrefix, readOnboardingProfile } from '../../lib/onboardingProfile'
+import { onboardingProfileStoragePrefix, readOnboardingProfile, resolveCurrentUserKey } from '../../lib/onboardingProfile'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import { useReviewStore } from '../../stores/reviewStore'
+import { NO_TRADE_SYMBOL } from '../../types/guidedReview'
 import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeGuidedReviewCard } from './HomeGuidedReviewCard'
@@ -37,6 +38,12 @@ type BubbleListResponse = {
   total: number
   items: BubbleItem[]
 }
+
+type ExchangeListResponse = {
+  items?: Array<{ id: string }>
+}
+
+const ONBOARDING_NUDGE_DISMISS_PREFIX = 'kifu-home-onboarding-dismiss-v1'
 
 const periodLabels: Record<string, string> = {
   '7d': '최근 7일',
@@ -66,6 +73,13 @@ const formatDateTime = (value?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const formatLocalDate = (value: Date) => {
+  const year = value.getFullYear()
+  const month = `${value.getMonth() + 1}`.padStart(2, '0')
+  const day = `${value.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 const toneByNumber = (value: number) => {
@@ -131,6 +145,7 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
 export function HomeSnapshot() {
   const router = useRouter()
   const guidedReview = useGuidedReviewStore((state) => state.review)
+  const guidedItems = useGuidedReviewStore((state) => state.items)
   const guidedLoading = useGuidedReviewStore((state) => state.isLoading)
   const fetchGuidedToday = useGuidedReviewStore((state) => state.fetchToday)
   const fetchGuidedStreak = useGuidedReviewStore((state) => state.fetchStreak)
@@ -156,6 +171,8 @@ export function HomeSnapshot() {
   const [refreshTick, setRefreshTick] = useState(0)
   const [guestMode, setGuestMode] = useState(false)
   const [guestModeReady, setGuestModeReady] = useState(false)
+  const [hasConnectedExchange, setHasConnectedExchange] = useState(false)
+  const [onboardingDismissedToday, setOnboardingDismissedToday] = useState(false)
 
   useEffect(() => {
     setGuestMode(isGuestSession())
@@ -207,6 +224,27 @@ export function HomeSnapshot() {
       isActive = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!guestModeReady || guestMode) return
+    let isActive = true
+    const loadConnections = async () => {
+      try {
+        const response = await api.get<ExchangeListResponse>('/v1/exchanges')
+        if (isActive) {
+          setHasConnectedExchange((response.data.items ?? []).length > 0)
+        }
+      } catch {
+        if (isActive) {
+          setHasConnectedExchange(false)
+        }
+      }
+    }
+    loadConnections()
+    return () => {
+      isActive = false
+    }
+  }, [guestMode, guestModeReady, refreshTick])
 
   useEffect(() => {
     let isActive = true
@@ -285,6 +323,13 @@ export function HomeSnapshot() {
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
+
+  useEffect(() => {
+    if (!guestModeReady || typeof window === 'undefined') return
+    const storageKey = `${ONBOARDING_NUDGE_DISMISS_PREFIX}:${guestMode ? 'guest' : resolveCurrentUserKey()}`
+    const saved = localStorage.getItem(storageKey)
+    setOnboardingDismissedToday(saved === formatLocalDate(new Date()))
+  }, [guestMode, guestModeReady])
 
   const snapshotPeriod = periodLabels[filters.period] ?? '최근'
   const summary = stats?.overall
@@ -375,17 +420,46 @@ export function HomeSnapshot() {
     return () => cancelAnimationFrame(frame)
   }, [totalPnlNumeric])
 
-  const shouldForceGuidedModal =
-    !guestMode && Boolean(guidedReview) && !guidedLoading && guidedReview?.status !== 'completed'
+  const showOnboardingNudge =
+    !guestMode &&
+    tradesCount === 0 &&
+    bubbleCount === 0 &&
+    !onboardingDismissedToday
+  const onboardingPrimaryHref = hasConnectedExchange
+    ? '/settings'
+    : onboardingProfile
+      ? '/chart?onboarding=1'
+      : '/onboarding/start'
+  const onboardingPrimaryLabel = hasConnectedExchange
+    ? '지금 동기화'
+    : onboardingProfile
+      ? '루틴 시작'
+      : '시작 가이드'
+  const onboardingSecondaryHref = hasConnectedExchange ? '/chart?onboarding=1' : '/settings'
+  const onboardingSecondaryLabel = hasConnectedExchange ? '차트에서 기록 시작' : '거래소 연결'
+  const onboardingHint = hasConnectedExchange
+    ? '거래소는 이미 연결돼 있습니다. 홈이 비어 있다면 한 번만 동기화해 주세요.'
+    : onboardingProfile
+      ? '아직 거래 기록이 없어도 괜찮습니다. 먼저 한 줄 기록으로 시작하거나 거래소를 연결하면 됩니다.'
+      : '처음이라면 시작 가이드를 보고 흐름을 익히거나, 거래소를 연결해 거래내역을 가져오면 됩니다.'
+  const isSyntheticNoTradeReview =
+    guidedItems.length === 1 &&
+    (guidedItems[0]?.symbol === NO_TRADE_SYMBOL || guidedItems[0]?.trade_count === 0)
+  const shouldShowGuidedReviewCard =
+    !guestMode &&
+    Boolean(guidedReview) &&
+    !guidedLoading &&
+    (
+      guidedReview?.status === 'completed' ||
+      (guidedItems.length > 0 && !isSyntheticNoTradeReview)
+    )
 
-  useEffect(() => {
-    if (!shouldForceGuidedModal) return
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [shouldForceGuidedModal])
+  const dismissOnboardingForToday = () => {
+    if (typeof window === 'undefined') return
+    const storageKey = `${ONBOARDING_NUDGE_DISMISS_PREFIX}:${guestMode ? 'guest' : resolveCurrentUserKey()}`
+    localStorage.setItem(storageKey, formatLocalDate(new Date()))
+    setOnboardingDismissedToday(true)
+  }
 
   return (
     <div className="min-h-screen text-zinc-100 p-4 md:p-8 transition-colors duration-700 ease-out">
@@ -560,23 +634,42 @@ export function HomeSnapshot() {
         {!guestMode && <HomeSimilarPatterns />}
 
         {/* Onboarding nudge */}
-        {onboardingProfile && (tradesCount === 0 || bubbleCount === 0) && (
+        {showOnboardingNudge && (
           <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-[10px] uppercase tracking-[0.3em] text-amber-400/60">Onboarding</p>
-                <p className="mt-1 text-sm font-semibold text-amber-200">{onboardingProfile.tendency}</p>
-                <p className="mt-1 text-[11px] text-amber-300/60">
-                  LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
-                </p>
+                {onboardingProfile ? (
+                  <>
+                    <p className="mt-1 text-sm font-semibold text-amber-200">{onboardingProfile.tendency}</p>
+                    <p className="mt-1 text-[11px] text-amber-300/60">
+                      LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-1 text-sm font-semibold text-amber-200">첫 기록 전 안내</p>
+                    <p className="mt-1 text-[11px] text-amber-300/60">
+                      거래를 아직 가져오지 않았더라도 바로 시작할 수 있습니다.
+                    </p>
+                  </>
+                )}
+                <p className="mt-2 text-[11px] text-amber-200/70">{onboardingHint}</p>
               </div>
-              <div className="flex gap-2">
-                <Link href="/chart?onboarding=1" className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
-                  루틴 시작
+              <div className="flex flex-wrap gap-2">
+                <Link href={onboardingPrimaryHref} className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
+                  {onboardingPrimaryLabel}
                 </Link>
-                <Link href="/settings" className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
-                  거래소 연결
+                <Link href={onboardingSecondaryHref} className="rounded-lg border border-amber-400/20 px-3 py-1.5 text-[11px] font-semibold text-amber-200/80 hover:bg-amber-500/5 transition">
+                  {onboardingSecondaryLabel}
                 </Link>
+                <button
+                  type="button"
+                  onClick={dismissOnboardingForToday}
+                  className="rounded-lg border border-transparent px-3 py-1.5 text-[11px] font-medium text-amber-300/70 transition hover:border-amber-400/10 hover:bg-amber-500/5 hover:text-amber-200"
+                >
+                  오늘은 숨기기
+                </button>
               </div>
             </div>
           </section>
@@ -585,7 +678,7 @@ export function HomeSnapshot() {
         {/* External components */}
         <PositionManager />
         <HomeSafetyCheckCard />
-        {!guestMode && guidedReview?.status === 'completed' && <HomeGuidedReviewCard autoLoad={false} />}
+        {shouldShowGuidedReviewCard && <HomeGuidedReviewCard autoLoad={false} />}
 
         {/* Recent bubbles */}
         <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
@@ -626,20 +719,6 @@ export function HomeSnapshot() {
         </section>
       </div>
 
-      {/* Guided review modal */}
-      {shouldForceGuidedModal && (
-        <div className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm">
-          <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8">
-            <div className="w-full rounded-2xl border border-sky-300/30 bg-neutral-950/95 p-4 shadow-[0_30px_120px_rgba(0,0,0,0.7)] md:p-6">
-              <p className="mb-3 text-xs uppercase tracking-[0.24em] text-sky-200">Daily Guided Review</p>
-              <p className="mb-4 text-sm text-neutral-300">
-                홈에서는 오늘 복기를 먼저 완료해야 다음 확인이 가능합니다.
-              </p>
-              <HomeGuidedReviewCard forceOpen autoLoad={false} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

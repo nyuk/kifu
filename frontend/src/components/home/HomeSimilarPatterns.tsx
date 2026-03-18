@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '../../lib/api'
 
+const toNumber = (value: number | string | null | undefined, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
 type SimilarBubble = {
   id: string
   symbol: string
@@ -15,7 +24,7 @@ type SimilarBubble = {
   tags?: string[]
   outcome?: {
     pnl_percent: number
-    direction: string
+    direction?: string
   } | null
 }
 
@@ -32,11 +41,47 @@ type SimilarResponse = {
   bubbles: SimilarBubble[]
 }
 
+type SimilarBubbleRaw = Omit<SimilarBubble, 'outcome'> & {
+  outcome?: {
+    pnl_percent?: number | string | null
+    direction?: string
+  } | null
+}
+
+type SimilarSummaryRaw = Omit<SimilarSummary, 'avg_pnl'> & {
+  avg_pnl?: number | string | null
+}
+
+type SimilarResponseRaw = {
+  similar_count?: number | string | null
+  summary?: SimilarSummaryRaw | null
+  bubbles?: SimilarBubbleRaw[] | null
+}
+
 type RecentBubble = {
   id: string
   symbol: string
   tags?: string[]
 }
+
+const normalizeSimilarResponse = (data: SimilarResponseRaw): SimilarResponse => ({
+  similar_count: toNumber(data.similar_count, 0),
+  summary: {
+    period: data.summary?.period ?? '1d',
+    wins: toNumber(data.summary?.wins, 0),
+    losses: toNumber(data.summary?.losses, 0),
+    avg_pnl: toNumber(data.summary?.avg_pnl, 0),
+  },
+  bubbles: (data.bubbles ?? []).map((bubble) => ({
+    ...bubble,
+    outcome: bubble.outcome
+      ? {
+          pnl_percent: toNumber(bubble.outcome.pnl_percent, 0),
+          direction: bubble.outcome.direction,
+        }
+      : null,
+  })),
+})
 
 export function HomeSimilarPatterns() {
   const [pattern, setPattern] = useState<{
@@ -60,10 +105,11 @@ export function HomeSimilarPatterns() {
         // 첫 번째 버블에 대해 유사 패턴 검색
         for (const bubble of bubbles) {
           try {
-            const res = await api.get<SimilarResponse>(`/v1/bubbles/${bubble.id}/similar?period=1d`)
-            if (res.data.similar_count > 1) { // 자기 자신 제외 1건 이상
+            const res = await api.get<SimilarResponseRaw>(`/v1/bubbles/${bubble.id}/similar?period=1d`)
+            const normalized = normalizeSimilarResponse(res.data)
+            if (normalized.similar_count > 1) { // 자기 자신 제외 1건 이상
               if (active) {
-                setPattern({ sourceBubble: bubble, similar: res.data })
+                setPattern({ sourceBubble: bubble, similar: normalized })
               }
               break
             }

@@ -41,7 +41,7 @@ const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
   }
 }
 
-const resolveCurrentUserKey = (): string => {
+export const resolveCurrentUserKey = (): string => {
   if (typeof window === 'undefined') return 'anon'
   const token = getAccessToken()
   if (!token) return 'anon'
