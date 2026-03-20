@@ -83,6 +83,7 @@ func Run() error {
 	guidedReviewRepo := repositories.NewGuidedReviewRepository(pool)
 	tradePlanRepo := repositories.NewTradePlanRepository(pool)
 	marketingRepo := repositories.NewMarketingRepository(pool)
+	growthRepo := repositories.NewGrowthRepository(pool)
 	poller := jobs.NewTradePoller(pool, exchangeRepo, userSymbolRepo, tradeSyncRepo, portfolioRepo, encKey)
 
 	// Telegram sender (optional - only if TELEGRAM_BOT_TOKEN is set)
@@ -135,6 +136,7 @@ func Run() error {
 		if path == "/health" ||
 			strings.HasPrefix(path, "/api/v1/auth/") ||
 			path == "/api/v1/webhook/telegram" ||
+			path == "/api/v1/growth/events" ||
 			path == "/api/v1/market/klines" {
 			return c.Next()
 		}
@@ -166,6 +168,7 @@ func Run() error {
 	monthlyReportService := services.NewMonthlyReportService(
 		monthlyReportRepo, tradeRepo, bubbleRepo, accuracyRepo, safetyRepo,
 	)
+	growthService := services.NewGrowthOSService(growthRepo, tradeRepo)
 
 	http.RegisterRoutes(
 		app,
@@ -207,6 +210,7 @@ func Run() error {
 		monthlyReportRepo,
 		monthlyReportService,
 		marketingRepo,
+		growthService,
 	)
 
 	go poller.Start(context.Background())
@@ -258,6 +262,13 @@ func Run() error {
 	// Monthly report auto-generation job
 	monthlyReportJob := jobs.NewMonthlyReportJob(monthlyReportService, userRepo, monthlyReportRepo)
 	monthlyReportJob.Start(context.Background())
+
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("GROWTH_OS_ENABLED")), "true") {
+		growthJob := jobs.NewGrowthOSJob(growthService)
+		growthJob.Start(context.Background())
+	} else {
+		log.Println("growth os: disabled by GROWTH_OS_ENABLED")
+	}
 
 	log.Printf("Server starting on port %s", port)
 	return app.Listen(":" + port)

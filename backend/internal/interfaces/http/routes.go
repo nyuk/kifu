@@ -60,6 +60,7 @@ func RegisterRoutes(
 	monthlyReportRepo repositories.MonthlyReportRepository,
 	monthlyReportService *services.MonthlyReportService,
 	marketingRepo repositories.MarketingRepository,
+	growthService *services.GrowthOSService,
 ) {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "healthy"})
@@ -284,6 +285,7 @@ func RegisterRoutes(
 	monthlyReportHandler := handlers.NewMonthlyReportHandler(monthlyReportService, monthlyReportRepo)
 	marketingService := services.NewMarketingService(marketingRepo)
 	marketingHandler := handlers.NewMarketingHandler(marketingService)
+	growthHandler := handlers.NewGrowthHandler(growthService)
 	reports := api.Group("/reports")
 	reports.Get("/monthly", monthlyReportHandler.GetLatest)
 	reports.Get("/monthly/list", monthlyReportHandler.ListReports)
@@ -295,6 +297,10 @@ func RegisterRoutes(
 	marketing.Post("/ideas", marketingHandler.CreateIdea)
 	marketing.Post("/ideas/:id/drafts", marketingHandler.GenerateDraft)
 	marketing.Patch("/drafts/:id", marketingHandler.UpdateDraft)
+
+	growth := api.Group("/growth")
+	growth.Post("/events", growthHandler.TrackEvent)
+	growth.Post("/feedback", growthHandler.CreateFeedback)
 
 	onchain := api.Group("/onchain")
 	onchain.Post("/quick-check", onchainHandler.QuickCheck)
@@ -321,6 +327,7 @@ func RegisterRoutes(
 	admin := api.Group("/admin", middleware.RequireAdmin(userRepo))
 	admin.Get("/telemetry", adminMetricsHandler.Telemetry)
 	admin.Get("/agent-services", adminMetricsHandler.AgentServices)
+	admin.Get("/growth/daily-report", growthHandler.GetLatestDailyReport)
 	admin.Post("/sim-report/run", simReportHandler.Run)
 	admin.Get("/users", adminUsersHandler.List)
 	admin.Patch("/users/:id/admin", adminUsersHandler.UpdateAdmin)
