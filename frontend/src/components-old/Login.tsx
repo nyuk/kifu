@@ -16,8 +16,6 @@ type SocialLoginStartResponse = {
   auth_url?: string
 }
 
-const tgBotUrl = 'https://t.me/kifu_main_bot'
-
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -188,26 +186,27 @@ export function Login() {
             <div className="h-px flex-1 bg-neutral-200" />
           </div>
 
-          {/* Guest & Telegram */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleGuestContinue}
-              disabled={isGuestLoading || isLoading}
-              className="w-full h-11 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-600 hover:bg-neutral-50 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {isGuestLoading ? '게스트 세션 시작 중...' : '게스트로 둘러보기'}
-            </button>
+          <section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">빠른 둘러보기</p>
+            <p className="mt-2 text-sm font-medium text-neutral-900">회원가입 전에 화면 흐름부터 볼 수 있습니다.</p>
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">실제 사용은 이메일 또는 Google 로그인 후 웹 설정에서 이어가고, 지금은 게스트 모드로 가볍게 체험할 수 있습니다.</p>
+            <div className="mt-4 space-y-3">
+              <button
+                type="button"
+                onClick={handleGuestContinue}
+                disabled={isGuestLoading || isLoading}
+                className="w-full h-11 rounded-xl border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold hover:bg-neutral-100 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {isGuestLoading ? '게스트 세션 시작 중...' : '게스트로 시작'}
+              </button>
+            </div>
+          </section>
 
-            <a
-              href={tgBotUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full h-11 rounded-xl bg-[#2AABEE] text-white text-sm font-semibold hover:bg-[#229ED9] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-              텔레그램으로 시작
-            </a>
+          {/* Guest */}
+          <div className="mt-3 text-center">
+            <Link href="/guest?mode=preview" className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
+              실제 로그인 없이 미리보기만 하고 싶다면 게스트 대시보드 보기
+            </Link>
           </div>
 
           {/* Links */}

@@ -336,8 +336,9 @@ func (h *NotificationHandler) handleBareStart(c *fiber.Ctx, chatID int64) {
 	if h.tgSender != nil {
 		_ = h.tgSender.SendToChatID(c.Context(), chatID,
 			"kifu에 오신 걸 환영합니다! 🎉\n\n"+
-				"가입이 완료되었습니다. 바로 테스트 복기를 시작할게요.\n\n"+
-				"나중에 웹에서 이메일을 연결하면 대시보드에서도 볼 수 있습니다.")
+				"지금부터 첫 테스트 복기를 시작할게요.\n"+
+				"이 흐름은 데모 체험용입니다.\n\n"+
+				"실제 사용은 웹에서 알림을 설정하고 텔레그램을 연결하는 쪽이 기준입니다.")
 	}
 
 	// Auto-start test flow so user experiences review immediately
@@ -370,7 +371,10 @@ func (h *NotificationHandler) handlePlansCommand(c *fiber.Ctx, chatID int64) {
 
 	plans, err := h.reviewBot.GetRecentPlans(c.Context(), channel.UserID, 5)
 	if err != nil || len(plans) == 0 {
-		_ = h.tgSender.SendToChatID(c.Context(), chatID, "아직 거래 계획이 없습니다.\n알림이 오면 자동으로 복기가 시작됩니다.")
+		_ = h.tgSender.SendToChatID(c.Context(), chatID,
+			"아직 거래 계획이 없습니다.\n\n"+
+				"/test — 데모 복기 다시 체험\n"+
+				"실제 사용은 웹에서 알림을 설정한 뒤 텔레그램을 연결하면 시작됩니다.")
 		return
 	}
 

@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
-const tgBotUrl = 'https://t.me/kifu_main_bot'
-
 function TelegramMockup({ compact = false }: { compact?: boolean }) {
     const [step, setStep] = useState(0)
 
@@ -122,14 +120,12 @@ export function LandingPage() {
                     <span className="text-lg font-bold tracking-wider text-neutral-900">KIFU</span>
                     <div className="flex items-center gap-4">
                         <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">로그인</Link>
-                        <a
-                            href={tgBotUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <Link
+                            href="/register"
                             className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors"
                         >
-                            시작하기
-                        </a>
+                            웹에서 시작
+                        </Link>
                     </div>
                 </div>
             </nav>
@@ -156,23 +152,29 @@ export function LandingPage() {
                     </h1>
 
                     <p className="mt-8 text-lg text-neutral-400 max-w-md mx-auto leading-relaxed md:text-xl">
-                        텔레그램에서 버튼 3번.
+                        웹에서 알림과 기록 흐름을 준비하고,
                         <br />
-                        15초면 거래 복기가 끝납니다.
+                        판단은 빠르게 남기세요.
                     </p>
 
                     <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                        <a
-                            href={tgBotUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group inline-flex items-center gap-2.5 rounded-full bg-[#2AABEE] px-8 py-4 text-sm font-bold text-white transition-all hover:shadow-xl hover:shadow-[#2AABEE]/20 hover:-translate-y-0.5"
+                        <Link
+                            href="/register"
+                            className="group inline-flex items-center gap-2.5 rounded-full bg-neutral-900 px-8 py-4 text-sm font-bold text-white transition-all hover:bg-neutral-800 hover:-translate-y-0.5"
                         >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                            텔레그램으로 시작
-                            <span className="text-white/60 text-xs font-normal">가입 불필요</span>
-                        </a>
+                            웹에서 시작
+                        </Link>
+                        <Link
+                            href="/guest?mode=preview"
+                            className="group inline-flex items-center gap-2.5 rounded-full border border-neutral-300 bg-white px-8 py-4 text-sm font-bold text-neutral-900 transition-all hover:bg-neutral-50 hover:-translate-y-0.5"
+                        >
+                            게스트로 먼저 둘러보기
+                            <span className="text-neutral-500 text-xs font-normal">빠른 미리보기</span>
+                        </Link>
                     </div>
+                    <p className="mt-4 text-xs text-neutral-400">
+                        웹 계정으로 바로 시작하거나, 게스트 모드로 화면 흐름을 먼저 볼 수 있습니다.
+                    </p>
                 </div>
 
                 {/* Scroll indicator */}
@@ -425,24 +427,21 @@ export function LandingPage() {
                     </h2>
 
                     <p className="mt-6 text-neutral-500 max-w-md mx-auto">
-                        가입 없이 텔레그램에서 바로 체험할 수 있습니다.
+                        기본 시작은 웹 계정과 설정 흐름입니다. 바로 가입하기 부담스럽다면 게스트로 먼저 둘러볼 수 있습니다.
                     </p>
 
                     <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center">
-                        <a
-                            href={tgBotUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group inline-flex items-center justify-center gap-2.5 rounded-full bg-[#2AABEE] px-8 py-4 text-sm font-bold text-white transition-all hover:shadow-xl hover:shadow-[#2AABEE]/20 hover:-translate-y-0.5"
-                        >
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                            텔레그램으로 시작
-                        </a>
                         <Link
                             href="/register"
-                            className="inline-flex items-center justify-center rounded-full border border-white/20 px-8 py-4 text-sm font-semibold text-white/80 hover:bg-white/5 transition-colors"
+                            className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-sm font-semibold text-neutral-950 hover:bg-neutral-100 transition-colors"
                         >
-                            웹에서 가입
+                            웹에서 시작
+                        </Link>
+                        <Link
+                            href="/guest?mode=preview"
+                            className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-4 text-sm font-semibold text-white hover:bg-white/5 transition-colors"
+                        >
+                            게스트로 먼저 보기
                         </Link>
                     </div>
                 </div>
