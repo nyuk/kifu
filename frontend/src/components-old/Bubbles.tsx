@@ -10,6 +10,65 @@ import { PageJumpPager } from '../components/ui/PageJumpPager'
 type ActionType = 'BUY' | 'SELL' | 'HOLD' | 'TP' | 'SL' | 'NONE' | 'all'
 
 const PAGE_SIZE = 12
+const SEOUL_TIME_ZONE = 'Asia/Seoul'
+
+function usesSeoulTime(symbol: string) {
+  return symbol.toUpperCase().includes('KRW')
+}
+
+function getDateParts(date: Date, timeZone?: string) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  const parts = formatter.formatToParts(date)
+  const year = Number(parts.find((part) => part.type === 'year')?.value || '0')
+  const month = Number(parts.find((part) => part.type === 'month')?.value || '0')
+  const day = Number(parts.find((part) => part.type === 'day')?.value || '0')
+  return { year, month, day }
+}
+
+function getRelativeDateLabel(timestamp: number, symbol: string) {
+  const timeZone = usesSeoulTime(symbol) ? SEOUL_TIME_ZONE : undefined
+  const target = new Date(timestamp)
+  const now = new Date()
+  const targetParts = getDateParts(target, timeZone)
+  const todayParts = getDateParts(now, timeZone)
+  const yesterday = new Date(now.getTime() - 86400000)
+  const yesterdayParts = getDateParts(yesterday, timeZone)
+
+  if (
+    targetParts.year === todayParts.year &&
+    targetParts.month === todayParts.month &&
+    targetParts.day === todayParts.day
+  ) {
+    return '오늘'
+  }
+
+  if (
+    targetParts.year === yesterdayParts.year &&
+    targetParts.month === yesterdayParts.month &&
+    targetParts.day === yesterdayParts.day
+  ) {
+    return '어제'
+  }
+
+  return `${targetParts.year}. ${targetParts.month}. ${targetParts.day}.`
+}
+
+function formatBubbleDateTime(timestamp: number, symbol: string) {
+  const timeZone = usesSeoulTime(symbol) ? SEOUL_TIME_ZONE : undefined
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
+}
 
 export function Bubbles() {
   const searchParams = useSearchParams()
@@ -268,8 +327,8 @@ export function Bubbles() {
                     : 'border-white/[0.08] bg-black/20 hover:border-neutral-600'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
                         <span className={`text-sm font-bold ${actionColors[bubble.action || 'NONE']}`}>
                           {bubble.action || 'NOTE'}
@@ -277,15 +336,17 @@ export function Bubbles() {
                         <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-zinc-300">{bubble.symbol}</span>
                         <span className="text-xs text-zinc-400">{bubble.timeframe}</span>
                       </div>
-                      <p className="mt-1 text-neutral-300 truncate">{bubble.note}</p>
+                      <p className="mt-1 break-words pr-2 text-neutral-300">{bubble.note}</p>
                     </div>
-                    <span className="text-xs text-zinc-400 whitespace-nowrap">
-                      {new Date(bubble.ts).toLocaleDateString()}
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-zinc-300 whitespace-nowrap">
+                      {getRelativeDateLabel(bubble.ts, bubble.symbol)}
                     </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
                     <span>${bubble.price.toLocaleString()}</span>
+                    <span>·</span>
+                    <span>{formatBubbleDateTime(bubble.ts, bubble.symbol)}</span>
                     {bubble.agents && bubble.agents.length > 0 && (
                       <>
                         <span>·</span>

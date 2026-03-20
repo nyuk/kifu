@@ -65,6 +65,8 @@ export type EvidencePacketOptions = {
 }
 
 const toUpper = (value: string) => value.trim().toUpperCase()
+const bubbleQueryTagPattern = /^[a-z0-9_-]+$/
+const canonicalSymbolPattern = /^[A-Z0-9]{3,12}$/
 
 const mapTradeItem = (item: TradeItem): EvidencePacketTrade => ({
   id: item.id,
@@ -111,6 +113,40 @@ const resolveTradeRange = (items: EvidencePacketTrade[]) => {
   return resolveTimeRange(items.map((item) => item.trade_time))
 }
 
+export const sanitizeBubbleTags = (tags: string[]) => {
+  const seen = new Set<string>()
+  const cleaned: string[] = []
+
+  for (const raw of tags) {
+    const tag = raw.trim().toLowerCase()
+    if (!tag) continue
+    if (tag.length > 20) continue
+    if (!bubbleQueryTagPattern.test(tag)) continue
+    if (seen.has(tag)) continue
+    seen.add(tag)
+    cleaned.push(tag)
+    if (cleaned.length >= 5) break
+  }
+
+  return cleaned
+}
+
+export const normalizeBubbleSymbol = (value: string) => {
+  const upper = toUpper(value)
+  if (!upper) return ''
+  if (canonicalSymbolPattern.test(upper)) return upper
+
+  if (upper.includes('-')) {
+    const [quote, base] = upper.split('-')
+    const candidate = `${base || ''}${quote || ''}`.replace(/[^A-Z0-9]/g, '')
+    if (canonicalSymbolPattern.test(candidate)) return candidate
+  }
+
+  const compact = upper.replace(/[^A-Z0-9]/g, '')
+  if (canonicalSymbolPattern.test(compact)) return compact
+  return ''
+}
+
 export async function buildEvidencePacket(options: EvidencePacketOptions): Promise<EvidencePacket | null> {
   const {
     symbol,
@@ -131,6 +167,7 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
 
   const now = new Date()
   const symbolLabel = symbol.trim() ? toUpper(symbol) : 'ALL'
+  const querySymbol = normalizeBubbleSymbol(symbol)
   const packet: EvidencePacket = {
     scope: 'one-shot',
     created_at: now.toISOString(),
@@ -160,8 +197,8 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
       limit: String(tradeLimit),
       sort: 'desc',
     })
-    if (symbol.trim()) {
-      params.set('symbol', toUpper(symbol))
+    if (querySymbol) {
+      params.set('symbol', querySymbol)
     }
     if (rangeFrom) params.set('from', rangeFrom)
     if (rangeTo) params.set('to', rangeTo)
@@ -175,24 +212,25 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
   }
 
   if (includeBubbles) {
+    const queryTags = sanitizeBubbleTags(bubbleTags)
     const params = new URLSearchParams({
       page: '1',
       limit: String(bubbleLimit),
       sort: 'desc',
     })
-    if (symbol.trim()) {
-      params.set('symbol', toUpper(symbol))
+    if (querySymbol) {
+      params.set('symbol', querySymbol)
     }
     if (rangeFrom) params.set('from', rangeFrom)
     if (rangeTo) params.set('to', rangeTo)
-    if (bubbleTags.length > 0) params.set('tags', bubbleTags.join(','))
+    if (queryTags.length > 0) params.set('tags', queryTags.join(','))
     const response = await api.get<{ items: any[] }>(`/v1/bubbles?${params.toString()}`)
     const items = (response.data.items || []).map(mapBubbleItem)
     packet.bubbles = {
       count: items.length,
       items,
       range: resolveTimeRange(items.map((item) => item.candle_time)),
-      tags: bubbleTags.length > 0 ? bubbleTags : undefined,
+      tags: queryTags.length > 0 ? queryTags : undefined,
     }
   }
 
@@ -203,8 +241,8 @@ export async function buildEvidencePacket(options: EvidencePacketOptions): Promi
       from: from.toISOString(),
       to: to.toISOString(),
     })
-    if (symbol.trim()) {
-      params.set('symbol', toUpper(symbol))
+    if (querySymbol) {
+      params.set('symbol', querySymbol)
     }
     const response = await api.get<TradeSummaryResponse>(`/v1/trades/summary?${params.toString()}`)
     packet.summary = {

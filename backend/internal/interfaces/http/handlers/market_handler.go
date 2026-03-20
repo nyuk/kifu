@@ -328,12 +328,14 @@ func buildKlinesURL(symbol string, interval string, limit int, endTime int64) st
 }
 
 type upbitKlineItem struct {
-	Timestamp    int64   `json:"timestamp"`
-	OpenPrice    float64 `json:"opening_price"`
-	HighPrice    float64 `json:"high_price"`
-	LowPrice     float64 `json:"low_price"`
-	ClosePrice   float64 `json:"trade_price"`
-	AccVolume    float64 `json:"candle_acc_trade_volume"`
+	Timestamp         int64   `json:"timestamp"`
+	CandleDateTimeUTC string  `json:"candle_date_time_utc"`
+	CandleDateTimeKST string  `json:"candle_date_time_kst"`
+	OpenPrice         float64 `json:"opening_price"`
+	HighPrice         float64 `json:"high_price"`
+	LowPrice          float64 `json:"low_price"`
+	ClosePrice        float64 `json:"trade_price"`
+	AccVolume         float64 `json:"candle_acc_trade_volume"`
 }
 
 func upbitIntervalPath(interval string) (string, bool) {
@@ -392,10 +394,21 @@ func fetchUpbitKlines(ctx context.Context, client *http.Client, symbol string, i
 	}
 
 	items := make([]KlineItem, 0, len(raw))
+	kstLocation, _ := time.LoadLocation("Asia/Seoul")
 	for i := len(raw) - 1; i >= 0; i-- {
 		row := raw[i]
+		candleTime := time.UnixMilli(row.Timestamp).UTC()
+		if trimmed := strings.TrimSpace(row.CandleDateTimeKST); trimmed != "" && kstLocation != nil {
+			if parsed, err := time.ParseInLocation("2006-01-02T15:04:05", trimmed, kstLocation); err == nil {
+				candleTime = parsed
+			}
+		} else if trimmed := strings.TrimSpace(row.CandleDateTimeUTC); trimmed != "" {
+			if parsed, err := time.Parse("2006-01-02T15:04:05", trimmed); err == nil {
+				candleTime = time.Date(parsed.Year(), parsed.Month(), parsed.Day(), parsed.Hour(), parsed.Minute(), parsed.Second(), 0, time.UTC)
+			}
+		}
 		items = append(items, KlineItem{
-			Time:   row.Timestamp / 1000,
+			Time:   candleTime.Unix(),
 			Open:   strconv.FormatFloat(row.OpenPrice, 'f', -1, 64),
 			High:   strconv.FormatFloat(row.HighPrice, 'f', -1, 64),
 			Low:    strconv.FormatFloat(row.LowPrice, 'f', -1, 64),

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -30,7 +31,8 @@ const (
 	providerOpenAI   = "openai"
 	providerClaude   = "claude"
 	providerGemini   = "gemini"
-	oneShotMaxTokens = 260
+	oneShotMaxTokens = 360
+	geminiMaxTokens  = 480
 )
 
 var (
@@ -563,27 +565,46 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 	if strings.TrimSpace(os.Getenv("AI_MOCK")) == "1" {
 		responseText = mockOneShotResponse(req)
 	} else {
-		// Build messages for invocation
-		messages := []interfaces.AIMessage{
-			{Role: "user", Content: prompt},
+		invokeOneShot := func(promptText string) (*interfaces.AIInvocationResult, error) {
+			messages := []interfaces.AIMessage{
+				{Role: "user", Content: promptText},
+			}
+			maxTokens := oneShotMaxTokens
+			if provider == providerGemini {
+				maxTokens = geminiMaxTokens
+			}
+			options := &interfaces.AIInvocationOption{
+				MaxTokens: &maxTokens,
+			}
+			return h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, options)
 		}
 
 		// Invoke provider through unified service
-		result, err := h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+		result, err := invokeOneShot(prompt)
 		if err != nil {
 			// Retry on 502/503/504 errors
 			if strings.Contains(err.Error(), "502") || strings.Contains(err.Error(), "503") || strings.Contains(err.Error(), "504") {
 				time.Sleep(800 * time.Millisecond)
-				result, err = h.aiInvocationService.InvokeProvider(c.Context(), userID, provider, model, messages, nil)
+				result, err = invokeOneShot(prompt)
 			}
 		}
 		if err != nil {
 			log.Printf("ai one-shot: provider=%s model=%s error=%v", provider, model, err)
 			log.Printf("[ai_handler] provider error: provider=%s model=%s err=%v", provider, model, err)
-			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": "AI provider request failed"})
+			return c.Status(502).JSON(fiber.Map{"code": "PROVIDER_ERROR", "message": err.Error()})
 		}
 
 		responseText = result.Content
+		if provider == providerGemini && shouldRetryShortGeminiResponse(responseText) {
+			retryPrompt := buildGeminiRetryPrompt(prompt)
+			retryResult, retryErr := invokeOneShot(retryPrompt)
+			if retryErr == nil && strings.TrimSpace(retryResult.Content) != "" {
+				responseText = retryResult.Content
+				result = retryResult
+			} else if retryErr != nil {
+				log.Printf("ai one-shot: provider=%s model=%s short-response-retry error=%v", provider, model, retryErr)
+			}
+		}
 		if result.TokensUsed > 0 {
 			tokensUsed = &result.TokensUsed
 		}
@@ -996,6 +1017,31 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 		builder.WriteString("6) 결론: 한 줄\n")
 	}
 	return builder.String()
+}
+
+func shouldRetryShortGeminiResponse(response string) bool {
+	trimmed := strings.TrimSpace(response)
+	if trimmed == "" {
+		return true
+	}
+	if utf8.RuneCountInString(trimmed) < 80 {
+		return true
+	}
+	requiredMarkers := 0
+	for _, marker := range []string{"1)", "2)", "3)", "4)", "5)", "6)"} {
+		if strings.Contains(trimmed, marker) {
+			requiredMarkers++
+		}
+	}
+	return requiredMarkers < 4
+}
+
+func buildGeminiRetryPrompt(base string) string {
+	return base + "\n\n추가 규칙:\n" +
+		"- 방금 응답이 너무 짧거나 형식이 불완전했습니다.\n" +
+		"- 이번에는 1)~6) 항목을 모두 빠짐없이 작성하세요.\n" +
+		"- 각 항목은 제목과 본문을 포함한 완전한 문장으로 작성하세요.\n" +
+		"- 최소 6줄 이상 작성하고, 각 줄은 번호로 시작하세요.\n"
 }
 
 func inferUserIntent(evidenceText string) string {

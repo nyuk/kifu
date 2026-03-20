@@ -8,6 +8,18 @@ type AiRequestContext = {
     tags?: string[]
 }
 
+export type AiBatchError = {
+    provider: string
+    message: string
+}
+
+export type AiBatchResult = {
+    responses: AgentResponse[]
+    errors: AiBatchError[]
+}
+
+export const activeAiProviders = ['openai', 'gemini'] as const
+
 const buildEvidenceText = (evidence?: EvidencePacket | null, context?: AiRequestContext) => {
     const lines: string[] = []
     if (evidence) {
@@ -90,8 +102,8 @@ const demoScenarios: DemoScenario[] = [
     },
 ]
 
-function buildDemoResponse(symbol: string, timeframe: string, promptType: 'brief' | 'detailed' | 'technical', evidenceText: string): AgentResponse {
-    const seedInput = `${symbol}:${timeframe}:${promptType}:${evidenceText.length}`
+function buildDemoResponse(symbol: string, timeframe: string, promptType: 'brief' | 'detailed' | 'technical', evidenceText: string, provider = 'demo'): AgentResponse {
+    const seedInput = `${symbol}:${timeframe}:${promptType}:${provider}:${evidenceText.length}`
     const seed = Array.from(seedInput).reduce((sum, char) => sum + char.charCodeAt(0), 0)
     const scenario = demoScenarios[seed % demoScenarios.length]
     const text = [
@@ -119,45 +131,77 @@ function buildDemoResponse(symbol: string, timeframe: string, promptType: 'brief
     ].join('\n')
 
     return {
-        provider: 'demo',
-        model: 'mock-scenario-v1',
+        provider,
+        model: provider === 'demo' ? 'mock-scenario-v1' : `${provider}-mock-scenario-v1`,
         prompt_type: promptType,
         response: text,
         created_at: new Date().toISOString(),
     }
 }
 
-export async function fetchAiOpinion(
+const mapProviderError = (provider: string, error: any): AiBatchError => ({
+    provider,
+    message: error?.response?.data?.message || error?.message || 'provider request failed',
+})
+
+export async function fetchAiOpinions(
     symbol: string,
     timeframe: string,
     price: number,
     promptType: 'brief' | 'detailed' | 'technical' = 'brief',
     evidence?: EvidencePacket | null,
     context?: AiRequestContext
-): Promise<AgentResponse> {
+): Promise<AiBatchResult> {
     const evidenceText = buildEvidenceText(evidence, context)
 
     if (isDemoMode) {
-        return buildDemoResponse(symbol, timeframe, promptType, evidenceText)
+        return {
+            responses: activeAiProviders.map((provider) => buildDemoResponse(symbol, timeframe, promptType, evidenceText, provider)),
+            errors: [],
+        }
     }
 
-    const payload = {
-        provider: 'openai',
-        prompt_type: promptType,
-        symbol,
-        timeframe,
-        price: String(price),
-        evidence_text: evidenceText,
+    const settled = await Promise.allSettled(
+        activeAiProviders.map(async (provider) => {
+            const payload = {
+                provider,
+                prompt_type: promptType,
+                symbol,
+                timeframe,
+                price: String(price),
+                evidence_text: evidenceText,
+            }
+
+            const response = await api.post('/v1/ai/one-shot', payload)
+            const data = response.data
+
+            return {
+                provider: data.provider || provider,
+                model: data.model || provider,
+                prompt_type: promptType,
+                response: data.response || '',
+                created_at: data.created_at || new Date().toISOString(),
+            } satisfies AgentResponse
+        }),
+    )
+
+    const responses: AgentResponse[] = []
+    const errors: AiBatchError[] = []
+
+    settled.forEach((result, index) => {
+        const provider = activeAiProviders[index]
+        if (result.status === 'fulfilled') {
+            responses.push(result.value)
+            return
+        }
+        errors.push(mapProviderError(provider, result.reason))
+    })
+
+    if (responses.length === 0) {
+        const primaryError = new Error(errors.map((item) => `${item.provider}: ${item.message}`).join(' | ') || 'AI provider request failed')
+        ;(primaryError as Error & { errors?: AiBatchError[] }).errors = errors
+        throw primaryError
     }
 
-    const response = await api.post('/v1/ai/one-shot', payload)
-    const data = response.data
-
-    return {
-        provider: data.provider || 'openai',
-        model: data.model || 'gpt-4o',
-        prompt_type: promptType,
-        response: data.response || '',
-        created_at: data.created_at || new Date().toISOString(),
-    }
+    return { responses, errors }
 }

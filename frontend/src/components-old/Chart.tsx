@@ -2,7 +2,7 @@
 
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { createChart, ColorType, CrosshairMode, type UTCTimestamp } from 'lightweight-charts'
+import { createChart, ColorType, CrosshairMode, TickMarkType, type Time, type UTCTimestamp } from 'lightweight-charts'
 import { api, DEFAULT_SYMBOLS } from '../lib/api'
 import { exportBubbles, importBubbles } from '../lib/dataHandler'
 import { parseTradeCsv } from '../lib/csvParser'
@@ -170,6 +170,57 @@ function getTimeframeSeconds(tf: string): number {
   return map[tf] || 3600
 }
 
+const seoulTimeZone = 'Asia/Seoul'
+
+function toTimeSeconds(value: Time): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    return Number.isNaN(parsed.getTime()) ? null : Math.floor(parsed.getTime() / 1000)
+  }
+  if (value && typeof value === 'object' && 'year' in value && 'month' in value && 'day' in value) {
+    const candidate = value as { year: number; month: number; day: number }
+    return Math.floor(Date.UTC(candidate.year, candidate.month - 1, candidate.day) / 1000)
+  }
+  return null
+}
+
+function formatChartDateTime(value: Time | number, useSeoulTime: boolean) {
+  const seconds = typeof value === 'number' ? value : toTimeSeconds(value)
+  if (seconds == null) return '-'
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: useSeoulTime ? seoulTimeZone : 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(seconds * 1000))
+}
+
+function formatChartTickMark(value: Time, tickMarkType: TickMarkType, useSeoulTime: boolean) {
+  const seconds = toTimeSeconds(value)
+  if (seconds == null) return null
+  const date = new Date(seconds * 1000)
+  const timeZone = useSeoulTime ? seoulTimeZone : 'UTC'
+
+  if (tickMarkType === TickMarkType.Time || tickMarkType === TickMarkType.TimeWithSeconds) {
+    return new Intl.DateTimeFormat('ko-KR', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date)
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone,
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
 export function Chart() {
   const { symbol: symbolParam } = useParams()
   const router = useRouter()
@@ -181,6 +232,7 @@ export function Chart() {
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
   const [symbols, setSymbols] = useState<UserSymbolItem[]>([])
   const [selectedSymbol, setSelectedSymbol] = useState('')
+  const useSeoulTime = resolveExchange(selectedSymbol) === 'upbit'
   const [timeframe, setTimeframe] = useState('1d')
   const [klines, setKlines] = useState<KlineItem[]>([])
   const [displayKlines, setDisplayKlines] = useState<KlineItem[]>([])
@@ -1036,7 +1088,14 @@ export function Chart() {
       grid: initialTheme.grid,
       crosshair: { mode: CrosshairMode.Magnet },
       rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
-      timeScale: { borderColor: 'rgba(255,255,255,0.08)' },
+      localization: {
+        locale: 'ko-KR',
+        timeFormatter: (time: Time) => formatChartDateTime(time, useSeoulTime),
+      },
+      timeScale: {
+        borderColor: 'rgba(255,255,255,0.08)',
+        tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatChartTickMark(time, tickMarkType, useSeoulTime),
+      },
       height: 480,
     })
 
@@ -1112,7 +1171,7 @@ export function Chart() {
       chartRef.current = null
       seriesRef.current = null
     }
-  }, [timeframe, chartData, updateOverlayPosition]) // Add dependencies if needed, but be careful of loops using 'loading' or 'klines' directly here causes re-mount
+  }, [timeframe, chartData, updateOverlayPosition, useSeoulTime]) // Add dependencies if needed, but be careful of loops using 'loading' or 'klines' directly here causes re-mount
 
   // Ref for loading state to use inside the chart event listener without re-binding
   const loadingRef = useRef(loading)
@@ -1952,7 +2011,7 @@ export function Chart() {
                 {/* Tooltip */}
                 <div className={`absolute left-1/2 hidden -translate-x-1/2 rounded-lg bg-white/[0.06] border border-white/[0.08] p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50 ${tooltipBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
                   <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
-                    {new Date(group.candleTime * 1000).toLocaleString()}
+                    {formatChartDateTime(group.candleTime, useSeoulTime)}
                   </div>
                   {/* Bubbles List */}
                   {hasBubbles && (
@@ -2101,14 +2160,14 @@ export function Chart() {
                   {pagedSummaryBubbles.map((bubble) => (
                     <div key={bubble.id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                       <div className="flex items-center justify-between text-xs text-neutral-500">
-                        <span>{new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</span>
+                        <span>{formatChartDateTime(Math.floor(bubble.ts / 1000), useSeoulTime)}</span>
                         <span className="text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</span>
                         <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
                           {bubble.action || 'NOTE'}
                         </span>
                       </div>
                       <div className="mt-1 text-[10px] text-neutral-500">
-                        생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                        생성 {formatChartDateTime(Math.floor(new Date(bubble.created_at).getTime() / 1000), useSeoulTime)}
                       </div>
                       <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-500">
@@ -2209,7 +2268,7 @@ export function Chart() {
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
                       <h3 className="mt-1 text-sm font-semibold text-neutral-100">
-                        {new Date(selectedGroup.candleTime * 1000).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                        {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
                       </h3>
                     </div>
                     <button
@@ -2242,10 +2301,10 @@ export function Chart() {
                             </div>
                             <div className="mt-0.5 text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</div>
                             <div className="mt-1 text-[10px] text-neutral-500">
-                              캔들 {new Date(bubble.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                              캔들 {formatChartDateTime(Math.floor(bubble.ts / 1000), useSeoulTime)}
                             </div>
                             <div className="mt-0.5 text-[10px] text-neutral-500">
-                              생성 {new Date(bubble.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}
+                              생성 {formatChartDateTime(Math.floor(new Date(bubble.created_at).getTime() / 1000), useSeoulTime)}
                             </div>
                             <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
                           </div>

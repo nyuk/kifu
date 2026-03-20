@@ -148,7 +148,7 @@ func createOpinions(ctx context.Context, bubble *entities.Bubble, repo domainrep
 	}{
 		{"openai", "gpt-4o", "리스크/보상 비율은 양호하지만, 레인지 상단에서 변동성이 확대될 수 있습니다."},
 		{"claude", "claude-3-5-sonnet-latest", "이 가격대는 직전 유동성 구간이므로 손절 기준을 명확히 하세요."},
-		{"gemini", "gemini-1.5-pro", "거래량이 유지된다면 상방 확률이 높습니다. 다만 눌림 가능성도 열어두세요."},
+		{"gemini", "gemini-2.5-flash", "거래량이 유지된다면 상방 확률이 높습니다. 다만 눌림 가능성도 열어두세요."},
 	}
 
 	for idx, response := range responses {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useBubbleStore, type AgentResponse } from '../lib/bubbleStore'
-import { fetchAiOpinion } from '../lib/mockAi'
+import { activeAiProviders, fetchAiOpinions } from '../lib/mockAi'
 import { buildEvidencePacket, describeEvidencePacket, type EvidencePacket } from '../lib/evidencePacket'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { api } from '../lib/api'
@@ -75,6 +75,47 @@ function buildRetryBackoff(attempt: number): number {
   return Math.min(1000 * Math.pow(2, attempt), 4000)
 }
 
+function formatProviderLabel(provider: string) {
+  const normalized = provider.trim().toLowerCase()
+  if (normalized === 'openai') return 'ChatGPT'
+  if (normalized === 'claude') return 'Claude'
+  if (normalized === 'gemini') return 'Gemini'
+  return provider
+}
+
+function formatAiResponsesForNote(responses: AgentResponse[]) {
+  return responses
+    .map((item) => `## ${formatProviderLabel(item.provider)}\n${item.response}`)
+    .join('\n\n')
+}
+
+function formatProviderFailure(provider: string, message: string) {
+  const normalized = message
+    .replace(/^provider invocation failed:\s*/i, '')
+    .replace(/^request failed:\s*/i, '')
+    .trim()
+
+  return `${formatProviderLabel(provider)}: ${normalized || '요청 실패'}`
+}
+
+function formatBubbleSaveError(err: any) {
+  const status = err?.response?.status
+  const code = String(err?.response?.data?.code || '').toUpperCase()
+  const detail = String(err?.response?.data?.message || err?.message || '').trim()
+
+  if (status === 400 && code === 'INVALID_SYMBOL') {
+    return '현재 심볼 형식으로는 저장할 수 없습니다. 심볼 표기를 다시 확인해주세요.'
+  }
+  if (status === 400 && code === 'INVALID_TAGS') {
+    return `태그 형식이 올바르지 않습니다. (${detail || '영문/숫자/_/-만 사용, 최대 5개'})`
+  }
+  if (status === 400 && detail) {
+    return `버블 저장 형식 오류입니다. (${detail})`
+  }
+  if (detail) return `버블 생성에 실패했습니다. (${detail})`
+  return '버블 생성에 실패했습니다.'
+}
+
 export function BubbleCreateModal({
   open,
   symbol,
@@ -97,7 +138,7 @@ export function BubbleCreateModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiRetryAttempt, setAiRetryAttempt] = useState(0)
-  const [aiResponse, setAiResponse] = useState<AgentResponse | null>(null)
+  const [aiResponses, setAiResponses] = useState<AgentResponse[]>([])
   const [aiError, setAiError] = useState('')
   const [promptType, setPromptType] = useState<'brief' | 'detailed' | 'technical'>('brief')
   const [includeEvidence, setIncludeEvidence] = useState(true)
@@ -119,10 +160,12 @@ export function BubbleCreateModal({
   const [evidenceLoading, setEvidenceLoading] = useState(false)
   const [evidenceError, setEvidenceError] = useState('')
 
+  const primaryAiResponse = aiResponses[0] ?? null
+
   const aiSections = useMemo(() => {
-    if (!aiResponse?.response) return []
-    return parseAiSections(aiResponse.response)
-  }, [aiResponse])
+    if (!primaryAiResponse?.response) return []
+    return parseAiSections(primaryAiResponse.response)
+  }, [primaryAiResponse])
 
   useEffect(() => {
     if (!open) return
@@ -133,7 +176,7 @@ export function BubbleCreateModal({
     setAssetClass(inferAssetClass(symbol))
     setVenueName('')
     setError('')
-    setAiResponse(null)
+    setAiResponses([])
     setAiError('')
     setAiLoading(false)
     setPromptType('brief')
@@ -317,11 +360,17 @@ export function BubbleCreateModal({
           setAiRetryAttempt(attempt)
         }
         try {
-          const response = await fetchAiOpinion(symbol, timeframe, finalPrice, promptType, packet, { memo, tags })
-          setAiResponse(response)
+          const result = await fetchAiOpinions(symbol, timeframe, finalPrice, promptType, packet, { memo, tags })
+          setAiResponses(result.responses)
+          if (result.errors.length > 0) {
+            const partial = result.errors.map((item) => formatProviderFailure(item.provider, item.message)).join(' · ')
+            setAiError(`일부 의견만 수집했습니다. ${partial}`)
+          } else {
+            setAiError('')
+          }
           setAiRetryAttempt(0)
           if (!memo) {
-            setMemo(response.response)
+            setMemo(result.responses[0]?.response || '')
           }
           return
         } catch (e: any) {
@@ -411,13 +460,13 @@ export function BubbleCreateModal({
         venue_name: venueName.trim() || undefined,
       })
 
-      if (aiResponse) {
-        updateBubble(bubble.id, { agents: [aiResponse], note: memo.trim(), tags })
+      if (aiResponses.length > 0) {
+        updateBubble(bubble.id, { agents: aiResponses, note: memo.trim(), tags })
         try {
           await api.post('/v1/notes', {
             bubble_id: bubble.id,
             title: 'AI 복기 요약',
-            content: aiResponse.response,
+            content: formatAiResponsesForNote(aiResponses),
             tags: ['ai', 'one-shot', promptType, symbol.toUpperCase()],
             lesson_learned: 'AI 요약을 참고하되 최종 판단은 본인이 결정.',
             emotion: 'uncertain',
@@ -431,13 +480,15 @@ export function BubbleCreateModal({
         const stamp = new Date().toISOString()
         localStorage.setItem('kifu-portfolio-refresh', stamp)
         window.dispatchEvent(new CustomEvent('kifu-portfolio-refresh', { detail: { at: stamp } }))
-      } catch {}
+      } catch {
+        // Ignore local refresh fan-out issues; bubble creation already succeeded.
+      }
 
       onCreated?.()
       onClose()
     } catch (err: any) {
       console.error(err)
-      setError('버블 생성에 실패했습니다.')
+      setError(formatBubbleSaveError(err))
     } finally {
       setIsSubmitting(false)
     }
@@ -552,7 +603,7 @@ export function BubbleCreateModal({
           <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">AI Insight</span>
-              {!aiResponse && (
+              {aiResponses.length === 0 && (
                 <div className="flex items-center gap-2">
                   <select
                     value={promptType}
@@ -570,7 +621,7 @@ export function BubbleCreateModal({
                     disabled={aiLoading || !price || aiDisabled}
                     className="rounded px-2 py-1 text-xs font-semibold text-blue-400 border border-blue-500/30 hover:bg-blue-500/10 disabled:opacity-50"
                   >
-                    {aiDisabled ? '멤버 전용' : aiLoading ? 'Analyzing...' : isDemoMode ? 'Ask AI (Demo)' : 'Ask AI'}
+                    {aiDisabled ? '멤버 전용' : aiLoading ? 'Analyzing...' : isDemoMode ? 'Ask AI (Demo)' : `Ask AI x${activeAiProviders.length}`}
                   </button>
                 </div>
               )}
@@ -593,33 +644,48 @@ export function BubbleCreateModal({
                 </div>
               </div>
             )}
-            {isDemoMode && !aiResponse && (
+            {isDemoMode && aiResponses.length === 0 && (
               <p className="mt-2 text-[11px] text-cyan-300">
-                DEMO MODE: AI 실호출 없이 샘플 응답을 반환합니다.
+                DEMO MODE: {activeAiProviders.map(formatProviderLabel).join(', ')} 샘플 응답을 반환합니다.
               </p>
             )}
-            {aiDisabled && !aiResponse && (
+            {aiDisabled && aiResponses.length === 0 && (
               <p className="mt-2 text-[11px] text-neutral-500">
                 AI 분석 요청은 회원 전용 기능입니다.
               </p>
             )}
-            {aiResponse && (
+            {aiResponses.length > 0 && (
               <div className="mt-2 space-y-2">
-                {aiSections.length > 0 ? (
-                  aiSections.map((section) => (
-                    <div
-                      key={`${section.title}-${section.body.slice(0, 16)}`}
-                      className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
-                      <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                {aiResponses.map((response) => {
+                  const sections = response === primaryAiResponse ? aiSections : parseAiSections(response.response)
+                  return (
+                    <div key={`${response.provider}-${response.created_at}`} className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">{formatProviderLabel(response.provider)}</p>
+                          <p className="text-[11px] text-neutral-500">{response.model}</p>
+                        </div>
+                      </div>
+                      {sections.length > 0 ? (
+                        <div className="space-y-2">
+                          {sections.map((section) => (
+                            <div
+                              key={`${response.provider}-${section.title}-${section.body.slice(0, 16)}`}
+                              className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                            >
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
+                              <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-white/[0.06] bg-black/30 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                          {response.response}
+                        </div>
+                      )}
                     </div>
-                  ))
-                ) : (
-                  <div className="rounded-lg border border-white/[0.06] bg-black/30 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
-                    {aiResponse.response}
-                  </div>
-                )}
+                  )
+                })}
               </div>
             )}
           </div>

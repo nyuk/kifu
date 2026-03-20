@@ -43,6 +43,9 @@ func (c *GeminiClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 		"generationConfig": map[string]interface{}{
 			"temperature":     0.2,
 			"maxOutputTokens": 260,
+			"thinkingConfig": map[string]interface{}{
+				"thinkingBudget": 0,
+			},
 		},
 	}
 
@@ -125,7 +128,13 @@ func (c *GeminiClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 		return nil, errors.New("gemini returned no content")
 	}
 
-	content := strings.TrimSpace(result.Candidates[0].Content.Parts[0].Text)
+	var textParts []string
+	for _, part := range result.Candidates[0].Content.Parts {
+		if trimmed := strings.TrimSpace(part.Text); trimmed != "" {
+			textParts = append(textParts, trimmed)
+		}
+	}
+	content := strings.TrimSpace(strings.Join(textParts, "\n"))
 	if content == "" {
 		return nil, errors.New("gemini returned empty content")
 	}

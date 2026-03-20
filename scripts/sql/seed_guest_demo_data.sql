@@ -152,7 +152,7 @@ SELECT
   CASE
     WHEN b.rn % 3 = 0 THEN 'gpt-4o'
     WHEN b.rn % 3 = 1 THEN 'claude-3-5-sonnet-latest'
-    ELSE 'gemini-1.5-pro'
+    ELSE 'gemini-2.5-flash'
   END,
   'seed-template-v1',
   'Seeded AI note: risk, scenario, and next action candidate.',

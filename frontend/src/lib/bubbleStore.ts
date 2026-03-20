@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from './api';
+import { normalizeBubbleSymbol, sanitizeBubbleTags } from './evidencePacket';
 
 export interface AgentResponse {
   provider: string;
@@ -205,7 +206,16 @@ export const useBubbleStore = create<BubbleState>()(
         return { count: mapped.length, total: finalTotal }
       },
       createBubbleRemote: async (payload) => {
-        const response = await api.post('/v1/bubbles', payload);
+        const normalizedSymbol = normalizeBubbleSymbol(payload.symbol);
+        if (!normalizedSymbol) {
+          throw new Error(`bubble symbol is invalid: ${payload.symbol}`);
+        }
+        const normalizedPayload = {
+          ...payload,
+          symbol: normalizedSymbol,
+          tags: sanitizeBubbleTags(payload.tags || []),
+        };
+        const response = await api.post('/v1/bubbles', normalizedPayload);
         const data = response.data;
         const bubble: Bubble = {
           id: data.id,
@@ -218,12 +228,12 @@ export const useBubbleStore = create<BubbleState>()(
           tags: data.tags || [],
           asset_class: data.asset_class,
           venue_name: data.venue_name,
-          action: resolveBubbleAction({
-            action: data.action,
-            tags: data.tags || payload.tags,
-            bubbleType: data.bubble_type,
-            memo: data.memo || payload.memo,
-          }),
+            action: resolveBubbleAction({
+              action: data.action,
+              tags: data.tags || normalizedPayload.tags,
+              bubbleType: data.bubble_type,
+              memo: data.memo || normalizedPayload.memo,
+            }),
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
         };
