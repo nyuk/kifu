@@ -135,3 +135,45 @@ OpenClaw에서 확인할 것:
 
 3. `Drop`
    - ACP보다 명확히 낫지 않음
+
+## 2026-03-20 초기 판정 메모
+
+아래는 공개 자료 기준의 **초기 판정**이다.
+아직 OpenClaw 내부 구현을 확인한 것은 아니므로, 확신도는 보수적으로 둔다.
+
+### 사용한 자료
+
+- 공식 문서(우선):
+  - OpenClaw CLI `acp`: [docs.openclaw.ai/cli/acp](https://docs.openclaw.ai/cli/acp)
+- 보조 자료(2차 출처, 신뢰도 낮음):
+  - OpenClaw ACP 명령 문서: [openclawdoc.com/commands/acp](https://openclawdoc.com/commands/acp/)
+  - OpenClaw ACP skill 개요: [playbooks.com/skills/openclaw/skills/acp](https://playbooks.com/skills/openclaw/skills/acp)
+  - OpenClaw 작업 마켓 예시: [crustyclaws.com](https://www.crustyclaws.com/)
+
+### 초기 답변 표
+
+| 질문 | 초기 답변 | 확신도 | 근거 |
+|---|---|---|---|
+| service-only job 적합성 | 불명확 | 낮음 | 공식 문서의 `openclaw acp`는 Gateway-backed ACP bridge로 설명되며, seller/runtime 그 자체로 보이진 않음. [공식 문서](https://docs.openclaw.ai/cli/acp) |
+| JSON requirement 지원 | 불명확 | 낮음 | 공식 문서는 ACP bridge/session routing 중심이고, 구조화 requirement/job schema 지원 범위는 안 보임. |
+| JSON deliverable 지원 | 불명확 | 낮음 | 공식 문서는 prompt/session/tool 브리지 중심. compact JSON deliverable 보장은 확인 못 함. |
+| seller 대응 구조 존재 | 부분 가능성 | 중간 이하 | 2차 자료에서는 `browse`, `job create`, `sell init / sell create` 같은 워크플로우가 언급되지만, 공식 seller 대응 구조는 확인 못 함. [2차 자료](https://playbooks.com/skills/openclaw/skills/acp) |
+| 결제/정산 구조 적합성 | 부분 가능성 | 중간 이하 | 2차 자료는 wallet/login/browse/job 흐름을 보여줌. 하지만 ACP의 `entity / requiredFunds / SLA`와 1:1 대응 여부는 아직 불명확. [2차 자료](https://openclawdoc.com/commands/acp/) |
+| KIFU API 재사용 가능성 | 가능성 높음 | 중간 | OpenClaw가 외부 도구/게이트웨이/에이전트 연동을 전제로 하므로 HTTP 호출형 재사용은 가능성이 높음. 다만 공식 문서로 직접 확인한 것은 아님. |
+| 승인/온보딩 리스크 우위 | 불명확 | 낮음 | 아직 OpenClaw 쪽 승인/온보딩 체계를 확인 못 함. ACP보다 낫다고 말할 근거가 없음. |
+| 1주 내 구현 가능성 | 판단 문서 + 얕은 adapter spike는 가능 | 중간 | 완전 전환/운영 시작은 불명확. 하지만 문서화와 구조 비교, 재사용 범위 도출까지는 가능. |
+
+### 현재 임시 결론
+
+`Continue` 또는 `Pause` 사이지만, 현재로선 **Pause에 더 가깝다**.
+
+이유:
+- 공식 문서만으로는 OpenClaw가 현재 ACP seller 흐름을 직접 대체할 수 있는지 확인되지 않았다.
+- 공개 자료 중 일부는 marketplace/skill/bridge 설명이 섞여 있어서, service-only job과 동일선상으로 보기 어렵다.
+- 따라서 지금 단계에서 바로 전환 결론을 내리면 위험하다.
+
+### 다음 확인 우선순위
+
+1. OpenClaw 쪽에서 실제 `sell service` 또는 `job provider` 공식 흐름이 있는지 확인
+2. requirement / deliverable을 구조화 JSON으로 유지 가능한지 확인
+3. wallet / payment / SLA가 기존 ACP와 얼마나 비슷한지 확인
