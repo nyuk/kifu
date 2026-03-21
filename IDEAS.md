@@ -88,6 +88,7 @@
 - [제품] 전략 프리셋 기반 백테스트 + 알림 연동
   - 아이디어: 사용자가 세부 전략을 직접 설계하지 않아도, 미리 정의된 전략 프리셋을 선택해 백테스트 결과를 보고 바로 알림 설정까지 이어지게 한다.
   - 목적: 전략 탐색 진입장벽을 낮추고, 백테스트 결과를 실제 행동(알림 구독)으로 연결한다.
+  - 설계 문서: `/Users/gimdongnyeog/PycharmProjects/MoneyVessel_Web/kifu-project/docs/runbook/strategy-preset-backtest-alert-v0.1.md`
   - 사용자 가치:
     - 초보자도 바로 전략을 체험 가능
     - 복잡한 설정 없이 결과 확인 가능
