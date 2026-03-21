@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '../../../src/stores/auth'
@@ -62,6 +63,26 @@ export default function OnboardingTestPage() {
     return profile.tendency
   }, [answers, isComplete])
 
+  const nextStepLinks = useMemo(() => {
+    if (isAuthenticated) {
+      return {
+        primaryHref: '/settings',
+        primaryLabel: 'Settings에서 거래 연결',
+        secondaryHref: '/home',
+        secondaryLabel: '서재로 돌아가기',
+        helper: '이제 실제 거래를 불러오면 홈, 차트, 복기 흐름이 실제 데이터로 채워집니다.',
+      }
+    }
+
+    return {
+      primaryHref: '/register?next=%2Fsettings',
+      primaryLabel: '회원가입 후 Settings로 이동',
+      secondaryHref: '/guest?mode=preview',
+      secondaryLabel: '게스트 미리보기 보기',
+      helper: '진단은 저장됐지만, 실제 데이터 저장과 연결은 웹 계정 + Settings에서 시작됩니다.',
+    }
+  }, [isAuthenticated])
+
   useEffect(() => {
     const draft = readOnboardingDraft<Record<number, Response>>()
     if (draft?.answers && Object.keys(draft.answers).length > 0) {
@@ -100,7 +121,7 @@ export default function OnboardingTestPage() {
       router.push('/home')
       return
     }
-    setSaveFeedback('저장 완료. 회원가입 후 바로 서재에서 이어갈 수 있어요.')
+    setSaveFeedback('진단 저장 완료. 아래 다음 단계에서 계정 생성 또는 미리보기를 선택할 수 있어요.')
   }
 
   const updateChoice = (choice: Choice) => {
@@ -287,6 +308,48 @@ export default function OnboardingTestPage() {
               </p>
             )}
           </section>
+
+          {isComplete && (
+            <section className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-sky-300">다음 단계</p>
+              <h2 className="mt-2 text-xl font-semibold text-zinc-100">
+                진단은 끝났습니다. 이제 실제 사용 흐름으로 넘어가면 됩니다.
+              </h2>
+              <p className="mt-2 text-sm text-zinc-300">{nextStepLinks.helper}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(nextStepLinks.primaryHref)}
+                  className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950"
+                >
+                  {nextStepLinks.primaryLabel}
+                </button>
+                <Link
+                  href={nextStepLinks.secondaryHref}
+                  className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200"
+                >
+                  {nextStepLinks.secondaryLabel}
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">1</p>
+                  <p className="mt-2 text-sm font-medium text-zinc-100">거래 연결 또는 CSV 업로드</p>
+                  <p className="mt-1 text-xs text-zinc-400">Settings에서 실제 데이터를 붙입니다.</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">2</p>
+                  <p className="mt-2 text-sm font-medium text-zinc-100">홈과 차트 확인</p>
+                  <p className="mt-1 text-xs text-zinc-400">가져온 거래가 서재와 차트에 채워집니다.</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">3</p>
+                  <p className="mt-2 text-sm font-medium text-zinc-100">첫 복기 완료</p>
+                  <p className="mt-1 text-xs text-zinc-400">그때부터 KIFU가 실제 패턴을 쌓기 시작합니다.</p>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>

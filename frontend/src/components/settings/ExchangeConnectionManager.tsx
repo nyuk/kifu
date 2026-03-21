@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
 import { isGuestSession } from '../../lib/guestSession'
@@ -95,6 +96,36 @@ const exchangeLabel: Record<ExchangeOption, string> = {
   binance_futures: 'Binance Futures',
   binance_spot: 'Binance Spot',
   upbit: 'Upbit',
+}
+
+function NextStepActions({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/8 p-4">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-emerald-300">다음 단계</p>
+      <p className="mt-2 text-sm font-semibold text-zinc-100">{title}</p>
+      <p className="mt-1 text-xs text-zinc-300">{description}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          href="/home"
+          className="rounded-lg bg-neutral-100 px-3 py-2 text-xs font-semibold text-neutral-950"
+        >
+          서재 보기
+        </Link>
+        <Link
+          href="/chart"
+          className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200"
+        >
+          차트 열기
+        </Link>
+        <Link
+          href="/review"
+          className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200"
+        >
+          복기 열기
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 export function ExchangeConnectionManager() {
@@ -464,6 +495,12 @@ export function ExchangeConnectionManager() {
 
         {csvUploadMessage && <p className="mt-3 text-xs text-emerald-300">{csvUploadMessage}</p>}
         {csvUploadError && <p className="mt-3 text-xs text-rose-300">{csvUploadError}</p>}
+        {csvUploadMessage && (
+          <NextStepActions
+            title="CSV 업로드가 끝났습니다."
+            description="이제 홈과 차트에서 실제 거래가 들어왔는지 확인하고, 복기에서 첫 기록을 남기면 됩니다."
+          />
+        )}
       </div>
 
       <div className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md">
@@ -555,6 +592,12 @@ export function ExchangeConnectionManager() {
               {statusMap[item.id] && <p className="mt-2 text-xs text-neutral-400">{statusMap[item.id]}</p>}
               {runIdMap[item.id] && (
                 <p className="mt-1 text-[11px] text-neutral-500">최근 동기화 run_id: {runIdMap[item.id]}</p>
+              )}
+              {(runIdMap[item.id] || statusMap[item.id]?.includes('동기화 완료')) && (
+                <NextStepActions
+                  title="거래 동기화가 끝났습니다."
+                  description="홈에서 숫자를 확인하고, 차트에서 실제 거래를 겹쳐 본 뒤, 복기 탭에서 첫 판단을 정리해보세요."
+                />
               )}
               {packErrorMap[item.id] && <p className="mt-2 text-xs text-rose-300">{packErrorMap[item.id]}</p>}
 
