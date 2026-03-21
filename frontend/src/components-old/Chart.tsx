@@ -1724,45 +1724,62 @@ export function Chart() {
                   </button>
                 </FilterGroup>
 
-                <FilterGroup label="Review / Import" tone="sky">
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={handleOpenImportHub} disabled={guestMode} className="rounded-md border border-sky-500/50 px-3 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/10 disabled:opacity-50">
-                      실제 거래 업로드
-                    </button>
+                <div className="lg:col-span-2 xl:col-span-3 grid gap-3 xl:grid-cols-[1.05fr_1.35fr]">
+                  <div className="rounded-2xl border border-sky-400/20 bg-sky-500/10 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-sky-200">실제 거래 연결</p>
+                    <h3 className="mt-2 text-sm font-semibold text-sky-50">Growth OS와 실제 저장 경로는 여기로 연결합니다.</h3>
+                    <p className="mt-2 text-xs leading-5 text-sky-100/80">
+                      CSV 업로드나 거래소 API 연결처럼 서버에 저장되는 진짜 거래 데이터는 차트 안이 아니라 <span className="font-semibold text-sky-50">Settings</span>에서 연결합니다.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={handleOpenImportHub}
+                        disabled={guestMode}
+                        className="rounded-md border border-sky-300/40 bg-sky-300/10 px-3 py-1.5 text-[11px] font-semibold text-sky-100 hover:bg-sky-300/20 disabled:opacity-50"
+                      >
+                        Settings에서 거래 연결하기
+                      </button>
+                    </div>
+                    <p className="mt-3 text-[11px] leading-5 text-sky-100/70">
+                      guest 모드에서는 실제 연결이 제한됩니다. 회원 계정으로 들어가면 CSV/API 연결과 Growth 계측이 이어집니다.
+                    </p>
                   </div>
-                  <p className="mt-2 text-[11px] leading-5 text-neutral-500">
-                    실제 계정 CSV/API 연결은 <span className="text-neutral-300">Settings</span>에서 진행합니다.
-                  </p>
-                </FilterGroup>
 
-                <FilterGroup label="로컬 차트 도구" tone="fuchsia">
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={exportBubbles} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                      버블 JSON 내보내기
-                    </button>
-                    <button onClick={handleImportClick} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                      버블 JSON 불러오기
-                    </button>
-                    <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
+                  <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-fuchsia-200">로컬 차트 도구</p>
+                    <h3 className="mt-2 text-sm font-semibold text-neutral-100">차트 오버레이, 버블, 실험용 CSV를 다루는 로컬 툴입니다.</h3>
+                    <p className="mt-2 text-xs leading-5 text-neutral-400">
+                      아래 버튼은 브라우저 안에서만 쓰는 실험용 도구입니다. 실제 거래 업로드나 Growth OS 계측을 대신하지 않습니다.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button onClick={exportBubbles} className="rounded-md border border-neutral-700 px-3 py-1.5 text-[11px] text-neutral-200 hover:bg-neutral-800">
+                        버블 JSON 내보내기
+                      </button>
+                      <button onClick={handleImportClick} className="rounded-md border border-neutral-700 px-3 py-1.5 text-[11px] text-neutral-200 hover:bg-neutral-800">
+                        버블 JSON 불러오기
+                      </button>
+                      <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
 
-                    <button onClick={handleTradeImportClick} disabled={guestMode} className="rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50">
-                      차트용 거래 CSV
-                    </button>
-                    <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
+                      <button
+                        onClick={handleTradeImportClick}
+                        disabled={guestMode}
+                        className="rounded-md border border-blue-900/50 px-3 py-1.5 text-[11px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50"
+                      >
+                        차트용 거래 CSV
+                      </button>
+                      <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
 
-                    <button
-                      onClick={handleStockCsvClick}
-                      disabled={guestMode}
-                      className="rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
-                    >
-                      주식 차트 CSV
-                    </button>
-                    <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
+                      <button
+                        onClick={handleStockCsvClick}
+                        disabled={guestMode}
+                        className="rounded-md border border-emerald-500/50 px-3 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
+                      >
+                        주식 차트 CSV
+                      </button>
+                      <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
+                    </div>
                   </div>
-                  <p className="mt-2 text-[11px] leading-5 text-neutral-500">
-                    이 버튼들은 차트 오버레이와 실험용 로컬 도구입니다. 실제 거래 업로드나 Growth OS 계측을 대신하지 않습니다.
-                  </p>
-                </FilterGroup>
+                </div>
 
                 <FilterGroup label="Danger Zone" tone="rose">
                   <div className="flex flex-wrap gap-2">

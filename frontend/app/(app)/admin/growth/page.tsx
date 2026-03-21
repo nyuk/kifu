@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../../../src/lib/api'
+import { MARKETING_PRODUCT_KEY, createMarketingIdea } from '../../../../src/lib/marketing'
+import type { MarketingAngleType } from '../../../../src/types/marketing'
 
 type GrowthDropOff = {
   from: string
@@ -38,7 +40,7 @@ type GrowthPayload = {
     x_drafts: GrowthDraft[]
   }
   issues: GrowthIssue[]
-  feedback?: {
+  feedback: {
     inbox_count: number
     next_count: number
     later_count: number
@@ -69,6 +71,11 @@ type ImportResponse = {
   run_id: string
 }
 
+type TodayAction = {
+  title: string
+  body: string
+}
+
 const metricLabelMap: Record<string, string> = {
   visit: '방문',
   guest_start: '게스트 시작',
@@ -84,6 +91,8 @@ const severityToneMap: Record<string, string> = {
   critical: 'border-rose-400/30 bg-rose-400/10 text-rose-100',
 }
 
+const messagePillar = 'Kifu는 거래 기록, 메모, 복기를 한 흐름으로 묶어 반복 실수를 줄입니다.'
+
 const formatDateTime = (value: string): string => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -92,6 +101,7 @@ const formatDateTime = (value: string): string => {
 
 const normalizePayload = (payload: GrowthDailyReport['payload'] | null | undefined): GrowthPayload | null => {
   if (!payload) return null
+
   let parsed: GrowthPayload | null = null
   if (typeof payload === 'string') {
     try {
@@ -99,9 +109,8 @@ const normalizePayload = (payload: GrowthDailyReport['payload'] | null | undefin
     } catch {
       return null
     }
-  }
-  if (!parsed) {
-    parsed = payload as GrowthPayload
+  } else {
+    parsed = payload
   }
 
   return {
@@ -132,6 +141,49 @@ const normalizePayload = (payload: GrowthDailyReport['payload'] | null | undefin
   }
 }
 
+const getDraftAngleType = (kind: string): MarketingAngleType => {
+  switch (kind) {
+    case 'feature':
+      return 'feature'
+    case 'dev_log':
+      return 'dev_log'
+    default:
+      return 'problem'
+  }
+}
+
+const buildTodayAction = (
+  primaryDropOff: GrowthDropOff | null,
+  primaryIssue: GrowthIssue | null,
+  recommendedActions: string[],
+): TodayAction => {
+  if (primaryDropOff && primaryDropOff.lost > 0) {
+    return {
+      title: `${metricLabelMap[primaryDropOff.from] ?? primaryDropOff.from} → ${metricLabelMap[primaryDropOff.to] ?? primaryDropOff.to} 구간 먼저 보기`,
+      body: `${primaryDropOff.lost}명이 여기서 빠졌습니다. 오늘은 이 구간의 버튼, 문구, 진입 흐름 중 하나만 먼저 점검하는 게 가장 값어치가 큽니다.`,
+    }
+  }
+
+  if (primaryIssue) {
+    return {
+      title: '오늘 먼저 정리할 이슈',
+      body: primaryIssue.message,
+    }
+  }
+
+  if (recommendedActions.length > 0) {
+    return {
+      title: '오늘의 운영 액션',
+      body: recommendedActions[0],
+    }
+  }
+
+  return {
+    title: '오늘의 운영 액션',
+    body: '지금은 큰 경고보다, 퍼널 수치와 초안 후보를 확인하며 다음 운영 루프를 고르는 단계입니다.',
+  }
+}
+
 export default function AdminGrowthPage() {
   const [report, setReport] = useState<GrowthDailyReport | null>(null)
   const [loading, setLoading] = useState(true)
@@ -139,11 +191,13 @@ export default function AdminGrowthPage() {
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uploadMessage, setUploadMessage] = useState<string>('')
+  const [uploadMessage, setUploadMessage] = useState('')
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [csvVenue, setCsvVenue] = useState('binance')
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0)
-  const [copyMessage, setCopyMessage] = useState('')
+  const [draftActionMessage, setDraftActionMessage] = useState('')
+  const [draftActionError, setDraftActionError] = useState<string | null>(null)
+  const [draftActionBusy, setDraftActionBusy] = useState<'copy' | 'marketing' | 'next' | 'later' | null>(null)
 
   const loadReport = async (refresh = false) => {
     if (refresh) {
@@ -175,13 +229,76 @@ export default function AdminGrowthPage() {
   const payload = useMemo(() => normalizePayload(report?.payload ?? null), [report])
   const draftOptions = payload?.content?.x_drafts ?? []
   const selectedDraft = draftOptions[selectedDraftIndex] ?? null
+  const sortedDropOffs = useMemo(
+    () => [...(payload?.funnel.drop_offs ?? [])].sort((a, b) => b.lost - a.lost),
+    [payload?.funnel.drop_offs],
+  )
+  const primaryDropOff = sortedDropOffs.find((item) => item.lost > 0) ?? null
+  const primaryIssue = payload?.issues?.[0] ?? null
+  const todayAction = buildTodayAction(primaryDropOff, primaryIssue, payload?.operator.recommended_actions ?? [])
 
   const copyDraft = async (draft: GrowthDraft) => {
+    setDraftActionBusy('copy')
+    setDraftActionError(null)
     try {
       await navigator.clipboard.writeText(draft.content)
-      setCopyMessage(`"${draft.title}" 초안을 복사했습니다.`)
+      setDraftActionMessage(`"${draft.title}" 초안을 복사했습니다.`)
     } catch {
-      setCopyMessage('초안 복사에 실패했습니다.')
+      setDraftActionError('초안 복사에 실패했습니다.')
+    } finally {
+      setDraftActionBusy(null)
+    }
+  }
+
+  const sendDraftToMarketing = async (draft: GrowthDraft) => {
+    setDraftActionBusy('marketing')
+    setDraftActionError(null)
+    setDraftActionMessage('')
+
+    try {
+      await createMarketingIdea({
+        product_key: MARKETING_PRODUCT_KEY,
+        title: draft.title,
+        raw_note: draft.content,
+        angle_type: getDraftAngleType(draft.kind),
+        message_pillar: messagePillar,
+        channels: ['x'],
+      })
+
+      setDraftActionMessage('Marketing OS 인박스에 저장했습니다. /marketing에서 초안 생성이나 다듬기를 이어가면 됩니다.')
+    } catch (err: any) {
+      const message = err?.response?.data?.message ?? 'Marketing OS로 보내는 데 실패했습니다.'
+      setDraftActionError(message)
+    } finally {
+      setDraftActionBusy(null)
+    }
+  }
+
+  const moveDraftToBucket = async (draft: GrowthDraft, bucket: 'next' | 'later') => {
+    setDraftActionBusy(bucket)
+    setDraftActionError(null)
+    setDraftActionMessage('')
+
+    try {
+      await api.post('/v1/growth/feedback', {
+        product_key: 'kifu',
+        source_type: 'internal_memo',
+        bucket,
+        title: draft.title,
+        body: draft.content,
+        metadata: {
+          report_id: report?.id,
+          report_date: payload?.report_date,
+          draft_kind: draft.kind,
+        },
+      })
+      await loadReport(true)
+      setDraftActionMessage(bucket === 'next' ? '초안을 Next 큐에 넣었습니다.' : '초안을 Later 큐에 넣었습니다.')
+    } catch (err: any) {
+      const message = err?.response?.data?.message ?? '초안 상태를 저장하지 못했습니다.'
+      setDraftActionError(message)
+    } finally {
+      setDraftActionBusy(null)
     }
   }
 
@@ -223,15 +340,15 @@ export default function AdminGrowthPage() {
   }
 
   const metrics = [
-    { key: 'visit', value: payload?.funnel?.counts?.visit ?? 0 },
-    { key: 'guest_start', value: payload?.funnel?.counts?.guest_start ?? 0 },
-    { key: 'signup_completed', value: payload?.funnel?.counts?.signup_completed ?? 0 },
+    { key: 'visit', value: payload?.funnel.counts.visit ?? 0 },
+    { key: 'guest_start', value: payload?.funnel.counts.guest_start ?? 0 },
+    { key: 'signup_completed', value: payload?.funnel.counts.signup_completed ?? 0 },
     {
       key: 'data_connected',
-      value: (payload?.funnel?.counts?.csv_upload_completed ?? 0) + (payload?.funnel?.counts?.api_connect_completed ?? 0),
+      value: (payload?.funnel.counts.csv_upload_completed ?? 0) + (payload?.funnel.counts.api_connect_completed ?? 0),
       label: '데이터 연결',
     },
-    { key: 'first_review_completed', value: payload?.funnel?.counts?.first_review_completed ?? 0 },
+    { key: 'first_review_completed', value: payload?.funnel.counts.first_review_completed ?? 0 },
   ]
 
   return (
@@ -240,7 +357,7 @@ export default function AdminGrowthPage() {
         <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Admin Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold text-zinc-100">Growth Daily Report</h1>
         <p className="mt-3 text-sm text-zinc-400">
-          최신 퍼널 지표, 이슈, 운영 액션, X 초안 후보를 한 번에 확인하는 최소 운영 화면입니다.
+          최신 퍼널 지표, 가장 큰 이탈 구간, 운영 액션, X 초안 후보를 한 번에 확인하는 최소 운영 화면입니다.
         </p>
         <div className="mt-4 flex flex-wrap gap-3 text-xs">
           <Link href="/admin" className="text-cyan-200 hover:text-cyan-100">
@@ -252,21 +369,31 @@ export default function AdminGrowthPage() {
         </div>
       </header>
 
-      {loading && <p className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4 text-sm text-zinc-400">리포트를 불러오는 중입니다...</p>}
-      {error && <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</p>}
+      {loading && (
+        <p className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4 text-sm text-zinc-400">
+          리포트를 불러오는 중입니다...
+        </p>
+      )}
+      {error && (
+        <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+          {error}
+        </p>
+      )}
 
       {!loading && !error && report && payload && (
         <>
           <section className="grid gap-3 md:grid-cols-5">
             {metrics.map((metric) => (
               <article key={metric.key} className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{metric.label ?? metricLabelMap[metric.key] ?? metric.key}</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                  {metric.label ?? metricLabelMap[metric.key] ?? metric.key}
+                </p>
                 <p className="mt-2 text-3xl font-semibold text-zinc-100">{metric.value}</p>
               </article>
             ))}
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
               <article className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -280,7 +407,9 @@ export default function AdminGrowthPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-zinc-500">새벽 운영 중에는 오늘 리포트를 다시 생성해 지금까지의 이벤트를 바로 확인할 수 있습니다.</p>
+                  <p className="text-xs text-zinc-500">
+                    오늘 리포트를 다시 생성하면 지금까지 쌓인 이벤트와 초안 후보를 바로 반영해 볼 수 있습니다.
+                  </p>
                   <button
                     type="button"
                     onClick={() => void loadReport(true)}
@@ -295,37 +424,62 @@ export default function AdminGrowthPage() {
                 </p>
               </article>
 
-              <article className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
-                <h2 className="text-lg font-medium text-zinc-100">운영자가 바로 볼 것</h2>
-                <div className="mt-4 space-y-3">
-                  {payload.operator.recommended_actions.map((action) => (
-                    <div key={action} className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
-                      {action}
-                    </div>
-                  ))}
-                </div>
+              <article className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-6">
+                <p className="text-xs uppercase tracking-[0.2em] text-cyan-200">Today&apos;s Action</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">{todayAction.title}</h2>
+                <p className="mt-3 text-sm leading-6 text-cyan-50/90">{todayAction.body}</p>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Feedback Inbox</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-100">{payload.feedback?.inbox_count ?? 0}</p>
+                  <div className="rounded-xl border border-white/10 bg-black/10 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/70">Feedback Inbox</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{payload.feedback.inbox_count}</p>
                   </div>
-                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Next</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-100">{payload.feedback?.next_count ?? 0}</p>
+                  <div className="rounded-xl border border-white/10 bg-black/10 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/70">Next</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{payload.feedback.next_count}</p>
                   </div>
-                  <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">Later</p>
-                    <p className="mt-2 text-2xl font-semibold text-zinc-100">{payload.feedback?.later_count ?? 0}</p>
+                  <div className="rounded-xl border border-white/10 bg-black/10 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/70">Later</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{payload.feedback.later_count}</p>
                   </div>
                 </div>
+                {payload.operator.recommended_actions.length > 0 && (
+                  <div className="mt-4 space-y-2 rounded-xl border border-white/10 bg-black/10 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-cyan-100/70">운영자가 바로 볼 것</p>
+                    {payload.operator.recommended_actions.slice(0, 3).map((action) => (
+                      <p key={action} className="text-sm leading-6 text-cyan-50/90">
+                        {action}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </article>
 
               <article className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
-                <h2 className="text-lg font-medium text-zinc-100">이슈와 드롭오프</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-medium text-zinc-100">이슈와 드롭오프</h2>
+                  {primaryDropOff && primaryDropOff.lost > 0 && (
+                    <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-amber-100">
+                      가장 큰 이탈 {primaryDropOff.lost}
+                    </span>
+                  )}
+                </div>
+
+                {primaryDropOff && primaryDropOff.lost > 0 && (
+                  <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-4 text-sm text-amber-100">
+                    <p className="text-[11px] uppercase tracking-[0.18em] opacity-80">우선 확인할 구간</p>
+                    <p className="mt-2 font-medium">
+                      {metricLabelMap[primaryDropOff.from] ?? primaryDropOff.from} → {metricLabelMap[primaryDropOff.to] ?? primaryDropOff.to}
+                    </p>
+                    <p className="mt-1">이탈 {primaryDropOff.lost}</p>
+                    <p className="mt-2 text-xs leading-5 text-amber-50/80">{primaryDropOff.note}</p>
+                  </div>
+                )}
+
                 <div className="mt-4 grid gap-3">
-                  {payload.issues.length === 0 && payload.funnel.drop_offs.length === 0 && (
+                  {payload.issues.length === 0 && sortedDropOffs.length === 0 && (
                     <p className="text-sm text-zinc-400">현재 기록된 주요 이슈가 없습니다.</p>
                   )}
+
                   {payload.issues.map((issue) => (
                     <div
                       key={issue.code}
@@ -337,8 +491,16 @@ export default function AdminGrowthPage() {
                       <p className="mt-1">{issue.message}</p>
                     </div>
                   ))}
-                  {payload.funnel.drop_offs.map((drop) => (
-                    <div key={`${drop.from}-${drop.to}`} className="rounded-xl border border-white/[0.06] bg-black/20 px-4 py-3 text-sm text-zinc-300">
+
+                  {sortedDropOffs.map((drop) => (
+                    <div
+                      key={`${drop.from}-${drop.to}`}
+                      className={`rounded-xl border px-4 py-3 text-sm ${
+                        primaryDropOff && drop.from === primaryDropOff.from && drop.to === primaryDropOff.to
+                          ? 'border-amber-400/20 bg-amber-500/5 text-zinc-100'
+                          : 'border-white/[0.06] bg-black/20 text-zinc-300'
+                      }`}
+                    >
                       <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
                         {metricLabelMap[drop.from] ?? drop.from} → {metricLabelMap[drop.to] ?? drop.to}
                       </p>
@@ -416,11 +578,6 @@ export default function AdminGrowthPage() {
                   <h2 className="text-lg font-medium text-zinc-100">X 초안 후보</h2>
                   <span className="text-xs text-zinc-500">{draftOptions.length}개</span>
                 </div>
-                {copyMessage && (
-                  <p className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                    {copyMessage}
-                  </p>
-                )}
                 <div className="mt-4 space-y-3">
                   {draftOptions.length === 0 && <p className="text-sm text-zinc-400">생성된 X 초안이 없습니다.</p>}
                   {draftOptions.map((draft, index) => (
@@ -445,27 +602,71 @@ export default function AdminGrowthPage() {
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-medium text-zinc-100">선택한 초안</h2>
                   {selectedDraft && (
-                    <button
-                      type="button"
-                      onClick={() => void copyDraft(selectedDraft)}
-                      className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20"
-                    >
-                      초안 복사
-                    </button>
+                    <span className="rounded-full border border-white/[0.08] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                      {selectedDraft.kind}
+                    </span>
                   )}
                 </div>
+
                 {!selectedDraft && <p className="mt-4 text-sm text-zinc-400">왼쪽 목록에서 초안을 선택해 주세요.</p>}
+
                 {selectedDraft && (
                   <div className="mt-4 space-y-3">
                     <div className="rounded-xl border border-white/[0.06] bg-black/20 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{selectedDraft.kind}</p>
-                      <p className="mt-1 text-base font-semibold text-zinc-100">{selectedDraft.title}</p>
+                      <p className="text-base font-semibold text-zinc-100">{selectedDraft.title}</p>
                     </div>
-                    <div className="rounded-xl border border-white/[0.06] bg-black/20 px-4 py-4 text-sm leading-6 whitespace-pre-wrap text-zinc-200">
+                    <div className="rounded-xl border border-white/[0.06] bg-black/20 px-4 py-4 text-sm leading-6 text-zinc-200 whitespace-pre-wrap">
                       {selectedDraft.content}
                     </div>
+
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => void copyDraft(selectedDraft)}
+                        disabled={draftActionBusy !== null}
+                        className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {draftActionBusy === 'copy' ? '복사 중...' : '초안 복사'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void sendDraftToMarketing(selectedDraft)}
+                        disabled={draftActionBusy !== null}
+                        className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {draftActionBusy === 'marketing' ? '보내는 중...' : 'Marketing OS로 보내기'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void moveDraftToBucket(selectedDraft, 'next')}
+                        disabled={draftActionBusy !== null}
+                        className="rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {draftActionBusy === 'next' ? '저장 중...' : 'Next로 보내기'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void moveDraftToBucket(selectedDraft, 'later')}
+                        disabled={draftActionBusy !== null}
+                        className="rounded-md border border-white/[0.16] bg-black/20 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {draftActionBusy === 'later' ? '저장 중...' : 'Later로 보내기'}
+                      </button>
+                    </div>
+
+                    {draftActionMessage && (
+                      <p className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                        {draftActionMessage}
+                      </p>
+                    )}
+                    {draftActionError && (
+                      <p className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                        {draftActionError}
+                      </p>
+                    )}
+
                     <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs leading-5 text-amber-100">
-                      최소 운영 흐름: 여기서 초안을 고른 뒤 복사하고, 필요하면 <Link href="/marketing" className="underline underline-offset-2">Marketing OS</Link>로 이동해 다듬은 후 X에 게시하면 됩니다.
+                      최소 운영 흐름: 여기서 초안을 고른 뒤 바로 복사해 X에 올리거나, <Link href="/marketing" className="underline underline-offset-2">Marketing OS</Link>로 보내 승인 흐름에서 다시 다듬을 수 있습니다.
                     </div>
                   </div>
                 )}
