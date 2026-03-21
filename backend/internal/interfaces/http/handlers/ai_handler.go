@@ -33,6 +33,7 @@ const (
 	providerGemini   = "gemini"
 	oneShotMaxTokens = 360
 	geminiMaxTokens  = 480
+	oneShotPromptVer = "v6"
 )
 
 var (
@@ -140,6 +141,7 @@ func (c *oneShotCache) set(key string, response OneShotAIResponse) {
 
 func buildOneShotCacheKey(userID uuid.UUID, req OneShotAIRequest) string {
 	parts := []string{
+		oneShotPromptVer,
 		userID.String(),
 		strings.ToLower(strings.TrimSpace(req.Provider)),
 		strings.ToLower(strings.TrimSpace(req.PromptType)),
@@ -186,6 +188,17 @@ func isProductionEnv() bool {
 		env = strings.TrimSpace(strings.ToLower(os.Getenv("ENV")))
 	}
 	return env == "production" || env == "prod"
+}
+
+func (h *AIHandler) isAdminUser(ctx context.Context, userID uuid.UUID) (bool, error) {
+	user, err := h.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, nil
+	}
+	return user.IsAdmin, nil
 }
 
 func (h *AIHandler) enforceAllowlist(ctx context.Context, userID uuid.UUID) error {
@@ -315,6 +328,12 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "no providers available"})
 	}
 
+	isAdminUser, err := h.isAdminUser(c.Context(), userID)
+	if err != nil {
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+	}
+
 	subscription, err := h.subscriptionRepo.GetByUserID(c.Context(), userID)
 	if err != nil {
 		log.Printf("[ai_handler] internal error: %v", err)
@@ -378,11 +397,11 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 		}
 	}
 
-	if serviceUsage > 0 && subscription.AIQuotaRemaining < serviceUsage {
+	if !isAdminUser && serviceUsage > 0 && subscription.AIQuotaRemaining < serviceUsage {
 		failRun("failed_quota_exceeded", "AI quota exceeded")
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 	}
-	if h.exceedsServiceMonthlyCap(subscription, serviceUsage) {
+	if !isAdminUser && h.exceedsServiceMonthlyCap(subscription, serviceUsage) {
 		failRun("failed_beta_cap_exceeded", "monthly beta cap exceeded")
 		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
 	}
@@ -445,12 +464,12 @@ func (h *AIHandler) RequestOpinions(c *fiber.Ctx) error {
 			TokensUsed: tokensUsed,
 		})
 
-		if h.aiInvocationService.UsesServiceKey(provider, key) {
+		if !isAdminUser && h.aiInvocationService.UsesServiceKey(provider, key) {
 			successfulServiceUsage++
 		}
 	}
 
-	if successfulServiceUsage > 0 {
+	if !isAdminUser && successfulServiceUsage > 0 {
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, successfulServiceUsage)
 		if err != nil {
 			log.Printf("[RequestOpinions] DecrementQuota error for user=%s: %v", userID, err)
@@ -524,6 +543,12 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": "symbol, timeframe, and price are required"})
 	}
 
+	isAdminUser, err := h.isAdminUser(c.Context(), userID)
+	if err != nil {
+		log.Printf("[ai_handler] internal error: %v", err)
+		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": "an internal error occurred"})
+	}
+
 	subscription, err := h.subscriptionRepo.GetByUserID(c.Context(), userID)
 	if err != nil {
 		log.Printf("[ai_handler] internal error: %v", err)
@@ -552,10 +577,10 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"code": "INVALID_REQUEST", "message": err.Error()})
 	}
 
-	if h.aiInvocationService.UsesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
+	if !isAdminUser && h.aiInvocationService.UsesServiceKey(provider, apiKey) && subscription.AIQuotaRemaining < 1 {
 		return c.Status(429).JSON(fiber.Map{"code": "QUOTA_EXCEEDED", "message": "AI quota exceeded"})
 	}
-	if h.aiInvocationService.UsesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
+	if !isAdminUser && h.aiInvocationService.UsesServiceKey(provider, apiKey) && h.exceedsServiceMonthlyCap(subscription, 1) {
 		return c.Status(429).JSON(fiber.Map{"code": "BETA_CAP_EXCEEDED", "message": "monthly beta cap exceeded"})
 	}
 
@@ -610,7 +635,7 @@ func (h *AIHandler) RequestOneShot(c *fiber.Ctx) error {
 		}
 	}
 
-	if h.aiInvocationService.UsesServiceKey(provider, apiKey) {
+	if !isAdminUser && h.aiInvocationService.UsesServiceKey(provider, apiKey) {
 		ok, err := h.subscriptionRepo.DecrementQuota(c.Context(), userID, 1)
 		if err != nil {
 			log.Printf("[RequestOneShot] DecrementQuota error for user=%s: %v", userID, err)
@@ -845,7 +870,23 @@ func (h *AIHandler) lookupModel(ctx context.Context, provider string) (string, e
 	if item == nil || !item.Enabled {
 		return "", errors.New("provider not enabled")
 	}
-	return item.Model, nil
+	model := strings.TrimSpace(item.Model)
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case providerGemini:
+		switch strings.ToLower(model) {
+		case "", "gemini-pro", "gemini-1.5-pro":
+			return "gemini-2.5-flash", nil
+		}
+	case providerClaude:
+		if model == "" {
+			return "claude-3-5-sonnet-latest", nil
+		}
+	case providerOpenAI:
+		if model == "" {
+			return "gpt-4o-mini", nil
+		}
+	}
+	return model, nil
 }
 
 type klineItem struct {
@@ -962,6 +1003,9 @@ func buildOneShotPrompt(req OneShotAIRequest) string {
 	builder.WriteString("- 마지막 결론에서 행동 제안과 다른 말을 하지 말 것\n\n")
 	builder.WriteString("핵심 규칙:\n")
 	builder.WriteString("- 근거 없는 일반론 금지. 증거 패킷이 있으면 반드시 그 안의 데이터(포지션/체결/버블/요약)를 직접 인용\n")
+	builder.WriteString(fmt.Sprintf("- 현재 심볼(%s) 체결 데이터를 우선 분석. 다른 심볼 체결은 현재 심볼 데이터가 부족할 때만 보조적으로 언급\n", strings.TrimSpace(req.Symbol)))
+	builder.WriteString("- 체결이 있으면 매수/매도 비중, 마지막 체결 방향, 체결 패턴을 먼저 읽고 메모에 적어야 할 질문을 제시\n")
+	builder.WriteString("- '포지션 없음', '데이터 부족', '추가 정보 필요' 같은 무미건조한 결론 금지. 있는 데이터로 최대한 판단\n")
 	builder.WriteString("- 행동 제안은 반드시 하나의 방향으로 명확히 결정: 유지/축소/정리/추가/관망/진입 중 하나\n")
 	builder.WriteString("- 포지션이 존재할 때는 '관망' 남발 금지. 관망을 제시하려면 현재 리스크가 낮다는 근거 1줄을 함께 제시\n")
 	builder.WriteString("- 증거에 손절/익절/기준이 있으면 해당 기준의 준수/위반 여부를 1줄로 먼저 판정\n")

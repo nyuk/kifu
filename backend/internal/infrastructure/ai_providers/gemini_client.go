@@ -65,18 +65,13 @@ func (c *GeminiClient) Invoke(ctx context.Context, invocation *interfaces.AIInvo
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Determine endpoint - Gemini uses model in URL
-	endpoint := invocation.DefaultEndpoint()
-	baseURL := invocation.Provider.BaseURL
-	if baseURL == "" {
-		baseURL = "https://generativelanguage.googleapis.com/v1beta"
-	}
+	// Gemini native API — always use the correct base URL regardless of DB value
+	baseURL := "https://generativelanguage.googleapis.com/v1beta"
 
 	endpointURL := fmt.Sprintf(
-		"%s/models/%s:%s?key=%s",
+		"%s/models/%s:generateContent?key=%s",
 		strings.TrimSuffix(baseURL, "/"),
 		invocation.Model,
-		endpoint,
 		url.QueryEscape(invocation.Credential),
 	)
 

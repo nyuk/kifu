@@ -497,17 +497,17 @@ export function BubbleCreateModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
-      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/[0.08] bg-neutral-950/95 backdrop-blur-md text-neutral-100 shadow-xl">
-        <div className="border-b border-white/[0.08] px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-4">
+      <div className="w-full max-w-2xl max-h-[94vh] overflow-hidden rounded-2xl border border-white/[0.08] bg-neutral-950/95 backdrop-blur-md text-neutral-100 shadow-xl">
+        <div className="border-b border-white/[0.08] px-6 py-3">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble</p>
-          <h3 className="mt-2 text-xl font-semibold">새 말풍선 기록</h3>
-          <p className="mt-1 text-sm text-neutral-400">
+          <h3 className="mt-1 text-lg font-semibold">새 말풍선 기록</h3>
+          <p className="mt-0.5 text-sm text-neutral-400">
             {symbol} · {timeframe}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col">
-          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5 pr-4">
+        <form onSubmit={handleSubmit} className="flex max-h-[82vh] flex-col">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4 pr-4">
           {error && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
               {error}
@@ -655,31 +655,31 @@ export function BubbleCreateModal({
               </p>
             )}
             {aiResponses.length > 0 && (
-              <div className="mt-2 space-y-2">
+              <div className="mt-3 space-y-3">
                 {aiResponses.map((response) => {
                   const sections = response === primaryAiResponse ? aiSections : parseAiSections(response.response)
                   return (
-                    <div key={`${response.provider}-${response.created_at}`} className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-                      <div className="mb-2 flex items-center justify-between gap-3">
+                    <div key={`${response.provider}-${response.created_at}`} className="rounded-xl border border-white/[0.10] bg-black/20 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">{formatProviderLabel(response.provider)}</p>
-                          <p className="text-[11px] text-neutral-500">{response.model}</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400">{formatProviderLabel(response.provider)}</p>
+                          <p className="text-xs text-neutral-500">{response.model}</p>
                         </div>
                       </div>
                       {sections.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           {sections.map((section) => (
                             <div
                               key={`${response.provider}-${section.title}-${section.body.slice(0, 16)}`}
-                              className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
+                              className={`rounded-lg border px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${toneClass(section.tone)}`}
                             >
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
-                              <p className="mt-1 text-xs text-inherit whitespace-pre-wrap">{section.body}</p>
+                              <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-80">{section.title}</p>
+                              <p className="mt-1.5 text-sm text-inherit whitespace-pre-wrap">{section.body}</p>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="rounded-lg border border-white/[0.06] bg-black/30 px-3 py-2 text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                        <div className="rounded-lg border border-white/[0.06] bg-black/30 px-4 py-3 text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
                           {response.response}
                         </div>
                       )}
@@ -693,8 +693,15 @@ export function BubbleCreateModal({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evidence Packet</p>
-                <p className="text-[11px] text-neutral-500">일회성 분석 패킷 · 서버에 저장되지 않습니다.</p>
-                <p className="text-[11px] text-neutral-500">포지션 포함은 별도 선택 가능합니다.</p>
+                {aiResponses.length === 0 && (
+                  <>
+                    <p className="text-[11px] text-neutral-500">일회성 분석 패킷 · 서버에 저장되지 않습니다.</p>
+                    <p className="text-[11px] text-neutral-500">포지션 포함은 별도 선택 가능합니다.</p>
+                  </>
+                )}
+                {aiResponses.length > 0 && (
+                  <p className="text-[11px] text-emerald-300">{packetSummaryText}</p>
+                )}
               </div>
               <button
                 type="button"
@@ -724,6 +731,7 @@ export function BubbleCreateModal({
               </button>
             </div>
 
+            {aiResponses.length === 0 && (
             <div className="mt-3 space-y-2 text-xs text-neutral-300">
               <div className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">패킷 프리셋</p>
@@ -942,6 +950,7 @@ export function BubbleCreateModal({
                 </div>
               )}
             </div>
+            )}
           </div>
 
           </div>

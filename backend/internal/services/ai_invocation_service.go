@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/interfaces"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 )
@@ -52,6 +54,9 @@ func (s *AIInvocationService) InvokeProvider(
 		return nil, fmt.Errorf("provider not enabled: %s", providerName)
 	}
 
+	provider = normalizeProviderConfig(provider)
+	model = normalizeProviderModel(provider.Name, model, provider.Model)
+
 	// Step 2: Resolve credential
 	credential, err := s.credentialResolver.ResolveCredential(ctx, userID, providerName)
 	if err != nil {
@@ -90,4 +95,49 @@ func (s *AIInvocationService) InvokeProvider(
 // UsesServiceKey checks if the given credential is a service-managed key
 func (s *AIInvocationService) UsesServiceKey(providerName string, credential string) bool {
 	return s.credentialResolver.UsesServiceKey(providerName, credential)
+}
+
+func normalizeProviderConfig(provider *entities.AIProvider) *entities.AIProvider {
+	if provider == nil {
+		return provider
+	}
+	name := strings.ToLower(strings.TrimSpace(provider.Name))
+	// Always correct provider_type based on canonical name mapping
+	switch name {
+	case "gemini":
+		provider.ProviderType = "google"
+	case "claude":
+		provider.ProviderType = "anthropic"
+	case "openai":
+		provider.ProviderType = "openai"
+	default:
+		if provider.ProviderType == "" {
+			provider.ProviderType = name
+		}
+	}
+	return provider
+}
+
+func normalizeProviderModel(providerName string, requestedModel string, providerDefault string) string {
+	preferred := strings.TrimSpace(requestedModel)
+	if preferred == "" {
+		preferred = strings.TrimSpace(providerDefault)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(providerName)) {
+	case "gemini":
+		switch strings.ToLower(preferred) {
+		case "", "gemini-pro", "gemini-1.5-pro":
+			return "gemini-2.5-flash"
+		}
+	case "claude":
+		if preferred == "" {
+			return "claude-3-5-sonnet-latest"
+		}
+	case "openai":
+		if preferred == "" {
+			return "gpt-4o-mini"
+		}
+	}
+	return preferred
 }

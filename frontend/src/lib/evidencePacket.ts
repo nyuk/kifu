@@ -283,6 +283,15 @@ export function describeEvidencePacket(packet: EvidencePacket): string[] {
     const range = packet.trades.range
     const rangeLabel = range ? `${range.from.slice(0, 10)} ~ ${range.to.slice(0, 10)}` : 'range unknown'
     lines.push(`Recent trades: ${packet.trades.count} (${rangeLabel})`)
+    for (const t of packet.trades.items) {
+      lines.push(`- ${t.symbol} ${t.side.toUpperCase()} ${t.price} x${t.quantity} @ ${t.trade_time.slice(0, 16)}`)
+    }
+    if (packet.trades.items.length > 0) {
+      const buys = packet.trades.items.filter((t) => t.side.toUpperCase() === 'BUY').length
+      const sells = packet.trades.items.length - buys
+      const last = packet.trades.items[0]
+      lines.push(`Trade pattern: BUY ${buys} / SELL ${sells} · last ${last.side.toUpperCase()} @ ${last.price}`)
+    }
   }
 
   if (packet.bubbles) {
@@ -290,12 +299,28 @@ export function describeEvidencePacket(packet: EvidencePacket): string[] {
     const rangeLabel = range ? `${range.from.slice(0, 10)} ~ ${range.to.slice(0, 10)}` : 'range unknown'
     const tags = packet.bubbles.tags && packet.bubbles.tags.length > 0 ? ` · tags ${packet.bubbles.tags.join(',')}` : ''
     lines.push(`Recent bubbles: ${packet.bubbles.count} (${rangeLabel})${tags}`)
+    for (const b of packet.bubbles.items) {
+      const memoSnippet = b.memo ? ` · "${b.memo.slice(0, 80)}"` : ''
+      const tagLabel = b.tags && b.tags.length > 0 ? ` [${b.tags.join(',')}]` : ''
+      lines.push(`- ${b.symbol} ${b.timeframe} @ ${b.candle_time.slice(0, 16)}${tagLabel}${memoSnippet}`)
+    }
   }
 
   if (packet.summary) {
     const range = packet.summary.range
     const totalTrades = packet.summary.totals?.total_trades ?? 0
     lines.push(`Summary ${range.from.slice(0, 10)} ~ ${range.to.slice(0, 10)} · trades ${totalTrades}`)
+    if (packet.summary.by_side) {
+      const buySide = packet.summary.by_side.find((s: any) => s.side?.toUpperCase() === 'BUY')
+      const sellSide = packet.summary.by_side.find((s: any) => s.side?.toUpperCase() === 'SELL')
+      if (buySide || sellSide) {
+        const buyCount = buySide?.count ?? 0
+        const sellCount = sellSide?.count ?? 0
+        const buyVol = buySide?.total_quantity ?? '0'
+        const sellVol = sellSide?.total_quantity ?? '0'
+        lines.push(`Summary by side: BUY ${buyCount} (vol ${buyVol}) / SELL ${sellCount} (vol ${sellVol})`)
+      }
+    }
   }
 
   return lines
