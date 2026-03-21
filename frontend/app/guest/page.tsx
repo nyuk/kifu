@@ -108,7 +108,7 @@ export default function GuestPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Guest Mode</p>
           <h1 className="text-3xl font-semibold">게스트 대시보드 미리보기</h1>
           <p className="text-sm text-zinc-400">
-            더미 데이터로 전체 탭 흐름을 체험하고, 서비스가 어떤 느낌으로 돌아가는지 빠르게 확인할 수 있습니다.
+            이 화면은 저장 없는 미리보기입니다. 더미 데이터로 전체 탭 흐름을 먼저 보고, 마음에 들면 아래에서 실제 게스트 홈을 열 수 있습니다.
           </p>
         </header>
 
@@ -200,9 +200,9 @@ export default function GuestPage() {
         </section>
 
         <section className="rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-5">
-          <h2 className="text-lg font-semibold">다음 단계</h2>
+          <h2 className="text-lg font-semibold">미리보기 후 선택</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            실제 사용을 시작하려면 회원가입 후 거래내역 불러오기 또는 초기 성향 테스트를 진행하세요.
+            여기서는 흐름만 확인합니다. 계속 써보려면 실제 게스트 홈으로 들어가거나, 웹 계정을 만들고 거래를 불러오면 됩니다.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
@@ -211,10 +211,10 @@ export default function GuestPage() {
               disabled={starting}
               className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
             >
-              {starting ? '게스트 세션 시작 중...' : '게스트 세션 시작'}
+              {starting ? '게스트 홈 여는 중...' : '실제 게스트 홈 열기'}
             </button>
-            <Link href="/onboarding/start" className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
-              처음부터 시작
+            <Link href="/register?next=%2Fonboarding%2Fimport" className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
+              웹 계정 만들기
             </Link>
           </div>
           {startError && (
@@ -223,7 +223,7 @@ export default function GuestPage() {
             </p>
           )}
           <p className="mt-3 text-xs text-zinc-500">
-            게스트 세션에서는 API/CSV/AI 설정 기능이 비활성화됩니다.
+            실제 게스트 홈에서도 API/CSV/AI 설정 기능은 비활성화됩니다. 저장 가능한 흐름은 웹 계정 + 설정에서 시작합니다.
           </p>
         </section>
       </div>

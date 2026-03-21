@@ -101,7 +101,7 @@ const normalizePayload = (payload: GrowthDailyReport['payload'] | null | undefin
     }
   }
   if (!parsed) {
-    parsed = payload
+    parsed = payload as GrowthPayload
   }
 
   return {

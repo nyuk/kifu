@@ -22,7 +22,7 @@ export default function OnboardingStartPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">시작하기</p>
             <h1 className="text-3xl font-semibold">어떻게 시작할까요?</h1>
             <p className="text-sm text-neutral-400">
-              기본 흐름은 웹 계정과 설정입니다. 가입이 부담스럽다면 게스트로 먼저 둘러볼 수 있습니다.
+              기본 흐름은 웹 계정과 설정입니다. 가입이 부담스럽다면 먼저 미리보기로 화면 흐름을 보고, 필요하면 실제 게스트 홈으로 들어갈 수 있습니다.
             </p>
           </header>
 
@@ -30,16 +30,16 @@ export default function OnboardingStartPage() {
             {/* Option A: Guest preview */}
             <article className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-5">
               <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Option A</p>
-              <h2 className="mt-2 text-xl font-semibold">게스트로 먼저 둘러보기</h2>
+              <h2 className="mt-2 text-xl font-semibold">게스트 미리보기</h2>
               <p className="mt-2 text-sm text-neutral-300">
-                실제 계정 생성 전에 홈, 차트, 복기 흐름을 더미 데이터로 먼저 확인할 수 있습니다.
+                실제 계정 생성 전에 홈, 차트, 복기 흐름을 더미 데이터로 먼저 확인합니다. 저장 없이 구조만 빠르게 보는 단계입니다.
               </p>
               <div className="mt-4">
                 <Link
                   href="/guest?mode=preview"
                   className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200 hover:border-neutral-500 transition-colors"
                 >
-                  게스트 입장
+                  미리보기 열기
                 </Link>
               </div>
             </article>

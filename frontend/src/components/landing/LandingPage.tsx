@@ -179,12 +179,12 @@ export function LandingPage() {
                             href="/guest?mode=preview"
                             className="group inline-flex items-center gap-2.5 rounded-full border border-neutral-300 bg-white px-8 py-4 text-sm font-bold text-neutral-900 transition-all hover:bg-neutral-50 hover:-translate-y-0.5"
                         >
-                            게스트로 먼저 둘러보기
-                            <span className="text-neutral-500 text-xs font-normal">빠른 미리보기</span>
+                            게스트 미리보기
+                            <span className="text-neutral-500 text-xs font-normal">화면 흐름만 먼저 보기</span>
                         </Link>
                     </div>
                     <p className="mt-4 text-xs text-neutral-400">
-                        웹 계정으로 바로 시작하거나, 게스트 모드로 화면 흐름을 먼저 볼 수 있습니다.
+                        웹 계정으로 바로 시작하거나, 게스트 미리보기로 화면 흐름을 먼저 볼 수 있습니다.
                     </p>
                 </div>
 
@@ -438,7 +438,7 @@ export function LandingPage() {
                     </h2>
 
                     <p className="mt-6 text-neutral-500 max-w-md mx-auto">
-                        기본 시작은 웹 계정과 설정 흐름입니다. 바로 가입하기 부담스럽다면 게스트로 먼저 둘러볼 수 있습니다.
+                        기본 시작은 웹 계정과 설정 흐름입니다. 바로 가입하기 부담스럽다면 저장 없는 게스트 미리보기로 화면 흐름을 먼저 볼 수 있습니다.
                     </p>
 
                     <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -452,7 +452,7 @@ export function LandingPage() {
                             href="/guest?mode=preview"
                             className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-4 text-sm font-semibold text-white hover:bg-white/5 transition-colors"
                         >
-                            게스트로 먼저 보기
+                            게스트 미리보기
                         </Link>
                     </div>
                 </div>
