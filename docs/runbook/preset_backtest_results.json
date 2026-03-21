@@ -1,0 +1,254 @@
+{
+  "generated_at": "2026-03-21T17:49:45.732675+00:00",
+  "data_range": {
+    "from": "2020-01-01 09:00:00",
+    "to": "2026-03-22 02:45:00"
+  },
+  "presets": [
+    {
+      "id": "dip-rebound-v1",
+      "label": "급락 반등 감시",
+      "short_description": "24시간 안에 5% 이상 급락하면 반등 기회를 감시합니다.",
+      "category": "rebound",
+      "risk_level": "medium",
+      "educational_note": "반등형 전략은 하락 추세에서 추가 급락을 잘못 잡을 수 있습니다. 손절 기준을 반드시 확인하세요.",
+      "params": {
+        "trigger": "24h drop >= 5%",
+        "tp": "+2%",
+        "sl": "-3%",
+        "timeout": "24h"
+      },
+      "summary_all": {
+        "signal_count": 881,
+        "win_rate": 60.4,
+        "avg_return_pct": 0.14,
+        "max_drawdown_pct": -11.92,
+        "avg_hold_bars": 29.7,
+        "avg_hold_hours": 7.4,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 493,
+        "sl_count": 293,
+        "timeout_count": 95
+      },
+      "summary_180d": {
+        "signal_count": 41,
+        "win_rate": 61.0,
+        "avg_return_pct": 0.195,
+        "max_drawdown_pct": -5.65,
+        "avg_hold_bars": 45.5,
+        "avg_hold_hours": 11.4,
+        "window": "180d",
+        "tp_count": 22,
+        "sl_count": 11,
+        "timeout_count": 8
+      },
+      "summary_90d": {
+        "signal_count": 22,
+        "win_rate": 63.6,
+        "avg_return_pct": 0.29,
+        "max_drawdown_pct": -5.65,
+        "avg_hold_bars": 38.0,
+        "avg_hold_hours": 9.5,
+        "window": "90d",
+        "tp_count": 13,
+        "sl_count": 5,
+        "timeout_count": 4
+      },
+      "recent_examples": [
+        {
+          "date": "2026-02-23",
+          "entry_price": 64427.65,
+          "result_pct": 2.064,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2026-02-24",
+          "entry_price": 64213.24,
+          "result_pct": 0.403,
+          "exit_type": "timeout"
+        },
+        {
+          "date": "2026-02-28",
+          "entry_price": 64570.21,
+          "result_pct": 2.078,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2026-03-06",
+          "entry_price": 68804.02,
+          "result_pct": -1.542,
+          "exit_type": "timeout"
+        },
+        {
+          "date": "2026-03-19",
+          "entry_price": 71042.89,
+          "result_pct": -1.879,
+          "exit_type": "timeout"
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    },
+    {
+      "id": "trend-recovery-v1",
+      "label": "추세 회복 감시",
+      "short_description": "가격이 20시간 평균선 아래에서 위로 회복하는 순간을 감시합니다.",
+      "category": "trend",
+      "risk_level": "low",
+      "educational_note": "추세 회복은 '가짜 돌파'가 잦습니다. 돌파 후에도 재이탈할 수 있으므로 확인 매매를 권장합니다.",
+      "params": {
+        "trigger": "close crosses above 20h MA",
+        "tp": "+1.5%",
+        "sl": "-2%",
+        "timeout": "48h"
+      },
+      "summary_all": {
+        "signal_count": 1699,
+        "win_rate": 57.2,
+        "avg_return_pct": 0.085,
+        "max_drawdown_pct": -5.47,
+        "avg_hold_bars": 63.6,
+        "avg_hold_hours": 15.9,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 905,
+        "sl_count": 631,
+        "timeout_count": 163
+      },
+      "summary_180d": {
+        "signal_count": 125,
+        "win_rate": 53.6,
+        "avg_return_pct": -0.097,
+        "max_drawdown_pct": -2.96,
+        "avg_hold_bars": 71.3,
+        "avg_hold_hours": 17.8,
+        "window": "180d",
+        "tp_count": 61,
+        "sl_count": 53,
+        "timeout_count": 11
+      },
+      "summary_90d": {
+        "signal_count": 60,
+        "win_rate": 50.0,
+        "avg_return_pct": -0.262,
+        "max_drawdown_pct": -2.96,
+        "avg_hold_bars": 75.7,
+        "avg_hold_hours": 18.9,
+        "window": "90d",
+        "tp_count": 26,
+        "sl_count": 27,
+        "timeout_count": 7
+      },
+      "recent_examples": [
+        {
+          "date": "2026-03-12",
+          "entry_price": 70311.44,
+          "result_pct": 1.79,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2026-03-14",
+          "entry_price": 71767.15,
+          "result_pct": -0.434,
+          "exit_type": "timeout"
+        },
+        {
+          "date": "2026-03-16",
+          "entry_price": 71529.63,
+          "result_pct": 1.74,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2026-03-17",
+          "entry_price": 74211.94,
+          "result_pct": -2.028,
+          "exit_type": "sl"
+        },
+        {
+          "date": "2026-03-20",
+          "entry_price": 70314.21,
+          "result_pct": 0.14,
+          "exit_type": "timeout"
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    },
+    {
+      "id": "vol-spike-v1",
+      "label": "변동성 급증 감시",
+      "short_description": "평소보다 변동성이 2배 이상 커지는 순간을 감시합니다.",
+      "category": "volatility",
+      "risk_level": "high",
+      "educational_note": "변동성 급증은 방향을 알려주지 않습니다. 큰 움직임이 시작됐다는 신호일 뿐이므로 방향 판단은 별도로 해야 합니다.",
+      "params": {
+        "trigger": "24h vol > 2x 7d vol",
+        "tp": "+2.5%",
+        "sl": "-2.5%",
+        "timeout": "12h"
+      },
+      "summary_all": {
+        "signal_count": 124,
+        "win_rate": 49.2,
+        "avg_return_pct": -0.311,
+        "max_drawdown_pct": -11.26,
+        "avg_hold_bars": 16.9,
+        "avg_hold_hours": 4.2,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 50,
+        "sl_count": 50,
+        "timeout_count": 24
+      },
+      "summary_180d": {
+        "signal_count": 3,
+        "win_rate": 33.3,
+        "avg_return_pct": 0.542,
+        "max_drawdown_pct": -1.86,
+        "avg_hold_bars": 32.7,
+        "avg_hold_hours": 8.2,
+        "window": "180d",
+        "tp_count": 1,
+        "sl_count": 0,
+        "timeout_count": 2
+      },
+      "summary_90d": {
+        "signal_count": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "max_drawdown_pct": 0,
+        "avg_hold_bars": 0,
+        "window": "90d"
+      },
+      "recent_examples": [
+        {
+          "date": "2025-01-21",
+          "entry_price": 100786.25,
+          "result_pct": 3.112,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2025-01-21",
+          "entry_price": 103724.0,
+          "result_pct": -3.128,
+          "exit_type": "sl"
+        },
+        {
+          "date": "2025-10-11",
+          "entry_price": 110809.05,
+          "result_pct": 2.598,
+          "exit_type": "tp"
+        },
+        {
+          "date": "2025-10-11",
+          "entry_price": 112360.83,
+          "result_pct": -0.145,
+          "exit_type": "timeout"
+        },
+        {
+          "date": "2025-10-11",
+          "entry_price": 112027.74,
+          "result_pct": -0.827,
+          "exit_type": "timeout"
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    }
+  ]
+}
