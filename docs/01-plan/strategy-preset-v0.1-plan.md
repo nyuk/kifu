@@ -88,6 +88,8 @@ v0.1은 **BTC 전용**, 자체 백테스트 데이터 기반, 3개 프리셋 고
 }
 ```
 
+**⚠ Phase 1 필수 수정**: `RuleConfigForm.tsx:183-185`의 volatility timeframe select가 15m/1h/4h만 제공. **Phase 1에서 `12h` 옵션 추가 필요** (백엔드는 string 기반이라 제한 없음).
+
 ### Preset 3: 사이클 저점 매수
 
 | 항목 | 값 |
@@ -120,7 +122,7 @@ v0.1은 **BTC 전용**, 자체 백테스트 데이터 기반, 3개 프리셋 고
 }
 ```
 
-**주의**: 기존 `price_change` alert rule은 `reference: "24h"`만 지원할 수 있음. `"90d"` 지원을 위해 alert monitor 수정이 필요할 수 있음. → Phase 2에서 확인.
+**⚠ Phase 1 제한**: `PriceChangeConfig.reference`는 `'24h' | '1h' | '4h'`만 지원 (`alert.ts:8`). `alert_monitor.go:658` `parseDuration()`도 1h/4h/24h만 처리, default=24h. **Phase 1에서 이 프리셋의 CTA는 비활성화** ("준비 중" 표시). Phase 2에서 90d reference 지원 추가 후 활성화.
 
 ## Data Source
 
@@ -187,16 +189,25 @@ Alerts
 **목표**: 백테스트 결과를 카드로 보여주고 알림 연결
 
 1. `Alerts` 하위에 `Preset Strategies` 탭 추가
-2. `preset_backtest_results_final.json`을 프론트에 정적 import
+2. `preset_backtest_results_final.json`을 `frontend/src/data/`에 배치하고 정적 import
 3. `PresetCard` 컴포넌트 구현 (이름, 수치 4개, 예시, CTA)
-4. CTA 클릭 → `RuleEditor` prefill open
-5. 상단 risk notice 고정
+4. Preset 1,2: CTA 클릭 → `RuleEditor` prefill open
+5. **Preset 3: CTA 비활성화** — "준비 중" 표시 (90d reference 미지원)
+6. `RuleConfigForm.tsx` volatility timeframe select에 `12h` 옵션 추가
+7. 상단 risk notice 고정
+
+**데이터 파일 위치**:
+- 원본: `docs/runbook/preset_backtest_results_final.json`
+- 프론트용 복사: `frontend/src/data/presetBacktestResults.json`
+- Next.js 외부 디렉터리 import 설정 불필요 (프론트 내부에 배치)
 
 **건드리는 파일 (예상)**:
+- `frontend/src/data/presetBacktestResults.json` — 백테스트 결과 데이터
 - `frontend/src/types/preset.ts` — 타입 정의
 - `frontend/src/components/presets/PresetCard.tsx` — 카드 컴포넌트
 - `frontend/src/components/presets/PresetStrategies.tsx` — 탭 페이지
 - `frontend/src/components/alerts/` — 탭 추가, RuleEditor prefill 연동
+- `frontend/src/components/alerts/RuleConfigForm.tsx` — volatility 12h 옵션 추가
 - `frontend/app/` — 라우팅 (필요시)
 
 **건드리지 않는 것**:
@@ -204,12 +215,16 @@ Alerts
 - alert rule 모델 변경 없음
 - 새 DB 테이블 없음
 
-### Phase 2: Alert 연결 검증
+### Phase 2: Alert 연결 검증 + 90d 지원
 
-**목표**: 프리셋에서 생성한 alert rule이 실제로 트리거되는지 확인
+**목표**: 프리셋에서 생성한 alert rule이 실제로 트리거되는지 확인, Preset 3 활성화
 
 1. Preset 1,2의 alert rule이 기존 `alert_monitor.go`에서 정상 트리거되는지 확인
-2. Preset 3의 `reference: "90d"` 지원 여부 확인 → 필요시 alert monitor 확장
+2. **Preset 3 활성화 작업**:
+   - `alert.ts`: `PriceChangeConfig.reference` 타입에 `'90d'` 추가
+   - `alert_monitor.go`: `parseDuration()`에 `"90d"` case 추가 (= 2160h)
+   - `RuleConfigForm.tsx`: price_change reference select에 90d 옵션 추가
+   - Preset 3 카드 CTA 활성화
 3. cooldown 설정이 프리셋 성격에 맞는지 검증
 
 ### Phase 3: 백테스트 갱신 자동화 (optional)
@@ -297,15 +312,19 @@ type PresetExample = {
 
 1. 3개 프리셋 카드가 `/alerts` 안에 표시된다
 2. 각 카드에 승률, 평균수익, 거래수, 보유기간이 보인다
-3. "이 전략으로 알림 받기"를 누르면 RuleEditor가 prefill 상태로 열린다
-4. 상단에 risk notice가 항상 보인다
-5. 기준일이 카드에 표시된다
+3. Preset 1,2: "이 전략으로 알림 받기"를 누르면 RuleEditor가 prefill 상태로 열린다
+4. Preset 3: CTA가 "준비 중"으로 비활성화되어 있다 (Phase 2 대기)
+5. 상단에 risk notice가 항상 보인다
+6. 기준일이 카드에 표시된다
+7. RuleEditor volatility timeframe에 12h 옵션이 존재한다
 
 ## Risk & Mitigation
 
 | 위험 | 대응 |
 |------|------|
-| 사이클 저점의 90d reference를 alert monitor가 지원 안 할 수 있음 | Phase 2에서 확인. 필요시 alert monitor 확장 또는 v0.1에서 해당 프리셋의 알림 연결만 비활성화 |
+| 사이클 저점의 90d reference를 alert monitor가 지원 안 함 (확인됨) | **Phase 1에서 CTA 비활성화**. Phase 2에서 `parseDuration()` + 타입 확장 후 활성화 |
+| Preset 2의 12h timeframe이 RuleEditor select에 없음 (확인됨) | **Phase 1에서 `RuleConfigForm.tsx`에 12h 옵션 추가** |
+| JSON이 `docs/runbook/`에 있어 Next.js에서 직접 import 불가 | **`frontend/src/data/`로 복사하여 사용** |
 | 최근 180d/90d 수치가 나쁠 수 있음 | 카드에 "전체 기간" 수치를 메인으로, 최근 수치는 보조로 표시 |
 | 카드 수치가 현재 시점과 괴리 | generated_at 표시 + 7일 초과 시 stale 배지 |
 | 거래수가 적어 통계적 신뢰도 의문 | 교육적 고지문으로 투명하게 설명 ("6년간 N회 발생 기준") |

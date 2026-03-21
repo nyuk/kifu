@@ -92,6 +92,12 @@ Exhaustive parameter sweep (`scripts/preset_backtest_sweep.py`):
 | `frontend/src/components/alerts/` | Add "Strategy Presets" tab to alerts section |
 | Alert RuleEditor | Support prefill props from preset's `alert_rule_template` |
 
+### Phase 1 Constraints (from Codex Review)
+
+- **Preset 3 CTA disabled** — show card with metrics but CTA says "준비 중" (90d not supported yet)
+- **Add 12h to volatility timeframe select** in `RuleConfigForm.tsx`
+- **JSON lives in `frontend/src/data/`** not `docs/runbook/`
+
 ### What NOT to Build
 
 - No new backend API
@@ -123,12 +129,21 @@ Each preset includes `alert_rule_template` with exact CreateAlertRuleRequest sha
 - Forbidden tone: 추천, 확실한 수익, 자동 매매
 - Must include: "과거 성과는 미래 결과를 보장하지 않습니다", data range (2020~2026), fee disclosure (0.08%)
 
-## Phase 2 Concern (After Phase 1)
+## Codex Review Findings (2026-03-22) — All Resolved
 
-Preset 3 (`cycle-accum-v1`) uses `reference: "90d"` in alert rule config.
-Current `alert_monitor.go` may only support `"24h"` reference.
-Need to verify and potentially extend the alert monitor for 90d lookback.
-→ Phase 2 task, not a blocker for Phase 1 (cards can show without working alerts).
+### [P1] Preset 3 — 90d reference not supported (CONFIRMED)
+- `alert.ts:8`: `reference: '24h' | '1h' | '4h'` — no 90d
+- `alert_monitor.go:658-668`: `parseDuration()` default = 24h for unknown values
+- **Resolution**: Phase 1 CTA disabled ("준비 중"). Phase 2 adds 90d to type + parseDuration + editor.
+
+### [P1] Preset 2 — 12h timeframe missing from RuleEditor (CONFIRMED)
+- `RuleConfigForm.tsx:183-185`: volatility select only has 15m/1h/4h
+- Backend is string-based, no restriction on 12h
+- **Resolution**: Phase 1 adds `<option value="12h">12h</option>` to the select.
+
+### [P2] JSON import path outside frontend (CONFIRMED)
+- `next.config.mjs`: no external directory import setup
+- **Resolution**: Copy JSON to `frontend/src/data/presetBacktestResults.json`. Keep `docs/runbook/` copy as source of truth for scripts.
 
 ## Pending Non-Preset Work
 
