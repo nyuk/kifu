@@ -39,6 +39,21 @@ func (r *GrowthRepositoryImpl) CreateFunnelEvent(ctx context.Context, event *ent
 	return err
 }
 
+func (r *GrowthRepositoryImpl) HasUserEvent(ctx context.Context, userID uuid.UUID, eventName string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM growth_funnel_events
+			WHERE user_id = $1 AND event_name = $2
+		)
+	`, userID, eventName).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (r *GrowthRepositoryImpl) CountFunnelEventsByRange(ctx context.Context, from, to time.Time) ([]domainrepos.GrowthDailyReportSummary, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT event_name, COUNT(*)::int

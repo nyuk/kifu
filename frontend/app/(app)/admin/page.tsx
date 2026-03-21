@@ -122,6 +122,13 @@ type AdminUserSnapshotResponse = {
 
 const tools = [
   {
+    href: '/admin/growth',
+    label: 'Growth Daily Report',
+    title: 'Growth OS 리포트',
+    description:
+      '최신 퍼널 지표, 운영 이슈, X 초안 후보를 한 화면에서 보고 바로 선택할 수 있습니다.',
+  },
+  {
     href: '/admin/sim-report',
     label: 'Sim Report Generator',
     title: '시뮬레이터 진단',

@@ -20,6 +20,7 @@ import (
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	cryptoutil "github.com/moneyvessel/kifu/internal/infrastructure/crypto"
 	"github.com/moneyvessel/kifu/internal/jobs"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 const (
@@ -37,6 +38,7 @@ type ExchangeHandler struct {
 	encryptionKey []byte
 	client        *http.Client
 	syncer        ExchangeSyncer
+	growthService *services.GrowthOSService
 }
 
 type ExchangeSyncer interface {
@@ -53,7 +55,12 @@ func NewExchangeHandler(
 	encryptionKey []byte,
 	syncer ExchangeSyncer,
 	runRepo repositories.RunRepository,
+	growthServices ...*services.GrowthOSService,
 ) *ExchangeHandler {
+	var growthService *services.GrowthOSService
+	if len(growthServices) > 0 {
+		growthService = growthServices[0]
+	}
 	return &ExchangeHandler{
 		exchangeRepo:  exchangeRepo,
 		tradeRepo:     tradeRepo,
@@ -62,7 +69,8 @@ func NewExchangeHandler(
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		syncer: syncer,
+		syncer:        syncer,
+		growthService: growthService,
 	}
 }
 
@@ -455,6 +463,18 @@ func (h *ExchangeHandler) Sync(c *fiber.Ctx) error {
 		"inserted_count": inserted,
 		"http_status":    200,
 	}))
+
+	if afterCount > 0 {
+		trackGrowthMilestone(c.Context(), h.growthService, userID, entities.GrowthEventAPIConnectComplete, c.Path(), map[string]any{
+			"exchange":       cred.Exchange,
+			"before_count":   beforeCount,
+			"after_count":    afterCount,
+			"inserted_count": inserted,
+			"full_backfill":  fullBackfill,
+			"history_days":   historyDays,
+			"run_id":         run.RunID.String(),
+		})
+	}
 
 	return c.Status(200).JSON(ExchangeSyncResponse{
 		Success:       true,

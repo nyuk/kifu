@@ -88,25 +88,25 @@ type GrowthOperatorHintsSection struct {
 }
 
 type GrowthOSService struct {
-	growthRepo repositories.GrowthRepository
-	tradeRepo  repositories.TradeRepository
-	now        func() time.Time
-	location   *time.Location
+	growthRepo    repositories.GrowthRepository
+	portfolioRepo repositories.PortfolioRepository
+	now           func() time.Time
+	location      *time.Location
 }
 
 func NewGrowthOSService(
 	growthRepo repositories.GrowthRepository,
-	tradeRepo repositories.TradeRepository,
+	portfolioRepo repositories.PortfolioRepository,
 ) *GrowthOSService {
 	location, err := time.LoadLocation("Asia/Seoul")
 	if err != nil {
 		location = time.UTC
 	}
 	return &GrowthOSService{
-		growthRepo: growthRepo,
-		tradeRepo:  tradeRepo,
-		now:        func() time.Time { return time.Now().UTC() },
-		location:   location,
+		growthRepo:    growthRepo,
+		portfolioRepo: portfolioRepo,
+		now:           func() time.Time { return time.Now().UTC() },
+		location:      location,
 	}
 }
 
@@ -138,6 +138,37 @@ func (s *GrowthOSService) TrackEvent(ctx context.Context, input GrowthEventInput
 		OccurredAt:     occurredAt,
 		CreatedAt:      now,
 	})
+}
+
+func (s *GrowthOSService) TrackUserMilestone(ctx context.Context, userID uuid.UUID, eventName string, sourcePath string, metadata map[string]any) (bool, error) {
+	eventName = normalizeGrowthEventName(eventName)
+	if eventName == "" {
+		return false, fmt.Errorf("invalid event_name")
+	}
+
+	exists, err := s.growthRepo.HasUserEvent(ctx, userID, eventName)
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		return false, nil
+	}
+
+	var sourcePathPtr *string
+	if trimmed := strings.TrimSpace(sourcePath); trimmed != "" {
+		sourcePathPtr = &trimmed
+	}
+
+	if err := s.TrackEvent(ctx, GrowthEventInput{
+		UserID:     &userID,
+		EventName:  eventName,
+		SourcePath: sourcePathPtr,
+		Metadata:   metadata,
+	}); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *GrowthOSService) CreateFeedbackItem(ctx context.Context, input CreateGrowthFeedbackInput) (*entities.GrowthFeedbackItem, error) {
@@ -186,7 +217,7 @@ func (s *GrowthOSService) CreateFeedbackItem(ctx context.Context, input CreateGr
 }
 
 func (s *GrowthOSService) GenerateDailyReport(ctx context.Context, reportDate time.Time) (*entities.GrowthDailyReport, error) {
-	day := time.Date(reportDate.In(s.location).Year(), reportDate.In(s.location).Month(), reportDate.In(s.location).Day(), 0, 0, 0, 0, s.location)
+	day := s.growthDay(reportDate)
 	if existing, err := s.growthRepo.GetDailyReportByDate(ctx, day); err == nil && existing != nil {
 		return existing, nil
 	}
@@ -249,6 +280,25 @@ func (s *GrowthOSService) GetLatestDailyReport(ctx context.Context) (*entities.G
 	return s.growthRepo.GetLatestDailyReport(ctx)
 }
 
+func (s *GrowthOSService) GetOperationalDailyReport(ctx context.Context, forceRefresh bool) (*entities.GrowthDailyReport, error) {
+	today := s.growthDay(s.now())
+	if forceRefresh {
+		return s.regenerateDailyReport(ctx, today)
+	}
+
+	latest, err := s.growthRepo.GetLatestDailyReport(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if latest == nil {
+		return s.GenerateDailyReport(ctx, today)
+	}
+	if !s.isSameGrowthDay(latest.ReportDate, today) {
+		return s.GenerateDailyReport(ctx, today)
+	}
+	return latest, nil
+}
+
 func (s *GrowthOSService) buildContentSection(ctx context.Context, from, to time.Time) (GrowthContentSection, []GrowthIssue) {
 	sourceUserID := strings.TrimSpace(os.Getenv("GROWTH_CONTENT_USER_ID"))
 	if sourceUserID == "" {
@@ -276,13 +326,10 @@ func (s *GrowthOSService) buildContentSection(ctx context.Context, from, to time
 			}}
 	}
 
-	filter := repositories.TradeFilter{
-		From:  &from,
-		To:    &to,
-		Limit: 500,
-		Sort:  "desc",
-	}
-	summary, _, symbols, err := s.tradeRepo.Summary(ctx, userID, filter)
+	contentFrom := from.Add(-24 * time.Hour)
+	contentTo := from.Add(-time.Nanosecond)
+
+	summary, symbols, err := s.buildTradeEventSummary(ctx, userID, contentFrom, contentTo)
 	if err != nil {
 		return GrowthContentSection{
 				SourceStatus:  "summary_error",
@@ -312,9 +359,63 @@ func (s *GrowthOSService) buildContentSection(ctx context.Context, from, to time
 	return GrowthContentSection{
 		SourceStatus:  "ready",
 		SourceUserID:  ptrString(userID.String()),
-		ReviewSummary: buildReviewSummary(from, summary, symbols),
-		XDrafts:       buildXDrafts(from, summary, symbols),
+		ReviewSummary: buildReviewSummary(contentFrom, summary, symbols),
+		XDrafts:       buildXDrafts(contentFrom, summary, symbols),
 	}, nil
+}
+
+func (s *GrowthOSService) buildTradeEventSummary(ctx context.Context, userID uuid.UUID, from, to time.Time) (repositories.TradeSummary, []repositories.TradeSymbolSummary, error) {
+	events, err := s.portfolioRepo.ListTimeline(ctx, userID, repositories.TimelineFilter{
+		From:       &from,
+		To:         &to,
+		EventTypes: []string{"spot_trade", "perp_trade", "dex_swap"},
+		Limit:      1000,
+	})
+	if err != nil {
+		return repositories.TradeSummary{}, nil, err
+	}
+
+	summary := repositories.TradeSummary{}
+	symbolIndex := map[string]int{}
+	symbols := make([]repositories.TradeSymbolSummary, 0)
+
+	for _, event := range events {
+		summary.TotalTrades++
+
+		side := ""
+		if event.Side != nil {
+			side = strings.ToLower(strings.TrimSpace(*event.Side))
+		}
+		switch side {
+		case "buy":
+			summary.BuyCount++
+		case "sell":
+			summary.SellCount++
+		}
+
+		symbol := strings.TrimSpace(event.Instrument)
+		if symbol == "" {
+			symbol = "UNKNOWN"
+		}
+		idx, exists := symbolIndex[symbol]
+		if !exists {
+			idx = len(symbols)
+			symbolIndex[symbol] = idx
+			symbols = append(symbols, repositories.TradeSymbolSummary{
+				Symbol: symbol,
+			})
+		}
+		symbols[idx].TradeCount++
+		symbols[idx].TotalTrades++
+		switch side {
+		case "buy":
+			symbols[idx].BuyCount++
+		case "sell":
+			symbols[idx].SellCount++
+		}
+	}
+
+	return summary, symbols, nil
 }
 
 func (s *GrowthOSService) buildFeedbackSection(ctx context.Context) GrowthFeedbackSection {
@@ -506,4 +607,72 @@ func trimOptional(value *string) *string {
 
 func ptrString(value string) *string {
 	return &value
+}
+
+func (s *GrowthOSService) growthDay(value time.Time) time.Time {
+	local := value.In(s.location)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.location)
+}
+
+func (s *GrowthOSService) isSameGrowthDay(a, b time.Time) bool {
+	dayA := s.growthDay(a)
+	dayB := s.growthDay(b)
+	return dayA.Equal(dayB)
+}
+
+func (s *GrowthOSService) regenerateDailyReport(ctx context.Context, reportDate time.Time) (*entities.GrowthDailyReport, error) {
+	day := s.growthDay(reportDate)
+
+	from := day
+	to := day.Add(24 * time.Hour)
+	funnelCounts, err := s.growthRepo.CountFunnelEventsByRange(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	countMap := map[string]int{}
+	for _, item := range funnelCounts {
+		countMap[item.EventName] = item.Count
+	}
+
+	content, issues := s.buildContentSection(ctx, from, to)
+	feedbackSection := s.buildFeedbackSection(ctx)
+	dropOffs, notes := buildGrowthDropOffs(countMap)
+	issues = append(issues, buildFunnelIssues(countMap)...)
+
+	payload := GrowthDailyReportPayload{
+		GeneratedAt: s.now(),
+		ReportDate:  day.Format("2006-01-02"),
+		Funnel: GrowthFunnelSection{
+			Counts:   countMap,
+			DropOffs: dropOffs,
+			Notes:    notes,
+		},
+		Content:  content,
+		Issues:   issues,
+		Feedback: feedbackSection,
+		Operator: GrowthOperatorHintsSection{
+			RecommendedActions: buildOperatorActions(content, countMap, issues),
+		},
+	}
+
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal growth daily report payload: %w", err)
+	}
+
+	report := &entities.GrowthDailyReport{
+		ID:                 uuid.New(),
+		ReportDate:         day,
+		Status:             "ready",
+		Payload:            rawPayload,
+		ContentDraftsCount: len(content.XDrafts),
+		IssuesCount:        len(issues),
+		CreatedAt:          s.now(),
+		UpdatedAt:          s.now(),
+	}
+	if err := s.growthRepo.CreateDailyReport(ctx, report); err != nil {
+		return nil, err
+	}
+	return report, nil
 }

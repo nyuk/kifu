@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 )
 
@@ -14,6 +15,7 @@ type GrowthDailyReportSummary struct {
 
 type GrowthRepository interface {
 	CreateFunnelEvent(ctx context.Context, event *entities.GrowthFunnelEvent) error
+	HasUserEvent(ctx context.Context, userID uuid.UUID, eventName string) (bool, error)
 	CountFunnelEventsByRange(ctx context.Context, from, to time.Time) ([]GrowthDailyReportSummary, error)
 	CreateFeedbackItem(ctx context.Context, item *entities.GrowthFeedbackItem) error
 	ListFeedbackByBucket(ctx context.Context, productKey, bucket string, limit int) ([]*entities.GrowthFeedbackItem, error)

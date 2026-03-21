@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,31 +18,42 @@ import (
 	"github.com/google/uuid"
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 type ImportHandler struct {
 	portfolioRepo repositories.PortfolioRepository
 	runRepo       repositories.RunRepository
+	growthService *services.GrowthOSService
 }
 
 type ImportResponse struct {
-	Imported               int           `json:"imported"`
-	Skipped                int           `json:"skipped"`
-	Duplicates             int           `json:"duplicates"`
-	Issues                 []importIssue `json:"issues"`
-	IssueCount             int           `json:"issue_count"`
-	IssuesTruncated        bool          `json:"issues_truncated"`
-	PositionsRefreshed     bool          `json:"positions_refreshed"`
-	PositionRefreshError   string        `json:"positions_refresh_error"`
-	Venue                  string        `json:"venue"`
-	Source                 string        `json:"source"`
-	RunID                  string        `json:"run_id"`
+	Imported             int           `json:"imported"`
+	Skipped              int           `json:"skipped"`
+	Duplicates           int           `json:"duplicates"`
+	Issues               []importIssue `json:"issues"`
+	IssueCount           int           `json:"issue_count"`
+	IssuesTruncated      bool          `json:"issues_truncated"`
+	PositionsRefreshed   bool          `json:"positions_refreshed"`
+	PositionRefreshError string        `json:"positions_refresh_error"`
+	Venue                string        `json:"venue"`
+	Source               string        `json:"source"`
+	RunID                string        `json:"run_id"`
 }
 
-func NewImportHandler(portfolioRepo repositories.PortfolioRepository, runRepo repositories.RunRepository) *ImportHandler {
+func NewImportHandler(
+	portfolioRepo repositories.PortfolioRepository,
+	runRepo repositories.RunRepository,
+	growthServices ...*services.GrowthOSService,
+) *ImportHandler {
+	var growthService *services.GrowthOSService
+	if len(growthServices) > 0 {
+		growthService = growthServices[0]
+	}
 	return &ImportHandler{
 		portfolioRepo: portfolioRepo,
 		runRepo:       runRepo,
+		growthService: growthService,
 	}
 }
 
@@ -81,19 +92,19 @@ var validEventTypes = map[string]struct{}{
 }
 
 type csvColumns struct {
-	executedAt int
-	symbol     int
-	side       int
-	qty        int
-	price      int
-	fee        int
-	feeAsset   int
-	eventType  int
-	externalID int
+	executedAt  int
+	symbol      int
+	side        int
+	qty         int
+	price       int
+	fee         int
+	feeAsset    int
+	eventType   int
+	externalID  int
 	venueSymbol int
-	baseAsset  int
-	quoteAsset int
-	metadata   int
+	baseAsset   int
+	quoteAsset  int
+	metadata    int
 }
 
 type importIssue struct {
@@ -332,15 +343,27 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 
 	runFinishedAt := time.Now().UTC()
 	runSummaryMeta := map[string]any{
-		"run_id":                run.RunID.String(),
-		"exchange_rows_imported": imported,
-		"exchange_rows_skipped":  skipped,
+		"run_id":                   run.RunID.String(),
+		"exchange_rows_imported":   imported,
+		"exchange_rows_skipped":    skipped,
 		"exchange_rows_duplicated": duplicates,
-		"positions_refreshed":    positionsRefreshed,
-		"positions_error":        positionRefreshError,
-		"http_status":            http.StatusOK,
+		"positions_refreshed":      positionsRefreshed,
+		"positions_error":          positionRefreshError,
+		"http_status":              http.StatusOK,
 	}
 	_ = h.runRepo.UpdateStatus(c.Context(), run.RunID, "completed", &runFinishedAt, mergeJSON(mustJSON(runMeta), runSummaryMeta))
+
+	if imported > 0 {
+		trackGrowthMilestone(c.Context(), h.growthService, userID, entities.GrowthEventCSVUploadComplete, c.Path(), map[string]any{
+			"imported":            imported,
+			"skipped":             skipped,
+			"duplicates":          duplicates,
+			"venue":               venue,
+			"source":              source,
+			"positions_refreshed": positionsRefreshed,
+			"run_id":              run.RunID.String(),
+		})
+	}
 
 	if report == "csv" {
 		var buffer bytes.Buffer
@@ -365,17 +388,17 @@ func (h *ImportHandler) ImportTrades(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"imported":               imported,
-		"skipped":                skipped,
-		"duplicates":             duplicates,
-		"issues":                 issues,
-		"issue_count":            len(issues),
-		"issues_truncated":       issuesTruncated,
-		"positions_refreshed":    positionsRefreshed,
+		"imported":                imported,
+		"skipped":                 skipped,
+		"duplicates":              duplicates,
+		"issues":                  issues,
+		"issue_count":             len(issues),
+		"issues_truncated":        issuesTruncated,
+		"positions_refreshed":     positionsRefreshed,
 		"positions_refresh_error": positionRefreshError,
-		"venue":                  venue,
-		"source":                 source,
-		"run_id":                 run.RunID.String(),
+		"venue":                   venue,
+		"source":                  source,
+		"run_id":                  run.RunID.String(),
 	})
 }
 
@@ -411,19 +434,19 @@ func resolveCsvColumns(header []string) (csvColumns, []string) {
 	}
 
 	cols := csvColumns{
-		executedAt: resolve("executed_at", "trade_time", "timestamp", "time", "datetime"),
-		symbol:     resolve("symbol", "pair", "instrument"),
-		side:       resolve("side", "type"),
-		qty:        resolve("qty", "quantity", "amount", "size"),
-		price:      resolve("price", "avg_price", "executed_price"),
-		fee:        resolve("fee", "commission"),
-		feeAsset:   resolve("fee_asset", "fee_currency", "commission_asset"),
-		eventType:  resolve("event_type"),
-		externalID: resolve("external_id", "trade_id", "tx_hash"),
+		executedAt:  resolve("executed_at", "trade_time", "timestamp", "time", "datetime"),
+		symbol:      resolve("symbol", "pair", "instrument"),
+		side:        resolve("side", "type"),
+		qty:         resolve("qty", "quantity", "amount", "size"),
+		price:       resolve("price", "avg_price", "executed_price"),
+		fee:         resolve("fee", "commission"),
+		feeAsset:    resolve("fee_asset", "fee_currency", "commission_asset"),
+		eventType:   resolve("event_type"),
+		externalID:  resolve("external_id", "trade_id", "tx_hash"),
 		venueSymbol: resolve("venue_symbol", "exchange_symbol"),
-		baseAsset:  resolve("base_asset", "base"),
-		quoteAsset: resolve("quote_asset", "quote"),
-		metadata:   resolve("metadata"),
+		baseAsset:   resolve("base_asset", "base"),
+		quoteAsset:  resolve("quote_asset", "quote"),
+		metadata:    resolve("metadata"),
 	}
 
 	var missing []string

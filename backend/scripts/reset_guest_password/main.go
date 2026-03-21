@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,6 +44,7 @@ func main() {
 
 	email := getenvOrDefault("RESET_GUEST_EMAIL", "guest.preview@kifu.local")
 	password := getenvOrFail("RESET_GUEST_PASSWORD")
+	forceAdmin, _ := strconv.ParseBool(getenvOrDefault("RESET_GUEST_IS_ADMIN", "false"))
 
 	userRepo := repositories.NewUserRepository(pool)
 
@@ -64,8 +66,10 @@ func main() {
 		ID:            user.ID,
 		Email:         user.Email,
 		PasswordHash:  hash,
+		PasswordSet:   true,
 		Name:          user.Name,
 		AIAllowlisted: user.AIAllowlisted,
+		IsAdmin:       user.IsAdmin || forceAdmin,
 		CreatedAt:     user.CreatedAt,
 		UpdatedAt:     time.Now().UTC(),
 	}
@@ -74,5 +78,5 @@ func main() {
 		log.Fatalf("update password failed: %v", err)
 	}
 
-	fmt.Printf("updated guest password for %s\n", email)
+	fmt.Printf("updated password for %s (is_admin=%t)\n", email, resetUser.IsAdmin)
 }

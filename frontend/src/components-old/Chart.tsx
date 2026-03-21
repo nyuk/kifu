@@ -1408,6 +1408,10 @@ export function Chart() {
     document.getElementById('import-stock-csv-input')?.click()
   }
 
+  const handleOpenImportHub = () => {
+    router.push('/settings')
+  }
+
   const handleStockCsvChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -1720,18 +1724,29 @@ export function Chart() {
                   </button>
                 </FilterGroup>
 
-                <FilterGroup label="Import / Export" tone="fuchsia">
+                <FilterGroup label="Review / Import" tone="sky">
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={handleOpenImportHub} disabled={guestMode} className="rounded-md border border-sky-500/50 px-3 py-1 text-[10px] font-semibold text-sky-200 hover:bg-sky-500/10 disabled:opacity-50">
+                      실제 거래 업로드
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-5 text-neutral-500">
+                    실제 계정 CSV/API 연결은 <span className="text-neutral-300">Settings</span>에서 진행합니다.
+                  </p>
+                </FilterGroup>
+
+                <FilterGroup label="로컬 차트 도구" tone="fuchsia">
                   <div className="flex flex-wrap gap-2">
                     <button onClick={exportBubbles} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                      Export JSON
+                      버블 JSON 내보내기
                     </button>
                     <button onClick={handleImportClick} className="rounded-md border border-neutral-700 px-3 py-1 text-[10px] text-neutral-300 hover:bg-neutral-800">
-                      Import JSON
+                      버블 JSON 불러오기
                     </button>
                     <input type="file" id="import-json-input" accept=".json" className="hidden" onChange={handleFileChange} />
 
                     <button onClick={handleTradeImportClick} disabled={guestMode} className="rounded-md border border-blue-900/50 px-3 py-1 text-[10px] text-blue-300 hover:bg-blue-900/20 disabled:opacity-50">
-                      Import CSV
+                      차트용 거래 CSV
                     </button>
                     <input type="file" id="import-csv-input" accept=".csv" className="hidden" onChange={handleTradeFileChange} />
 
@@ -1740,10 +1755,13 @@ export function Chart() {
                       disabled={guestMode}
                       className="rounded-md border border-emerald-500/50 px-3 py-1 text-[10px] text-emerald-300 hover:bg-emerald-500/10 disabled:opacity-50"
                     >
-                      Stock CSV
+                      주식 차트 CSV
                     </button>
                     <input type="file" id="import-stock-csv-input" accept=".csv" className="hidden" onChange={handleStockCsvChange} />
                   </div>
+                  <p className="mt-2 text-[11px] leading-5 text-neutral-500">
+                    이 버튼들은 차트 오버레이와 실험용 로컬 도구입니다. 실제 거래 업로드나 Growth OS 계측을 대신하지 않습니다.
+                  </p>
                 </FilterGroup>
 
                 <FilterGroup label="Danger Zone" tone="rose">

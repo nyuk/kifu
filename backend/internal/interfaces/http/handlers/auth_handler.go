@@ -23,6 +23,7 @@ import (
 	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
 	"github.com/moneyvessel/kifu/internal/infrastructure/auth"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 type AuthHandler struct {
@@ -31,6 +32,7 @@ type AuthHandler struct {
 	refreshTokenRepo repositories.RefreshTokenRepository
 	subscriptionRepo repositories.SubscriptionRepository
 	jwtSecret        string
+	growthService    *services.GrowthOSService
 }
 
 func NewAuthHandler(
@@ -39,13 +41,19 @@ func NewAuthHandler(
 	refreshTokenRepo repositories.RefreshTokenRepository,
 	subscriptionRepo repositories.SubscriptionRepository,
 	jwtSecret string,
+	growthServices ...*services.GrowthOSService,
 ) *AuthHandler {
+	var growthService *services.GrowthOSService
+	if len(growthServices) > 0 {
+		growthService = growthServices[0]
+	}
 	return &AuthHandler{
 		userRepo:         userRepo,
 		userIdentityRepo: userIdentityRepo,
 		refreshTokenRepo: refreshTokenRepo,
 		subscriptionRepo: subscriptionRepo,
 		jwtSecret:        jwtSecret,
+		growthService:    growthService,
 	}
 }
 
@@ -111,6 +119,10 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	if err := h.subscriptionRepo.Create(c.Context(), subscription); err != nil {
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
+
+	trackGrowthMilestone(c.Context(), h.growthService, user.ID, entities.GrowthEventSignupCompleted, c.Path(), map[string]any{
+		"auth_method": "password",
+	})
 
 	return c.Status(200).JSON(RegisterResponse{UserID: user.ID.String()})
 }
@@ -1142,6 +1154,9 @@ func (h *AuthHandler) createSocialUser(ctx context.Context, email string, name s
 	}); err != nil {
 		return nil, err
 	}
+	trackGrowthMilestone(ctx, h.growthService, newUser.ID, entities.GrowthEventSignupCompleted, "/api/v1/auth/social-login/callback", map[string]any{
+		"auth_method": "social",
+	})
 	return newUser, nil
 }
 

@@ -104,21 +104,15 @@ func (h *GrowthHandler) CreateFeedback(c *fiber.Ctx) error {
 }
 
 func (h *GrowthHandler) GetLatestDailyReport(c *fiber.Ctx) error {
-	report, err := h.service.GetLatestDailyReport(c.Context())
+	forceRefresh := strings.EqualFold(strings.TrimSpace(c.Query("refresh")), "1") ||
+		strings.EqualFold(strings.TrimSpace(c.Query("refresh")), "true")
+
+	report, err := h.service.GetOperationalDailyReport(c.Context(), forceRefresh)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INTERNAL_ERROR",
 			"message": err.Error(),
 		})
-	}
-	if report == nil {
-		report, err = h.service.GenerateDailyReport(c.Context(), time.Now())
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "INTERNAL_ERROR",
-				"message": err.Error(),
-			})
-		}
 	}
 	return c.JSON(report)
 }

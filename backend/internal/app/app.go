@@ -168,7 +168,7 @@ func Run() error {
 	monthlyReportService := services.NewMonthlyReportService(
 		monthlyReportRepo, tradeRepo, bubbleRepo, accuracyRepo, safetyRepo,
 	)
-	growthService := services.NewGrowthOSService(growthRepo, tradeRepo)
+	growthService := services.NewGrowthOSService(growthRepo, portfolioRepo)
 
 	http.RegisterRoutes(
 		app,

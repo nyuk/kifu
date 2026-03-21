@@ -7,15 +7,22 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/domain/repositories"
+	"github.com/moneyvessel/kifu/internal/services"
 )
 
 type GuidedReviewHandler struct {
-	repo repositories.GuidedReviewRepository
+	repo          repositories.GuidedReviewRepository
+	growthService *services.GrowthOSService
 }
 
-func NewGuidedReviewHandler(repo repositories.GuidedReviewRepository) *GuidedReviewHandler {
-	return &GuidedReviewHandler{repo: repo}
+func NewGuidedReviewHandler(repo repositories.GuidedReviewRepository, growthServices ...*services.GrowthOSService) *GuidedReviewHandler {
+	var growthService *services.GrowthOSService
+	if len(growthServices) > 0 {
+		growthService = growthServices[0]
+	}
+	return &GuidedReviewHandler{repo: repo, growthService: growthService}
 }
 
 func (h *GuidedReviewHandler) GetToday(c *fiber.Ctx) error {
@@ -124,6 +131,15 @@ func (h *GuidedReviewHandler) CompleteReview(c *fiber.Ctx) error {
 		}
 		return c.Status(500).JSON(fiber.Map{"code": "INTERNAL_ERROR", "message": err.Error()})
 	}
+
+	metadata := map[string]any{
+		"review_id": reviewID.String(),
+	}
+	if streak != nil {
+		metadata["current_streak"] = streak.CurrentStreak
+		metadata["longest_streak"] = streak.LongestStreak
+	}
+	trackGrowthMilestone(c.Context(), h.growthService, userID, entities.GrowthEventFirstReviewComplete, c.Path(), metadata)
 
 	return c.Status(200).JSON(fiber.Map{
 		"ok":     true,

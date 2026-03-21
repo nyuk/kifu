@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../lib/api'
+import { trackGrowthGuestStart } from '../lib/growth'
 import { startGuestSession, clearGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { resolveAuthRedirectPath } from '../lib/onboardingFlow'
@@ -66,7 +67,14 @@ export function Login() {
       const response = await api.post('/v1/auth/guest')
       resetSessionData()
       setTokens(response.data.access_token, response.data.refresh_token)
-      startGuestSession()
+      const session = startGuestSession()
+      if (session) {
+        await trackGrowthGuestStart({
+          guestSessionId: session.id,
+          entryPoint: 'login_guest_continue',
+          sourcePath: '/login',
+        })
+      }
       router.push('/home')
     } catch {
       setError('게스트 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.')

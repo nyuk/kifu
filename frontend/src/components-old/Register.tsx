@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../lib/api'
+import { trackGrowthGuestStart } from '../lib/growth'
 import { useAuthStore } from '../stores/auth'
 import { clearGuestSession, startGuestSession } from '../lib/guestSession'
 import { useBubbleStore } from '../lib/bubbleStore'
@@ -59,7 +60,14 @@ export function Register() {
       const response = await api.post('/v1/auth/guest')
       resetSessionData()
       setTokens(response.data.access_token, response.data.refresh_token)
-      startGuestSession()
+      const session = startGuestSession()
+      if (session) {
+        await trackGrowthGuestStart({
+          guestSessionId: session.id,
+          entryPoint: 'register_guest_continue',
+          sourcePath: '/register',
+        })
+      }
       router.push('/home')
     } catch {
       setError('게스트 로그인에 실패했습니다.')

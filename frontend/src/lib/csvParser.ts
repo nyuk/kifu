@@ -7,12 +7,15 @@ export async function parseTradeCsv(file: File): Promise<Trade[]> {
 
     if (lines.length < 2) return []
 
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim())
+    const headers = lines[0]
+        .toLowerCase()
+        .split(',')
+        .map(h => h.trim().replace(/^\ufeff/, ''))
 
     // Basic mapping helper
     const getIdx = (candidates: string[]) => headers.findIndex(h => candidates.includes(h))
 
-    const timeIdx = getIdx(['time', 'date', 'created_at', 'timestamp'])
+    const timeIdx = getIdx(['time', 'date', 'created_at', 'timestamp', 'trade_time', 'executed_at', 'datetime'])
     const sideIdx = getIdx(['side', 'type', 'action'])
     const priceIdx = getIdx(['price', 'avg_price', 'exec_price'])
     const qtyIdx = getIdx(['qty', 'quantity', 'amount', 'units'])

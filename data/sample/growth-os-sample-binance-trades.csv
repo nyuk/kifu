@@ -1,0 +1,4 @@
+trade_time,symbol,side,quantity,price,fee,fee_asset,event_type,external_id
+2026-03-20T09:12:00Z,BTCUSDT,buy,0.0025,84250.5,0.18,USDT,spot_trade,growth-demo-001
+2026-03-20T11:48:00Z,ETHUSDT,buy,0.045,1985.2,0.04,USDT,spot_trade,growth-demo-002
+2026-03-20T15:26:00Z,ETHUSDT,sell,0.020,2012.8,0.02,USDT,spot_trade,growth-demo-003

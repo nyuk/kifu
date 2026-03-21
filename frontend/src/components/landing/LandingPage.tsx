@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { trackGrowthVisitOnce } from '../../lib/growth'
 
 function TelegramMockup({ compact = false }: { compact?: boolean }) {
     const [step, setStep] = useState(0)
@@ -112,6 +113,16 @@ function CountUp({ target, suffix = '' }: { target: number; suffix?: string }) {
 }
 
 export function LandingPage() {
+    useEffect(() => {
+        trackGrowthVisitOnce({
+            entryPoint: 'landing_hero',
+            sourcePath: '/',
+            metadata: {
+                page_kind: 'landing',
+            },
+        })
+    }, [])
+
     return (
         <div className="min-h-screen bg-white text-neutral-900 antialiased overflow-x-hidden">
             {/* Minimal Nav — transparent, floating */}

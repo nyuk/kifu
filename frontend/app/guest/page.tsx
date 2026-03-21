@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../src/lib/api'
+import { trackGrowthGuestStart } from '../../src/lib/growth'
 import { startGuestSession } from '../../src/lib/guestSession'
 import { useAuthStore } from '../../src/stores/auth'
 
@@ -60,10 +61,6 @@ export default function GuestPage() {
     }
   }, [previewMode, isAuthenticated, router])
 
-  if (!previewMode) {
-    return null
-  }
-
   const scenario = useMemo(
     () =>
       [
@@ -74,13 +71,27 @@ export default function GuestPage() {
     [scenarioIndex],
   )
 
+  if (!previewMode) {
+    return null
+  }
+
   const handleGuestStart = async () => {
     setStarting(true)
     setStartError(null)
     try {
       const response = await api.post('/v1/auth/guest')
       setTokens(response.data.access_token, response.data.refresh_token)
-      startGuestSession()
+      const session = startGuestSession()
+      if (session) {
+        await trackGrowthGuestStart({
+          guestSessionId: session.id,
+          entryPoint: 'guest_preview_start',
+          sourcePath: '/guest?mode=preview',
+          metadata: {
+            mode: 'preview',
+          },
+        })
+      }
       router.push('/home')
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '게스트 시작에 실패했습니다. 잠시 후 다시 시도해주세요.'

@@ -17,6 +17,7 @@ import { parseAiSections, toneClass } from '../../../src/lib/aiResponseFormat'
 import { ExportButtons } from '../../../src/components/review/ExportButtons'
 import { PerformanceTrendChart } from '../../../src/components/review/PerformanceTrendChart'
 import { PageJumpPager } from '../../../src/components/ui/PageJumpPager'
+import { HomeGuidedReviewCard } from '../../../src/components/home/HomeGuidedReviewCard'
 import type { TradeSummaryResponse } from '../../../src/types/trade'
 import type { SymbolStats, ReviewNote, NotesListResponse } from '../../../src/types/review'
 
@@ -725,6 +726,10 @@ export default function ReviewPage() {
             {error}
           </div>
         )}
+
+        <div className="mb-6">
+          <HomeGuidedReviewCard />
+        </div>
 
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1">
           <button
