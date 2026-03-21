@@ -34,6 +34,18 @@ type ExchangeSyncResponse = {
   run_id?: string
 }
 
+type TradeImportResponse = {
+  imported: number
+  skipped: number
+  duplicates: number
+  issue_count: number
+  positions_refreshed?: boolean
+  positions_refresh_error?: string
+  venue: string
+  source: string
+  run_id: string
+}
+
 type SummaryPackPayload = {
   time_range?: {
     start_ts?: string
@@ -99,6 +111,11 @@ export function ExchangeConnectionManager() {
   const [packMap, setPackMap] = useState<Record<string, SummaryPackResponse>>({})
   const [packLoadingMap, setPackLoadingMap] = useState<Record<string, boolean>>({})
   const [packErrorMap, setPackErrorMap] = useState<Record<string, string>>({})
+  const [csvVenue, setCsvVenue] = useState<'binance' | 'upbit' | 'bybit'>('binance')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvUploading, setCsvUploading] = useState(false)
+  const [csvUploadMessage, setCsvUploadMessage] = useState('')
+  const [csvUploadError, setCsvUploadError] = useState('')
   const [, setElapsedTick] = useState(0)
 
   const [exchange, setExchange] = useState<ExchangeOption>('binance_futures')
@@ -270,6 +287,47 @@ export function ExchangeConnectionManager() {
     }
   }
 
+  const onUploadCsv = async () => {
+    if (guestMode) return
+    if (!csvFile) {
+      setCsvUploadError('업로드할 CSV 파일을 먼저 선택해 주세요.')
+      return
+    }
+
+    setCsvUploading(true)
+    setCsvUploadError('')
+    setCsvUploadMessage('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+      formData.append('venue', csvVenue)
+      formData.append('asset_class', 'crypto')
+      formData.append('venue_type', 'cex')
+      formData.append('source', 'csv')
+
+      const response = await api.post<TradeImportResponse>('/v1/imports/trades', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      setCsvUploadMessage(
+        `CSV 업로드 완료: imported ${response.data.imported}, skipped ${response.data.skipped}, duplicates ${response.data.duplicates}`,
+      )
+      setCsvFile(null)
+      if (typeof window !== 'undefined') {
+        const stamp = new Date().toISOString()
+        localStorage.setItem('kifu-portfolio-refresh', stamp)
+        window.dispatchEvent(new CustomEvent('kifu-portfolio-refresh', { detail: { at: stamp } }))
+      }
+    } catch (err: any) {
+      setCsvUploadError(err?.response?.data?.message ?? 'CSV 업로드에 실패했습니다.')
+    } finally {
+      setCsvUploading(false)
+    }
+  }
+
   const onDownloadPack = (pack: SummaryPackResponse) => {
     const blob = new Blob([JSON.stringify(pack, null, 2)], {
       type: 'application/json;charset=utf-8',
@@ -361,6 +419,51 @@ export function ExchangeConnectionManager() {
         </button>
 
         {error && <p className="mt-3 text-xs text-rose-300">{error}</p>}
+      </div>
+
+      <div className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md">
+        <p className="text-sm font-bold text-neutral-100">거래 CSV 업로드</p>
+        <p className="mt-1 text-xs text-neutral-500">
+          API 연결이 어렵다면 거래소 CSV로 먼저 시작할 수 있습니다. 업로드 후 포트폴리오와 복기 화면이 바로 채워집니다.
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-[180px_1fr]">
+          <select
+            value={csvVenue}
+            onChange={(event) => setCsvVenue(event.target.value as 'binance' | 'upbit' | 'bybit')}
+            disabled={guestMode || csvUploading}
+            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-200 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
+          >
+            <option value="binance">Binance CSV</option>
+            <option value="upbit">Upbit CSV</option>
+            <option value="bybit">Bybit CSV</option>
+          </select>
+
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            disabled={guestMode || csvUploading}
+            onChange={(event) => setCsvFile(event.target.files?.[0] ?? null)}
+            className="block w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-200 file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-neutral-200"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onUploadCsv}
+            disabled={guestMode || csvUploading}
+            className="rounded-lg bg-neutral-100 px-4 py-2 text-xs font-bold text-neutral-950 shadow-lg shadow-white/5 transition hover:bg-white disabled:opacity-60"
+          >
+            {csvUploading ? 'CSV 업로드 중...' : 'CSV 업로드'}
+          </button>
+          <p className="text-xs text-neutral-500">
+            업로드 후에는 홈/차트/복기에서 바로 데이터를 확인할 수 있습니다.
+          </p>
+        </div>
+
+        {csvUploadMessage && <p className="mt-3 text-xs text-emerald-300">{csvUploadMessage}</p>}
+        {csvUploadError && <p className="mt-3 text-xs text-rose-300">{csvUploadError}</p>}
       </div>
 
       <div className="rounded-xl border border-white/5 bg-white/[0.04] p-5 backdrop-blur-md">
