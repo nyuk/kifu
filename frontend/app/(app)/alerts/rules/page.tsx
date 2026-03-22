@@ -5,14 +5,18 @@ import { useI18n } from '../../../../src/lib/i18n'
 import { useAlertStore } from '../../../../src/stores/alertStore'
 import { RuleList } from '../../../../src/components/alerts/RuleList'
 import { RuleEditor } from '../../../../src/components/alerts/RuleEditor'
+import { PresetStrategies } from '../../../../src/components/presets/PresetStrategies'
 import type { AlertRule } from '../../../../src/types/alert'
 import Link from 'next/link'
+
+type Tab = 'rules' | 'presets'
 
 export default function AlertRulesPage() {
   const { t } = useI18n()
   const { rules, isLoadingRules, rulesError, fetchRules } = useAlertStore()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('rules')
 
   useEffect(() => {
     fetchRules()
@@ -36,54 +40,93 @@ export default function AlertRulesPage() {
             {t.alertsTitle}
           </Link>
           <span>/</span>
-          <span>{t.alertRulesTitle}</span>
+          <span>{activeTab === 'rules' ? t.alertRulesTitle : '프리셋 전략'}</span>
         </div>
-        <h2 className="mt-3 text-2xl font-semibold text-neutral-100">{t.alertRulesTitle}</h2>
-        <p className="mt-2 text-sm text-neutral-400">{t.alertRulesSubtitle}</p>
+        <h2 className="mt-3 text-2xl font-semibold text-neutral-100">
+          {activeTab === 'rules' ? t.alertRulesTitle : '프리셋 전략'}
+        </h2>
+        <p className="mt-2 text-sm text-neutral-400">
+          {activeTab === 'rules'
+            ? t.alertRulesSubtitle
+            : 'KIFU가 검증한 전략을 확인하고, 마음에 들면 알림으로 연결하세요.'}
+        </p>
       </header>
 
-      <div className="flex justify-end">
+      {/* Tabs */}
+      <div className="flex gap-2">
         <button
           type="button"
-          onClick={handleCreate}
-          className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white"
+          onClick={() => setActiveTab('rules')}
+          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+            activeTab === 'rules'
+              ? 'bg-neutral-200 text-neutral-950'
+              : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06]'
+          }`}
         >
-          + {t.createRule}
+          {t.alertRulesTitle}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('presets')}
+          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition ${
+            activeTab === 'presets'
+              ? 'bg-neutral-200 text-neutral-950'
+              : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06]'
+          }`}
+        >
+          프리셋 전략
         </button>
       </div>
 
-      {rulesError && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
-          {rulesError}
-        </div>
-      )}
-
-      {isLoadingRules && rules.length === 0 ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/[0.04]" />
-          ))}
-        </div>
-      ) : rules.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-10 text-center">
-          <p className="text-sm text-neutral-500">{t.noRules}</p>
-          <button
-            type="button"
-            onClick={handleCreate}
-            className="mt-4 rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500 transition"
-          >
-            + {t.createRule}
-          </button>
-        </div>
+      {/* Tab content */}
+      {activeTab === 'presets' ? (
+        <PresetStrategies />
       ) : (
-        <RuleList rules={rules} onEdit={handleEdit} />
-      )}
+        <>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white"
+            >
+              + {t.createRule}
+            </button>
+          </div>
 
-      <RuleEditor
-        open={editorOpen}
-        rule={editingRule}
-        onClose={() => setEditorOpen(false)}
-      />
+          {rulesError && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+              {rulesError}
+            </div>
+          )}
+
+          {isLoadingRules && rules.length === 0 ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/[0.04]" />
+              ))}
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-10 text-center">
+              <p className="text-sm text-neutral-500">{t.noRules}</p>
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="mt-4 rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500 transition"
+              >
+                + {t.createRule}
+              </button>
+            </div>
+          ) : (
+            <RuleList rules={rules} onEdit={handleEdit} />
+          )}
+
+          <RuleEditor
+            open={editorOpen}
+            rule={editingRule}
+            onClose={() => setEditorOpen(false)}
+          />
+        </>
+      )}
     </div>
   )
 }

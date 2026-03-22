@@ -1,0 +1,318 @@
+{
+  "generated_at": "2026-03-21T18:07:50.058070+00:00",
+  "data_source": "binance_btcusdt_15m_cache.csv",
+  "data_range": {
+    "from": "2020-01-01 09:00:00",
+    "to": "2026-03-22 03:00:00"
+  },
+  "fee_applied": "0.08% round-trip",
+  "presets": [
+    {
+      "id": "extreme-dip-v1",
+      "label": "급락 반등 감시",
+      "short_description": "24시간 내 15% 이상 급락 후 반등 기회를 감시합니다.",
+      "category": "rebound",
+      "risk_level": "high",
+      "educational_note": "극단적 급락은 강한 반등이 올 수 있지만, 추가 하락이 이어질 위험도 큽니다. 손절 기준(-7%)을 반드시 지키세요.",
+      "params": {
+        "trigger": "24h 고점 대비 -15%",
+        "tp": "+5%",
+        "sl": "-7%",
+        "timeout": "24h"
+      },
+      "alert_rule_template": {
+        "name": "급락 반등 감시",
+        "symbol": "BTCUSDT",
+        "rule_type": "price_change",
+        "config": {
+          "direction": "drop",
+          "threshold_type": "percent",
+          "threshold_value": "15",
+          "reference": "24h"
+        },
+        "cooldown_minutes": 1440
+      },
+      "summary_all": {
+        "signal_count": 41,
+        "win_rate": 68.3,
+        "avg_return_pct": 1.67,
+        "total_return_pct": 68.6,
+        "max_drawdown_pct": -13.23,
+        "avg_hold_bars": 19.0,
+        "avg_hold_hours": 4.8,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 28,
+        "sl_count": 12,
+        "timeout_count": 1
+      },
+      "summary_180d": {
+        "signal_count": 1,
+        "win_rate": 100.0,
+        "avg_return_pct": 5.32,
+        "total_return_pct": 5.3,
+        "max_drawdown_pct": 0.0,
+        "avg_hold_bars": 3.0,
+        "avg_hold_hours": 0.8,
+        "window": "180d",
+        "tp_count": 1,
+        "sl_count": 0,
+        "timeout_count": 0
+      },
+      "summary_90d": {
+        "signal_count": 1,
+        "win_rate": 100.0,
+        "avg_return_pct": 5.32,
+        "total_return_pct": 5.3,
+        "max_drawdown_pct": 0.0,
+        "avg_hold_bars": 3.0,
+        "avg_hold_hours": 0.8,
+        "window": "90d",
+        "tp_count": 1,
+        "sl_count": 0,
+        "timeout_count": 0
+      },
+      "recent_examples": [
+        {
+          "date": "2022-11-09",
+          "entry_price": 17716.19,
+          "result_pct": 5.486,
+          "exit_type": "tp",
+          "bars_held": 10
+        },
+        {
+          "date": "2022-11-09",
+          "entry_price": 17400.74,
+          "result_pct": -8.606,
+          "exit_type": "sl",
+          "bars_held": 45
+        },
+        {
+          "date": "2022-11-10",
+          "entry_price": 15800.64,
+          "result_pct": 5.591,
+          "exit_type": "tp",
+          "bars_held": 30
+        },
+        {
+          "date": "2024-08-05",
+          "entry_price": 51606.13,
+          "result_pct": 5.45,
+          "exit_type": "tp",
+          "bars_held": 36
+        },
+        {
+          "date": "2026-02-06",
+          "entry_price": 60255.65,
+          "result_pct": 5.32,
+          "exit_type": "tp",
+          "bars_held": 3
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    },
+    {
+      "id": "vol-spike-v1",
+      "label": "변동성 급증 감시",
+      "short_description": "12시간 변동성이 평소의 1.8배를 넘으면 큰 움직임 시작을 감시합니다.",
+      "category": "volatility",
+      "risk_level": "medium",
+      "educational_note": "변동성 급증은 방향을 알려주지 않습니다. 큰 움직임이 시작됐다는 신호일 뿐이므로 방향 판단은 별도로 해야 합니다.",
+      "params": {
+        "trigger": "12h 변동성 > 3.5일 평균의 1.8배",
+        "tp": "+5%",
+        "sl": "-7%",
+        "timeout": "48h"
+      },
+      "alert_rule_template": {
+        "name": "변동성 급증 감시",
+        "symbol": "BTCUSDT",
+        "rule_type": "volatility_spike",
+        "config": {
+          "timeframe": "12h",
+          "multiplier": "1.8"
+        },
+        "cooldown_minutes": 720
+      },
+      "summary_all": {
+        "signal_count": 171,
+        "win_rate": 60.8,
+        "avg_return_pct": 0.72,
+        "total_return_pct": 123.5,
+        "max_drawdown_pct": -11.87,
+        "avg_hold_bars": 133.8,
+        "avg_hold_hours": 33.4,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 54,
+        "sl_count": 22,
+        "timeout_count": 95
+      },
+      "summary_180d": {
+        "signal_count": 8,
+        "win_rate": 62.5,
+        "avg_return_pct": -0.04,
+        "total_return_pct": -0.3,
+        "max_drawdown_pct": -5.67,
+        "avg_hold_bars": 170.6,
+        "avg_hold_hours": 42.7,
+        "window": "180d",
+        "tp_count": 1,
+        "sl_count": 0,
+        "timeout_count": 7
+      },
+      "summary_90d": {
+        "signal_count": 4,
+        "win_rate": 50.0,
+        "avg_return_pct": -0.64,
+        "total_return_pct": -2.6,
+        "max_drawdown_pct": -5.67,
+        "avg_hold_bars": 149.2,
+        "avg_hold_hours": 37.3,
+        "window": "90d",
+        "tp_count": 1,
+        "sl_count": 0,
+        "timeout_count": 3
+      },
+      "recent_examples": [
+        {
+          "date": "2025-12-18",
+          "entry_price": 87233.44,
+          "result_pct": 0.744,
+          "exit_type": "timeout",
+          "bars_held": 192
+        },
+        {
+          "date": "2026-01-19",
+          "entry_price": 92684.0,
+          "result_pct": -3.515,
+          "exit_type": "timeout",
+          "bars_held": 192
+        },
+        {
+          "date": "2026-01-22",
+          "entry_price": 89912.7,
+          "result_pct": 0.149,
+          "exit_type": "timeout",
+          "bars_held": 192
+        },
+        {
+          "date": "2026-01-30",
+          "entry_price": 82035.92,
+          "result_pct": -4.581,
+          "exit_type": "timeout",
+          "bars_held": 192
+        },
+        {
+          "date": "2026-02-06",
+          "entry_price": 62965.51,
+          "result_pct": 5.387,
+          "exit_type": "tp",
+          "bars_held": 21
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    },
+    {
+      "id": "cycle-accum-v1",
+      "label": "사이클 저점 매수",
+      "short_description": "90일 고점 대비 20% 이상 하락한 구간에서 중장기 매집 기회를 감시합니다.",
+      "category": "cycle",
+      "risk_level": "high",
+      "educational_note": "사이클 매수는 수주~수개월의 보유를 전제합니다. 단기 추가 하락(-20%)에도 견딜 자금 관리가 필요합니다.",
+      "params": {
+        "trigger": "90일 고점 대비 -20%",
+        "tp": "+30%",
+        "sl": "-20%",
+        "timeout": "90일"
+      },
+      "alert_rule_template": {
+        "name": "사이클 저점 매수",
+        "symbol": "BTCUSDT",
+        "rule_type": "price_change",
+        "config": {
+          "direction": "drop",
+          "threshold_type": "percent",
+          "threshold_value": "20",
+          "reference": "90d"
+        },
+        "cooldown_minutes": 10080
+      },
+      "summary_all": {
+        "signal_count": 30,
+        "win_rate": 60.0,
+        "avg_return_pct": 8.88,
+        "total_return_pct": 266.4,
+        "max_drawdown_pct": -20.94,
+        "avg_hold_bars": 4021.5,
+        "avg_hold_hours": 1005.4,
+        "window": "2020-01-01~2026-03-22",
+        "tp_count": 14,
+        "sl_count": 12,
+        "timeout_count": 4
+      },
+      "summary_180d": {
+        "signal_count": 3,
+        "win_rate": 33.3,
+        "avg_return_pct": -7.98,
+        "total_return_pct": -24.0,
+        "max_drawdown_pct": -20.21,
+        "avg_hold_bars": 4383.0,
+        "avg_hold_hours": 1095.8,
+        "window": "180d",
+        "tp_count": 0,
+        "sl_count": 2,
+        "timeout_count": 1
+      },
+      "summary_90d": {
+        "signal_count": 2,
+        "win_rate": 50.0,
+        "avg_return_pct": -1.84,
+        "total_return_pct": -3.7,
+        "max_drawdown_pct": -20.21,
+        "avg_hold_bars": 2353.5,
+        "avg_hold_hours": 588.4,
+        "window": "90d",
+        "tp_count": 0,
+        "sl_count": 1,
+        "timeout_count": 1
+      },
+      "recent_examples": [
+        {
+          "date": "2024-08-05",
+          "entry_price": 57368.0,
+          "result_pct": 20.789,
+          "exit_type": "timeout",
+          "bars_held": 8640
+        },
+        {
+          "date": "2025-02-25",
+          "entry_price": 87157.25,
+          "result_pct": 25.73,
+          "exit_type": "timeout",
+          "bars_held": 8640
+        },
+        {
+          "date": "2025-11-05",
+          "entry_price": 100704.6,
+          "result_pct": -20.277,
+          "exit_type": "sl",
+          "bars_held": 8442
+        },
+        {
+          "date": "2026-02-01",
+          "entry_price": 78846.77,
+          "result_pct": -20.293,
+          "exit_type": "sl",
+          "bars_held": 507
+        },
+        {
+          "date": "2026-02-06",
+          "entry_price": 60255.65,
+          "result_pct": 16.615,
+          "exit_type": "timeout",
+          "bars_held": 4200
+        }
+      ],
+      "risk_notice": "과거 성과는 미래 결과를 보장하지 않습니다."
+    }
+  ]
+}

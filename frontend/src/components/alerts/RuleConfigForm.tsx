@@ -183,6 +183,7 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
               <option value="15m">15m</option>
               <option value="1h">1h</option>
               <option value="4h">4h</option>
+              <option value="12h">12h</option>
             </select>
           </div>
           <div>
