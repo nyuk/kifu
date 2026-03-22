@@ -7,6 +7,7 @@ import { api } from '../../src/lib/api'
 import { trackGrowthGuestStart } from '../../src/lib/growth'
 import { startGuestSession } from '../../src/lib/guestSession'
 import { useAuthStore } from '../../src/stores/auth'
+import { LegalFooter } from '../../src/components/legal/LegalFooter'
 
 type GuestTab = 'home' | 'chart' | 'review' | 'portfolio'
 
@@ -102,8 +103,8 @@ export default function GuestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 px-4 py-10 text-zinc-100">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Guest Mode</p>
           <h1 className="text-3xl font-semibold">게스트 대시보드 미리보기</h1>
@@ -227,6 +228,7 @@ export default function GuestPage() {
           </p>
         </section>
       </div>
+      <LegalFooter variant="dark" />
     </div>
   )
 }

@@ -314,10 +314,10 @@ export function describeEvidencePacket(packet: EvidencePacket): string[] {
       const buySide = packet.summary.by_side.find((s: any) => s.side?.toUpperCase() === 'BUY')
       const sellSide = packet.summary.by_side.find((s: any) => s.side?.toUpperCase() === 'SELL')
       if (buySide || sellSide) {
-        const buyCount = buySide?.count ?? 0
-        const sellCount = sellSide?.count ?? 0
-        const buyVol = buySide?.total_quantity ?? '0'
-        const sellVol = sellSide?.total_quantity ?? '0'
+        const buyCount = buySide?.trade_count ?? buySide?.total_trades ?? 0
+        const sellCount = sellSide?.trade_count ?? sellSide?.total_trades ?? 0
+        const buyVol = buySide?.total_volume ?? '0'
+        const sellVol = sellSide?.total_volume ?? '0'
         lines.push(`Summary by side: BUY ${buyCount} (vol ${buyVol}) / SELL ${sellCount} (vol ${sellVol})`)
       }
     }

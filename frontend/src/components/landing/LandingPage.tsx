@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { LegalFooter } from '../legal/LegalFooter'
 import { trackGrowthVisitOnce } from '../../lib/growth'
 
 function TelegramMockup({ compact = false }: { compact?: boolean }) {
@@ -459,9 +460,7 @@ export function LandingPage() {
             </section>
 
             {/* ─── Footer ─── */}
-            <footer className="bg-neutral-950 border-t border-white/5 py-8 text-center">
-                <p className="text-xs text-neutral-600">&copy; 2026 KIFU · 매매 복기를 습관으로</p>
-            </footer>
+            <LegalFooter variant="dark" />
         </div>
     )
 }

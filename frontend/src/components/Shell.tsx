@@ -9,6 +9,7 @@ import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
 import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck, Megaphone } from 'lucide-react'
+import { LegalFooter } from './legal/LegalFooter'
 
 type ShellTheme = 'neutral' | 'forest' | 'warm'
 const SHELL_THEME_KEY = 'kifu-shell-theme-v1'
@@ -243,11 +244,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <main className="relative min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.06] shadow-inner backdrop-blur-sm">
           {/* Top Gradient Fade moved to individual pages or could be here globally */}
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-        <div className={contentClass}>
-          {children}
-        </div>
-      </main>
+          <div className={contentClass}>
+            {children}
+            <div className="mt-10 rounded-2xl border border-white/[0.06] bg-black/10">
+              <LegalFooter variant="app" />
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
   )
 }
