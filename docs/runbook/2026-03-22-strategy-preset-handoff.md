@@ -1,6 +1,6 @@
 # Strategy Preset v0.1 — Codex Handoff (2026-03-22)
 
-## Status: PLAN COMPLETE → Awaiting Codex Review Before Implementation
+## Status: PLAN COMPLETE → Phase 1 assumptions refined after review
 
 ## What Happened
 
@@ -75,7 +75,7 @@ Exhaustive parameter sweep (`scripts/preset_backtest_sweep.py`):
 
 **Goal**: Static preset cards in frontend → CTA links to RuleEditor with prefilled values.
 
-**No backend changes needed.** All data is from static JSON.
+**Phase 1 keeps the backend untouched.** All preset card data comes from static JSON.
 
 ### Files to Create
 
@@ -92,11 +92,11 @@ Exhaustive parameter sweep (`scripts/preset_backtest_sweep.py`):
 | `frontend/src/components/alerts/` | Add "Strategy Presets" tab to alerts section |
 | Alert RuleEditor | Support prefill props from preset's `alert_rule_template` |
 
-### Phase 1 Constraints (from Codex Review)
+### Phase 1 Constraints (current)
 
 - **Preset 3 CTA disabled** — show card with metrics but CTA says "준비 중" (90d not supported yet)
-- **Add 12h to volatility timeframe select** in `RuleConfigForm.tsx`
-- **JSON lives in `frontend/src/data/`** not `docs/runbook/`
+- **12h volatility timeframe is already supported in current `RuleConfigForm.tsx`**
+- **JSON must live in `frontend/src/data/` at runtime**; `docs/runbook/` copy remains the research source of truth
 
 ### What NOT to Build
 
@@ -120,8 +120,9 @@ Full type definitions are in `docs/01-plan/strategy-preset-v0.1-plan.md` → "Fr
 
 ### Data Source
 
-Import `docs/runbook/preset_backtest_results_final.json` as static data.
-Each preset includes `alert_rule_template` with exact CreateAlertRuleRequest shape for RuleEditor prefill.
+Use `frontend/src/data/presetBacktestResults.json` as the app runtime import.
+Keep `docs/runbook/preset_backtest_results_final.json` as the research/script source of truth.
+Each preset includes `alert_rule_template` with exact `CreateAlertRuleRequest` shape for RuleEditor prefill.
 
 ## Copy Rules
 
@@ -136,14 +137,24 @@ Each preset includes `alert_rule_template` with exact CreateAlertRuleRequest sha
 - `alert_monitor.go:658-668`: `parseDuration()` default = 24h for unknown values
 - **Resolution**: Phase 1 CTA disabled ("준비 중"). Phase 2 adds 90d to type + parseDuration + editor.
 
-### [P1] Preset 2 — 12h timeframe missing from RuleEditor (CONFIRMED)
-- `RuleConfigForm.tsx:183-185`: volatility select only has 15m/1h/4h
-- Backend is string-based, no restriction on 12h
-- **Resolution**: Phase 1 adds `<option value="12h">12h</option>` to the select.
+### [P1] Preset 2 — 12h timeframe missing from RuleEditor (RESOLVED IN CURRENT MAIN)
+- Current code now includes `<option value="12h">12h</option>` in `RuleConfigForm.tsx`
+- Backend is string-based, so this preset can keep the 12h template as-is
+- **Resolution**: no additional Phase 1 work required; keep as regression check
 
-### [P2] JSON import path outside frontend (CONFIRMED)
-- `next.config.mjs`: no external directory import setup
-- **Resolution**: Copy JSON to `frontend/src/data/presetBacktestResults.json`. Keep `docs/runbook/` copy as source of truth for scripts.
+### [P2] JSON import path outside frontend (RESOLVED IN CURRENT MAIN)
+- `next.config.mjs` still has no external directory import setup
+- Current app uses `frontend/src/data/presetBacktestResults.json`
+- **Resolution**: keep `docs/runbook/` copy as script/source-of-truth artifact, but treat `frontend/src/data/` as runtime input
+
+## Remaining Product Risk After Review
+
+Only one Phase 1 limitation is intentionally still open:
+
+1. **Preset 3 / 90d reference**
+   - `alert.ts` still limits `PriceChangeConfig.reference` to `1h | 4h | 24h`
+   - `alert_monitor.go` still defaults unknown durations to `24h`
+   - therefore `cycle-accum-v1` remains **card-only + CTA disabled** until Phase 2
 
 ## Pending Non-Preset Work
 

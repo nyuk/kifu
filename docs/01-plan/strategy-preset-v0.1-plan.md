@@ -88,7 +88,7 @@ v0.1은 **BTC 전용**, 자체 백테스트 데이터 기반, 3개 프리셋 고
 }
 ```
 
-**⚠ Phase 1 필수 수정**: `RuleConfigForm.tsx:183-185`의 volatility timeframe select가 15m/1h/4h만 제공. **Phase 1에서 `12h` 옵션 추가 필요** (백엔드는 string 기반이라 제한 없음).
+**Current code status**: `RuleConfigForm.tsx`에 `12h` 옵션이 이미 추가되어 있습니다. 이 프리셋은 Phase 1에서 그대로 사용 가능하며, 이후 회귀 시 `12h`가 사라지지 않도록 확인만 유지합니다.
 
 ### Preset 3: 사이클 저점 매수
 
@@ -126,11 +126,18 @@ v0.1은 **BTC 전용**, 자체 백테스트 데이터 기반, 3개 프리셋 고
 
 ## Data Source
 
-- **파일**: `preset_backtest_results_final.json` (자체 생성)
+- **백테스트 원본 파일**: `docs/runbook/preset_backtest_results_final.json`
+- **프론트 런타임 파일**: `frontend/src/data/presetBacktestResults.json`
 - **원본 데이터**: `binance_btcusdt_15m_cache.csv` (2020-01-01 ~ 2026-03-22, 218K 행)
 - **수수료**: 0.08% round-trip 차감 적용
 - **갱신 방식**: v0.1은 정적. 백테스트 스크립트 재실행으로 수동 갱신.
 - **카드에 기준일 표시**: 반드시 `generated_at` 노출. 7일 이상 지나면 stale 표시.
+
+### Source of Truth
+
+- 스크립트와 연구용 기준 데이터는 `docs/runbook/preset_backtest_results_final.json`을 source of truth로 둡니다.
+- 앱은 Next.js 정적 import 제약 때문에 `frontend/src/data/presetBacktestResults.json`을 직접 읽습니다.
+- v0.1에서는 두 파일을 수동 동기화합니다. 자동 동기화는 Phase 3 이후 과제로 둡니다.
 
 ## UI Design
 
@@ -193,8 +200,7 @@ Alerts
 3. `PresetCard` 컴포넌트 구현 (이름, 수치 4개, 예시, CTA)
 4. Preset 1,2: CTA 클릭 → `RuleEditor` prefill open
 5. **Preset 3: CTA 비활성화** — "준비 중" 표시 (90d reference 미지원)
-6. `RuleConfigForm.tsx` volatility timeframe select에 `12h` 옵션 추가
-7. 상단 risk notice 고정
+6. 상단 risk notice 고정
 
 **데이터 파일 위치**:
 - 원본: `docs/runbook/preset_backtest_results_final.json`
@@ -207,7 +213,6 @@ Alerts
 - `frontend/src/components/presets/PresetCard.tsx` — 카드 컴포넌트
 - `frontend/src/components/presets/PresetStrategies.tsx` — 탭 페이지
 - `frontend/src/components/alerts/` — 탭 추가, RuleEditor prefill 연동
-- `frontend/src/components/alerts/RuleConfigForm.tsx` — volatility 12h 옵션 추가
 - `frontend/app/` — 라우팅 (필요시)
 
 **건드리지 않는 것**:
@@ -316,15 +321,15 @@ type PresetExample = {
 4. Preset 3: CTA가 "준비 중"으로 비활성화되어 있다 (Phase 2 대기)
 5. 상단에 risk notice가 항상 보인다
 6. 기준일이 카드에 표시된다
-7. RuleEditor volatility timeframe에 12h 옵션이 존재한다
+7. RuleEditor volatility timeframe에 12h 옵션이 유지된다
 
 ## Risk & Mitigation
 
 | 위험 | 대응 |
 |------|------|
 | 사이클 저점의 90d reference를 alert monitor가 지원 안 함 (확인됨) | **Phase 1에서 CTA 비활성화**. Phase 2에서 `parseDuration()` + 타입 확장 후 활성화 |
-| Preset 2의 12h timeframe이 RuleEditor select에 없음 (확인됨) | **Phase 1에서 `RuleConfigForm.tsx`에 12h 옵션 추가** |
-| JSON이 `docs/runbook/`에 있어 Next.js에서 직접 import 불가 | **`frontend/src/data/`로 복사하여 사용** |
+| Preset 2의 12h timeframe이 에디터에서 빠질 수 있음 | **현재 main에서 해결됨**. `RuleConfigForm.tsx`의 12h 옵션을 회귀 체크 항목으로 유지 |
+| JSON이 `docs/runbook/`에 있어 Next.js에서 직접 import 불가 | **현재 main에서 해결됨**. `frontend/src/data/presetBacktestResults.json`을 앱 런타임 파일로 사용 |
 | 최근 180d/90d 수치가 나쁠 수 있음 | 카드에 "전체 기간" 수치를 메인으로, 최근 수치는 보조로 표시 |
 | 카드 수치가 현재 시점과 괴리 | generated_at 표시 + 7일 초과 시 stale 배지 |
 | 거래수가 적어 통계적 신뢰도 의문 | 교육적 고지문으로 투명하게 설명 ("6년간 N회 발생 기준") |
