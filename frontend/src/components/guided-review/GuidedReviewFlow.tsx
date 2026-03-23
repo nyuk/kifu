@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import {
   INTENT_OPTIONS,
@@ -269,6 +271,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
 }
 
 export function GuidedReviewFlow({ onClose }: { onClose: () => void }) {
+  const guestMode = isGuestSession()
   const { review, items, currentStep, streak, completeReview, nextStep, setStep } =
     useGuidedReviewStore()
   const [completing, setCompleting] = useState(false)
@@ -288,6 +291,22 @@ export function GuidedReviewFlow({ onClose }: { onClose: () => void }) {
     setCompleting(true)
     await completeReview()
     setCompleting(false)
+  }
+
+  if (guestMode) {
+    return (
+      <div className="space-y-4 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4">
+        <p className="text-sm font-semibold text-amber-100">게스트 모드에서는 복기를 시작하거나 저장할 수 없습니다.</p>
+        <p className="text-xs text-amber-100/75">{guestFeatureMessage('복기 작성')}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg border border-amber-300/40 px-4 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/10"
+        >
+          닫기
+        </button>
+      </div>
+    )
   }
 
   if (isCompleted) {

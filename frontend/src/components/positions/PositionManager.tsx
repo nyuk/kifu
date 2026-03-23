@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 import type { ManualPosition, ManualPositionRequest, ManualPositionsResponse } from '../../types/position'
 
 const emptyForm: ManualPositionRequest = {
@@ -31,6 +33,7 @@ const toLocalInput = (value?: string) => {
 }
 
 export function PositionManager() {
+  const guestMode = isGuestSession()
   const [positions, setPositions] = useState<ManualPosition[]>([])
   const [statusFilter, setStatusFilter] = useState<'open' | 'closed' | 'all'>('open')
   const [isLoading, setIsLoading] = useState(false)
@@ -69,11 +72,19 @@ export function PositionManager() {
   }
 
   const handleOpenNew = () => {
+    if (guestMode) {
+      setError(guestFeatureMessage('포지션 추가'))
+      return
+    }
     resetForm()
     setIsModalOpen(true)
   }
 
   const handleEdit = (position: ManualPosition) => {
+    if (guestMode) {
+      setError(guestFeatureMessage('포지션 수정'))
+      return
+    }
     setEditing(position)
     setForm({
       symbol: position.symbol,
@@ -95,6 +106,10 @@ export function PositionManager() {
   }
 
   const handleSave = async () => {
+    if (guestMode) {
+      setError(guestFeatureMessage('포지션 저장'))
+      return
+    }
     if (!form.symbol.trim()) {
       setError('심볼을 입력해주세요.')
       return
@@ -132,6 +147,10 @@ export function PositionManager() {
   }
 
   const handleClosePosition = async (position: ManualPosition) => {
+    if (guestMode) {
+      setError(guestFeatureMessage('포지션 종료'))
+      return
+    }
     try {
       await api.put(`/v1/manual-positions/${position.id}`, { status: 'closed' })
       await loadPositions()
@@ -141,6 +160,10 @@ export function PositionManager() {
   }
 
   const handleDelete = async (position: ManualPosition) => {
+    if (guestMode) {
+      setError(guestFeatureMessage('포지션 삭제'))
+      return
+    }
     if (!confirm('이 포지션을 삭제할까요?')) return
     try {
       await api.delete(`/v1/manual-positions/${position.id}`)
@@ -185,12 +208,19 @@ export function PositionManager() {
           <button
             type="button"
             onClick={handleOpenNew}
+            disabled={guestMode}
             className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white hover:border-white/20"
           >
             포지션 추가
           </button>
         </div>
       </div>
+
+      {guestMode && (
+        <p className="mt-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          게스트 모드에서는 포지션을 추가하거나 수정할 수 없습니다. 웹 계정을 만들면 상태를 저장할 수 있습니다.
+        </p>
+      )}
 
       {error && (
         <p className="mt-3 rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</p>
@@ -231,6 +261,7 @@ export function PositionManager() {
                 <button
                   type="button"
                   onClick={() => handleEdit(position)}
+                  disabled={guestMode}
                   className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
                 >
                   수정
@@ -239,6 +270,7 @@ export function PositionManager() {
                   <button
                     type="button"
                     onClick={() => handleClosePosition(position)}
+                    disabled={guestMode}
                     className="rounded-lg border border-amber-400/50 px-2.5 py-1 text-amber-200 hover:bg-amber-500/10"
                   >
                     종료
@@ -247,6 +279,7 @@ export function PositionManager() {
                 <button
                   type="button"
                   onClick={() => handleDelete(position)}
+                  disabled={guestMode}
                   className="rounded-lg border border-rose-400/50 px-2.5 py-1 text-rose-200 hover:bg-rose-500/10"
                 >
                   삭제
@@ -271,6 +304,11 @@ export function PositionManager() {
               <h3 className="mt-2 text-xl font-semibold">포지션 상태 입력</h3>
             </div>
             <div className="space-y-4 px-6 py-5">
+              {guestMode && (
+                <p className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  게스트 모드에서는 포지션 입력이 비활성화됩니다.
+                </p>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-sm text-neutral-300">
                   심볼
@@ -278,6 +316,7 @@ export function PositionManager() {
                     type="text"
                     value={form.symbol}
                     onChange={(event) => setForm({ ...form, symbol: event.target.value })}
+                    disabled={guestMode}
                     className={INPUT_STYLE}
                     placeholder="BTCUSDT"
                   />
@@ -287,6 +326,7 @@ export function PositionManager() {
                   <select
                     value={form.position_side}
                     onChange={(event) => setForm({ ...form, position_side: event.target.value as 'long' | 'short' })}
+                    disabled={guestMode}
                     className={SELECT_STYLE}
                   >
                     <option value="long">Long</option>
@@ -301,6 +341,7 @@ export function PositionManager() {
                   <select
                     value={form.asset_class}
                     onChange={(event) => setForm({ ...form, asset_class: event.target.value as 'crypto' | 'stock' })}
+                    disabled={guestMode}
                     className={SELECT_STYLE}
                   >
                     <option value="crypto">Crypto</option>
@@ -313,6 +354,7 @@ export function PositionManager() {
                     type="text"
                     value={form.venue || ''}
                     onChange={(event) => setForm({ ...form, venue: event.target.value })}
+                    disabled={guestMode}
                     className={INPUT_STYLE}
                     placeholder="binance, upbit, kis"
                   />
@@ -325,6 +367,7 @@ export function PositionManager() {
                   type="text"
                   value={form.entry_price || ''}
                   onChange={(event) => setForm({ ...form, entry_price: event.target.value })}
+                  disabled={guestMode}
                   className={INPUT_STYLE}
                   placeholder="예: 78000"
                 />
@@ -334,6 +377,7 @@ export function PositionManager() {
                 <button
                   type="button"
                   onClick={() => setShowAdvanced((prev) => !prev)}
+                  disabled={guestMode}
                   className="text-xs font-semibold text-neutral-300 hover:text-neutral-100"
                 >
                   {showAdvanced ? '상세 옵션 접기' : '상세 옵션 펼치기'}
@@ -343,6 +387,7 @@ export function PositionManager() {
                   <select
                     value={form.status}
                     onChange={(event) => setForm({ ...form, status: event.target.value as 'open' | 'closed' })}
+                    disabled={guestMode}
                     className="ml-2 rounded-lg border border-white/[0.08] bg-white/[0.06] px-3 py-1.5 text-xs text-neutral-200"
                   >
                     <option value="open">보유중</option>
@@ -360,6 +405,7 @@ export function PositionManager() {
                         type="text"
                         value={form.size || ''}
                         onChange={(event) => setForm({ ...form, size: event.target.value })}
+                        disabled={guestMode}
                         className={INPUT_STYLE}
                       />
                     </label>
@@ -369,6 +415,7 @@ export function PositionManager() {
                         type="text"
                         value={form.leverage || ''}
                         onChange={(event) => setForm({ ...form, leverage: event.target.value })}
+                        disabled={guestMode}
                         className={INPUT_STYLE}
                         placeholder="예: 3"
                       />
@@ -381,6 +428,7 @@ export function PositionManager() {
                         type="text"
                         value={form.stop_loss || ''}
                         onChange={(event) => setForm({ ...form, stop_loss: event.target.value })}
+                        disabled={guestMode}
                         className={INPUT_STYLE}
                       />
                     </label>
@@ -390,6 +438,7 @@ export function PositionManager() {
                         type="text"
                         value={form.take_profit || ''}
                         onChange={(event) => setForm({ ...form, take_profit: event.target.value })}
+                        disabled={guestMode}
                         className={INPUT_STYLE}
                       />
                     </label>
@@ -400,6 +449,7 @@ export function PositionManager() {
                       type="text"
                       value={form.strategy || ''}
                       onChange={(event) => setForm({ ...form, strategy: event.target.value })}
+                      disabled={guestMode}
                       className={INPUT_STYLE}
                       placeholder="예: 손절 -2% / 추세 이탈"
                     />
@@ -409,6 +459,7 @@ export function PositionManager() {
                     <textarea
                       value={form.memo || ''}
                       onChange={(event) => setForm({ ...form, memo: event.target.value })}
+                      disabled={guestMode}
                       rows={2}
                       className={INPUT_STYLE}
                     />
@@ -419,6 +470,7 @@ export function PositionManager() {
                       type="datetime-local"
                       value={openedAtInput}
                       onChange={(event) => setOpenedAtInput(event.target.value)}
+                      disabled={guestMode}
                       className={INPUT_STYLE}
                     />
                   </label>
@@ -439,10 +491,10 @@ export function PositionManager() {
                 <button
                   type="button"
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={guestMode || isSaving}
                   className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 shadow-lg shadow-white/10 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSaving ? '저장 중...' : '저장'}
+                  {guestMode ? '게스트 저장 불가' : isSaving ? '저장 중...' : '저장'}
                 </button>
               </div>
             </div>

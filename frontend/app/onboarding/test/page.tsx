@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { isGuestSession } from '../../../src/lib/guestSession'
 import { useAuthStore } from '../../../src/stores/auth'
 import { buildOnboardingProfile, readOnboardingDraft, readOnboardingProfile, saveOnboardingDraft, saveOnboardingProfile } from '../../../src/lib/onboardingProfile'
 
@@ -38,6 +39,7 @@ const reasonOptions: Array<{ key: Reason; label: string }> = [
 export default function OnboardingTestPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const router = useRouter()
+  const guestMode = isGuestSession()
   const [answers, setAnswers] = useState<Record<number, Response>>({})
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -114,6 +116,10 @@ export default function OnboardingTestPage() {
   }, [answers, isComplete])
 
   const handleSave = () => {
+    if (guestMode) {
+      setSaveFeedback('게스트 모드에서는 성향 테스트를 저장할 수 없습니다. 웹 계정을 만들면 이용할 수 있습니다.')
+      return
+    }
     const profile = buildOnboardingProfile(answers, scenarios.length)
     saveOnboardingProfile(profile)
     setSavedAt(profile.completed_at)
@@ -165,6 +171,36 @@ export default function OnboardingTestPage() {
         },
       }
     })
+  }
+
+  if (guestMode) {
+    return (
+      <div className="min-h-screen bg-neutral-950 px-4 text-neutral-100">
+        <div className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center">
+          <div className="w-full rounded-2xl border border-amber-400/20 bg-amber-500/10 p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-amber-300">Members Only</p>
+            <h1 className="mt-2 text-2xl font-semibold text-zinc-100">성향 테스트는 회원 전용입니다</h1>
+            <p className="mt-3 text-sm text-amber-100/80">
+              게스트 모드는 읽기 전용 미리보기입니다. 성향 테스트 결과 저장과 이후 연결 흐름은 웹 계정에서만 사용할 수 있습니다.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/register?next=%2Fonboarding%2Ftest"
+                className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950"
+              >
+                회원가입 후 테스트 시작
+              </Link>
+              <Link
+                href="/guest?mode=preview"
+                className="rounded-lg border border-amber-300/30 px-4 py-2 text-sm font-semibold text-amber-100"
+              >
+                게스트 미리보기로 돌아가기
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

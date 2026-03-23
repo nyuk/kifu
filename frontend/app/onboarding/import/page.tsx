@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { isGuestSession } from '../../../src/lib/guestSession'
 import { useAuthStore } from '../../../src/stores/auth'
 
 export default function OnboardingImportPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const guestMode = isGuestSession()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -55,9 +57,15 @@ export default function OnboardingImportPage() {
                 회원가입 후 Settings로 이동
               </Link>
             )}
-            <Link href="/onboarding/test" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
-              나중에 하고 3분 테스트
-            </Link>
+            {guestMode ? (
+              <Link href="/register?next=%2Fonboarding%2Ftest" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
+                회원가입 후 3분 테스트
+              </Link>
+            ) : (
+              <Link href="/onboarding/test" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
+                나중에 하고 3분 테스트
+              </Link>
+            )}
           </div>
         </section>
       </div>

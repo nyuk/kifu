@@ -2,6 +2,8 @@
 
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../../lib/api'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { PageJumpPager } from '../ui/PageJumpPager'
@@ -43,6 +45,7 @@ const buildParams = (filters: Filters, cursor?: string | null) => {
 }
 
 export function PortfolioDashboard() {
+  const guestMode = isGuestSession()
   const [filters, setFilters] = useState<Filters>({
     assetClass: 'all',
     venue: '',
@@ -323,6 +326,10 @@ export function PortfolioDashboard() {
   }
 
   const handleBackfillEvents = async () => {
+    if (guestMode) {
+      setBackfillError(guestFeatureMessage('포트폴리오 이벤트 생성'))
+      return
+    }
     setBackfillLoading(true)
     setBackfillError(null)
     try {
@@ -451,16 +458,21 @@ export function PortfolioDashboard() {
               총 {(tradeSummary?.totals?.total_trades ?? 0).toLocaleString()}건
             </p>
           </div>
+          {guestMode && (
+            <p className="mt-2 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              게스트 모드에서는 포트폴리오 이벤트를 생성하거나 저장할 수 없습니다.
+            </p>
+          )}
           {usingTradeFallback && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <p className="text-xs text-amber-300">포트폴리오 이벤트가 비어 있어 거래내역 기반으로 대체 표시 중</p>
               <button
                 type="button"
                 onClick={handleBackfillEvents}
-                disabled={backfillLoading}
+                disabled={guestMode || backfillLoading}
                 className="rounded-full border border-amber-400/60 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 disabled:opacity-60"
               >
-                {backfillLoading ? '생성 중...' : '포트폴리오 데이터 생성'}
+                {guestMode ? '게스트 생성 불가' : backfillLoading ? '생성 중...' : '포트폴리오 데이터 생성'}
               </button>
               {backfillResult && (
                 <span className="text-[11px] text-amber-200">

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { api } from '../lib/api'
+import { guestFeatureMessage } from '../lib/guestAccess'
+import { isGuestSession } from '../lib/guestSession'
 import type {
   GuidedReview,
   GuidedReviewItem,
@@ -54,6 +56,9 @@ export const useGuidedReviewStore = create<GuidedReviewStore>((set, get) => ({
   submitItem: async (itemId: string, payload: SubmitItemPayload) => {
     set({ error: null })
     try {
+      if (isGuestSession()) {
+        throw new Error(guestFeatureMessage('복기 답변 저장'))
+      }
       await api.post(`/v1/guided-reviews/items/${itemId}/submit`, payload)
       // Update local state
       set((state) => ({
@@ -70,8 +75,8 @@ export const useGuidedReviewStore = create<GuidedReviewStore>((set, get) => ({
         ),
       }))
       return true
-    } catch {
-      set({ error: '답변 저장에 실패했습니다' })
+    } catch (error: any) {
+      set({ error: error?.message || '답변 저장에 실패했습니다' })
       return false
     }
   },
@@ -81,14 +86,17 @@ export const useGuidedReviewStore = create<GuidedReviewStore>((set, get) => ({
     if (!review) return false
     set({ error: null })
     try {
+      if (isGuestSession()) {
+        throw new Error(guestFeatureMessage('복기 완료 처리'))
+      }
       const response = await api.post<CompleteResponse>(`/v1/guided-reviews/${review.id}/complete`)
       set({
         streak: response.data.streak,
         review: { ...review, status: 'completed' },
       })
       return true
-    } catch {
-      set({ error: '복기 완료 처리에 실패했습니다' })
+    } catch (error: any) {
+      set({ error: error?.message || '복기 완료 처리에 실패했습니다' })
       return false
     }
   },

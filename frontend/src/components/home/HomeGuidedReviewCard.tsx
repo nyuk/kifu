@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '../../lib/api'
+import { isGuestSession } from '../../lib/guestSession'
 import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import { NO_TRADE_SYMBOL } from '../../types/guidedReview'
@@ -14,6 +15,7 @@ type HomeGuidedReviewCardProps = {
 }
 
 export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: HomeGuidedReviewCardProps) {
+  const guestMode = isGuestSession()
   const { review, items, streak, isLoading, error, fetchToday, fetchStreak } =
     useGuidedReviewStore()
   const [isOpen, setIsOpen] = useState(false)
@@ -21,6 +23,11 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
   const [hasTodayTrades, setHasTodayTrades] = useState(false)
 
   useEffect(() => {
+    if (guestMode) {
+      setHasTodayTrades(false)
+      setRecentSymbols([])
+      return
+    }
     if (autoLoad) {
       fetchToday()
       fetchStreak()
@@ -49,7 +56,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
       }
     }
     loadRecentSymbols()
-  }, [autoLoad, fetchToday, fetchStreak])
+  }, [autoLoad, fetchToday, fetchStreak, guestMode])
 
   useEffect(() => {
     if (forceOpen) {
@@ -97,7 +104,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
       </div>
 
       {/* Summary stats */}
-      {hasItems && !isOpen && (
+      {hasItems && !isOpen && !guestMode && (
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 py-2">
             <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Items</p>
@@ -116,7 +123,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         </div>
       )}
 
-      {!isOpen && (supplementPending > 0 || rolloverPending > 0) && (
+      {!isOpen && !guestMode && (supplementPending > 0 || rolloverPending > 0) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {supplementPending > 0 && (
             <span className="rounded-full border border-amber-300/40 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200">
@@ -131,7 +138,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         </div>
       )}
 
-      {showNoTradeDayBanner && !isOpen && (
+      {showNoTradeDayBanner && !isOpen && !guestMode && (
         <div className="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-3">
           <p className="text-xs font-semibold text-cyan-100">오늘은 비거래일 복기입니다.</p>
           <p className="mt-1 text-xs text-cyan-100/80">
@@ -160,6 +167,12 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         </div>
       ) : (
         <div className="mt-4">
+          {guestMode && (
+            <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-100">게스트 모드에서는 복기 시작과 비거래일 기록 저장이 비활성화됩니다.</p>
+              <p className="mt-1 text-xs text-amber-100/75">복기 루프는 웹 계정을 만들면 사용할 수 있습니다.</p>
+            </div>
+          )}
           {isLoading ? (
             <p className="text-xs text-neutral-500">불러오는 중...</p>
           ) : error ? (
@@ -173,7 +186,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
                 다시 불러오기
               </button>
             </div>
-          ) : isCompleted ? (
+          ) : !guestMode && isCompleted ? (
             <div className="flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3">
               <span className="text-lg">&#10003;</span>
             <div className="flex-1">
@@ -201,7 +214,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
               </Link>
             )}
           </div>
-          ) : hasItems ? (
+          ) : !guestMode && hasItems ? (
             <button
               type="button"
               onClick={() => setIsOpen(true)}
@@ -218,7 +231,9 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
           ) : (
             <p className="rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-xs text-neutral-500">
               오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.
-              <span className="ml-1 text-neutral-300">비거래일도 기록 흐름은 계속 저장할 수 있습니다.</span>
+              <span className="ml-1 text-neutral-300">
+                {guestMode ? '게스트 모드에서는 복기 저장이 비활성화됩니다.' : '비거래일도 기록 흐름은 계속 저장할 수 있습니다.'}
+              </span>
             </p>
           )}
         </div>

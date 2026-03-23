@@ -252,9 +252,11 @@ export default function AlertPage() {
           <Link href="/review" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
             과거 대응 복기
           </Link>
-          <Link href="/onboarding/test" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
-            성향 테스트 다시하기
-          </Link>
+          {!guestMode && (
+            <Link href="/onboarding/test" className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200">
+              성향 테스트 다시하기
+            </Link>
+          )}
         </section>
       </div>
     </div>
