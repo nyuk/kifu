@@ -3,22 +3,24 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from '../lib/i18n'
-import { clearGuestSession } from '../lib/guestSession'
+import { clearGuestSession, isGuestSession } from '../lib/guestSession'
 import { LanguageSelector } from '../components/LanguageSelector'
 import { ExchangeConnectionManager } from '../components/settings/ExchangeConnectionManager'
 import { api } from '../lib/api'
 import { useAlertStore } from '../stores/alertStore'
+import { guestFeatureMessage } from '../lib/guestAccess'
 import type { TelegramConnectResponse } from '../types/alert'
 
-function TelegramConnect() {
+function TelegramConnect({ guestMode }: { guestMode: boolean }) {
   const { t } = useI18n()
   const { channels, isLoadingChannels, fetchChannels, connectTelegram, disconnectTelegram } = useAlertStore()
   const [connectData, setConnectData] = useState<TelegramConnectResponse | null>(null)
   const [countdown, setCountdown] = useState(0)
 
   useEffect(() => {
+    if (guestMode) return
     fetchChannels()
-  }, [fetchChannels])
+  }, [fetchChannels, guestMode])
 
   // Countdown timer
   useEffect(() => {
@@ -54,22 +56,29 @@ function TelegramConnect() {
   }, [tgChannel, connectData])
 
   const handleConnect = useCallback(async () => {
+    if (guestMode) return
     const data = await connectTelegram()
     if (data) {
       setConnectData(data)
       setCountdown(data.expires_in)
     }
-  }, [connectTelegram])
+  }, [connectTelegram, guestMode])
 
   const handleDisconnect = useCallback(async () => {
+    if (guestMode) return
     if (!confirm('텔레그램 연결을 해제하시겠습니까?')) return
     await disconnectTelegram()
-  }, [disconnectTelegram])
+  }, [disconnectTelegram, guestMode])
 
   const isConnected = tgChannel?.verified
 
   return (
     <div className="space-y-4">
+      {guestMode && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          {guestFeatureMessage('텔레그램 연결')}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -88,7 +97,7 @@ function TelegramConnect() {
         {isConnected ? (
           <button
             onClick={handleDisconnect}
-            disabled={isLoadingChannels}
+            disabled={guestMode || isLoadingChannels}
             className="rounded-lg px-3 py-1.5 text-xs text-red-400 hover:text-red-300 transition disabled:opacity-50"
           >
             {t.telegramDisconnect}
@@ -96,7 +105,7 @@ function TelegramConnect() {
         ) : (
           <button
             onClick={handleConnect}
-            disabled={isLoadingChannels || !!connectData}
+            disabled={guestMode || isLoadingChannels || !!connectData}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 transition disabled:opacity-50"
           >
             {t.telegramConnect}
@@ -153,6 +162,11 @@ export function Settings() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState('')
   const [passwordError, setPasswordError] = useState('')
+  const [guestMode, setGuestMode] = useState(false)
+
+  useEffect(() => {
+    setGuestMode(isGuestSession())
+  }, [])
 
   useEffect(() => {
     let isActive = true
@@ -182,6 +196,10 @@ export function Settings() {
     event.preventDefault()
     setPasswordError('')
     setPasswordMessage('')
+    if (guestMode) {
+      setPasswordError(guestFeatureMessage('비밀번호 변경'))
+      return
+    }
     if (!newPassword.trim()) {
       setPasswordError('새 비밀번호를 입력해주세요.')
       return
@@ -216,6 +234,15 @@ export function Settings() {
         </p>
       </header>
       <section className="grid gap-4 lg:grid-cols-2">
+        {guestMode && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 lg:col-span-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-200">Guest Mode</p>
+            <p className="mt-3 text-lg font-semibold text-zinc-100">읽기 전용 미리보기</p>
+            <p className="mt-2 text-sm text-amber-100/90">
+              게스트 모드에서는 저장, 연결, 알림 설정, 내보내기 같은 쓰기 기능이 비활성화됩니다. 웹 계정을 만들면 실제 데이터를 저장하고 연결할 수 있습니다.
+            </p>
+          </div>
+        )}
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Language / 언어</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">Interface Language</p>
@@ -249,6 +276,7 @@ export function Settings() {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 placeholder="현재 비밀번호"
+                disabled={guestMode}
                 className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 text-sm text-zinc-100 outline-none focus:border-emerald-400/60"
                 required
               />
@@ -258,13 +286,14 @@ export function Settings() {
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="새 비밀번호"
+              disabled={guestMode}
               className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 text-sm text-zinc-100 outline-none focus:border-emerald-400/60"
               required
             />
             <div className="flex items-center gap-2">
               <button
                 type="submit"
-                disabled={passwordSaving}
+                disabled={guestMode || passwordSaving}
                 className="inline-flex h-10 items-center rounded-lg border border-emerald-300/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:opacity-60"
               >
                 {passwordSaving ? '저장 중...' : passwordSet ? '비밀번호 변경' : '비밀번호 설정'}
@@ -292,7 +321,7 @@ export function Settings() {
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Notifications</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">{t.telegramTitle}</p>
           <div className="mt-4">
-            <TelegramConnect />
+            <TelegramConnect guestMode={guestMode} />
           </div>
         </div>
       </section>

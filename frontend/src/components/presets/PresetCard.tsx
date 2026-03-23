@@ -8,6 +8,7 @@ type PresetCardProps = {
   onViewDetail: (preset: PresetStrategy) => void
   summaryWindow: PresetSummaryWindow
   disabled?: boolean
+  disabledLabel?: string
 }
 
 const RISK_BADGE: Record<string, { label: string; className: string }> = {
@@ -61,7 +62,7 @@ function formatWindowLabel(summaryWindow: PresetSummaryWindow, summaryLabel?: st
   return summaryLabel || '전체 기간'
 }
 
-export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow, disabled }: PresetCardProps) {
+export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow, disabled, disabledLabel = '준비 중' }: PresetCardProps) {
   const risk = RISK_BADGE[preset.risk_level] ?? RISK_BADGE.medium
   const category = CATEGORY_BADGE[preset.category] ?? CATEGORY_BADGE.rebound
   const s = getSummaryByWindow(preset, summaryWindow)
@@ -139,7 +140,7 @@ export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow,
               disabled
               className="w-full rounded-lg border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-500 cursor-not-allowed"
             >
-              준비 중
+              {disabledLabel}
             </button>
           ) : (
             <button

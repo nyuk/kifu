@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { api } from '../../lib/api'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 
 type ExportType = 'stats' | 'accuracy' | 'bubbles'
 
@@ -12,8 +14,13 @@ type ExportButtonsProps = {
 
 export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportButtonsProps) {
   const [isExporting, setIsExporting] = useState<ExportType | null>(null)
+  const guestMode = isGuestSession()
 
   const handleExport = async (type: ExportType) => {
+    if (guestMode) {
+      alert(guestFeatureMessage('데이터 내보내기'))
+      return
+    }
     setIsExporting(type)
     try {
       const params = new URLSearchParams({ period })
@@ -60,11 +67,16 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
       <p className="text-sm text-zinc-300 mb-4">
         복기 데이터를 CSV 파일로 내보내 외부에서 분석할 수 있습니다.
       </p>
+      {guestMode && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          {guestFeatureMessage('데이터 내보내기')}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <button
           onClick={() => handleExport('stats')}
-          disabled={isExporting !== null}
+          disabled={guestMode || isExporting !== null}
           className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'stats' ? (
@@ -85,7 +97,7 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
 
         <button
           onClick={() => handleExport('accuracy')}
-          disabled={isExporting !== null}
+          disabled={guestMode || isExporting !== null}
           className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'accuracy' ? (
@@ -106,7 +118,7 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
 
         <button
           onClick={() => handleExport('bubbles')}
-          disabled={isExporting !== null}
+          disabled={guestMode || isExporting !== null}
           className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-left transition-colors hover:border-white/20 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isExporting === 'bubbles' ? (

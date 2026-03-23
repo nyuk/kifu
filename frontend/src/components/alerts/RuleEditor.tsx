@@ -10,6 +10,7 @@ type RuleEditorProps = {
   open: boolean
   rule?: AlertRule | null
   onClose: () => void
+  guestMode?: boolean
 }
 
 const RULE_TYPES: { value: RuleType; labelKey: 'ruleTypePrice' | 'ruleTypeMA' | 'ruleTypeLevel' | 'ruleTypeVolatility' }[] = [
@@ -26,7 +27,7 @@ const DEFAULT_CONFIGS: Record<RuleType, RuleConfig> = {
   volatility_spike: { timeframe: '1h', multiplier: '2.0' },
 }
 
-export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
+export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEditorProps) {
   const { t } = useI18n()
   const { createRule, updateRule } = useAlertStore()
 
@@ -71,6 +72,10 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (guestMode) {
+      setError('게스트 모드에서는 알림 규칙을 저장할 수 없습니다. 웹 계정을 만들면 사용할 수 있습니다.')
+      return
+    }
     if (!name.trim() || !symbol.trim()) {
       setError('전략 이름과 종목을 입력해 주세요.')
       return
@@ -121,6 +126,12 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
             </div>
           )}
 
+          {guestMode && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+              게스트 모드에서는 알림 규칙을 만들거나 수정할 수 없습니다. 설정은 읽기만 가능합니다.
+            </div>
+          )}
+
           {isPresetPrefill && (
             <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300/80">프리셋 요약</p>
@@ -151,6 +162,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
                 placeholder={isPresetPrefill ? '예: 급락 반등 감시' : '예: BTC 5% 하락 알림'}
               />
@@ -161,6 +173,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 type="text"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
                 placeholder="BTCUSDT"
               />
@@ -173,6 +186,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
               <select
                 value={ruleType}
                 onChange={(e) => handleRuleTypeChange(e.target.value as RuleType)}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               >
                 {RULE_TYPES.map((rt) => (
@@ -189,6 +203,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
                 value={cooldown}
                 onChange={(e) => setCooldown(parseInt(e.target.value) || 60)}
                 min={1}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
               />
             </label>
@@ -198,7 +213,9 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
               {isPresetPrefill ? '프리셋 조건' : '세부 조건'}
             </p>
-            <RuleConfigForm ruleType={ruleType} config={config} onChange={setConfig} />
+            <div className={guestMode ? 'pointer-events-none opacity-70' : ''}>
+              <RuleConfigForm ruleType={ruleType} config={config} onChange={setConfig} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
@@ -211,7 +228,7 @@ export function RuleEditor({ open, rule, onClose }: RuleEditorProps) {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={guestMode || submitting}
               className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? t.saving : isEdit ? '규칙 저장' : isPresetPrefill ? '알림 만들기' : t.save}

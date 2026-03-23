@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { api } from '../lib/api'
+import { guestFeatureMessage } from '../lib/guestAccess'
+import { isGuestSession } from '../lib/guestSession'
 import type {
   AlertRule,
   CreateAlertRuleRequest,
@@ -12,6 +14,12 @@ import type {
   NotificationChannel,
   TelegramConnectResponse,
 } from '../types/alert'
+
+const ensureGuestWritable = (feature: string) => {
+  if (isGuestSession()) {
+    throw new Error(guestFeatureMessage(feature))
+  }
+}
 
 type AlertStore = {
   // Rules
@@ -67,6 +75,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   createRule: async (data) => {
     set({ isLoadingRules: true, rulesError: null })
     try {
+      ensureGuestWritable('알림 설정')
       const response = await api.post<AlertRule>('/v1/alert-rules', data)
       const newRule = response.data
       set((state) => ({
@@ -74,8 +83,8 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
         isLoadingRules: false,
       }))
       return newRule
-    } catch {
-      set({ rulesError: '규칙 생성에 실패했습니다', isLoadingRules: false })
+    } catch (error: any) {
+      set({ rulesError: error?.message || '규칙 생성에 실패했습니다', isLoadingRules: false })
       return null
     }
   },
@@ -83,6 +92,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   updateRule: async (id, data) => {
     set({ isLoadingRules: true, rulesError: null })
     try {
+      ensureGuestWritable('알림 설정')
       const response = await api.put<AlertRule>(`/v1/alert-rules/${id}`, data)
       const updated = response.data
       set((state) => ({
@@ -90,8 +100,8 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
         isLoadingRules: false,
       }))
       return updated
-    } catch {
-      set({ rulesError: '규칙 수정에 실패했습니다', isLoadingRules: false })
+    } catch (error: any) {
+      set({ rulesError: error?.message || '규칙 수정에 실패했습니다', isLoadingRules: false })
       return null
     }
   },
@@ -99,20 +109,22 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   deleteRule: async (id) => {
     set({ isLoadingRules: true, rulesError: null })
     try {
+      ensureGuestWritable('알림 설정')
       await api.delete(`/v1/alert-rules/${id}`)
       set((state) => ({
         rules: state.rules.filter((r) => r.id !== id),
         isLoadingRules: false,
       }))
       return true
-    } catch {
-      set({ rulesError: '규칙 삭제에 실패했습니다', isLoadingRules: false })
+    } catch (error: any) {
+      set({ rulesError: error?.message || '규칙 삭제에 실패했습니다', isLoadingRules: false })
       return false
     }
   },
 
   toggleRule: async (id) => {
     try {
+      ensureGuestWritable('알림 설정')
       const response = await api.patch<{ id: string; enabled: boolean }>(
         `/v1/alert-rules/${id}/toggle`
       )
@@ -121,8 +133,8 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
         rules: state.rules.map((r) => (r.id === id ? { ...r, enabled } : r)),
       }))
       return true
-    } catch {
-      set({ rulesError: '규칙 토글에 실패했습니다' })
+    } catch (error: any) {
+      set({ rulesError: error?.message || '규칙 토글에 실패했습니다' })
       return false
     }
   },
@@ -167,6 +179,7 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   submitDecision: async (alertId, data) => {
     set({ isLoadingDetail: true, detailError: null })
     try {
+      ensureGuestWritable('알림 판단 저장')
       const response = await api.post<AlertDecision>(`/v1/alerts/${alertId}/decision`, data)
       const decision = response.data
       // Update alert detail with decision
@@ -180,14 +193,15 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
         set({ isLoadingDetail: false })
       }
       return decision
-    } catch {
-      set({ detailError: '결정 제출에 실패했습니다', isLoadingDetail: false })
+    } catch (error: any) {
+      set({ detailError: error?.message || '결정 제출에 실패했습니다', isLoadingDetail: false })
       return null
     }
   },
 
   dismissAlert: async (id) => {
     try {
+      ensureGuestWritable('알림 상태 변경')
       await api.patch(`/v1/alerts/${id}/dismiss`)
       // Update in alert list
       set((state) => ({
@@ -199,7 +213,8 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
         set({ alertDetail: { ...detail, alert: { ...detail.alert, status: 'expired' } } })
       }
       return true
-    } catch {
+    } catch (error: any) {
+      set({ detailError: error?.message || '알림 상태 변경에 실패했습니다' })
       return false
     }
   },
@@ -222,11 +237,12 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   connectTelegram: async () => {
     set({ isLoadingChannels: true, channelsError: null })
     try {
+      ensureGuestWritable('텔레그램 연결')
       const response = await api.post<TelegramConnectResponse>('/v1/notifications/telegram/connect')
       set({ isLoadingChannels: false })
       return response.data
-    } catch {
-      set({ channelsError: '텔레그램 연결에 실패했습니다', isLoadingChannels: false })
+    } catch (error: any) {
+      set({ channelsError: error?.message || '텔레그램 연결에 실패했습니다', isLoadingChannels: false })
       return null
     }
   },
@@ -234,14 +250,15 @@ export const useAlertStore = create<AlertStore>((set, get) => ({
   disconnectTelegram: async () => {
     set({ isLoadingChannels: true, channelsError: null })
     try {
+      ensureGuestWritable('텔레그램 연결')
       await api.delete('/v1/notifications/telegram')
       set((state) => ({
         channels: state.channels.filter((ch) => ch.type !== 'telegram'),
         isLoadingChannels: false,
       }))
       return true
-    } catch {
-      set({ channelsError: '텔레그램 연결 해제에 실패했습니다', isLoadingChannels: false })
+    } catch (error: any) {
+      set({ channelsError: error?.message || '텔레그램 연결 해제에 실패했습니다', isLoadingChannels: false })
       return false
     }
   },

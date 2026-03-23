@@ -7,6 +7,7 @@ import type { AlertRule, RuleType } from '../../types/alert'
 type RuleListProps = {
   rules: AlertRule[]
   onEdit: (rule: AlertRule) => void
+  guestMode?: boolean
 }
 
 const RULE_TYPE_LABELS: Record<RuleType, 'ruleTypePrice' | 'ruleTypeMA' | 'ruleTypeLevel' | 'ruleTypeVolatility'> = {
@@ -40,7 +41,7 @@ function formatRuleConfig(rule: AlertRule): string {
   }
 }
 
-export function RuleList({ rules, onEdit }: RuleListProps) {
+export function RuleList({ rules, onEdit, guestMode = false }: RuleListProps) {
   const { t } = useI18n()
   const { toggleRule, deleteRule, isLoadingRules } = useAlertStore()
 
@@ -83,10 +84,10 @@ export function RuleList({ rules, onEdit }: RuleListProps) {
               <button
                 type="button"
                 onClick={() => toggleRule(rule.id)}
-                disabled={isLoadingRules}
+                disabled={guestMode || isLoadingRules}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   rule.enabled ? 'bg-green-500' : 'bg-neutral-700'
-                }`}
+                } ${guestMode ? 'cursor-not-allowed opacity-60' : ''}`}
                 aria-label={t.ruleEnabled}
               >
                 <span
@@ -99,7 +100,8 @@ export function RuleList({ rules, onEdit }: RuleListProps) {
               <button
                 type="button"
                 onClick={() => onEdit(rule)}
-                className="rounded-lg px-2 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition"
+                disabled={guestMode}
+                className="rounded-lg px-2 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {t.editRule}
               </button>
@@ -107,7 +109,8 @@ export function RuleList({ rules, onEdit }: RuleListProps) {
               <button
                 type="button"
                 onClick={() => handleDelete(rule.id)}
-                className="rounded-lg px-2 py-1 text-xs text-red-400 hover:text-red-300 transition"
+                disabled={guestMode}
+                className="rounded-lg px-2 py-1 text-xs text-red-400 hover:text-red-300 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {t.deleteRule}
               </button>

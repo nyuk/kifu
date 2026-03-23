@@ -8,6 +8,7 @@ import { useAlertStore } from '../../../../src/stores/alertStore'
 import { AlertBriefings } from '../../../../src/components/alerts/AlertBriefings'
 import { DecisionForm } from '../../../../src/components/alerts/DecisionForm'
 import { AlertOutcomes } from '../../../../src/components/alerts/AlertOutcomes'
+import { isGuestSession } from '../../../../src/lib/guestSession'
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-yellow-500/20 text-yellow-400',
@@ -18,6 +19,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function AlertDetailPage() {
   const { t } = useI18n()
+  const guestMode = isGuestSession()
   const params = useParams()
   const id = params.id as string
   const { alertDetail, isLoadingDetail, detailError, fetchAlertDetail, dismissAlert } = useAlertStore()
@@ -68,6 +70,11 @@ export default function AlertDetailPage() {
           <span>/</span>
           <span>{t.alertDetailTitle}</span>
         </div>
+        {guestMode && (
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            게스트 모드에서는 알림 상태 변경과 판단 저장이 비활성화됩니다.
+          </div>
+        )}
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -93,6 +100,7 @@ export default function AlertDetailPage() {
             <button
               type="button"
               onClick={() => dismissAlert(alert.id)}
+              disabled={guestMode}
               className="shrink-0 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition"
             >
               {t.dismissAlert}

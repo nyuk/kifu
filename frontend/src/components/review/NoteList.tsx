@@ -4,6 +4,8 @@ import { KeyboardEvent, useState, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { NoteEditor } from './NoteEditor'
 import { PageJumpPager } from '../ui/PageJumpPager'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 import type { ReviewNote } from '../../types/review'
 
 const EMOTION_EMOJI: Record<string, string> = {
@@ -20,6 +22,7 @@ type NoteListProps = {
 }
 
 export function NoteList({ bubbleId }: NoteListProps) {
+  const guestMode = isGuestSession()
   const {
     notes,
     isLoading,
@@ -52,12 +55,14 @@ export function NoteList({ bubbleId }: NoteListProps) {
   }
 
   const handleDelete = async (note: ReviewNote) => {
+    if (guestMode) return
     if (confirm(`"${note.title}" 노트를 삭제하시겠습니까?`)) {
       await deleteNote(note.id)
     }
   }
 
   const handleNewNote = () => {
+    if (guestMode) return
     setEditingNote(null)
     setIsEditorOpen(true)
   }
@@ -113,7 +118,8 @@ export function NoteList({ bubbleId }: NoteListProps) {
         </h3>
         <button
           onClick={handleNewNote}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white"
+          disabled={guestMode}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -125,6 +131,12 @@ export function NoteList({ bubbleId }: NoteListProps) {
       {error && (
         <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
           {error}
+        </div>
+      )}
+
+      {guestMode && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+          {guestFeatureMessage('리뷰 작성과 수정')}
         </div>
       )}
 
@@ -155,7 +167,8 @@ export function NoteList({ bubbleId }: NoteListProps) {
                 <div className="flex gap-1">
                   <button
                     onClick={() => handleEdit(note)}
-                    className="rounded p-1.5 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+                    disabled={guestMode}
+                    className="rounded p-1.5 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                     title="수정"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -164,7 +177,8 @@ export function NoteList({ bubbleId }: NoteListProps) {
                   </button>
                   <button
                     onClick={() => handleDelete(note)}
-                    className="rounded p-1.5 text-neutral-400 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+                    disabled={guestMode}
+                    className="rounded p-1.5 text-neutral-400 transition-colors hover:bg-rose-500/10 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
                     title="삭제"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

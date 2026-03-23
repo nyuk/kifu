@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { OnboardingProfile } from '../../../src/lib/onboardingProfile'
 import { readOnboardingProfile } from '../../../src/lib/onboardingProfile'
 import { api } from '../../../src/lib/api'
+import { guestFeatureMessage } from '../../../src/lib/guestAccess'
+import { isGuestSession } from '../../../src/lib/guestSession'
 import type { TradeItem, TradeListResponse } from '../../../src/types/trade'
 
 type EmergencyMode = 'aggressive' | 'defensive' | 'balanced'
@@ -28,6 +30,7 @@ const modeMeta: Record<EmergencyMode, { label: string; tone: string; tip: string
 }
 
 export default function AlertPage() {
+  const guestMode = isGuestSession()
   const [profile, setProfile] = useState<OnboardingProfile | null>(null)
   const [recentTrades, setRecentTrades] = useState<TradeItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -100,6 +103,7 @@ export default function AlertPage() {
   ] as const
 
   const handleSaveAction = () => {
+    if (guestMode) return
     if (!actionChoice) return
     const entry = {
       id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}`,
@@ -138,6 +142,12 @@ export default function AlertPage() {
             <p className="mt-3 text-xs text-current/70">성향 정보가 없어 기본 브리핑으로 대체합니다.</p>
           )}
         </section>
+
+        {guestMode && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+            {guestFeatureMessage('긴급 모드 선택 저장')}
+          </div>
+        )}
 
         <section className="grid gap-4 md:grid-cols-3">
           <article className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
@@ -185,10 +195,11 @@ export default function AlertPage() {
                 key={option.key}
                 type="button"
                 onClick={() => setActionChoice(option.key)}
+                disabled={guestMode}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${actionChoice === option.key
                     ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
                     : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                  }`}
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {option.label}
               </button>
@@ -199,13 +210,14 @@ export default function AlertPage() {
             onChange={(event) => setActionNote(event.target.value)}
             placeholder="지금 판단의 한 줄 메모"
             rows={2}
+            disabled={guestMode}
             className="mt-3 w-full rounded-lg border border-neutral-700 bg-black/25 px-3 py-2 text-sm text-neutral-100 placeholder:text-zinc-400"
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleSaveAction}
-              disabled={!actionChoice}
+              disabled={guestMode || !actionChoice}
               className="rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-950 disabled:opacity-60"
             >
               선택 저장

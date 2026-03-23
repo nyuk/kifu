@@ -5,6 +5,7 @@ import { PresetCard } from './PresetCard'
 import { RuleEditor } from '../alerts/RuleEditor'
 import type { PresetStrategy, PresetBacktestData, PresetSummaryWindow } from '../../types/preset'
 import type { AlertRule, CreateAlertRuleRequest } from '../../types/alert'
+import { isGuestSession } from '../../lib/guestSession'
 import backtestData from '../../data/presetBacktestResults.json'
 
 const data = backtestData as PresetBacktestData
@@ -71,6 +72,7 @@ function formatDate(iso: string): string {
 }
 
 export function PresetStrategies() {
+  const guestMode = isGuestSession()
   const [editorOpen, setEditorOpen] = useState(false)
   const [prefillRule, setPrefillRule] = useState<AlertRule | null>(null)
   const [selectedPreset, setSelectedPreset] = useState<PresetStrategy | null>(null)
@@ -91,6 +93,7 @@ export function PresetStrategies() {
   })
 
   const handleCreateAlert = (preset: PresetStrategy) => {
+    if (guestMode) return
     const template = preset.alert_rule_template as CreateAlertRuleRequest
     // Create a fake AlertRule to prefill the editor
     const fakeRule: AlertRule = {
@@ -164,10 +167,17 @@ export function PresetStrategies() {
             onCreateAlert={handleCreateAlert}
             onViewDetail={setSelectedPreset}
             summaryWindow={summaryWindow}
-            disabled={DISABLED_PRESET_IDS.has(preset.id)}
+            disabled={guestMode || DISABLED_PRESET_IDS.has(preset.id)}
+            disabledLabel={guestMode ? '게스트 모드에서는 알림 생성 불가' : '준비 중'}
           />
         ))}
       </div>
+
+      {guestMode && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          게스트 모드에서는 프리셋 전략을 읽기 전용으로만 볼 수 있습니다. 알림 생성은 웹 계정에서 사용할 수 있습니다.
+        </div>
+      )}
 
       {selectedPreset && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4 py-8">
@@ -293,7 +303,15 @@ export function PresetStrategies() {
                 </section>
 
                 <div className="flex flex-col gap-3 pt-2">
-                  {DISABLED_PRESET_IDS.has(selectedPreset.id) ? (
+                  {guestMode ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full rounded-xl border border-neutral-700 px-4 py-3 text-sm font-medium text-neutral-500 cursor-not-allowed"
+                    >
+                      게스트 모드에서는 알림을 만들 수 없습니다
+                    </button>
+                  ) : DISABLED_PRESET_IDS.has(selectedPreset.id) ? (
                     <button
                       type="button"
                       disabled
@@ -328,6 +346,7 @@ export function PresetStrategies() {
       <RuleEditor
         open={editorOpen}
         rule={prefillRule}
+        guestMode={guestMode}
         onClose={() => {
           setEditorOpen(false)
           setPrefillRule(null)

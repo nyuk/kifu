@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
+import { guestFeatureMessage } from '../../lib/guestAccess'
+import { isGuestSession } from '../../lib/guestSession'
 import type { ReviewNote, Emotion, CreateNoteRequest } from '../../types/review'
 
 type NoteEditorProps = {
@@ -23,6 +25,7 @@ const EMOTION_OPTIONS: { value: Emotion; label: string; emoji: string }[] = [
 
 export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps) {
   const { createNote, updateNote, isLoading } = useNoteStore()
+  const guestMode = isGuestSession()
 
   const [title, setTitle] = useState(note?.title || '')
   const [content, setContent] = useState(note?.content || '')
@@ -55,6 +58,9 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (guestMode) {
+      return
+    }
 
     if (!title.trim() || !content.trim()) {
       return
@@ -100,6 +106,11 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {guestMode && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+              {guestFeatureMessage(note ? '리뷰 수정' : '리뷰 작성')}
+            </div>
+          )}
           {/* Title */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-neutral-300">
@@ -109,6 +120,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              disabled={guestMode}
               className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="노트 제목을 입력하세요"
               required
@@ -123,6 +135,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              disabled={guestMode}
               className="min-h-[150px] w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="매매에 대한 분석과 복기 내용을 작성하세요"
               required
@@ -140,6 +153,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                   key={opt.value}
                   type="button"
                   onClick={() => setEmotion(opt.value)}
+                  disabled={guestMode}
                   className={`rounded-full border px-3 py-1.5 text-sm transition-all ${emotion === opt.value
                       ? 'border-white/20 bg-neutral-100 text-neutral-900 shadow-sm font-semibold'
                       : 'border-transparent bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-neutral-200'
@@ -159,6 +173,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
             <textarea
               value={lessonLearned}
               onChange={(e) => setLessonLearned(e.target.value)}
+              disabled={guestMode}
               className="min-h-[80px] w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
               placeholder="이 매매에서 배운 점을 기록하세요"
             />
@@ -175,13 +190,15 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                disabled={guestMode}
                 className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-neutral-100 placeholder:text-neutral-500 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all"
                 placeholder="태그 입력 후 Enter"
               />
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white transition-colors"
+                disabled={guestMode}
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-neutral-300 hover:bg-white/10 hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               >
                 추가
               </button>
@@ -197,6 +214,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
+                      disabled={guestMode}
                       className="text-sky-300/60 hover:text-sky-300"
                     >
                       &times;
@@ -218,7 +236,7 @@ export function NoteEditor({ note, bubbleId, onClose, onSaved }: NoteEditorProps
             </button>
             <button
               type="submit"
-              disabled={isLoading || !title.trim() || !content.trim()}
+              disabled={guestMode || isLoading || !title.trim() || !content.trim()}
               className="rounded-lg bg-neutral-100 px-6 py-2.5 text-sm font-bold text-neutral-950 shadow-lg shadow-white/5 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? '저장 중...' : note ? '수정' : '저장'}

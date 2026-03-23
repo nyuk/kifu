@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useI18n } from '../../lib/i18n'
 import { useAlertStore } from '../../stores/alertStore'
+import { isGuestSession } from '../../lib/guestSession'
 import type { DecisionAction, Confidence, AlertDecision } from '../../types/alert'
 
 type DecisionFormProps = {
@@ -29,6 +30,7 @@ const CONFIDENCES: { value: Confidence; labelKey: 'confidenceHigh' | 'confidence
 export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
   const { t } = useI18n()
   const { submitDecision, isLoadingDetail } = useAlertStore()
+  const guestMode = isGuestSession()
 
   const [action, setAction] = useState<DecisionAction>('hold')
   const [memo, setMemo] = useState('')
@@ -63,6 +65,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (guestMode) return
     await submitDecision(alertId, {
       action,
       memo: memo.trim() || undefined,
@@ -74,6 +77,11 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
     <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">{t.decisionTitle}</p>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        {guestMode && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+            게스트 모드에서는 알림 판단을 저장할 수 없습니다. 읽기만 가능합니다.
+          </div>
+        )}
         <div>
           <label className="block text-xs text-neutral-400 mb-2">{t.decisionAction}</label>
           <div className="flex flex-wrap gap-2">
@@ -82,11 +90,12 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
                 key={a.value}
                 type="button"
                 onClick={() => setAction(a.value)}
+                disabled={guestMode}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   action === a.value
                     ? 'bg-neutral-200 text-neutral-950'
                     : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.08]'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {t[a.labelKey]}
               </button>
@@ -102,11 +111,12 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
                 key={c.value}
                 type="button"
                 onClick={() => setConfidence(c.value)}
+                disabled={guestMode}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   confidence === c.value
                     ? 'bg-neutral-200 text-neutral-950'
                     : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.08]'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 {t[c.labelKey]}
               </button>
@@ -120,6 +130,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={3}
+            disabled={guestMode}
             className="w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:border-blue-500"
             placeholder="판단 근거를 기록하세요..."
           />
@@ -127,7 +138,7 @@ export function DecisionForm({ alertId, existingDecision }: DecisionFormProps) {
 
         <button
           type="submit"
-          disabled={isLoadingDetail}
+          disabled={guestMode || isLoadingDetail}
           className="w-full rounded-lg bg-neutral-100 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoadingDetail ? t.saving : t.submitDecision}

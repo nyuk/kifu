@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from './api';
 import { normalizeBubbleSymbol, sanitizeBubbleTags } from './evidencePacket';
+import { guestFeatureMessage } from './guestAccess';
+import { isGuestSession } from './guestSession';
 
 export interface AgentResponse {
   provider: string;
@@ -131,6 +133,12 @@ const resolveBubbleAction = (params: {
   return undefined
 }
 
+const ensureBubbleWritable = (feature: string) => {
+  if (isGuestSession()) {
+    throw new Error(guestFeatureMessage(feature));
+  }
+}
+
 export const useBubbleStore = create<BubbleState>()(
   persist(
     (set, get) => ({
@@ -206,6 +214,7 @@ export const useBubbleStore = create<BubbleState>()(
         return { count: mapped.length, total: finalTotal }
       },
       createBubbleRemote: async (payload) => {
+        ensureBubbleWritable('말풍선 생성');
         const normalizedSymbol = normalizeBubbleSymbol(payload.symbol);
         if (!normalizedSymbol) {
           throw new Error(`bubble symbol is invalid: ${payload.symbol}`);
@@ -250,6 +259,7 @@ export const useBubbleStore = create<BubbleState>()(
         return bubble;
       },
       updateBubbleRemote: async (id, payload) => {
+        ensureBubbleWritable('말풍선 수정');
         await api.put(`/v1/bubbles/${id}`, payload);
         set((state) => ({
           bubbles: state.bubbles.map((b) =>
@@ -258,11 +268,13 @@ export const useBubbleStore = create<BubbleState>()(
         }));
       },
       backfillBubblesFromServer: async () => {
+        ensureBubbleWritable('말풍선 자동 생성');
         const response = await api.post('/v1/trades/backfill-bubbles');
         const updated = Number(response.data?.updated || 0);
         return { updated };
       },
       backfillPortfolioBubblesFromServer: async () => {
+        ensureBubbleWritable('포트폴리오 말풍선 생성');
         const response = await api.post('/v1/portfolio/backfill-bubbles');
         const created = Number(response.data?.created || 0);
         return { created };

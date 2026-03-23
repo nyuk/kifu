@@ -14,6 +14,8 @@ import { buildEvidencePacket, describeEvidencePacket, type EvidencePacket } from
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { api } from '../lib/api'
 import { isDemoMode } from '../lib/appMode'
+import { guestFeatureMessage } from '../lib/guestAccess'
+import { isGuestSession } from '../lib/guestSession'
 
 
 type BubbleCreateModalProps = {
@@ -156,6 +158,7 @@ export function BubbleCreateModal({
   onClose,
   onCreated,
 }: BubbleCreateModalProps) {
+  const guestMode = isGuestSession()
 
   const [timeframe, setTimeframe] = useState(defaultTimeframe)
   const [candleTime, setCandleTime] = useState('')
@@ -250,7 +253,7 @@ export function BubbleCreateModal({
     // Use defaultTime if provided, otherwise now
     const initialDate = defaultTime ? new Date(defaultTime) : new Date()
     setCandleTime(formatLocalDateTime(initialDate))
-  }, [open, defaultPrice, defaultTimeframe, defaultTime])
+  }, [open, defaultPrice, defaultTimeframe, defaultTime, symbol])
 
   useEffect(() => {
     if (!open) return
@@ -361,6 +364,10 @@ export function BubbleCreateModal({
   const MAX_AI_RETRIES = 2
 
   const handleAskAi = async (providers: readonly AiProvider[] = primaryAiProviders, mergeMode: 'replace' | 'append' = 'replace') => {
+    if (guestMode) {
+      setAiError(guestFeatureMessage('AI 의견 수집'))
+      return
+    }
     if (aiDisabled) {
       setAiError('\uac8c\uc2a4\ud2b8 \ubaa8\ub4dc\uc5d0\uc11c\ub294 AI \uc758\uacac \uc694\uccad\uc774 \ube44\ud65c\uc131\ud654\ub429\ub2c8\ub2e4.')
       return
@@ -442,6 +449,10 @@ export function BubbleCreateModal({
   }
 
   const handleBuildEvidencePreview = async () => {
+    if (guestMode) {
+      setEvidenceError(guestFeatureMessage('말풍선 생성'))
+      return
+    }
     if (aiDisabled) {
       setEvidenceError('\uac8c\uc2a4\ud2b8 \ubaa8\ub4dc\uc5d0\uc11c\ub294 \uc99d\uac70 \ud328\ud0b7\uc744 \uc0ac\uc6a9\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.')
       return
@@ -481,6 +492,10 @@ export function BubbleCreateModal({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (guestMode) {
+      setError(guestFeatureMessage('말풍선 생성'))
+      return
+    }
     if (!symbol) {
       setError('\uc885\ubaa9\uc744 \uc120\ud0dd\ud574 \uc8fc\uc138\uc694.')
       return
@@ -562,12 +577,18 @@ export function BubbleCreateModal({
               {error}
             </div>
           )}
+          {guestMode && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-base text-amber-200">
+              게스트 모드에서는 말풍선 저장과 AI 의견 수집을 사용할 수 없습니다. 차트와 예시 데이터는 읽기 전용으로만 볼 수 있습니다.
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-base font-medium text-neutral-300">
               시간 구간
               <select
                 value={timeframe}
                 onChange={(event) => setTimeframe(event.target.value)}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
               >
                 {timeframes.map((item) => (
@@ -583,6 +604,7 @@ export function BubbleCreateModal({
                 type="datetime-local"
                 value={candleTime}
                 onChange={(event) => setCandleTime(event.target.value)}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
               />
             </label>
@@ -593,6 +615,7 @@ export function BubbleCreateModal({
               type="text"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
+              disabled={guestMode}
               className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
               placeholder={'\uc608: 104800'}
             />
@@ -603,6 +626,7 @@ export function BubbleCreateModal({
               value={memo}
               onChange={(event) => setMemo(event.target.value)}
               rows={3}
+              disabled={guestMode}
               className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base leading-7 text-neutral-100"
               placeholder={'\uc9c4\uc785 \uadfc\uac70, \uc2ec\ub9ac \uc0c1\ud0dc \ub4f1\uc744 \uae30\ub85d\ud574 \ubcf4\uc138\uc694.'}
             />
@@ -613,6 +637,7 @@ export function BubbleCreateModal({
               type="text"
               value={tagsInput}
               onChange={(event) => setTagsInput(event.target.value)}
+              disabled={guestMode}
               className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
               placeholder="breakout, fomo"
             />
@@ -632,6 +657,7 @@ export function BubbleCreateModal({
               <select
                 value={assetClass}
                 onChange={(event) => setAssetClass(event.target.value as 'crypto' | 'stock')}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
               >
                 <option value="crypto">Crypto</option>
@@ -644,6 +670,7 @@ export function BubbleCreateModal({
                 type="text"
                 value={venueName}
                 onChange={(event) => setVenueName(event.target.value)}
+                disabled={guestMode}
                 className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-2.5 text-base text-neutral-100"
                 placeholder="binance, upbit, kis"
               />
@@ -659,7 +686,7 @@ export function BubbleCreateModal({
                   <select
                     value={promptType}
                     onChange={(e) => setPromptType(e.target.value as any)}
-                    disabled={aiLoading}
+                    disabled={guestMode || aiLoading}
                     className="rounded-lg border border-white/[0.08] bg-white/[0.06] px-3 py-2 text-sm text-neutral-300"
                   >
                     <option value="brief">빠르게</option>
@@ -669,7 +696,7 @@ export function BubbleCreateModal({
                   <button
                     type="button"
                     onClick={() => void handleAskAi(primaryAiProviders)}
-                    disabled={aiLoading || !price || aiDisabled}
+                    disabled={guestMode || aiLoading || !price || aiDisabled}
                     className="rounded-lg border border-blue-500/30 px-4 py-2 text-sm font-semibold text-blue-300 hover:bg-blue-500/10 disabled:opacity-50"
                   >
                     {aiDisabled ? '멤버만 사용' : aiLoading ? '분석 중...' : isDemoMode ? 'ChatGPT 의견 (데모)' : 'ChatGPT 의견'}
@@ -687,7 +714,7 @@ export function BubbleCreateModal({
                 <button
                   type="button"
                   onClick={() => void handleAskAi(optionalAiProviders, 'append')}
-                  disabled={aiLoading || !price}
+                  disabled={guestMode || aiLoading || !price}
                   className="rounded-lg border border-violet-400/30 px-4 py-2 text-sm font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-50"
                 >
                   {aiLoading ? (hasGeminiResponse ? 'Gemini 다시 요청 중...' : '추가 의견 요청 중...') : hasGeminiResponse ? 'Gemini 다시 요청' : 'Gemini 추가 의견'}
@@ -704,7 +731,7 @@ export function BubbleCreateModal({
                   <button
                     type="button"
                     onClick={() => void handleAskAi(primaryAiProviders)}
-                    disabled={aiLoading || !price || aiDisabled}
+                    disabled={guestMode || aiLoading || !price || aiDisabled}
                     className="rounded-lg border border-rose-300/50 px-4 py-2 text-sm font-semibold text-rose-200 hover:bg-rose-500/10 disabled:opacity-60"
                   >
                     {aiLoading ? '\uc7ac\uc2dc\ub3c4 \uc911...' : '\ub2e4\uc2dc \uc2dc\ub3c4'}
@@ -791,7 +818,7 @@ export function BubbleCreateModal({
                     return next
                   })
                 }
-                disabled={aiDisabled}
+                disabled={guestMode || aiDisabled}
                 className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                   includeEvidence
                     ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200'
@@ -834,6 +861,7 @@ export function BubbleCreateModal({
                     type="checkbox"
                     checked={includePositions}
                     onChange={(event) => setIncludePositions(event.target.checked)}
+                    disabled={guestMode}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
                   {'\ud604\uc7ac \ud3ec\uc9c0\uc158 \ud3ec\ud568'}
@@ -843,7 +871,7 @@ export function BubbleCreateModal({
                     type="checkbox"
                     checked={includeRecentTrades}
                     onChange={(event) => setIncludeRecentTrades(event.target.checked)}
-                    disabled={!includeEvidence}
+                    disabled={guestMode || !includeEvidence}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
                   {'\uccb4\uacb0 10\uac74'}
@@ -853,7 +881,7 @@ export function BubbleCreateModal({
                     type="checkbox"
                     checked={includeSummary}
                     onChange={(event) => setIncludeSummary(event.target.checked)}
-                    disabled={!includeEvidence}
+                    disabled={guestMode || !includeEvidence}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
                   기간 요약
@@ -863,7 +891,7 @@ export function BubbleCreateModal({
                     type="checkbox"
                     checked={includeBubbles}
                     onChange={(event) => setIncludeBubbles(event.target.checked)}
-                    disabled={!includeEvidence}
+                    disabled={guestMode || !includeEvidence}
                     className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                   />
                   최근 버블 포함
@@ -875,6 +903,7 @@ export function BubbleCreateModal({
                 <button
                   type="button"
                   onClick={() => setShowPacketAdvanced((prev) => !prev)}
+                  disabled={guestMode}
                   className="rounded-lg border border-white/[0.08] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-white/[0.12]"
                 >
                   {showPacketAdvanced ? '접기' : '펼치기'}
@@ -896,6 +925,7 @@ export function BubbleCreateModal({
                           key={option.value}
                           type="button"
                           onClick={() => setEvidenceScope(option.value as any)}
+                          disabled={guestMode}
                           className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                             evidenceScope === option.value
                               ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
@@ -916,6 +946,7 @@ export function BubbleCreateModal({
                           type="date"
                           value={evidenceFrom}
                           onChange={(event) => setEvidenceFrom(event.target.value)}
+                          disabled={guestMode}
                           className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-neutral-200"
                         />
                       </label>
@@ -925,6 +956,7 @@ export function BubbleCreateModal({
                           type="date"
                           value={evidenceTo}
                           onChange={(event) => setEvidenceTo(event.target.value)}
+                          disabled={guestMode}
                           className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-neutral-200"
                         />
                       </label>
@@ -936,6 +968,7 @@ export function BubbleCreateModal({
                     <button
                       type="button"
                       onClick={() => setEvidenceSymbolScope('current')}
+                      disabled={guestMode}
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                         evidenceSymbolScope === 'current'
                           ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
@@ -947,6 +980,7 @@ export function BubbleCreateModal({
                     <button
                       type="button"
                       onClick={() => setEvidenceSymbolScope('all')}
+                      disabled={guestMode}
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                         evidenceSymbolScope === 'all'
                           ? 'border-emerald-300/60 bg-emerald-300/10 text-emerald-200'
@@ -972,6 +1006,7 @@ export function BubbleCreateModal({
                           setBubbleTagsInput(event.target.value)
                           setBubbleTagsEdited(true)
                         }}
+                        disabled={guestMode}
                         className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-neutral-200"
                         placeholder="breakout, fomo"
                       />
@@ -981,6 +1016,7 @@ export function BubbleCreateModal({
                       <select
                         value={bubbleLimit}
                         onChange={(event) => setBubbleLimit(Number(event.target.value))}
+                        disabled={guestMode}
                         className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-neutral-200"
                       >
                         {[4, 6, 10, 20].map((value) => (
@@ -996,7 +1032,7 @@ export function BubbleCreateModal({
                 <button
                   type="button"
                   onClick={handleBuildEvidencePreview}
-                  disabled={evidenceLoading || (!includeEvidence && !includePositions && !includeBubbles)}
+                  disabled={guestMode || evidenceLoading || (!includeEvidence && !includePositions && !includeBubbles)}
                   className="rounded-lg border border-white/[0.08] px-4 py-2 text-sm font-semibold text-neutral-200 hover:border-white/[0.12] disabled:opacity-60"
                 >
                   {evidenceLoading ? '준비 중...' : '패킷 미리보기'}
@@ -1035,7 +1071,7 @@ export function BubbleCreateModal({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={guestMode || isSubmitting}
                 className="rounded-xl bg-neutral-100 px-5 py-2.5 text-base font-semibold text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? '저장 중...' : '버블 저장'}

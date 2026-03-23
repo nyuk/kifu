@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getAccessToken, useAuthStore } from '../stores/auth'
+import { buildGuestBlockedError, isGuestBlockedApiRequest } from './guestAccess'
 
 const configuredBaseURL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim()
 const defaultLocalBaseURL = 'http://127.0.0.1:8080/api'
@@ -42,6 +43,10 @@ export const api = axios.create({
 
 // Request interceptor - add token
 api.interceptors.request.use((config) => {
+  if (isGuestBlockedApiRequest(config.method, config.url)) {
+    return Promise.reject(buildGuestBlockedError(config))
+  }
+
   const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

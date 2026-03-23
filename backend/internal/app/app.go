@@ -18,6 +18,7 @@ import (
 	"github.com/moneyvessel/kifu/internal/infrastructure/notification"
 	"github.com/moneyvessel/kifu/internal/infrastructure/repositories"
 	"github.com/moneyvessel/kifu/internal/interfaces/http"
+	"github.com/moneyvessel/kifu/internal/interfaces/http/middleware"
 	"github.com/moneyvessel/kifu/internal/jobs"
 	"github.com/moneyvessel/kifu/internal/services"
 )
@@ -161,6 +162,8 @@ func Run() error {
 			},
 		})(c)
 	})
+
+	app.Use(middleware.RequireGuestReadOnly(userRepo))
 
 	summaryPackService := services.NewSummaryPackService(tradeRepo)
 

@@ -87,17 +87,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { icon: Boxes, label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
     { icon: Zap, label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
     { icon: FileText, label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
-    { icon: TrendingUp, label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
     { icon: Settings, label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]
 
+  const effectiveBaseNavItems = isGuestSessionActive
+    ? baseNavItems
+    : [
+        ...baseNavItems.slice(0, 7),
+        { icon: TrendingUp, label: t.navAlerts, href: '/alerts', color: 'text-indigo-400', activeColor: 'bg-indigo-400/10 text-indigo-300' },
+        ...baseNavItems.slice(7),
+      ]
+
   const navItems = isAdmin && !isGuestSessionActive
     ? [
-        ...baseNavItems,
+        ...effectiveBaseNavItems,
         { icon: Megaphone, label: '마케팅', href: '/marketing', color: 'text-amber-300', activeColor: 'bg-amber-300/10 text-amber-200' },
         { icon: ShieldCheck, label: 'Admin', href: '/admin', color: 'text-cyan-400', activeColor: 'bg-cyan-400/10 text-cyan-300' },
       ]
-    : baseNavItems
+    : effectiveBaseNavItems
 
   const handleLogout = () => {
     clearGuestSession()

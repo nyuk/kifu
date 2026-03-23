@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { api } from '../lib/api'
+import { guestFeatureMessage } from '../lib/guestAccess'
+import { isGuestSession } from '../lib/guestSession'
 import type { ReviewNote, CreateNoteRequest, NotesListResponse } from '../types/review'
 
 type NoteStore = {
@@ -53,7 +55,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         },
         isLoading: false,
       })
-    } catch (error) {
+    } catch {
       set({ error: '노트를 불러오는데 실패했습니다', isLoading: false })
     }
   },
@@ -65,7 +67,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         `/v1/bubbles/${bubbleId}/notes`
       )
       set({ notes: response.data.notes, isLoading: false })
-    } catch (error) {
+    } catch {
       set({ error: '노트를 불러오는데 실패했습니다', isLoading: false })
     }
   },
@@ -73,6 +75,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   createNote: async (data: CreateNoteRequest) => {
     set({ isLoading: true, error: null })
     try {
+      if (isGuestSession()) {
+        throw new Error(guestFeatureMessage('리뷰 작성'))
+      }
       const response = await api.post<ReviewNote>('/v1/notes', data)
       const newNote = response.data
       set((state) => ({
@@ -80,8 +85,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         isLoading: false,
       }))
       return newNote
-    } catch (error) {
-      set({ error: '노트 생성에 실패했습니다', isLoading: false })
+    } catch (error: any) {
+      set({ error: error?.message || '노트 생성에 실패했습니다', isLoading: false })
       return null
     }
   },
@@ -89,6 +94,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   updateNote: async (id: string, data: CreateNoteRequest) => {
     set({ isLoading: true, error: null })
     try {
+      if (isGuestSession()) {
+        throw new Error(guestFeatureMessage('리뷰 수정'))
+      }
       const response = await api.put<ReviewNote>(`/v1/notes/${id}`, data)
       const updatedNote = response.data
       set((state) => ({
@@ -97,8 +105,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         isLoading: false,
       }))
       return updatedNote
-    } catch (error) {
-      set({ error: '노트 수정에 실패했습니다', isLoading: false })
+    } catch (error: any) {
+      set({ error: error?.message || '노트 수정에 실패했습니다', isLoading: false })
       return null
     }
   },
@@ -106,6 +114,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   deleteNote: async (id: string) => {
     set({ isLoading: true, error: null })
     try {
+      if (isGuestSession()) {
+        throw new Error(guestFeatureMessage('리뷰 삭제'))
+      }
       await api.delete(`/v1/notes/${id}`)
       set((state) => ({
         notes: state.notes.filter((n) => n.id !== id),
@@ -113,8 +124,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         isLoading: false,
       }))
       return true
-    } catch (error) {
-      set({ error: '노트 삭제에 실패했습니다', isLoading: false })
+    } catch (error: any) {
+      set({ error: error?.message || '노트 삭제에 실패했습니다', isLoading: false })
       return false
     }
   },

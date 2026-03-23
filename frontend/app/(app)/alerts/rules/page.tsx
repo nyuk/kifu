@@ -8,11 +8,13 @@ import { RuleEditor } from '../../../../src/components/alerts/RuleEditor'
 import { PresetStrategies } from '../../../../src/components/presets/PresetStrategies'
 import type { AlertRule } from '../../../../src/types/alert'
 import Link from 'next/link'
+import { isGuestSession } from '../../../../src/lib/guestSession'
 
 type Tab = 'rules' | 'presets'
 
 export default function AlertRulesPage() {
   const { t } = useI18n()
+  const guestMode = isGuestSession()
   const { rules, isLoadingRules, rulesError, fetchRules } = useAlertStore()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null)
@@ -83,10 +85,16 @@ export default function AlertRulesPage() {
         <PresetStrategies />
       ) : (
         <>
+          {guestMode && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+              게스트 모드에서는 알림 규칙을 읽기만 할 수 있습니다. 생성, 수정, 삭제, 토글은 웹 계정에서 사용할 수 있습니다.
+            </div>
+          )}
           <div className="flex justify-end">
             <button
               type="button"
               onClick={handleCreate}
+              disabled={guestMode}
               className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white"
             >
               + {t.createRule}
@@ -111,18 +119,20 @@ export default function AlertRulesPage() {
               <button
                 type="button"
                 onClick={handleCreate}
-                className="mt-4 rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500 transition"
+                disabled={guestMode}
+                className="mt-4 rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 + {t.createRule}
               </button>
             </div>
           ) : (
-            <RuleList rules={rules} onEdit={handleEdit} />
+            <RuleList rules={rules} onEdit={handleEdit} guestMode={guestMode} />
           )}
 
           <RuleEditor
             open={editorOpen}
             rule={editingRule}
+            guestMode={guestMode}
             onClose={() => setEditorOpen(false)}
           />
         </>
