@@ -2,8 +2,12 @@ import { api } from './api'
 import type {
   CreateMarketingIdeaPayload,
   GenerateMarketingDraftPayload,
+  MarketingChannelSetting,
   MarketingDraft,
+  MarketingPublication,
   MarketingWorkspaceResponse,
+  SaveMarketingChannelSettingPayload,
+  SaveMarketingPublicationPayload,
   UpdateMarketingDraftPayload,
 } from '../types/marketing'
 
@@ -26,5 +30,15 @@ export const generateMarketingDraft = async (ideaId: string, payload: GenerateMa
 
 export const updateMarketingDraft = async (draftId: string, payload: UpdateMarketingDraftPayload) => {
   const response = await api.patch<MarketingDraft>(`/v1/marketing/drafts/${draftId}`, payload)
+  return response.data
+}
+
+export const saveMarketingPublication = async (draftId: string, payload: SaveMarketingPublicationPayload) => {
+  const response = await api.put<MarketingPublication>(`/v1/marketing/drafts/${draftId}/publication`, payload)
+  return response.data
+}
+
+export const saveMarketingChannelSetting = async (channel: string, payload: SaveMarketingChannelSettingPayload) => {
+  const response = await api.put<MarketingChannelSetting>(`/v1/marketing/settings/${channel}`, payload)
   return response.data
 }

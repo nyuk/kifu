@@ -21,4 +21,12 @@ type MarketingRepository interface {
 	CountDraftsByUser(ctx context.Context, userID uuid.UUID, productKey string) (int, error)
 	CountDraftsByStatus(ctx context.Context, userID uuid.UUID, productKey string, status string) (int, error)
 	NextDraftVersion(ctx context.Context, ideaID uuid.UUID, channel string) (int, error)
+
+	CreatePublication(ctx context.Context, publication *entities.MarketingPublication) error
+	UpdatePublication(ctx context.Context, publication *entities.MarketingPublication) error
+	GetPublicationByDraftID(ctx context.Context, draftID uuid.UUID) (*entities.MarketingPublication, error)
+
+	ListChannelSettingsByUser(ctx context.Context, userID uuid.UUID, productKey string) ([]*entities.MarketingChannelSetting, error)
+	GetChannelSetting(ctx context.Context, userID uuid.UUID, productKey string, channel string) (*entities.MarketingChannelSetting, error)
+	UpsertChannelSetting(ctx context.Context, setting *entities.MarketingChannelSetting) error
 }

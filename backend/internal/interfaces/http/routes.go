@@ -283,7 +283,7 @@ func RegisterRoutes(
 	packs.Get("/:pack_id", packHandler.GetByID)
 
 	monthlyReportHandler := handlers.NewMonthlyReportHandler(monthlyReportService, monthlyReportRepo)
-	marketingService := services.NewMarketingService(marketingRepo)
+	marketingService := services.NewMarketingService(marketingRepo).WithAIGeneration(aiProviderRepo, aiInvocationService)
 	marketingHandler := handlers.NewMarketingHandler(marketingService)
 	growthHandler := handlers.NewGrowthHandler(growthService)
 	reports := api.Group("/reports")
@@ -297,6 +297,8 @@ func RegisterRoutes(
 	marketing.Post("/ideas", marketingHandler.CreateIdea)
 	marketing.Post("/ideas/:id/drafts", marketingHandler.GenerateDraft)
 	marketing.Patch("/drafts/:id", marketingHandler.UpdateDraft)
+	marketing.Put("/drafts/:id/publication", marketingHandler.SavePublication)
+	marketing.Put("/settings/:channel", marketingHandler.SaveChannelSetting)
 
 	growth := api.Group("/growth")
 	growth.Post("/events", growthHandler.TrackEvent)

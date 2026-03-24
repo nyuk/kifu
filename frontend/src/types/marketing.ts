@@ -8,11 +8,34 @@ export type MarketingAngleType =
   | 'personal_experience'
   | 'education'
 
+export type MarketingContentIntent =
+  | 'direct_promo'
+  | 'soft_promo'
+  | 'non_promo'
+
+export type MarketingEvidenceSource =
+  | 'personal_note'
+  | 'team_chat'
+  | 'quote'
+  | 'news'
+  | 'screenshot'
+  | 'generated_image'
+
+export type MarketingFormatStyle =
+  | 'question'
+  | 'reflection'
+  | 'conversation'
+  | 'contrarian'
+  | 'screen_explainer'
+  | 'news_reaction'
+
 export type MarketingDraftStatus =
   | 'approval_pending'
   | 'approved'
   | 'on_hold'
   | 'discarded'
+
+export type MarketingPublicationStatus = 'published'
 
 export type MarketingIdeaStatus = 'inbox' | 'draft_ready'
 
@@ -25,6 +48,9 @@ export type MarketingIdea = {
   angle_type: MarketingAngleType
   message_pillar: string
   channels: MarketingChannel[]
+  content_intent: MarketingContentIntent
+  evidence_source: MarketingEvidenceSource
+  format_style: MarketingFormatStyle
   source_link?: string | null
   status: MarketingIdeaStatus
   created_at: string
@@ -47,6 +73,35 @@ export type MarketingDraft = {
   updated_at: string
 }
 
+export type MarketingPublication = {
+  id: string
+  draft_id: string
+  user_id: string
+  product_key: string
+  channel: MarketingChannel
+  publish_status: MarketingPublicationStatus
+  external_url?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type MarketingChannelSetting = {
+  id: string
+  user_id: string
+  product_key: string
+  channel: MarketingChannel
+  publication_name: string
+  publication_url?: string | null
+  default_category: string
+  primary_audience: string
+  tone_guide: string
+  default_cta: string
+  proof_points: string
+  reference_notes: string
+  created_at: string
+  updated_at: string
+}
+
 export type MarketingWorkspaceSummary = {
   idea_count: number
   draft_count: number
@@ -59,6 +114,8 @@ export type MarketingWorkspaceResponse = {
   summary: MarketingWorkspaceSummary
   ideas: MarketingIdea[]
   drafts: MarketingDraft[]
+  publications: MarketingPublication[]
+  channel_settings: MarketingChannelSetting[]
 }
 
 export type CreateMarketingIdeaPayload = {
@@ -68,6 +125,9 @@ export type CreateMarketingIdeaPayload = {
   angle_type: MarketingAngleType
   message_pillar: string
   channels: MarketingChannel[]
+  content_intent: MarketingContentIntent
+  evidence_source: MarketingEvidenceSource
+  format_style: MarketingFormatStyle
   source_link?: string
 }
 
@@ -86,6 +146,24 @@ export type UpdateMarketingDraftPayload = {
   status?: MarketingDraftStatus
 }
 
+export type SaveMarketingPublicationPayload = {
+  product_key: string
+  external_url: string
+}
+
+export type SaveMarketingChannelSettingPayload = {
+  product_key: string
+  channel: MarketingChannel
+  publication_name: string
+  publication_url?: string
+  default_category: string
+  primary_audience: string
+  tone_guide: string
+  default_cta: string
+  proof_points: string
+  reference_notes: string
+}
+
 export const marketingChannelLabels: Record<MarketingChannel, string> = {
   x: 'X',
   naver_blog: '네이버 블로그',
@@ -99,6 +177,30 @@ export const marketingAngleLabels: Record<MarketingAngleType, string> = {
   dev_log: '개발 로그',
   personal_experience: '개인 경험',
   education: '교육형',
+}
+
+export const marketingContentIntentLabels: Record<MarketingContentIntent, string> = {
+  direct_promo: '직접 광고',
+  soft_promo: '은근한 연결',
+  non_promo: '비광고 글',
+}
+
+export const marketingEvidenceSourceLabels: Record<MarketingEvidenceSource, string> = {
+  personal_note: '내 생각',
+  team_chat: '팀 대화',
+  quote: '인용문',
+  news: '뉴스 기사',
+  screenshot: '화면 캡처',
+  generated_image: '생성 이미지',
+}
+
+export const marketingFormatStyleLabels: Record<MarketingFormatStyle, string> = {
+  question: '질문형',
+  reflection: '회고형',
+  conversation: '대화형',
+  contrarian: '반박형',
+  screen_explainer: '화면 설명형',
+  news_reaction: '뉴스 반응형',
 }
 
 export const marketingDraftStatusLabels: Record<MarketingDraftStatus, string> = {

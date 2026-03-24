@@ -197,6 +197,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               else if (item.href.includes('bubbles')) accentClass = 'bg-amber-500'
               else if (item.href.includes('trades')) accentClass = 'bg-rose-500'
               else if (item.href.includes('review')) accentClass = 'bg-emerald-500'
+              else if (item.href.includes('marketing')) accentClass = 'bg-amber-400'
               else if (item.href.includes('admin')) accentClass = 'bg-cyan-500'
               else if (item.href.includes('settings')) accentClass = 'bg-neutral-500'
 
@@ -229,6 +230,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {guestSessionId ? (
                 <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-200">
                   Guest · {guestSessionId}
+                </span>
+              ) : isAdmin ? (
+                <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-medium text-cyan-200">
+                  Admin
                 </span>
               ) : (
                 <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200">

@@ -114,6 +114,7 @@ func (r *AIProviderRepositoryImpl) GetDefault(ctx context.Context) (*entities.AI
                provider_type, base_url, default_endpoint, timeout_seconds, retry_policy, responses_api_enabled
         FROM ai_providers
         WHERE is_default = true AND enabled = true
+        ORDER BY created_at DESC, name ASC
         LIMIT 1
     `
 	var provider entities.AIProvider

@@ -14,8 +14,9 @@ import (
 )
 
 type PlanMatcher struct {
-	planRepo repositories.TradePlanRepository
-	tgSender *notification.TelegramSender
+	planRepo            repositories.TradePlanRepository
+	tgSender            *notification.TelegramSender
+	disabledMissingTable bool
 }
 
 func NewPlanMatcher(
@@ -44,9 +45,18 @@ func (m *PlanMatcher) Start(ctx context.Context) {
 }
 
 func (m *PlanMatcher) runOnce(ctx context.Context) {
+	if m.disabledMissingTable {
+		return
+	}
+
 	// 1) Single JOIN query: find all unmatched plans that have a matching trade
 	matches, err := m.planRepo.MatchWithTrades(ctx, 100)
 	if err != nil {
+		if isMissingTradePlansTable(err) {
+			m.disabledMissingTable = true
+			log.Printf("plan matcher: trade_plans 테이블이 없어 비활성화합니다. backend/migrations/032_trade_plans.sql 적용 후 재시작하면 다시 활성화됩니다.")
+			return
+		}
 		log.Printf("plan matcher: match query failed: %v", err)
 		return
 	}
@@ -79,10 +89,26 @@ func (m *PlanMatcher) runOnce(ctx context.Context) {
 	// 2) Single UPDATE: expire plans older than 24h with no trade match
 	expired, err := m.planRepo.ExpireOld(ctx, 24*time.Hour)
 	if err != nil {
+		if isMissingTradePlansTable(err) {
+			m.disabledMissingTable = true
+			log.Printf("plan matcher: trade_plans 테이블이 없어 비활성화합니다. backend/migrations/032_trade_plans.sql 적용 후 재시작하면 다시 활성화됩니다.")
+			return
+		}
 		log.Printf("plan matcher: expire failed: %v", err)
 	} else if expired > 0 {
 		log.Printf("plan matcher: expired %d unmatched plans", expired)
 	}
+}
+
+func isMissingTradePlansTable(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "trade_plans") &&
+		(strings.Contains(text, "sqlstate 42p01") ||
+			strings.Contains(text, "relation") ||
+			strings.Contains(text, "릴레이션"))
 }
 
 func (m *PlanMatcher) sendMatchNotification(ctx context.Context, plan *entities.TradePlan, tradePrice string) {

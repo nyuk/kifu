@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	MarketingProductKifu = "kifu"
+	MarketingProductKifu        = "kifu"
+	MarketingProductMoneyVessel = "moneyvessel"
 
 	MarketingChannelX          = "x"
 	MarketingChannelNaverBlog  = "naver_blog"
@@ -18,27 +19,49 @@ const (
 	MarketingDraftStatusOK     = "approved"
 	MarketingDraftStatusHold   = "on_hold"
 	MarketingDraftStatusTrash  = "discarded"
+	MarketingPublishStatusDone = "published"
 	MarketingAngleProductIntro = "product_intro"
 	MarketingAngleProblem      = "problem"
 	MarketingAngleFeature      = "feature"
 	MarketingAngleDevLog       = "dev_log"
 	MarketingAnglePersonal     = "personal_experience"
 	MarketingAngleEducation    = "education"
+
+	MarketingContentIntentDirect = "direct_promo"
+	MarketingContentIntentSoft   = "soft_promo"
+	MarketingContentIntentNon    = "non_promo"
+
+	MarketingEvidencePersonalNote = "personal_note"
+	MarketingEvidenceTeamChat     = "team_chat"
+	MarketingEvidenceQuote        = "quote"
+	MarketingEvidenceNews         = "news"
+	MarketingEvidenceScreenshot   = "screenshot"
+	MarketingEvidenceGenerated    = "generated_image"
+
+	MarketingFormatQuestion        = "question"
+	MarketingFormatReflection      = "reflection"
+	MarketingFormatConversation    = "conversation"
+	MarketingFormatContrarian      = "contrarian"
+	MarketingFormatScreenExplainer = "screen_explainer"
+	MarketingFormatNewsReaction    = "news_reaction"
 )
 
 type MarketingIdea struct {
-	ID            uuid.UUID `json:"id"`
-	UserID        uuid.UUID `json:"user_id"`
-	ProductKey    string    `json:"product_key"`
-	Title         string    `json:"title"`
-	RawNote       string    `json:"raw_note"`
-	AngleType     string    `json:"angle_type"`
-	MessagePillar string    `json:"message_pillar"`
-	Channels      []string  `json:"channels"`
-	SourceLink    *string   `json:"source_link,omitempty"`
-	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	UserID         uuid.UUID `json:"user_id"`
+	ProductKey     string    `json:"product_key"`
+	Title          string    `json:"title"`
+	RawNote        string    `json:"raw_note"`
+	AngleType      string    `json:"angle_type"`
+	MessagePillar  string    `json:"message_pillar"`
+	Channels       []string  `json:"channels"`
+	ContentIntent  string    `json:"content_intent"`
+	EvidenceSource string    `json:"evidence_source"`
+	FormatStyle    string    `json:"format_style"`
+	SourceLink     *string   `json:"source_link,omitempty"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type MarketingDraft struct {
@@ -66,6 +89,23 @@ type MarketingPublication struct {
 	PublishStatus   string    `json:"publish_status"`
 	ExternalURL     *string   `json:"external_url,omitempty"`
 	MetricsSnapshot []byte    `json:"metrics_snapshot"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type MarketingChannelSetting struct {
+	ID              uuid.UUID `json:"id"`
+	UserID          uuid.UUID `json:"user_id"`
+	ProductKey      string    `json:"product_key"`
+	Channel         string    `json:"channel"`
+	PublicationName string    `json:"publication_name"`
+	PublicationURL  *string   `json:"publication_url,omitempty"`
+	DefaultCategory string    `json:"default_category"`
+	PrimaryAudience string    `json:"primary_audience"`
+	ToneGuide       string    `json:"tone_guide"`
+	DefaultCTA      string    `json:"default_cta"`
+	ProofPoints     string    `json:"proof_points"`
+	ReferenceNotes  string    `json:"reference_notes"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

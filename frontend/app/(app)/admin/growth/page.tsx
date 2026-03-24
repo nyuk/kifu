@@ -263,6 +263,9 @@ export default function AdminGrowthPage() {
         angle_type: getDraftAngleType(draft.kind),
         message_pillar: messagePillar,
         channels: ['x'],
+        content_intent: 'soft_promo',
+        evidence_source: 'personal_note',
+        format_style: 'reflection',
       })
 
       setDraftActionMessage('Marketing OS 인박스에 저장했습니다. /marketing에서 초안 생성이나 다듬기를 이어가면 됩니다.')
