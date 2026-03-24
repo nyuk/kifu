@@ -41,6 +41,12 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
 
   const isEdit = !!rule?.id
   const isPresetPrefill = !!rule && !rule.id
+  const presetLockedFields =
+    ruleType === 'price_change'
+      ? ['direction', 'threshold_type', 'reference']
+      : ruleType === 'volatility_spike'
+        ? ['timeframe']
+        : []
 
   const currentRuleTypeLabel =
     RULE_TYPES.find((item) => item.value === ruleType)?.labelKey
@@ -115,7 +121,7 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
             {isEdit
               ? '알림 규칙을 수정하고 저장하면 다음 트리거부터 새 조건이 적용됩니다.'
               : isPresetPrefill
-                ? '프리셋에서 가져온 기본값입니다. 종목과 쿨다운만 확인한 뒤 바로 저장해도 됩니다.'
+                ? '프리셋 백테스트에서 가져온 기본값입니다. Phase 1에서는 종목과 기준 구간은 유지하고, 이름·쿨다운·민감도만 조정하는 흐름을 권장합니다.'
                 : '가격 변화, 이동평균, 가격 수준, 변동성 급등 중 원하는 조건으로 알림을 만들 수 있습니다.'}
           </p>
         </div>
@@ -135,7 +141,7 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
           {isPresetPrefill && (
             <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-300/80">프리셋 요약</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-4">
                 <div>
                   <p className="text-xs text-neutral-500">전략 이름</p>
                   <p className="mt-1 text-sm font-medium text-neutral-100">{name || '프리셋 전략'}</p>
@@ -148,9 +154,13 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
                   <p className="text-xs text-neutral-500">기본 종목</p>
                   <p className="mt-1 text-sm font-medium text-neutral-100">{symbol || 'BTCUSDT'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-neutral-500">백테스트 기준</p>
+                  <p className="mt-1 text-sm font-medium text-neutral-100">BTCUSDT · 15m</p>
+                </div>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-                저장 후에도 규칙 목록에서 이름, 종목, 쿨다운, 세부 조건을 다시 수정할 수 있습니다.
+                카드의 수치는 BTCUSDT 15분봉 결과를 기준으로 합니다. 기본 흐름에서는 종목과 규칙 유형을 바꾸지 않고, 이름·쿨다운·민감도만 조정하는 편이 카드 결과와 가장 잘 맞습니다.
               </p>
             </div>
           )}
@@ -173,10 +183,13 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
                 type="text"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                disabled={guestMode}
-                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
+                disabled={guestMode || isPresetPrefill}
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
                 placeholder="BTCUSDT"
               />
+              {isPresetPrefill && (
+                <p className="mt-1 text-[11px] text-neutral-500">Phase 1에서는 프리셋 종목을 그대로 사용합니다.</p>
+              )}
             </label>
           </div>
 
@@ -186,8 +199,8 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
               <select
                 value={ruleType}
                 onChange={(e) => handleRuleTypeChange(e.target.value as RuleType)}
-                disabled={guestMode}
-                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100"
+                disabled={guestMode || isPresetPrefill}
+                className="mt-2 w-full rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2 text-sm text-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {RULE_TYPES.map((rt) => (
                   <option key={rt.value} value={rt.value}>
@@ -195,6 +208,9 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
                   </option>
                 ))}
               </select>
+              {isPresetPrefill && (
+                <p className="mt-1 text-[11px] text-neutral-500">프리셋 전략의 규칙 유형은 고정됩니다.</p>
+              )}
             </label>
             <label className="text-sm text-neutral-300">
               {isPresetPrefill ? '중복 알림 간격 (분)' : t.ruleCooldown}
@@ -214,8 +230,19 @@ export function RuleEditor({ open, rule, onClose, guestMode = false }: RuleEdito
               {isPresetPrefill ? '프리셋 조건' : '세부 조건'}
             </p>
             <div className={guestMode ? 'pointer-events-none opacity-70' : ''}>
-              <RuleConfigForm ruleType={ruleType} config={config} onChange={setConfig} />
+              <RuleConfigForm
+                ruleType={ruleType}
+                config={config}
+                onChange={setConfig}
+                disabled={guestMode}
+                lockedFields={isPresetPrefill ? presetLockedFields : []}
+              />
             </div>
+            {isPresetPrefill && (
+              <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+                고정된 항목은 카드 결과와 같은 맥락을 유지하기 위한 값입니다. 지금 단계에서는 민감도만 미세 조정하는 흐름으로 사용하세요.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">

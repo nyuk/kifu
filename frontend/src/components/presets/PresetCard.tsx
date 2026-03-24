@@ -66,6 +66,7 @@ export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow,
   const risk = RISK_BADGE[preset.risk_level] ?? RISK_BADGE.medium
   const category = CATEGORY_BADGE[preset.category] ?? CATEGORY_BADGE.rebound
   const s = getSummaryByWindow(preset, summaryWindow)
+  const isCyclePreset = preset.id === 'cycle-accum-v1'
 
   return (
     <div className="flex flex-col rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
@@ -85,12 +86,30 @@ export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow,
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-md border border-white/[0.08] bg-black/20 px-2 py-1 text-[11px] font-medium text-neutral-300">
+          BTCUSDT
+        </span>
+        <span className="rounded-md border border-white/[0.08] bg-black/20 px-2 py-1 text-[11px] font-medium text-neutral-300">
+          15m 기준
+        </span>
+        <span className="rounded-md border border-white/[0.08] bg-black/20 px-2 py-1 text-[11px] font-medium text-neutral-400">
+          {formatWindowLabel(summaryWindow, s.window)}
+        </span>
+      </div>
+
       {/* Metrics */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricBox label="승률" value={`${s.win_rate}%`} />
-        <MetricBox label="평균수익" value={`${s.avg_return_pct > 0 ? '+' : ''}${s.avg_return_pct}%`} />
-        <MetricBox label="신호 수" value={`${s.signal_count}회`} sub={formatWindowLabel(summaryWindow, s.window)} />
-        <MetricBox label="평균보유" value={formatHoldTime(preset)} />
+        <MetricBox label="평균 손익" value={`${s.avg_return_pct > 0 ? '+' : ''}${s.avg_return_pct}%`} />
+        <MetricBox label="최대 낙폭" value={`${s.max_drawdown_pct}%`} />
+        <MetricBox label="신호 수" value={`${s.signal_count}회`} />
+      </div>
+
+      <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2">
+        <p className="text-[11px] leading-relaxed text-neutral-400">
+          평균 보유 {formatHoldTime(preset)} · TP {s.tp_count} · SL {s.sl_count} · TO {s.timeout_count}
+        </p>
       </div>
 
       {/* Params */}
@@ -126,6 +145,11 @@ export function PresetCard({ preset, onCreateAlert, onViewDetail, summaryWindow,
 
       {/* CTA */}
       <div className="mt-auto pt-4">
+        {disabled && isCyclePreset && (
+          <div className="mb-3 rounded-lg border border-white/[0.08] bg-black/20 px-3 py-2 text-xs leading-relaxed text-neutral-400">
+            90일 기준 알림 연결은 아직 준비 중입니다. 지금은 카드와 상세 결과만 먼저 확인할 수 있습니다.
+          </div>
+        )}
         <div className="grid gap-2">
           <button
             type="button"

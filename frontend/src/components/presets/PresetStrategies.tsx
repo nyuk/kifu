@@ -57,6 +57,69 @@ const PRESET_COPY: Record<
   },
 }
 
+const PRESET_DETAIL_GUIDE: Record<
+  string,
+  {
+    fitFor: string[]
+    adjustables: string[]
+    nextSteps: string[]
+    phaseNote?: string
+  }
+> = {
+  'extreme-dip-v1': {
+    fitFor: [
+      '급락 뒤 짧은 반등 구간을 놓치지 않고 먼저 감시하고 싶을 때',
+      '강한 변동 구간에서 진입 후보를 빠르게 체크하고 싶을 때',
+      '짧은 보유와 명확한 무효 기준을 선호할 때',
+    ],
+    adjustables: [
+      '알림 이름을 내 표현에 맞게 바꾸기',
+      '중복 알림 간격을 상황에 맞게 줄이거나 늘리기',
+      '민감도(threshold value)를 조금 더 보수적이거나 공격적으로 조정하기',
+    ],
+    nextSteps: [
+      '상세 결과에서 최근 예시와 손익 분포를 먼저 확인합니다.',
+      '기본값으로 알림을 만든 뒤 실제 알림이 너무 잦은지 확인합니다.',
+      '알림이 울리면 버블과 복기로 이어서 내 판단 패턴과 비교합니다.',
+    ],
+  },
+  'vol-spike-v1': {
+    fitFor: [
+      '방향보다 먼저 큰 움직임 시작 자체를 잡아두고 싶을 때',
+      '차트만 보다 변동성 확장을 놓치는 경우가 많을 때',
+      '직접 진입보다 관찰 트리거로 먼저 쓰고 싶을 때',
+    ],
+    adjustables: [
+      '알림 이름과 쿨다운을 내 루틴에 맞게 정리하기',
+      'multiplier를 높여 더 드문 신호만 받거나 낮춰 더 민감하게 받기',
+      '같은 BTC 맥락에서 실제 신호 밀도를 보고 조정하기',
+    ],
+    nextSteps: [
+      '카드의 최근 90일/180일 결과를 먼저 비교합니다.',
+      '알림을 만든 뒤 신호가 왔을 때 방향 판단은 별도로 합니다.',
+      '복기에서 변동성 확대 구간의 실제 대응을 기록합니다.',
+    ],
+  },
+  'cycle-accum-v1': {
+    fitFor: [
+      '단기 대응보다 중장기 관찰 후보를 정리하고 싶을 때',
+      '사이클 저점 구간을 단기 알림보다 관찰 카드로 먼저 보고 싶을 때',
+      '분할 매수 관점의 리서치 메모를 쌓고 싶을 때',
+    ],
+    adjustables: [
+      'Phase 1에서는 카드와 상세 결과만 먼저 확인합니다.',
+      '90일 기준 알림 연결은 다음 단계에서 지원 예정입니다.',
+      '지금은 실제 자동 연결보다 관찰 후보 정리에 집중하는 편이 맞습니다.',
+    ],
+    nextSteps: [
+      '상세 결과로 과거 저점 구간의 손익과 보유 기간을 먼저 확인합니다.',
+      '현재는 카드 결과를 참고해 별도 메모/버블로 관찰 포인트를 적어둡니다.',
+      '90일 기준 알림이 지원되면 그때 CTA를 열어 같은 전략으로 연결합니다.',
+    ],
+    phaseNote: '90일 기준 reference는 아직 alert runtime이 지원하지 않아, Phase 1에서는 카드와 상세 결과만 제공합니다.',
+  },
+}
+
 // Preset 3 (cycle-accum-v1) uses reference:"90d" which is not supported yet
 const DISABLED_PRESET_IDS = new Set(['cycle-accum-v1'])
 
@@ -114,6 +177,7 @@ export function PresetStrategies() {
   }
 
   const stale = isStale(data.generated_at)
+  const selectedGuide = selectedPreset ? PRESET_DETAIL_GUIDE[selectedPreset.id] : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -224,18 +288,33 @@ export function PresetStrategies() {
                 <div className="grid gap-3 sm:grid-cols-4">
                   <DetailMetric label="승률" value={`${getSummaryByWindow(selectedPreset, summaryWindow).win_rate}%`} />
                   <DetailMetric
-                    label="평균 수익"
+                    label="평균 손익"
                     value={`${getSummaryByWindow(selectedPreset, summaryWindow).avg_return_pct > 0 ? '+' : ''}${getSummaryByWindow(selectedPreset, summaryWindow).avg_return_pct}%`}
                   />
                   <DetailMetric label="신호 수" value={`${getSummaryByWindow(selectedPreset, summaryWindow).signal_count}회`} />
                   <DetailMetric label="평균 보유" value={formatDetailHoldTime(getSummaryByWindow(selectedPreset, summaryWindow).avg_hold_hours)} />
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-                  <p className="text-xs text-neutral-500">현재 비교 구간</p>
-                  <p className="mt-2 text-sm font-medium text-neutral-100">
-                    {formatWindowLabel(summaryWindow, getSummaryByWindow(selectedPreset, summaryWindow).window)}
-                  </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                    <p className="text-xs text-neutral-500">현재 비교 구간</p>
+                    <p className="mt-2 text-sm font-medium text-neutral-100">
+                      {formatWindowLabel(summaryWindow, getSummaryByWindow(selectedPreset, summaryWindow).window)}
+                    </p>
+                    <p className="mt-2 text-[11px] text-neutral-500">
+                      최대 낙폭 {getSummaryByWindow(selectedPreset, summaryWindow).max_drawdown_pct}% · TP {getSummaryByWindow(selectedPreset, summaryWindow).tp_count} · SL {getSummaryByWindow(selectedPreset, summaryWindow).sl_count} · TO {getSummaryByWindow(selectedPreset, summaryWindow).timeout_count}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                    <p className="text-xs text-neutral-500">데이터 기준</p>
+                    <p className="mt-2 text-sm font-medium text-neutral-100">BTCUSDT · 15m</p>
+                    <p className="mt-2 text-[11px] text-neutral-500">
+                      생성 기준 {formatDate(data.generated_at)} {stale ? '· 갱신 확인 필요' : ''}
+                    </p>
+                    <p className="mt-1 text-[11px] text-neutral-600">
+                      {data.data_range.from.slice(0, 10)} ~ {data.data_range.to.slice(0, 10)}
+                    </p>
+                  </div>
                 </div>
 
                 <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
@@ -287,20 +366,36 @@ export function PresetStrategies() {
                 <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">이 전략이 맞는 경우</p>
                   <ul className="mt-3 space-y-2 text-sm leading-7 text-neutral-300">
-                    <li>복잡한 조건을 직접 만들기보다, 먼저 검증된 형태를 써보고 싶을 때</li>
-                    <li>차트만 보다가 놓치는 구간을 알림으로 먼저 잡아두고 싶을 때</li>
-                    <li>완전 자동매매보다 관찰과 복기 중심의 트리거가 필요할 때</li>
+                    {selectedGuide?.fitFor.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">지금 조정하면 좋은 것</p>
+                  <ul className="mt-3 space-y-2 text-sm leading-7 text-neutral-300">
+                    {selectedGuide?.adjustables.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
                   </ul>
                 </section>
 
                 <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">다음 단계</p>
                   <ol className="mt-3 space-y-2 text-sm leading-7 text-neutral-300">
-                    <li>1. 이 전략이 어떤 상황을 감시하는지 확인합니다.</li>
-                    <li>2. 종목과 쿨다운만 조정해 알림 규칙을 만듭니다.</li>
-                    <li>3. 실제 알림이 오면 판단과 복기로 이어갑니다.</li>
+                    {selectedGuide?.nextSteps.map((item, index) => (
+                      <li key={item}>{index + 1}. {item}</li>
+                    ))}
                   </ol>
                 </section>
+
+                {selectedGuide?.phaseNote && (
+                  <section className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-200/80">Phase 1 제한</p>
+                    <p className="mt-3 text-sm leading-7 text-indigo-100/90">{selectedGuide.phaseNote}</p>
+                  </section>
+                )}
 
                 <div className="flex flex-col gap-3 pt-2">
                   {guestMode ? (

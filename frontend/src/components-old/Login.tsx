@@ -196,8 +196,8 @@ export function Login() {
 
           <section className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">빠른 둘러보기</p>
-            <p className="mt-2 text-sm font-medium text-neutral-900">로그인 없이 빠르게 체험할 수 있습니다.</p>
-            <p className="mt-1 text-xs leading-relaxed text-neutral-500">실제 사용은 이메일 또는 Google 로그인 후 웹 설정에서 이어갑니다. 지금 버튼은 실제 게스트 홈을 열고, 아래 링크는 저장 없는 미리보기입니다.</p>
+            <p className="mt-2 text-sm font-medium text-neutral-900">로그인 없이 화면 흐름만 먼저 볼 수 있습니다.</p>
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">게스트 홈에서는 화면 흐름만 둘러볼 수 있습니다. 알림 설정, 버블 저장, 복기 작성, 포지션 수정은 되지 않고, 실제 사용은 이메일 또는 Google 로그인 후 웹 설정에서 이어갑니다.</p>
             <div className="mt-4 space-y-3">
               <button
                 type="button"
@@ -205,7 +205,7 @@ export function Login() {
                 disabled={isGuestLoading || isLoading}
                 className="w-full h-11 rounded-xl border border-neutral-200 bg-white text-neutral-700 text-sm font-semibold hover:bg-neutral-100 active:scale-[0.98] transition-all disabled:opacity-50"
               >
-                {isGuestLoading ? '게스트 홈 여는 중...' : '게스트 홈 바로 열기'}
+                {isGuestLoading ? '게스트 홈 여는 중...' : '게스트 홈 열기'}
               </button>
             </div>
           </section>
@@ -213,7 +213,7 @@ export function Login() {
           {/* Guest */}
           <div className="mt-3 text-center">
             <Link href="/guest?mode=preview" className="text-xs text-neutral-500 hover:text-neutral-700 transition-colors">
-              화면만 먼저 보고 싶다면 게스트 미리보기 보기
+              저장 없이 화면만 먼저 보고 싶다면 게스트 미리보기 보기
             </Link>
           </div>
 

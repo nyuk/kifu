@@ -109,7 +109,7 @@ export default function GuestPage() {
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Guest Mode</p>
           <h1 className="text-3xl font-semibold">게스트 대시보드 미리보기</h1>
           <p className="text-sm text-zinc-400">
-            이 화면은 저장 없는 미리보기입니다. 더미 데이터로 전체 탭 흐름을 먼저 보고, 마음에 들면 아래에서 실제 게스트 홈을 열 수 있습니다.
+            이 화면은 저장 없는 미리보기입니다. 더미 데이터로 전체 탭 흐름을 먼저 보고, 필요하면 아래에서 게스트 홈을 열 수 있습니다.
           </p>
         </header>
 
@@ -194,7 +194,7 @@ export default function GuestPage() {
                 ))}
               </div>
               <p className="mt-4 text-xs text-zinc-500">
-                게스트 체험은 저장되지 않지만, 실제 사용자 흐름과 같은 화면 구조를 사용합니다.
+                게스트 체험은 저장되지 않으며, 게스트 홈에서는 화면을 둘러보는 흐름만 제공합니다.
               </p>
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function GuestPage() {
         <section className="rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-5">
           <h2 className="text-lg font-semibold">미리보기 후 선택</h2>
           <p className="mt-2 text-sm text-zinc-400">
-            여기서는 흐름만 확인합니다. 계속 써보려면 실제 게스트 홈으로 들어가거나, 웹 계정을 만들고 거래를 불러오면 됩니다.
+            여기서는 흐름만 확인합니다. 계속 둘러보려면 게스트 홈으로 들어가고, 저장 기능까지 쓰려면 웹 계정을 만들고 거래를 불러오면 됩니다.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
@@ -212,7 +212,7 @@ export default function GuestPage() {
               disabled={starting}
               className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-60"
             >
-              {starting ? '게스트 홈 여는 중...' : '실제 게스트 홈 열기'}
+              {starting ? '게스트 홈 여는 중...' : '게스트 홈 열기'}
             </button>
             <Link href="/register?next=%2Fonboarding%2Fimport" className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950">
               웹 계정 만들기
@@ -224,7 +224,7 @@ export default function GuestPage() {
             </p>
           )}
           <p className="mt-3 text-xs text-zinc-500">
-            실제 게스트 홈에서도 API/CSV/AI 설정 기능은 비활성화됩니다. 저장 가능한 흐름은 웹 계정 + 설정에서 시작합니다.
+            게스트 홈에서는 화면 흐름만 둘러볼 수 있고, 알림 설정, 버블 저장, 복기 작성, 포지션 수정, API/CSV 연결 같은 저장 기능은 회원 전용입니다.
           </p>
         </section>
       </div>

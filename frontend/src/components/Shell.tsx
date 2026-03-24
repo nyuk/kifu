@@ -252,6 +252,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {/* Top Gradient Fade moved to individual pages or could be here globally */}
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
           <div className={contentClass}>
+            {isGuestSessionActive && (
+              <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">Guest Mode</p>
+                    <p className="mt-1 text-sm text-amber-100">
+                      게스트에서는 화면 흐름만 먼저 둘러볼 수 있습니다. 알림 설정, 버블 저장, 복기 작성, 포지션 수정 같은 저장 기능은 회원 전용입니다.
+                    </p>
+                  </div>
+                  <Link
+                    href="/register?next=%2Fonboarding%2Fimport"
+                    className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-200 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-amber-100"
+                  >
+                    회원가입 후 저장 기능 사용하기
+                  </Link>
+                </div>
+              </div>
+            )}
             {children}
             <div className="mt-10 rounded-2xl border border-white/[0.06] bg-black/10">
               <LegalFooter variant="app" />

@@ -7,9 +7,11 @@ type RuleConfigFormProps = {
   ruleType: RuleType
   config: RuleConfig
   onChange: (config: RuleConfig) => void
+  disabled?: boolean
+  lockedFields?: string[]
 }
 
-export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormProps) {
+export function RuleConfigForm({ ruleType, config, onChange, disabled = false, lockedFields = [] }: RuleConfigFormProps) {
   const { t } = useI18n()
 
   const inputClass =
@@ -18,6 +20,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
   const labelClass = 'block text-xs text-neutral-400 mb-1'
   const hintClass = 'mt-1 text-[11px] text-neutral-500'
   const descClass = 'mb-4 rounded-lg bg-white/[0.04] px-3 py-2.5 text-xs text-neutral-400 leading-relaxed'
+  const disabledClass = 'disabled:cursor-not-allowed disabled:opacity-60'
+  const isLocked = (field: string) => disabled || lockedFields.includes(field)
 
   if (ruleType === 'price_change') {
     const c = config as { direction?: string; threshold_type?: string; threshold_value?: string; reference?: string }
@@ -32,7 +36,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.direction || 'both'}
               onChange={(e) => onChange({ ...c, direction: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('direction')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="drop">{t.dirDrop}</option>
               <option value="rise">{t.dirRise}</option>
@@ -46,7 +51,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
               <select
                 value={c.threshold_type || 'percent'}
                 onChange={(e) => onChange({ ...c, threshold_type: e.target.value } as RuleConfig)}
-                className={selectClass + ' w-28'}
+                disabled={isLocked('threshold_type')}
+                className={`${selectClass} w-28 ${disabledClass}`}
               >
                 <option value="percent">%</option>
                 <option value="absolute">$</option>
@@ -56,7 +62,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
                 value={c.threshold_value || ''}
                 onChange={(e) => onChange({ ...c, threshold_value: e.target.value } as RuleConfig)}
                 placeholder="5"
-                className={inputClass}
+                disabled={isLocked('threshold_value')}
+                className={`${inputClass} ${disabledClass}`}
               />
             </div>
             <p className={hintClass}>{t.hintThreshold}</p>
@@ -66,7 +73,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.reference || '24h'}
               onChange={(e) => onChange({ ...c, reference: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('reference')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="1h">{t.ref1h}</option>
               <option value="4h">{t.ref4h}</option>
@@ -93,7 +101,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
               type="number"
               value={c.ma_period || 20}
               onChange={(e) => onChange({ ...c, ma_period: parseInt(e.target.value) || 20 } as RuleConfig)}
-              className={inputClass}
+              disabled={isLocked('ma_period')}
+              className={`${inputClass} ${disabledClass}`}
             />
             <p className={hintClass}>{t.hintMAPeriod}</p>
           </div>
@@ -102,7 +111,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.ma_timeframe || '1h'}
               onChange={(e) => onChange({ ...c, ma_timeframe: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('ma_timeframe')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="15m">15m</option>
               <option value="1h">1h</option>
@@ -115,7 +125,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.direction || 'below'}
               onChange={(e) => onChange({ ...c, direction: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('direction')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="above">{t.dirMACrossAbove}</option>
               <option value="below">{t.dirMACrossBelow}</option>
@@ -142,7 +153,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
               value={c.price || ''}
               onChange={(e) => onChange({ ...c, price: e.target.value } as RuleConfig)}
               placeholder="100000"
-              className={inputClass}
+              disabled={isLocked('price')}
+              className={`${inputClass} ${disabledClass}`}
             />
             <p className={hintClass}>{t.hintTargetPrice}</p>
           </div>
@@ -151,7 +163,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.direction || 'above'}
               onChange={(e) => onChange({ ...c, direction: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('direction')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="above">{t.dirLevelAbove}</option>
               <option value="below">{t.dirLevelBelow}</option>
@@ -178,7 +191,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
             <select
               value={c.timeframe || '1h'}
               onChange={(e) => onChange({ ...c, timeframe: e.target.value } as RuleConfig)}
-              className={selectClass}
+              disabled={isLocked('timeframe')}
+              className={`${selectClass} ${disabledClass}`}
             >
               <option value="15m">15m</option>
               <option value="1h">1h</option>
@@ -193,7 +207,8 @@ export function RuleConfigForm({ ruleType, config, onChange }: RuleConfigFormPro
               value={c.multiplier || ''}
               onChange={(e) => onChange({ ...c, multiplier: e.target.value } as RuleConfig)}
               placeholder="2.0"
-              className={inputClass}
+              disabled={isLocked('multiplier')}
+              className={`${inputClass} ${disabledClass}`}
             />
             <p className={hintClass}>{t.hintMultiplier}</p>
           </div>
