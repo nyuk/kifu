@@ -11,7 +11,7 @@
 - 윈도우에서 프리미엄 알림봇 운영 작업
 - 맥에서 프리미엄 백테스트 연구
 - 맥에서 Kifu ACP / OpenClaw 관련 작업
-- 맥에서 아이디어 정리
+- 윈도우에서 전역 아이디어 정리
 
 여기서 핵심 문제는 **환경과 레인을 한 덩어리로 부르면 실제 충돌을 놓치기 쉽다**는 점이다.
 
@@ -40,7 +40,7 @@
 앞으로는 아래처럼 구분한다.
 
 - `환경`: 윈도우 Codex / 맥 Codex / 윈도우 Claude / 배포 서버
-- `레인`: Kifu Main / Kifu Design / Kifu Marketing / Premium Alert Bot / Premium Backtest / Kifu ACP / Ideas
+- `레인`: Kifu Main / Kifu Design / Kifu Marketing / Premium Alert Bot / Premium Backtest / Kifu ACP / Global Ideas
 
 즉, `윈도우 Kifu Main`은 하나의 이름이 아니라:
 
@@ -212,11 +212,12 @@
 - 마케팅
 - 프리미엄 백테스트
 
-### 7. Ideas
+### 7. Global Ideas
 
 사용 시점:
-- 아이디어만 정리하고 싶을 때
-- 아직 구현/운영/디자인 어느 쪽으로 갈지 안 정했을 때
+- 아직 어느 프로젝트에 둘지 모르는 아이디어
+- Kifu / Premium Alert Bot / Premium Backtest / ACP 중 어디로 갈지 미정인 아이디어
+- 새 레인이 필요한지부터 판단해야 하는 아이디어
 
 이 레인에서 기대하는 것:
 - 아이디어 압축
@@ -226,6 +227,11 @@
 섞지 말아야 할 것:
 - 바로 코드 구현
 - 운영 명령 실행
+
+관리 위치:
+- Windows에서 전역 인박스로 관리
+- 추천 파일: `C:\Users\nyuk8\Documents\global-ideas\GLOBAL_IDEAS.md`
+- 이 레인은 Kifu repo 내부 전용 레인이 아니라, **프로젝트 배정 전 인박스**에 가깝다
 
 ## 소유 범위(write scope) 예시
 
@@ -255,7 +261,7 @@
 
 ```text
 현재 환경: [윈도우 Codex / 맥 Codex / 윈도우 Claude / 배포 서버]
-현재 레인: [Kifu Main / Kifu Design / Kifu Marketing / Premium Alert Bot / Premium Backtest / Kifu ACP / Ideas]
+현재 레인: [Kifu Main / Kifu Design / Kifu Marketing / Premium Alert Bot / Premium Backtest / Kifu ACP / Global Ideas]
 현재 소유 범위: [이번 스레드에서 실제로 건드릴 파일/화면/모듈 범위]
 이번 목표: [이번 스레드에서 하고 싶은 일]
 
@@ -340,13 +346,13 @@
 이번 목표: ACP 유지/병행/전환 중 어떤 쪽이 맞는지 정리하고 싶어.
 ```
 
-### 예시 8. 맥에서 아이디어 정리
+### 예시 8. 윈도우에서 전역 아이디어 정리
 
 ```text
-현재 환경: 맥 Codex
-현재 레인: Ideas
-현재 소유 범위: IDEAS.md, 아이디어 문서 정리
-이번 목표: 생각 중인 아이디어를 정리하고 어떤 레인으로 보낼지 분류하고 싶어.
+현재 환경: 윈도우 Codex
+현재 레인: Global Ideas
+현재 소유 범위: C:\Users\nyuk8\Documents\global-ideas\GLOBAL_IDEAS.md
+이번 목표: 아직 어느 프로젝트에 둘지 모르는 아이디어를 정리하고 어떤 레인으로 보낼지 분류하고 싶어.
 ```
 
 ## 충돌 방지 규칙
@@ -416,6 +422,24 @@ Codex든 Claude든 새 스레드에서 아래 4가지를 먼저 말하면 된다
   - 현재 소유 범위
   - 이번 목표
   를 먼저 붙이면 충분하다
+
+## 새 레인이 필요할 때
+
+새 레인이 필요할지 애매하면, 먼저 `Global Ideas` 레인에서 판단한다.
+
+즉:
+- “이 아이디어가 Kifu Main 안에 들어가는가?”
+- “마케팅인가?”
+- “프리미엄 알림봇인가?”
+- “프리미엄 백테스트인가?”
+- “ACP인가?”
+- “기존 어느 레인에도 안 들어가서 새 레인이 필요한가?”
+
+이 질문을 `Global Ideas`에서 먼저 다룬다.
+
+한 줄 규칙:
+- **새 레인 후보는 먼저 `Global Ideas`에 보낸다**
+- 거기서 충분히 독립된 축이라고 판단되면 이 문서에 새 레인을 추가한다
 
 ## 기억할 것
 
