@@ -1,7 +1,7 @@
 'use client'
 
 import axios from 'axios'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent } from 'react'
 import { AccentHeroCard } from '../common/AccentHeroCard'
 import {
   createMarketingIdea,
@@ -22,6 +22,7 @@ import type {
   MarketingAngleType,
   MarketingChannel,
   MarketingContentIntent,
+  MarketingIdeaAttachment,
   MarketingPublication,
   MarketingChannelSetting,
   MarketingDraftStatus,
@@ -49,6 +50,7 @@ type IdeaFormState = {
   evidence_source: MarketingEvidenceSource
   format_style: MarketingFormatStyle
   source_link: string
+  attachments: MarketingIdeaAttachment[]
 }
 
 type DraftEditorState = {
@@ -84,7 +86,7 @@ type WorkspaceTab = 'capture' | 'review'
 
 type DraftPrepInput = Pick<
   CreateMarketingIdeaPayload,
-  'raw_note' | 'content_intent' | 'evidence_source' | 'format_style' | 'source_link' | 'message_pillar'
+  'raw_note' | 'content_intent' | 'evidence_source' | 'format_style' | 'source_link' | 'message_pillar' | 'attachments'
 >
 
 type IdeaDraftPrepStatus = {
@@ -97,12 +99,13 @@ const hasDigit = (value: string) => /\d/.test(value)
 const hasAnyCue = (value: string, cues: string[]) => cues.some((cue) => value.includes(cue))
 
 const recordCues = ['기록', '복기', '메모', '이유', '기준', '진입', '청산']
-const screenCues = ['화면', '스크린', '캡처', '카드', '메모', '복기', '기록', '플로우']
+const screenCues = ['화면', '스크린', '캡처', '카드', '메모', '복기', '기록', '플로우', '차트', '캔들', '15분봉', '15m']
 
 const getIdeaDraftPrepStatus = (input: DraftPrepInput): IdeaDraftPrepStatus => {
   const rawNote = input.raw_note.trim()
   const sourceLink = input.source_link?.trim() ?? ''
   const combined = `${rawNote} ${input.message_pillar ?? ''}`.trim()
+  const attachments = input.attachments ?? []
   const blocking: string[] = []
   const warnings: string[] = []
 
@@ -114,8 +117,12 @@ const getIdeaDraftPrepStatus = (input: DraftPrepInput): IdeaDraftPrepStatus => {
     blocking.push('뉴스/인용 기반 초안은 출처 링크를 함께 넣어주세요.')
   }
 
-  if (input.evidence_source === 'screenshot' && !hasAnyCue(rawNote, screenCues)) {
+  if (input.evidence_source === 'screenshot' && !hasAnyCue(rawNote, screenCues) && attachments.length === 0) {
     blocking.push('스크린샷 근거라면 raw note에 어떤 화면이나 카드가 보이는지 적어주세요.')
+  }
+
+  if ((input.evidence_source === 'screenshot' || input.evidence_source === 'generated_image') && attachments.length === 0) {
+    blocking.push('이미지 근거 초안은 실제 이미지 첨부가 필요합니다.')
   }
 
   if (input.format_style === 'news_reaction' && !hasDigit(rawNote) && !sourceLink) {
@@ -124,6 +131,10 @@ const getIdeaDraftPrepStatus = (input: DraftPrepInput): IdeaDraftPrepStatus => {
 
   if (input.content_intent !== 'non_promo' && !hasAnyCue(combined, recordCues)) {
     warnings.push('지금 입력이면 두 번째 문단의 제품 연결이 약해질 수 있습니다. 기록/복기/메모/기준 같은 단어를 한 번 더 넣어주세요.')
+  }
+
+  if (attachments.length > 0 && attachments.every((attachment) => !(attachment.note ?? '').trim()) && rawNote.length < 120) {
+    warnings.push('이미지를 붙였다면 무엇을 보여주는지 한 줄 메모를 함께 남기면 초안 품질이 더 좋아집니다.')
   }
 
   return { blocking, warnings }
@@ -158,6 +169,7 @@ const defaultIdeaForm = (productKey: MarketingProductKey): IdeaFormState => ({
   evidence_source: 'personal_note',
   format_style: 'reflection',
   source_link: '',
+  attachments: [],
 })
 
 const emptyDraftEditor = (): DraftEditorState => ({
@@ -321,6 +333,42 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return error instanceof Error ? error.message : fallback
 }
 
+const allowedMarketingImageTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+
+const readFileAsDataURL = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const value = typeof reader.result === 'string' ? reader.result : ''
+      if (!value) {
+        reject(new Error('이미지 데이터를 읽지 못했습니다.'))
+        return
+      }
+      resolve(value)
+    }
+    reader.onerror = () => reject(new Error('이미지 파일을 읽는 중 오류가 발생했습니다.'))
+    reader.readAsDataURL(file)
+  })
+
+const createIdeaAttachmentFromFile = async (file: File): Promise<MarketingIdeaAttachment> => {
+  const mimeType = file.type.toLowerCase()
+  if (!allowedMarketingImageTypes.includes(mimeType)) {
+    throw new Error('PNG, JPG, WEBP 이미지만 첨부할 수 있습니다.')
+  }
+  if (file.size > 1_800_000) {
+    throw new Error('이미지 크기는 1.8MB 이하여야 합니다.')
+  }
+
+  const dataURL = await readFileAsDataURL(file)
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: file.name?.trim() || `image-${Date.now()}`,
+    mime_type: mimeType,
+    data_url: dataURL,
+    note: '',
+  }
+}
+
 const normalizeBlogPublishText = (text: string) =>
   text
     .replace(/\n\n도입\n/g, '\n\n')
@@ -359,6 +407,7 @@ export function MarketingWorkspace() {
   const [savingChannelSettings, setSavingChannelSettings] = useState(false)
   const [channelSettingForm, setChannelSettingForm] = useState<ChannelSettingFormState>(emptyChannelSettingForm)
   const workspaceFlowRef = useRef<HTMLDivElement | null>(null)
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null)
   const activeProduct = getMarketingProductConfig(activeProductKey)
   const availableMessagePillars = activeProduct.messagePillars.length > 0 ? activeProduct.messagePillars : messagePillars
 
@@ -530,6 +579,69 @@ export function MarketingWorkspace() {
     }))
   }
 
+  const handleIdeaAttachmentFiles = async (files: FileList | File[]) => {
+    const nextFiles = Array.from(files)
+    if (nextFiles.length === 0) {
+      return
+    }
+    if ((ideaForm.attachments?.length ?? 0) + nextFiles.length > 3) {
+      setError('이미지는 최대 3개까지 첨부할 수 있습니다.')
+      setSuccessMessage(null)
+      return
+    }
+
+    setError(null)
+    setSuccessMessage(null)
+    try {
+      const created = await Promise.all(nextFiles.map((file) => createIdeaAttachmentFromFile(file)))
+      setIdeaForm((current) => ({
+        ...current,
+        attachments: [...current.attachments, ...created],
+      }))
+      setSuccessMessage(`${created.length}개의 이미지를 첨부했습니다.`)
+    } catch (attachmentError) {
+      setError(getErrorMessage(attachmentError, '이미지를 첨부하지 못했습니다.'))
+    }
+  }
+
+  const handleIdeaAttachmentPaste = async (event: ClipboardEvent<HTMLDivElement>) => {
+    const items = Array.from(event.clipboardData?.items ?? [])
+    const files = items
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file))
+
+    if (files.length === 0) {
+      return
+    }
+    event.preventDefault()
+    await handleIdeaAttachmentFiles(files)
+  }
+
+  const handleAttachmentInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      await handleIdeaAttachmentFiles(files)
+    }
+    event.target.value = ''
+  }
+
+  const updateIdeaAttachmentNote = (attachmentId: string, note: string) => {
+    setIdeaForm((current) => ({
+      ...current,
+      attachments: current.attachments.map((attachment) =>
+        attachment.id === attachmentId ? { ...attachment, note } : attachment
+      ),
+    }))
+  }
+
+  const removeIdeaAttachment = (attachmentId: string) => {
+    setIdeaForm((current) => ({
+      ...current,
+      attachments: current.attachments.filter((attachment) => attachment.id !== attachmentId),
+    }))
+  }
+
   const handleChannelSettingFieldChange = <K extends keyof ChannelSettingFormState>(
     field: K,
     value: ChannelSettingFormState[K]
@@ -554,6 +666,7 @@ export function MarketingWorkspace() {
       evidence_source: starter.evidenceSource,
       format_style: starter.formatStyle,
       source_link: '',
+      attachments: [],
     })
     focusWorkspaceTab('capture')
     setSuccessMessage('추천 아이디어 템플릿을 불러왔습니다.')
@@ -623,15 +736,20 @@ export function MarketingWorkspace() {
       evidence_source: ideaForm.evidence_source,
       format_style: ideaForm.format_style,
       source_link: ideaForm.source_link.trim() || undefined,
+      attachments: ideaForm.attachments.map((attachment) => ({
+        ...attachment,
+        note: attachment.note?.trim() || undefined,
+      })),
     }
 
     setSavingIdea(true)
     setError(null)
     setSuccessMessage(null)
     try {
-      await createMarketingIdea(payload)
+      const idea = await createMarketingIdea(payload)
       setIdeaForm(defaultIdeaForm(activeProductKey))
       await loadWorkspace()
+      setSelectedIdeaId(idea.id)
       setSuccessMessage('아이디어를 저장했습니다.')
     } catch (submitError) {
       if (isAuthError(submitError)) {
@@ -968,6 +1086,75 @@ export function MarketingWorkspace() {
                   placeholder="무슨 일이 있었는지, 왜 중요했는지, 어떤 화면이나 근거를 보여줄 수 있는지 적어주세요."
                 />
               </label>
+
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-neutral-300">이미지 첨부</p>
+                    <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                      차트나 화면 캡처를 붙여넣거나 업로드하면 초안 생성 때 함께 참고합니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    className="rounded-full border border-white/[0.08] bg-black/20 px-3 py-1.5 text-xs font-medium text-neutral-200 transition hover:border-amber-300/40 hover:text-amber-100"
+                  >
+                    이미지 추가
+                  </button>
+                </div>
+
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  accept={allowedMarketingImageTypes.join(',')}
+                  multiple
+                  onChange={handleAttachmentInputChange}
+                  className="hidden"
+                />
+
+                <div
+                  onPaste={handleIdeaAttachmentPaste}
+                  className="rounded-2xl border border-dashed border-white/[0.14] bg-black/20 px-4 py-4 text-sm text-neutral-400"
+                >
+                  이미지를 붙여넣거나 업로드하세요. 최대 3장, PNG/JPG/WEBP, 각 1.8MB 이하
+                </div>
+
+                {ideaForm.attachments.length > 0 && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {ideaForm.attachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="grid gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3"
+                      >
+                        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                          <img
+                            src={attachment.data_url}
+                            alt={attachment.name}
+                            className="h-40 w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="truncate text-sm text-white">{attachment.name}</p>
+                          <button
+                            type="button"
+                            onClick={() => removeIdeaAttachment(attachment.id)}
+                            className="rounded-full border border-rose-300/20 bg-rose-500/10 px-2.5 py-1 text-[11px] text-rose-100 transition hover:bg-rose-500/15"
+                          >
+                            제거
+                          </button>
+                        </div>
+                        <textarea
+                          value={attachment.note ?? ''}
+                          onChange={(event) => updateIdeaAttachmentNote(attachment.id, event.target.value)}
+                          className="min-h-24 rounded-2xl border border-white/[0.08] bg-black/20 px-3 py-2 text-sm leading-relaxed text-white outline-none transition focus:border-amber-300/50"
+                          placeholder="이 이미지에서 무엇을 보여주고 싶은지 한두 줄로 적어주세요"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
@@ -1367,6 +1554,32 @@ export function MarketingWorkspace() {
                               >
                                 {idea.source_link}
                               </a>
+                            </div>
+                          )}
+
+                          {idea.attachments && idea.attachments.length > 0 && (
+                            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">첨부 이미지</p>
+                              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                {idea.attachments.map((attachment) => (
+                                  <div
+                                    key={`${idea.id}:${attachment.id}`}
+                                    className="grid gap-2 rounded-2xl border border-white/[0.08] bg-black/20 p-3"
+                                  >
+                                    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-black/30">
+                                      <img
+                                        src={attachment.data_url}
+                                        alt={attachment.name}
+                                        className="h-36 w-full object-cover"
+                                      />
+                                    </div>
+                                    <p className="truncate text-sm text-white">{attachment.name}</p>
+                                    {attachment.note && (
+                                      <p className="text-sm leading-relaxed text-neutral-300">{attachment.note}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
 

@@ -1025,6 +1025,8 @@ export function Chart() {
     }
   }, [densityAdjustedPositions, overlayPositions.length, showBubbles, showTrades])
 
+  const currentDensityLabel = densityOptions.find((option) => option.value === densityMode)?.label ?? densityMode
+
   const detailBubbleTotalPages = Math.max(1, Math.ceil((selectedGroup?.bubbles.length || 0) / CHART_PANEL_PAGE_SIZE))
   const detailTradeTotalPages = Math.max(1, Math.ceil((selectedGroup?.trades.length || 0) / CHART_PANEL_PAGE_SIZE))
   const pagedDetailBubbles = (selectedGroup?.bubbles || []).slice(
@@ -1511,21 +1513,31 @@ export function Chart() {
       })
     }
   }
+  const densityLabel = densityOptions.find((option) => option.value === densityMode)?.label ?? 'Auto'
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Market</p>
-            <h2 className="mt-2 text-2xl font-semibold text-neutral-100">Chart Overview</h2>
-            <p className="mt-2 text-sm text-neutral-400">
-              Live Chart with Bubble Journaling & Trade Overlay
-            </p>
+      <header className="kifu-panel p-5 md:p-6">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5">
+            <div className="max-w-3xl space-y-3">
+              <p className="kifu-eyebrow">Chart Review</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[2rem] font-semibold tracking-tight text-neutral-100">차트 복기</h2>
+                {selectedSymbol && <span className="kifu-chip">{selectedSymbol}</span>}
+                <span className="kifu-chip">{timeframe.toUpperCase()}</span>
+                <span className="kifu-chip">{densityLabel} 밀도</span>
+              </div>
+              <p className="kifu-section-copy max-w-3xl">
+                차트, 말풍선, 체결 오버레이만 남겨두고 판단을 복기하는 화면입니다.
+                필요한 보기 옵션만 빠르게 바꾸고, 실험용 도구는 접어서 분리했습니다.
+              </p>
+            </div>
           </div>
-          <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <FilterGroup label="Market" tone="emerald">
+
+          <div className="kifu-panel-muted p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <FilterGroup label="시장" tone="emerald">
                 <FilterPills
                   options={[
                     { value: 'crypto', label: 'Crypto' },
@@ -1538,11 +1550,11 @@ export function Chart() {
                 />
               </FilterGroup>
 
-              <FilterGroup label="Symbol" tone="sky">
+              <FilterGroup label="심볼" tone="sky">
                 <select
                   value={selectedSymbol}
                   onChange={(e) => handleSymbolChange(e.target.value)}
-                  className="rounded-md border border-sky-400/40 bg-neutral-950/70 px-2 py-1 text-xs font-semibold text-sky-100"
+                  className="kifu-field min-w-[140px] py-2 text-sm font-semibold"
                 >
                   {symbols.map((item) => (
                     <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
@@ -1550,7 +1562,7 @@ export function Chart() {
                 </select>
               </FilterGroup>
 
-              <FilterGroup label="Timeframe" tone="amber">
+              <FilterGroup label="타임프레임" tone="amber">
                 <FilterPills
                   options={intervals.map((interval) => ({ value: interval, label: interval }))}
                   value={timeframe}
@@ -1560,80 +1572,83 @@ export function Chart() {
                 />
               </FilterGroup>
 
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setIsModalOpen(true)}
                   disabled={!selectedSymbol}
-                  className="rounded-md bg-neutral-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-950 hover:bg-white disabled:opacity-60"
+                  className="kifu-btn-primary"
                 >
-                  Create Bubble
+                  말풍선 기록
                 </button>
                 <button
                   onClick={() => setShowReplay((prev) => !prev)}
-                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
-                    showReplay
-                      ? 'border-sky-300 bg-sky-300/20 text-sky-200'
-                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                  }`}
+                  className={showReplay ? 'kifu-btn-secondary border-sky-300/40 bg-sky-300/15 text-sky-100' : 'kifu-btn-secondary'}
                 >
-                  {showReplay ? 'Hide Replay' : 'Replay'}
+                  {showReplay ? '리플레이 닫기' : '리플레이'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAdvancedControls((prev) => !prev)}
-                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition ${
-                    showAdvancedControls
-                      ? 'border-fuchsia-300 bg-fuchsia-300/20 text-fuchsia-100'
-                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                  }`}
+                  className={showAdvancedControls ? 'kifu-btn-secondary border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100' : 'kifu-btn-secondary'}
                 >
-                  {showAdvancedControls ? '기능 숨기기' : '기능 더보기'}
+                  {showAdvancedControls ? '실험 도구 닫기' : '실험 도구'}
                 </button>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-              <span className="uppercase tracking-[0.2em] text-neutral-500">Quick</span>
-              {quickPicks.map((item) => (
-                <button
-                  key={item.value}
-                  onClick={() => handleSymbolChange(item.value)}
-                  className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
-                    selectedSymbol === item.value
-                      ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                      : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
+            <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Quick</span>
+                {quickPicks.map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={() => handleSymbolChange(item.value)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                      selectedSymbol === item.value
+                        ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
 
-            {showAdvancedControls && (
-              <div className="mt-3 grid gap-3 border-t border-white/[0.06] pt-3 lg:grid-cols-2 xl:grid-cols-3">
-                <FilterGroup label="Display" tone="emerald">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                <FilterGroup label="레이어" tone="emerald">
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowBubbles((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         showBubbles
                           ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
                           : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
                       }`}
                     >
-                      Bubbles
+                      말풍선
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowTrades((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         showTrades
                           ? 'border-sky-300 bg-sky-300/20 text-sky-200'
                           : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
                       }`}
                     >
-                      Trades
+                      체결
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPositions((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        showPositions
+                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                      }`}
+                    >
+                      포지션
                     </button>
                     <button
                       type="button"
@@ -1641,107 +1656,121 @@ export function Chart() {
                         setShowTrades(true)
                         setShowBubbles(false)
                       }}
-                      className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200 transition hover:bg-indigo-300/20"
+                      className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-300/20"
                     >
-                      Trade Focus
+                      체결 집중
                     </button>
+                  </div>
+                </FilterGroup>
+
+                <FilterGroup label="밀도" tone="amber">
+                  <FilterPills
+                    options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
+                    value={densityMode}
+                    onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
+                    tone="amber"
+                    ariaLabel="Density filter"
+                  />
+                </FilterGroup>
+              </div>
+            </div>
+
+            {showAdvancedControls && (
+              <div className="mt-4 grid gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.82fr_1.18fr]">
+                <div>
+                  <p className="kifu-eyebrow">Lab</p>
+                  <p className="mt-2 text-sm leading-6 text-neutral-400">
+                    일반 복기에는 꼭 필요하지 않은 실험용 보기 설정입니다. 기본 화면과 분리해서 두었습니다.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FilterGroup label="스타일" tone="sky">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowStyleMenu((prev) => !prev)}
+                        className="kifu-btn-secondary w-full justify-between"
+                      >
+                        {chartThemes[themeMode].label}
+                      </button>
+                      {showStyleMenu && (
+                        <div className="absolute right-0 z-50 mt-2 w-44 rounded-2xl border border-white/10 bg-neutral-950/95 p-2 shadow-xl">
+                          {Object.entries(chartThemes).map(([value, item]) => (
+                            <button
+                              key={value}
+                              onClick={() => {
+                                setThemeMode(value as keyof typeof chartThemes)
+                                setShowStyleMenu(false)
+                              }}
+                              className={`w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+                                themeMode === value
+                                  ? 'bg-sky-300/20 text-sky-200'
+                                  : 'text-neutral-300 hover:bg-white/5'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </FilterGroup>
+
+                  <FilterGroup label="자동 버블" tone="rose">
                     <button
                       type="button"
-                      onClick={() => setShowPositions((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                        showPositions
-                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
-                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                      onClick={() => setAutoBubbleFromTrades((prev) => !prev)}
+                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                        autoBubbleFromTrades
+                          ? 'border-rose-300 bg-rose-300/20 text-rose-200'
+                          : 'border-neutral-700 text-neutral-400 hover:border-rose-300/40 hover:text-rose-200'
                       }`}
                     >
-                      Positions
+                      {autoBubbleFromTrades ? '사용 중' : '꺼짐'}
                     </button>
-                  </div>
-                </FilterGroup>
+                  </FilterGroup>
+                </div>
+              </div>
+            )}
+          </div>
 
-                <FilterGroup label="Style" tone="sky">
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setShowStyleMenu((prev) => !prev)}
-                      className="rounded-full border border-sky-300/40 bg-sky-300/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-200 hover:bg-sky-300/20"
-                    >
-                      {chartThemes[themeMode].label}
-                    </button>
-                    {showStyleMenu && (
-                      <div className="absolute right-0 z-50 mt-2 w-40 rounded-xl border border-white/[0.08] bg-neutral-950/95 p-2 shadow-xl">
-                        {Object.entries(chartThemes).map(([value, item]) => (
-                          <button
-                            key={value}
-                            onClick={() => {
-                              setThemeMode(value as keyof typeof chartThemes)
-                              setShowStyleMenu(false)
-                            }}
-                            className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
-                              themeMode === value
-                                ? 'bg-sky-300/20 text-sky-200'
-                                : 'text-neutral-300 hover:bg-white/[0.06]'
-                            }`}
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+          <div className="flex flex-col gap-2">
+            {error && <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
+            {(dataSource === 'crypto' && !isMarketSupported(selectedSymbol)) && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                현재 차트 데이터는 Binance(USDT/USDC/USD) 및 Upbit(KRW-*) 기반입니다. 기타 심볼은 준비 중입니다.
+              </div>
+            )}
+            {(dataSource === 'stock') && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                주식 차트 데이터 소스는 아직 연결되지 않았습니다. (연동 예정)
+              </div>
+            )}
+            {guestMode && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+                게스트 모드에서는 API 동기화, CSV 가져오기, AI 요청을 숨기고 읽기 중심 흐름만 보여줍니다.
+              </div>
+            )}
+            {showOnboardingGuide && (
+              <div className="rounded-xl border border-cyan-400/40 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">온보딩 루틴</p>
+                    <p className="mt-1 text-cyan-100/80">최근 변동이 큰 캔들 1개를 선택해서 말풍선을 남겨보세요. 오늘은 1개만 하면 충분합니다.</p>
                   </div>
-                </FilterGroup>
-
-                <FilterGroup label="Auto Bubble" tone="rose">
                   <button
                     type="button"
-                    onClick={() => setAutoBubbleFromTrades((prev) => !prev)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                      autoBubbleFromTrades
-                        ? 'border-rose-300 bg-rose-300/20 text-rose-200'
-                        : 'border-neutral-700 text-neutral-400 hover:border-rose-300/40 hover:text-rose-200'
-                    }`}
+                    onClick={() => setShowOnboardingGuide(false)}
+                    className="rounded-md border border-cyan-300/40 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-cyan-100 hover:bg-cyan-300/20"
                   >
-                    {autoBubbleFromTrades ? 'On' : 'Off'}
+                    닫기
                   </button>
-                </FilterGroup>
-
+                </div>
               </div>
             )}
           </div>
         </div>
-        {error && <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">{error}</div>}
-        {(dataSource === 'crypto' && !isMarketSupported(selectedSymbol)) && (
-          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-            현재 차트 데이터는 Binance(USDT/USDC/USD) 및 Upbit(KRW-*) 기반입니다. 기타 심볼은 준비 중입니다.
-          </div>
-        )}
-        {(dataSource === 'stock') && (
-          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
-            주식 차트 데이터 소스는 아직 연결되지 않았습니다. (연동 예정)
-          </div>
-        )}
-        {guestMode && (
-          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-100">
-            게스트 모드: API 동기화/CSV 가져오기/AI 요청은 회원 전용입니다.
-          </div>
-        )}
-        {showOnboardingGuide && (
-          <div className="mt-3 rounded-lg border border-cyan-400/40 bg-cyan-500/10 p-3 text-xs text-cyan-100">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="font-semibold">온보딩 루틴</p>
-                <p className="mt-1 text-cyan-100/80">최근 변동이 큰 캔들 1개를 선택해서 말풍선을 남겨보세요. 오늘은 1개만 하면 충분합니다.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowOnboardingGuide(false)}
-                className="rounded-md border border-cyan-300/40 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-cyan-100 hover:bg-cyan-300/20"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {showReplay && (
@@ -1754,9 +1783,9 @@ export function Chart() {
         </div>
       )}
 
-      <section className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 relative lg:pr-20" ref={wrapperRef}>
-          <div className="h-[520px] w-full relative" ref={containerRef}>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(340px,0.95fr)]">
+        <div className="kifu-panel relative p-4 xl:pr-20" ref={wrapperRef}>
+          <div className="relative h-[560px] w-full" ref={containerRef}>
             {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
             {mounted && (
               <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'visible' }}>
@@ -1931,7 +1960,8 @@ export function Chart() {
                   e.stopPropagation()
                   const nextGroup = isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades }
                   setSelectedGroup(nextGroup)
-                  // no jump; only select group
+                  setSelectedPosition(null)
+                  if (nextGroup) setPanelTab('detail')
                 }}
               >
                 {/* Visual Connector Line */}
@@ -1999,44 +2029,138 @@ export function Chart() {
               </div>
             )}
           </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="kifu-stat-card">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">말풍선</p>
+              <p className="mt-2 text-3xl font-semibold text-neutral-50">{filteredBubbles.length}</p>
+              <p className="mt-2 text-xs text-neutral-500">필터 적용 기준</p>
+            </div>
+            <div className="kifu-stat-card">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">체결</p>
+              <p className="mt-2 text-3xl font-semibold text-neutral-50">{activeTrades.length}</p>
+              <p className="mt-2 text-xs text-neutral-500">현재 차트 오버레이</p>
+            </div>
+            <div className="kifu-stat-card">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">마커</p>
+              <p className="mt-2 text-3xl font-semibold text-neutral-50">{densitySummary.markers}</p>
+              <p className="mt-2 text-xs text-neutral-500">현재 밀도 {currentDensityLabel}</p>
+            </div>
+          </div>
+
+          {(selectedPosition || selectedGroup) && (
+            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+              {selectedGroup && (
+                <div className="kifu-panel-muted p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="kifu-eyebrow">Selected Scene</p>
+                      <h4 className="mt-2 text-lg font-semibold text-neutral-100">
+                        {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
+                      </h4>
+                      <p className="mt-2 text-sm leading-6 text-neutral-400">
+                        선택한 장면의 말풍선과 체결이 어떤 조합으로 묶여 있는지 빠르게 확인하는 보조 영역입니다.
+                      </p>
+                    </div>
+                    <span className="kifu-chip">{selectedGroup.bubbles.length}개 말풍선 · {selectedGroup.trades.length}개 체결</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">말풍선 메모</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedGroup.bubbles.length}개</p>
+                      <p className="mt-2 text-xs text-neutral-500">상세 목록은 오른쪽 패널에서 그대로 확인</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">체결 오버레이</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedGroup.trades.length}개</p>
+                      <p className="mt-2 text-xs text-neutral-500">선택 시점에 겹친 체결 수</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPosition && (
+                <div className="kifu-panel-muted p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="kifu-eyebrow">Selected Position</p>
+                      <h4 className="mt-2 text-lg font-semibold text-neutral-100">
+                        {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
+                      </h4>
+                      <p className="mt-2 text-sm text-neutral-400">
+                        {selectedPosition.opened_at ? new Date(selectedPosition.opened_at).toLocaleString() : '시간 정보 없음'}
+                      </p>
+                    </div>
+                    <span className="kifu-chip">포지션 요약</span>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Entry</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.entry_price || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Size</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.size || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">SL</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.stop_loss || '-'}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">TP</p>
+                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.take_profit || '-'}</p>
+                    </div>
+                  </div>
+                  {(selectedPosition.strategy || selectedPosition.memo) && (
+                    <div className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm leading-6 text-neutral-300">
+                      {selectedPosition.strategy && <p>전략: {selectedPosition.strategy}</p>}
+                      {selectedPosition.memo && <p className={selectedPosition.strategy ? 'mt-2' : ''}>메모: {selectedPosition.memo}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <aside className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col gap-4">
+        <aside className="kifu-panel flex flex-col gap-4 p-5">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Bubble Board</p>
-            <h3 className="mt-2 text-lg font-semibold text-neutral-100">말풍선 컨트롤</h3>
-            <p className="text-xs text-neutral-400 mt-1">
-              {filteredBubbles.length} bubbles · {activeTrades.length} trades
+            <p className="kifu-eyebrow">Review Panel</p>
+            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">말풍선과 체결</h3>
+            <p className="mt-2 text-sm text-neutral-400">
+              {filteredBubbles.length}개 기록 · {activeTrades.length}개 체결
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setPanelTab('summary')}
-              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 panelTab === 'summary'
                   ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
                   : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
               }`}
             >
-              Summary
+              기록 요약
             </button>
             <button
+              type="button"
               onClick={() => setPanelTab('detail')}
-              className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                 panelTab === 'detail'
                   ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
                   : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
               }`}
             >
-              Detail
+              선택 상세
             </button>
           </div>
 
           {panelTab === 'summary' && (
             <>
               <div className="space-y-3">
-                <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex items-center justify-between text-xs text-neutral-500">
                     <span>말풍선 요약</span>
                     <span>{bubbleSummary.total.toLocaleString()}개</span>
@@ -2050,7 +2174,7 @@ export function Chart() {
                     <span className="rounded-full border border-neutral-600/60 px-2 py-0.5 text-neutral-300">NOTE {bubbleSummary.note}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-[10px] text-neutral-500">
-                    <span>현재 밀도: {densityOptions.find((option) => option.value === densityMode)?.label}</span>
+                    <span>현재 밀도: {currentDensityLabel}</span>
                     <span>표시 {densitySummary.markers.toLocaleString()} / {densitySummary.totalMarkers.toLocaleString()}</span>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-600">
@@ -2061,29 +2185,19 @@ export function Chart() {
                   </div>
                 </div>
 
-                <div>
-                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-neutral-500">밀도 옵션</p>
-                  <FilterPills
-                    options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
-                    value={densityMode}
-                    onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
-                    tone="amber"
-                    ariaLabel="Density filter"
-                  />
-                </div>
-
                 <input
                   value={bubbleSearch}
                   onChange={(e) => setBubbleSearch(e.target.value)}
                   placeholder="메모/태그 검색"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950/70 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500"
+                  className="kifu-field w-full py-2 text-sm"
                 />
                 <div className="flex flex-wrap gap-2">
                   {actionOptions.map((action) => (
                     <button
                       key={action}
+                      type="button"
                       onClick={() => setActionFilter(action)}
-                      className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         actionFilter === action
                           ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
                           : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
@@ -2171,6 +2285,7 @@ export function Chart() {
                       </p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setSelectedPosition(null)}
                       className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
                     >
@@ -2221,6 +2336,7 @@ export function Chart() {
                       </h3>
                     </div>
                     <button
+                      type="button"
                       onClick={() => setSelectedGroup(null)}
                       className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
                     >
@@ -2238,11 +2354,11 @@ export function Chart() {
                           <div key={bubble.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-bold ${
-                                bubble.action === 'BUY' ? 'text-green-400' :
-                                bubble.action === 'SELL' ? 'text-red-400' :
-                                bubble.action === 'TP' ? 'text-emerald-300' :
-                                bubble.action === 'SL' ? 'text-rose-300' :
-                                'text-neutral-300'
+                                bubble.action === 'BUY' ? 'text-green-400'
+                                  : bubble.action === 'SELL' ? 'text-red-400'
+                                    : bubble.action === 'TP' ? 'text-emerald-300'
+                                      : bubble.action === 'SL' ? 'text-rose-300'
+                                        : 'text-neutral-300'
                               }`}>
                                 {bubble.action || 'NOTE'}
                               </span>

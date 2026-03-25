@@ -3,6 +3,7 @@ package ai_providers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -173,12 +174,70 @@ func (c *GeminiClient) ProviderType() string {
 func (c *GeminiClient) messagesToGemini(messages []interfaces.AIMessage) []map[string]interface{} {
 	result := make([]map[string]interface{}, len(messages))
 	for i, msg := range messages {
+		capacity := len(msg.Parts)
+		if capacity == 0 {
+			capacity = 1
+		}
+		parts := make([]map[string]interface{}, 0, capacity)
+		if len(msg.Parts) == 0 {
+			parts = append(parts, map[string]interface{}{"text": msg.Content})
+		} else {
+			for _, part := range msg.Parts {
+				switch strings.ToLower(strings.TrimSpace(part.Type)) {
+				case "image":
+					mimeType, encoded, err := parseGeminiImageDataURL(part.DataURL)
+					if err != nil {
+						continue
+					}
+					parts = append(parts, map[string]interface{}{
+						"inline_data": map[string]string{
+							"mime_type": mimeType,
+							"data":      encoded,
+						},
+					})
+				default:
+					text := strings.TrimSpace(part.Text)
+					if text == "" {
+						continue
+					}
+					parts = append(parts, map[string]interface{}{"text": text})
+				}
+			}
+		}
+		if len(parts) == 0 {
+			parts = append(parts, map[string]interface{}{"text": msg.Content})
+		}
 		result[i] = map[string]interface{}{
-			"role": msg.Role,
-			"parts": []map[string]string{
-				{"text": msg.Content},
-			},
+			"role":  msg.Role,
+			"parts": parts,
 		}
 	}
 	return result
+}
+
+func parseGeminiImageDataURL(raw string) (string, string, error) {
+	value := strings.TrimSpace(raw)
+	if !strings.HasPrefix(value, "data:") {
+		return "", "", errors.New("image data url required")
+	}
+	parts := strings.SplitN(value, ",", 2)
+	if len(parts) != 2 {
+		return "", "", errors.New("invalid image data url")
+	}
+	header := parts[0]
+	if !strings.Contains(header, ";base64") {
+		return "", "", errors.New("image data url must be base64")
+	}
+	mimeType := strings.TrimPrefix(strings.SplitN(header, ";", 2)[0], "data:")
+	if mimeType == "" {
+		return "", "", errors.New("image mime type is required")
+	}
+	encoded := strings.TrimSpace(parts[1])
+	if encoded == "" {
+		return "", "", errors.New("image payload is required")
+	}
+	if _, err := base64.StdEncoding.DecodeString(encoded); err != nil {
+		return "", "", fmt.Errorf("invalid image payload: %w", err)
+	}
+	return mimeType, encoded, nil
 }

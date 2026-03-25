@@ -8,8 +8,15 @@ import (
 
 // AIMessage represents a single message in a chat-style invocation.
 type AIMessage struct {
-	Role    string `json:"role"` // "system", "user", "assistant"
-	Content string `json:"content"`
+	Role    string          `json:"role"` // "system", "user", "assistant"
+	Content string          `json:"content"`
+	Parts   []AIMessagePart `json:"parts,omitempty"`
+}
+
+type AIMessagePart struct {
+	Type    string `json:"type"` // "text" | "image"
+	Text    string `json:"text,omitempty"`
+	DataURL string `json:"data_url,omitempty"`
 }
 
 // AIInvocationOption allows callers to override provider defaults per-call.

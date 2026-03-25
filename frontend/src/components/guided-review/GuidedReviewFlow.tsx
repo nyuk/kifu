@@ -32,6 +32,13 @@ const noTradeLayerTitle: Record<Layer, string> = {
   memo: '비거래일 메모',
 }
 
+const layerLabel: Record<Layer, string> = {
+  intent: '이유',
+  emotions: '감정',
+  pattern: '패턴',
+  memo: '메모',
+}
+
 const pnlTone = (pnl?: number | null) => {
   if (pnl === null || pnl === undefined) return 'text-neutral-300'
   if (pnl > 0) return 'text-lime-300'
@@ -68,6 +75,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
   const intentOptions = isNoTradeDayItem ? NO_TRADE_INTENT_OPTIONS : INTENT_OPTIONS
   const patternOptions = isNoTradeDayItem ? NO_TRADE_PATTERN_OPTIONS : PATTERN_OPTIONS
   const resolvedLayerTitle = isNoTradeDayItem ? noTradeLayerTitle[layer] : layerTitle[layer]
+  const itemLabel = isNoTradeDayItem ? '비거래일 복기' : item.symbol
 
   const toggleEmotion = useCallback((value: string) => {
     setEmotions((prev) =>
@@ -108,18 +116,19 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
   return (
     <div className="space-y-5">
       {/* Item header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-lg font-semibold text-neutral-100">
-            {isNoTradeDayItem ? '비거래일 복기' : item.symbol}
+      <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <p className="kifu-eyebrow">Current Item</p>
+          <p className="mt-2 text-xl font-semibold text-neutral-100">
+            {itemLabel}
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="mt-1 text-sm text-neutral-400">
             {isNoTradeDayItem
               ? '오늘은 거래 없이 루틴을 이어갑니다'
               : `${item.side ? item.side.toUpperCase() : '-'} · ${item.trade_count}건`}
           </p>
           {(isSupplementItem || isRolloverItem) && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {isSupplementItem && (
                 <span className="rounded-full border border-amber-300/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-200">
                   보강
@@ -133,28 +142,52 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
             </div>
           )}
         </div>
-        <div className="text-right">
-          <p className={`text-xl font-semibold ${pnlTone(item.pnl)}`}>{formatPnl(item.pnl)}</p>
-          <p className="text-[10px] text-neutral-500">{index + 1} / {total}</p>
+        <div className="grid gap-2 sm:grid-cols-2 md:min-w-[220px]">
+          <div className="kifu-stat-card">
+            <p className="kifu-eyebrow">PnL</p>
+            <p className={`mt-2 text-2xl font-semibold ${pnlTone(item.pnl)}`}>{formatPnl(item.pnl)}</p>
+          </div>
+          <div className="kifu-stat-card">
+            <p className="kifu-eyebrow">Progress</p>
+            <p className="mt-2 text-2xl font-semibold text-neutral-100">{index + 1} / {total}</p>
+          </div>
         </div>
       </div>
 
       {/* Layer progress */}
-      <div className="flex gap-1">
-        {LAYERS.map((l, i) => (
-          <div
-            key={l}
-            className={`h-1 flex-1 rounded-full transition ${
-              i <= currentLayer ? 'bg-sky-400' : 'bg-neutral-800'
-            }`}
-          />
-        ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {LAYERS.map((step, i) => (
+            <span
+              key={step}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                i === currentLayer
+                  ? 'border-sky-300/50 bg-sky-400/15 text-sky-200'
+                  : i < currentLayer
+                    ? 'border-emerald-300/40 bg-emerald-500/10 text-emerald-200'
+                    : 'border-white/10 bg-white/5 text-neutral-400'
+              }`}
+            >
+              {i + 1}. {layerLabel[step]}
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {LAYERS.map((l, i) => (
+            <div
+              key={l}
+              className={`h-1 flex-1 rounded-full transition ${
+                i <= currentLayer ? 'bg-sky-400' : 'bg-neutral-800'
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
       {isAlreadyAnswered && currentLayer === 0 ? (
-        <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
+        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
           <p className="text-sm font-semibold text-emerald-200">답변 완료</p>
-          <p className="mt-1 text-xs text-emerald-200/70">
+          <p className="mt-1 text-sm text-emerald-200/70">
             {intentOptions.find((o) => o.value === item.intent)?.label}
             {item.emotions && item.emotions.length > 0 && (
               <> · {item.emotions.map((e) => EMOTION_OPTIONS.find((o) => o.value === e)?.label).filter(Boolean).join(', ')}</>
@@ -163,7 +196,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
           <button
             type="button"
             onClick={onSubmitted}
-            className="mt-3 rounded-lg bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-900"
+            className="kifu-btn-primary mt-3"
           >
             다음
           </button>
@@ -171,7 +204,10 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
       ) : (
         <>
           {/* Layer title */}
-          <p className="text-sm font-semibold text-neutral-200">{resolvedLayerTitle}</p>
+          <div className="space-y-1">
+            <p className="kifu-eyebrow">Step {currentLayer + 1}</p>
+            <p className="text-base font-semibold text-neutral-100">{resolvedLayerTitle}</p>
+          </div>
 
           {/* Layer content */}
           {layer === 'intent' && (
@@ -181,10 +217,10 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   key={option.value}
                   type="button"
                   onClick={() => setIntent(option.value)}
-                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                     intent === option.value
                       ? 'border-sky-400 bg-sky-500/20 text-sky-200'
-                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
+                      : 'border-white/10 bg-white/5 text-neutral-300 hover:border-white/20'
                   }`}
                 >
                   {option.label}
@@ -200,10 +236,10 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   key={option.value}
                   type="button"
                   onClick={() => toggleEmotion(option.value)}
-                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                     emotions.includes(option.value)
                       ? 'border-violet-400 bg-violet-500/20 text-violet-200'
-                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
+                      : 'border-white/10 bg-white/5 text-neutral-300 hover:border-white/20'
                   }`}
                 >
                   {option.label}
@@ -219,10 +255,10 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
                   key={option.value}
                   type="button"
                   onClick={() => setPattern(option.value)}
-                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${
                     pattern === option.value
                       ? 'border-amber-400 bg-amber-500/20 text-amber-200'
-                      : 'border-white/[0.06] bg-white/[0.04] text-neutral-300 hover:border-white/[0.1]'
+                      : 'border-white/10 bg-white/5 text-neutral-300 hover:border-white/20'
                   }`}
                 >
                   {option.label}
@@ -237,7 +273,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
               onChange={(e) => setMemo(e.target.value)}
               placeholder={isNoTradeDayItem ? '오늘 비거래 선택이 맞았는지, 내일 체크할 조건을 남기기 (선택)' : '오늘 이 거래에 대해 한 줄 남기기 (선택)'}
               rows={3}
-              className="w-full rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-sm text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+              className="kifu-field w-full text-sm leading-6"
             />
           )}
 
@@ -247,7 +283,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
               type="button"
               onClick={handleBack}
               disabled={currentLayer === 0}
-              className="rounded-lg border border-white/[0.06] px-4 py-2 text-xs font-semibold text-neutral-300 transition hover:border-neutral-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="kifu-btn-secondary"
             >
               이전
             </button>
@@ -255,7 +291,7 @@ function ItemFlow({ item, index, total, onSubmitted }: ItemFlowProps) {
               type="button"
               onClick={handleNext}
               disabled={!canAdvance() || submitting}
-              className="rounded-lg bg-neutral-100 px-6 py-2 text-xs font-semibold text-neutral-900 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="kifu-btn-primary"
             >
               {submitting
                 ? '저장 중...'
@@ -352,25 +388,30 @@ export function GuidedReviewFlow({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-6">
       {/* Progress bar */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-neutral-500">
-          {answeredCount} / {totalCount} 완료
-        </p>
-        <div className="flex gap-1">
-          {items.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setStep(i)}
-              className={`h-2 w-6 rounded-full transition ${
-                i === currentStep
-                  ? 'bg-sky-400'
-                  : item.intent
-                    ? 'bg-emerald-500'
-                    : 'bg-neutral-700'
-              }`}
-            />
-          ))}
+      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="kifu-eyebrow">Review Progress</p>
+            <p className="mt-2 text-base font-semibold text-neutral-100">
+              {answeredCount} / {totalCount} 항목 정리됨
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {items.map((item, i) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setStep(i)}
+                className={`h-2.5 w-8 rounded-full transition ${
+                  i === currentStep
+                    ? 'bg-sky-400'
+                    : item.intent
+                      ? 'bg-emerald-500'
+                      : 'bg-neutral-700'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -392,7 +433,7 @@ export function GuidedReviewFlow({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={handleComplete}
             disabled={completing}
-            className="rounded-xl bg-gradient-to-r from-sky-500 to-violet-500 px-8 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="kifu-btn-primary min-w-[200px]"
           >
             {completing ? '완료 처리 중...' : '복기 완료하기'}
           </button>

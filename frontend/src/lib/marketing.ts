@@ -4,6 +4,7 @@ import type {
   GenerateMarketingDraftPayload,
   MarketingChannelSetting,
   MarketingDraft,
+  MarketingIdea,
   MarketingPublication,
   MarketingWorkspaceResponse,
   SaveMarketingChannelSettingPayload,
@@ -19,7 +20,7 @@ export const fetchMarketingWorkspace = async (productKey = MARKETING_PRODUCT_KEY
 }
 
 export const createMarketingIdea = async (payload: CreateMarketingIdeaPayload) => {
-  const response = await api.post('/v1/marketing/ideas', payload)
+  const response = await api.post<MarketingIdea>('/v1/marketing/ideas', payload)
   return response.data
 }
 

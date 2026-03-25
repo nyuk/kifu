@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/moneyvessel/kifu/internal/domain/entities"
 	"github.com/moneyvessel/kifu/internal/services"
 )
 
@@ -17,16 +18,17 @@ func NewMarketingHandler(service *services.MarketingService) *MarketingHandler {
 }
 
 type CreateMarketingIdeaRequest struct {
-	ProductKey     string   `json:"product_key"`
-	Title          string   `json:"title"`
-	RawNote        string   `json:"raw_note"`
-	AngleType      string   `json:"angle_type"`
-	MessagePillar  string   `json:"message_pillar"`
-	Channels       []string `json:"channels"`
-	ContentIntent  string   `json:"content_intent"`
-	EvidenceSource string   `json:"evidence_source"`
-	FormatStyle    string   `json:"format_style"`
-	SourceLink     *string  `json:"source_link"`
+	ProductKey     string                             `json:"product_key"`
+	Title          string                             `json:"title"`
+	RawNote        string                             `json:"raw_note"`
+	AngleType      string                             `json:"angle_type"`
+	MessagePillar  string                             `json:"message_pillar"`
+	Channels       []string                           `json:"channels"`
+	ContentIntent  string                             `json:"content_intent"`
+	EvidenceSource string                             `json:"evidence_source"`
+	FormatStyle    string                             `json:"format_style"`
+	SourceLink     *string                            `json:"source_link"`
+	Attachments    []entities.MarketingIdeaAttachment `json:"attachments"`
 }
 
 type GenerateMarketingDraftRequest struct {
@@ -98,6 +100,7 @@ func (h *MarketingHandler) CreateIdea(c *fiber.Ctx) error {
 		EvidenceSource: req.EvidenceSource,
 		FormatStyle:    req.FormatStyle,
 		SourceLink:     req.SourceLink,
+		Attachments:    req.Attachments,
 	})
 	if err != nil {
 		return h.writeMarketingError(c, err)

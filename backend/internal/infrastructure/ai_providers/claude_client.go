@@ -3,6 +3,7 @@ package ai_providers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -149,13 +150,76 @@ func (c *ClaudeClient) ProviderType() string {
 }
 
 // messagesToClaude converts generic AIMessage to Claude format.
-func (c *ClaudeClient) messagesToClaude(messages []interfaces.AIMessage) []map[string]string {
-	result := make([]map[string]string, len(messages))
+func (c *ClaudeClient) messagesToClaude(messages []interfaces.AIMessage) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(messages))
 	for i, msg := range messages {
-		result[i] = map[string]string{
-			"role":    msg.Role,
-			"content": msg.Content,
+		entry := map[string]interface{}{"role": msg.Role}
+		if len(msg.Parts) == 0 {
+			entry["content"] = msg.Content
+			result[i] = entry
+			continue
 		}
+
+		contentParts := make([]map[string]interface{}, 0, len(msg.Parts))
+		for _, part := range msg.Parts {
+			switch strings.ToLower(strings.TrimSpace(part.Type)) {
+			case "image":
+				mimeType, encoded, err := parseClaudeImageDataURL(part.DataURL)
+				if err != nil {
+					continue
+				}
+				contentParts = append(contentParts, map[string]interface{}{
+					"type": "image",
+					"source": map[string]string{
+						"type":       "base64",
+						"media_type": mimeType,
+						"data":       encoded,
+					},
+				})
+			default:
+				text := strings.TrimSpace(part.Text)
+				if text == "" {
+					continue
+				}
+				contentParts = append(contentParts, map[string]interface{}{
+					"type": "text",
+					"text": text,
+				})
+			}
+		}
+		if len(contentParts) == 0 {
+			entry["content"] = msg.Content
+		} else {
+			entry["content"] = contentParts
+		}
+		result[i] = entry
 	}
 	return result
+}
+
+func parseClaudeImageDataURL(raw string) (string, string, error) {
+	value := strings.TrimSpace(raw)
+	if !strings.HasPrefix(value, "data:") {
+		return "", "", errors.New("image data url required")
+	}
+	parts := strings.SplitN(value, ",", 2)
+	if len(parts) != 2 {
+		return "", "", errors.New("invalid image data url")
+	}
+	header := parts[0]
+	if !strings.Contains(header, ";base64") {
+		return "", "", errors.New("image data url must be base64")
+	}
+	mimeType := strings.TrimPrefix(strings.SplitN(header, ";", 2)[0], "data:")
+	if mimeType == "" {
+		return "", "", errors.New("image mime type is required")
+	}
+	encoded := strings.TrimSpace(parts[1])
+	if encoded == "" {
+		return "", "", errors.New("image payload is required")
+	}
+	if _, err := base64.StdEncoding.DecodeString(encoded); err != nil {
+		return "", "", fmt.Errorf("invalid image payload: %w", err)
+	}
+	return mimeType, encoded, nil
 }

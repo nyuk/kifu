@@ -325,7 +325,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <header className="rounded-2xl border border-cyan-400/20 bg-white/[0.04] p-6">
         <p className="text-xs uppercase tracking-[0.24em] text-cyan-200">Admin Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold text-zinc-100">관리자 대시보드</h1>

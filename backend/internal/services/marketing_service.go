@@ -68,6 +68,7 @@ type CreateMarketingIdeaInput struct {
 	EvidenceSource string
 	FormatStyle    string
 	SourceLink     *string
+	Attachments    []entities.MarketingIdeaAttachment
 }
 
 type GenerateMarketingDraftInput struct {
@@ -255,6 +256,10 @@ func (s *MarketingService) CreateIdea(ctx context.Context, input CreateMarketing
 	}
 
 	sourceLink := normalizeMarketingOptionalText(input.SourceLink, 500)
+	attachments, err := normalizeMarketingIdeaAttachments(input.Attachments)
+	if err != nil {
+		return nil, err
+	}
 	now := s.now()
 	idea := &entities.MarketingIdea{
 		ID:             uuid.New(),
@@ -269,6 +274,7 @@ func (s *MarketingService) CreateIdea(ctx context.Context, input CreateMarketing
 		EvidenceSource: evidenceSource,
 		FormatStyle:    formatStyle,
 		SourceLink:     sourceLink,
+		Attachments:    attachments,
 		Status:         entities.MarketingIdeaStatusInbox,
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -689,6 +695,59 @@ func normalizeMarketingOptionalText(value *string, maxLen int) *string {
 	return &trimmed
 }
 
+func normalizeMarketingIdeaAttachments(items []entities.MarketingIdeaAttachment) ([]entities.MarketingIdeaAttachment, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
+	if len(items) > 3 {
+		return nil, &MarketingError{Code: MarketingErrorInvalidInput, Message: "첨부 이미지는 최대 3개까지 가능합니다"}
+	}
+
+	normalized := make([]entities.MarketingIdeaAttachment, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for index, item := range items {
+		id := strings.TrimSpace(item.ID)
+		if id == "" {
+			id = fmt.Sprintf("attachment-%d", index+1)
+		}
+		if _, exists := seen[id]; exists {
+			return nil, &MarketingError{Code: MarketingErrorInvalidInput, Message: "첨부 이미지 id가 중복되었습니다"}
+		}
+		seen[id] = struct{}{}
+
+		mimeType := strings.ToLower(strings.TrimSpace(item.MimeType))
+		switch mimeType {
+		case "image/png", "image/jpeg", "image/jpg", "image/webp":
+		default:
+			return nil, &MarketingError{Code: MarketingErrorInvalidInput, Message: "PNG, JPG, WEBP 이미지만 첨부할 수 있습니다"}
+		}
+
+		dataURL := strings.TrimSpace(item.DataURL)
+		if !strings.HasPrefix(dataURL, "data:"+mimeType+";base64,") {
+			return nil, &MarketingError{Code: MarketingErrorInvalidInput, Message: "이미지 data url 형식이 올바르지 않습니다"}
+		}
+		if len(dataURL) > 2_500_000 {
+			return nil, &MarketingError{Code: MarketingErrorInvalidInput, Message: "각 이미지 크기는 2.5MB 이하여야 합니다"}
+		}
+
+		name := normalizeMarketingFreeText(item.Name, 120)
+		if name == "" {
+			name = fmt.Sprintf("image-%d", index+1)
+		}
+		note := normalizeMarketingOptionalText(item.Note, 240)
+
+		normalized = append(normalized, entities.MarketingIdeaAttachment{
+			ID:       id,
+			Name:     name,
+			MimeType: mimeType,
+			DataURL:  dataURL,
+			Note:     note,
+		})
+	}
+
+	return normalized, nil
+}
+
 func normalizeMarketingFreeText(value string, maxLen int) string {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -915,6 +974,7 @@ func buildMarketingAIMessages(
 	}
 	settingPrompt := marketingChannelSettingPrompt(channelSetting)
 	rewritePrompt := marketingStructuredRewritePrompt(idea, channel)
+	attachmentPrompt := marketingAttachmentPrompt(idea)
 
 	systemPrompt := strings.TrimSpace(fmt.Sprintf(
 		`You are the founder-content drafting engine for %s Marketing OS.
@@ -955,6 +1015,8 @@ Content intent: %s
 Evidence source: %s
 Format style: %s
 Source link: %s
+Image attachments:
+%s
 
 Channel instructions:
 %s
@@ -1000,6 +1062,7 @@ Return JSON only.
 		marketingEvidenceSourceDisplayName(idea.EvidenceSource),
 		marketingFormatStyleDisplayName(idea.FormatStyle),
 		sourceLink,
+		attachmentPrompt,
 		marketingDraftChannelInstruction(channel),
 		marketingAngleInstruction(idea.AngleType, channel),
 		marketingContentIntentInstruction(idea.ContentIntent, channel),
@@ -1011,8 +1074,62 @@ Return JSON only.
 		marketingHardRequirement(idea, channel, productName),
 	))
 
-	messages = append(messages, domaininterfaces.AIMessage{Role: "user", Content: userPrompt})
+	messages = append(messages, domaininterfaces.AIMessage{
+		Role:    "user",
+		Content: userPrompt,
+		Parts:   marketingUserMessageParts(userPrompt, idea),
+	})
 	return messages
+}
+
+func marketingUserMessageParts(prompt string, idea *entities.MarketingIdea) []domaininterfaces.AIMessagePart {
+	parts := []domaininterfaces.AIMessagePart{{
+		Type: "text",
+		Text: prompt,
+	}}
+
+	for _, attachment := range idea.Attachments {
+		dataURL := strings.TrimSpace(attachment.DataURL)
+		if dataURL == "" {
+			continue
+		}
+		if note := strings.TrimSpace(pointerStringValue(attachment.Note)); note != "" {
+			parts = append(parts, domaininterfaces.AIMessagePart{
+				Type: "text",
+				Text: fmt.Sprintf("Image note for %s: %s", attachment.Name, note),
+			})
+		}
+		parts = append(parts, domaininterfaces.AIMessagePart{
+			Type:    "image",
+			DataURL: dataURL,
+		})
+	}
+
+	return parts
+}
+
+func marketingAttachmentPrompt(idea *entities.MarketingIdea) string {
+	if len(idea.Attachments) == 0 {
+		return "- none"
+	}
+
+	lines := make([]string, 0, len(idea.Attachments)+1)
+	lines = append(lines, "Inspect the attached images visually. Use them as concrete scene evidence, but do not claim exact numbers unless they are clearly visible.")
+	for index, attachment := range idea.Attachments {
+		line := fmt.Sprintf("- image %d: %s (%s)", index+1, attachment.Name, attachment.MimeType)
+		if note := strings.TrimSpace(pointerStringValue(attachment.Note)); note != "" {
+			line += fmt.Sprintf(" | note: %s", note)
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func pointerStringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func marketingStructuredRewritePrompt(idea *entities.MarketingIdea, channel string) string {
@@ -1023,6 +1140,9 @@ func marketingStructuredRewritePrompt(idea *entities.MarketingIdea, channel stri
 
 	if marketingNeedsFragmentRewrite(idea, channel) {
 		lines = append(lines, "The raw note is fragmented. Turn short fragments into one flowing first paragraph.")
+	}
+	if len(idea.Attachments) > 0 {
+		lines = append(lines, "Use the attached image evidence to ground the first paragraph in one visible scene or chart move.")
 	}
 	if marketingNeedsAnchorHeavyNewsRewrite(idea, channel) {
 		anchors := marketingPromptAnchorCues(idea)
@@ -1231,11 +1351,12 @@ func marketingDraftReadinessIssues(
 		issues = append(issues, "뉴스/인용 기반 초안은 source_link를 함께 넣어주세요. 출처가 있어야 제네릭한 요약으로 흐르지 않습니다.")
 	}
 
-	if idea.EvidenceSource == entities.MarketingEvidenceScreenshot {
-		hasScreenCue := marketingContainsAny(rawNote, "화면", "스크린", "캡처", "카드", "메모", "복기", "기록")
+	if idea.EvidenceSource == entities.MarketingEvidenceScreenshot || idea.EvidenceSource == entities.MarketingEvidenceGenerated {
+		hasScreenCue := marketingContainsAny(rawNote, "화면", "스크린", "캡처", "카드", "메모", "복기", "기록", "차트", "캔들", "15분봉", "15m")
 		hasProofPoint := channelSetting != nil && collapseMarketingWhitespace(channelSetting.ProofPoints) != ""
-		if !hasScreenCue && !hasProofPoint {
-			issues = append(issues, "스크린샷 근거 초안은 raw_note에 어떤 화면을 보여줄지 적거나, 채널 설정의 proof points를 먼저 채워주세요.")
+		hasAttachment := len(idea.Attachments) > 0
+		if !hasScreenCue && !hasProofPoint && !hasAttachment {
+			issues = append(issues, "이미지 근거 초안은 raw_note에 어떤 화면이나 차트를 보여줄지 적거나, 이미지를 첨부하거나, 채널 설정의 proof points를 먼저 채워주세요.")
 		}
 	}
 

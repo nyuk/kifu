@@ -39,6 +39,14 @@ export type MarketingPublicationStatus = 'published'
 
 export type MarketingIdeaStatus = 'inbox' | 'draft_ready'
 
+export type MarketingIdeaAttachment = {
+  id: string
+  name: string
+  mime_type: string
+  data_url: string
+  note?: string | null
+}
+
 export type MarketingIdea = {
   id: string
   user_id: string
@@ -52,6 +60,7 @@ export type MarketingIdea = {
   evidence_source: MarketingEvidenceSource
   format_style: MarketingFormatStyle
   source_link?: string | null
+  attachments?: MarketingIdeaAttachment[]
   status: MarketingIdeaStatus
   created_at: string
   updated_at: string
@@ -129,6 +138,7 @@ export type CreateMarketingIdeaPayload = {
   evidence_source: MarketingEvidenceSource
   format_style: MarketingFormatStyle
   source_link?: string
+  attachments?: MarketingIdeaAttachment[]
 }
 
 export type GenerateMarketingDraftPayload = {

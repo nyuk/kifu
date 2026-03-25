@@ -47,21 +47,30 @@ const (
 )
 
 type MarketingIdea struct {
-	ID             uuid.UUID `json:"id"`
-	UserID         uuid.UUID `json:"user_id"`
-	ProductKey     string    `json:"product_key"`
-	Title          string    `json:"title"`
-	RawNote        string    `json:"raw_note"`
-	AngleType      string    `json:"angle_type"`
-	MessagePillar  string    `json:"message_pillar"`
-	Channels       []string  `json:"channels"`
-	ContentIntent  string    `json:"content_intent"`
-	EvidenceSource string    `json:"evidence_source"`
-	FormatStyle    string    `json:"format_style"`
-	SourceLink     *string   `json:"source_link,omitempty"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID                 `json:"id"`
+	UserID         uuid.UUID                 `json:"user_id"`
+	ProductKey     string                    `json:"product_key"`
+	Title          string                    `json:"title"`
+	RawNote        string                    `json:"raw_note"`
+	AngleType      string                    `json:"angle_type"`
+	MessagePillar  string                    `json:"message_pillar"`
+	Channels       []string                  `json:"channels"`
+	ContentIntent  string                    `json:"content_intent"`
+	EvidenceSource string                    `json:"evidence_source"`
+	FormatStyle    string                    `json:"format_style"`
+	SourceLink     *string                   `json:"source_link,omitempty"`
+	Attachments    []MarketingIdeaAttachment `json:"attachments,omitempty"`
+	Status         string                    `json:"status"`
+	CreatedAt      time.Time                 `json:"created_at"`
+	UpdatedAt      time.Time                 `json:"updated_at"`
+}
+
+type MarketingIdeaAttachment struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	MimeType string  `json:"mime_type"`
+	DataURL  string  `json:"data_url"`
+	Note     *string `json:"note,omitempty"`
 }
 
 type MarketingDraft struct {

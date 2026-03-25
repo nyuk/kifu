@@ -147,13 +147,46 @@ func (c *OpenAIClient) ProviderType() string {
 }
 
 // messagesToOpenAI converts generic AIMessage to OpenAI format.
-func (c *OpenAIClient) messagesToOpenAI(messages []interfaces.AIMessage) []map[string]string {
-	result := make([]map[string]string, len(messages))
+func (c *OpenAIClient) messagesToOpenAI(messages []interfaces.AIMessage) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(messages))
 	for i, msg := range messages {
-		result[i] = map[string]string{
-			"role":    msg.Role,
-			"content": msg.Content,
+		entry := map[string]interface{}{"role": msg.Role}
+		if len(msg.Parts) == 0 {
+			entry["content"] = msg.Content
+			result[i] = entry
+			continue
 		}
+
+		contentParts := make([]map[string]interface{}, 0, len(msg.Parts))
+		for _, part := range msg.Parts {
+			switch strings.ToLower(strings.TrimSpace(part.Type)) {
+			case "image":
+				if strings.TrimSpace(part.DataURL) == "" {
+					continue
+				}
+				contentParts = append(contentParts, map[string]interface{}{
+					"type": "image_url",
+					"image_url": map[string]string{
+						"url": strings.TrimSpace(part.DataURL),
+					},
+				})
+			default:
+				text := strings.TrimSpace(part.Text)
+				if text == "" {
+					continue
+				}
+				contentParts = append(contentParts, map[string]interface{}{
+					"type": "text",
+					"text": text,
+				})
+			}
+		}
+		if len(contentParts) == 0 {
+			entry["content"] = msg.Content
+		} else {
+			entry["content"] = contentParts
+		}
+		result[i] = entry
 	}
 	return result
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { api } from '../../lib/api'
 import { isGuestSession } from '../../lib/guestSession'
 import { onboardingProfileStoragePrefix, readOnboardingProfile, resolveCurrentUserKey } from '../../lib/onboardingProfile'
@@ -10,7 +9,6 @@ import { normalizeTradeSummary } from '../../lib/tradeAdapters'
 import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { useGuidedReviewStore } from '../../stores/guidedReviewStore'
 import { useReviewStore } from '../../stores/reviewStore'
-import { NO_TRADE_SYMBOL } from '../../types/guidedReview'
 import type { AccuracyResponse } from '../../types/review'
 import type { TradeSummaryResponse } from '../../types/trade'
 import { HomeGuidedReviewCard } from './HomeGuidedReviewCard'
@@ -143,7 +141,6 @@ const StatusGauge = ({ mode }: { mode: 'good' | 'ok' | 'bad' | 'idle' }) => {
 }
 
 export function HomeSnapshot() {
-  const router = useRouter()
   const guidedReview = useGuidedReviewStore((state) => state.review)
   const guidedItems = useGuidedReviewStore((state) => state.items)
   const guidedLoading = useGuidedReviewStore((state) => state.isLoading)
@@ -379,30 +376,6 @@ export function HomeSnapshot() {
           ? 'text-emerald-200'
           : 'text-indigo-200'
 
-  const routineItems = [
-    {
-      key: 'market',
-      title: '시장 기운 읽기',
-      done: Boolean(lastUpdated),
-      href: '/alert',
-      hint: '긴급 브리핑 30초',
-    },
-    {
-      key: 'position',
-      title: '내 자리 확인',
-      done: tradesCount > 0,
-      href: '/portfolio',
-      hint: tradesCount > 0 ? `${tradesCount.toLocaleString()}건 체결 감지` : '거래 기록 비어있음',
-    },
-    {
-      key: 'journal',
-      title: '한 줄 남기기',
-      done: bubbleCount > 0,
-      href: '/chart?onboarding=1',
-      hint: bubbleCount > 0 ? `${bubbleCount.toLocaleString()}개 기록` : '오늘 판단 한 줄',
-    },
-  ] as const
-
   useEffect(() => {
     const from = prevPnlRef.current
     const to = totalPnlNumeric
@@ -442,17 +415,96 @@ export function HomeSnapshot() {
     : onboardingProfile
       ? '아직 거래 기록이 없어도 괜찮습니다. 먼저 한 줄 기록으로 시작하거나 거래소를 연결하면 됩니다.'
       : '처음이라면 시작 가이드를 보고 흐름을 익히거나, 거래소를 연결해 거래내역을 가져오면 됩니다.'
-  const isSyntheticNoTradeReview =
-    guidedItems.length === 1 &&
-    (guidedItems[0]?.symbol === NO_TRADE_SYMBOL || guidedItems[0]?.trade_count === 0)
-  const shouldShowGuidedReviewCard =
-    !guestMode &&
-    Boolean(guidedReview) &&
-    !guidedLoading &&
-    (
-      guidedReview?.status === 'completed' ||
-      (guidedItems.length > 0 && !isSyntheticNoTradeReview)
-    )
+  const reviewAnsweredCount = guidedItems.filter((item) => item.intent).length
+  const reviewTotalCount = guidedItems.length
+  const latestBubble = recentBubbles[0] ?? null
+  const chartStartHref = latestBubble ? `/chart/${encodeURIComponent(latestBubble.symbol)}` : '/chart/BTCUSDT?onboarding=1'
+  const reviewStatusText = guestMode
+    ? '게스트 모드에서는 흐름만 살펴볼 수 있습니다.'
+    : guidedLoading
+      ? '오늘 복기 항목을 준비하는 중입니다.'
+      : guidedReview?.status === 'completed' && reviewTotalCount > 0
+        ? '오늘 복기가 완료됐습니다. 결과와 패턴을 확인해 보세요.'
+        : reviewTotalCount > 0
+          ? `${reviewAnsweredCount}/${reviewTotalCount}개 항목을 정리했습니다. 남은 거래를 이어서 복기하세요.`
+          : '오늘 거래를 불러오면 guided review가 바로 생성됩니다.'
+  const hubActions = [
+    {
+      key: 'review',
+      title: reviewTotalCount > 0 ? (reviewAnsweredCount > 0 ? '오늘 복기 이어하기' : '오늘 복기 시작') : '복기 센터 열기',
+      hint: reviewStatusText,
+      href: '/review',
+      badge: reviewTotalCount > 0 ? `${reviewAnsweredCount}/${reviewTotalCount}` : guestMode ? 'Guide' : 'Ready',
+    },
+    {
+      key: 'chart',
+      title: latestBubble ? `${latestBubble.symbol} 차트 열기` : '차트에서 첫 기록 남기기',
+      hint: latestBubble ? `${latestBubble.timeframe.toUpperCase()} · ${formatDateTime(latestBubble.candle_time)}` : '차트와 말풍선을 한 화면에서 복기합니다.',
+      href: chartStartHref,
+      badge: latestBubble ? latestBubble.timeframe.toUpperCase() : 'Chart',
+    },
+    {
+      key: 'report',
+      title: '성과와 패턴 보기',
+      hint: accuracyLabel
+        ? `AI ${accuracyLabel} · 복기 노트와 성과를 함께 확인하세요.`
+        : '복기 기록이 쌓이면 패턴과 리포트가 선명해집니다.',
+      href: '/review',
+      badge: totalOpinions > 0 ? `${totalOpinions} AI` : 'Report',
+    },
+  ] as const
+  const focusMetrics = [
+    {
+      key: 'pnl',
+      label: '실현손익',
+      value: formatCurrency(animatedPnl, currency.symbol),
+      tone: pnlTone,
+    },
+    {
+      key: 'trades',
+      label: '체결',
+      value: `${tradesCount.toLocaleString()}건`,
+      tone: 'text-neutral-100',
+    },
+    {
+      key: 'bubbles',
+      label: '말풍선',
+      value: `${bubbleCount.toLocaleString()}개`,
+      tone: 'text-neutral-100',
+    },
+    {
+      key: 'ai',
+      label: 'AI 비교',
+      value: accuracyLabel ?? `${totalOpinions.toLocaleString()}건`,
+      tone: accuracyLabel ? 'text-emerald-200' : 'text-neutral-100',
+    },
+  ] as const
+  const reviewSnapshotItems = [
+    {
+      key: 'status',
+      label: '복기 상태',
+      value: guidedReview?.status === 'completed' && reviewTotalCount > 0
+        ? '오늘 복기 완료'
+        : reviewTotalCount > 0
+          ? `${reviewAnsweredCount}/${reviewTotalCount} 진행 중`
+          : '아직 항목 없음',
+    },
+    {
+      key: 'latest',
+      label: '최근 기록',
+      value: latestBubble ? `${latestBubble.symbol} · ${latestBubble.timeframe.toUpperCase()}` : '기록 없음',
+    },
+    {
+      key: 'winRate',
+      label: '승률',
+      value: formatPercent(summary?.win_rate),
+    },
+    {
+      key: 'updated',
+      label: '마지막 갱신',
+      value: lastUpdated ? lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-',
+    },
+  ] as const
 
   const dismissOnboardingForToday = () => {
     if (typeof window === 'undefined') return
@@ -462,33 +514,35 @@ export function HomeSnapshot() {
   }
 
   return (
-    <div className="min-h-screen text-zinc-100 p-4 md:p-8 transition-colors duration-700 ease-out">
-      <div className="w-full flex flex-col gap-6">
-
-        {/* Header */}
+    <div className="min-h-screen p-4 text-zinc-100 transition-colors duration-700 ease-out md:p-8">
+      <div className="flex w-full flex-col gap-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">Library Ritual</p>
-            <h1 className="text-2xl font-semibold text-stone-200">서재 모드</h1>
-            <p className="text-sm text-stone-500">{snapshotPeriod} 장면을 조용히 다시 읽습니다</p>
+          <div className="space-y-2">
+            <p className="kifu-eyebrow">Trade Review Hub</p>
+            <h1 className="kifu-section-title">거래 복기 홈</h1>
+            <p className="kifu-section-copy max-w-3xl">
+              {snapshotPeriod} 동안의 거래, 차트 기록, AI 의견을 한 흐름으로 다시 봅니다.
+              먼저 오늘 복기를 시작하고, 이어서 차트와 패턴 리포트로 넘어가세요.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-white/[0.06] bg-white/[0.03] p-0.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
               {(['7d', '30d', 'all'] as const).map((period) => (
                 <button
                   key={period}
                   type="button"
                   onClick={() => setFilters({ period })}
-                  className={`rounded-md px-3 py-1 text-[11px] font-medium transition-all ${filters.period === period
-                    ? 'bg-stone-700/80 text-stone-100 shadow-sm'
-                    : 'text-stone-500 hover:text-stone-300'
-                    }`}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    filters.period === period
+                      ? 'bg-white/15 text-white'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
                 >
                   {period.toUpperCase()}
                 </button>
               ))}
             </div>
-            <div className="flex rounded-lg border border-white/[0.06] bg-white/[0.03] p-0.5">
+            <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
               {([
                 { key: 'auto', label: '자동' },
                 { key: 'usdt', label: '$' },
@@ -498,227 +552,203 @@ export function HomeSnapshot() {
                   key={item.key}
                   type="button"
                   onClick={() => setCurrencyMode(item.key)}
-                  className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${currencyMode === item.key
-                    ? 'bg-stone-700/80 text-stone-100 shadow-sm'
-                    : 'text-stone-500 hover:text-stone-300'
-                    }`}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    currencyMode === item.key
+                      ? 'bg-white/15 text-white'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
                 >
                   {item.label}
                 </button>
               ))}
             </div>
-            <span className="text-[10px] text-stone-600">
-              {lastUpdated ? lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '...'}
+            <span className="kifu-chip">
+              업데이트 {lastUpdated ? lastUpdated.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '...'}
             </span>
           </div>
         </header>
 
-        {/* Hero — single PnL focus */}
-        <section className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-black/30 via-white/[0.02] to-transparent p-6 lg:p-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-3 lg:max-w-md">
-              <StatusGauge mode={resolvedMode} />
-              <p className={`text-sm leading-relaxed ${heroAccent}`}>{heroText}</p>
-              <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
-                  거래 {tradesCount.toLocaleString()}건
-                </span>
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
-                  BUY {bySide.buyCount} · SELL {bySide.sellCount}
-                </span>
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-stone-400">
-                  버블 {formatNumber(bubbleCount)}개
-                </span>
-                {accuracyLabel && (
-                  <span className="rounded-full border border-lime-400/30 bg-lime-500/8 px-2.5 py-0.5 text-lime-300">
-                    AI {accuracyLabel}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="text-center lg:text-right">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-2">PnL</p>
-              <p className={`text-4xl font-semibold tracking-tight font-mono ${pnlTone}`}>
-                {formatCurrency(animatedPnl, currency.symbol)}
-              </p>
-            </div>
-          </div>
-        </section>
+        <section className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+          <HomeGuidedReviewCard autoLoad={false} />
 
-        {/* Routine — 3 questions */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">Quiet Routine</p>
-          <div className="grid gap-2 lg:grid-cols-3">
-            {routineItems.map((item) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                className="group flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3 transition hover:bg-white/[0.05] hover:border-white/[0.08]"
-              >
-                <div>
-                  <p className="text-sm font-medium text-stone-300 group-hover:text-stone-100 transition-colors">{item.title}</p>
-                  <p className="text-[11px] text-stone-600">{item.hint}</p>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.done
-                    ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-amber-500/10 text-amber-400'
-                    }`}
-                >
-                  {item.done ? '완료' : '대기'}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Stats — compact 2-column */}
-        <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">기록 요약</p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <div>
-                <p className="text-[11px] text-stone-600">총 버블</p>
-                <p className="text-xl font-semibold text-stone-200">{formatNumber(stats?.total_bubbles ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-stone-600">결과 있음</p>
-                <p className="text-xl font-semibold text-stone-200">{formatNumber(stats?.bubbles_with_outcome ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-stone-600">승률</p>
-                <p className={`text-xl font-semibold ${summary && summary.win_rate >= 50 ? 'text-lime-300' : 'text-rose-300'}`}>
-                  {formatPercent(summary?.win_rate)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-stone-600">평균 손익</p>
-                <p className={`text-xl font-semibold ${toneByNumber(tradesCount ? totalPnlNumeric / tradesCount : 0)}`}>
-                  {tradesCount ? formatCurrency(totalPnlNumeric / tradesCount, currency.symbol) : '-'}
-                </p>
-              </div>
-            </div>
-            {isLoading && <p className="mt-3 text-[11px] text-stone-600">통계를 불러오는 중...</p>}
-          </div>
-
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600 mb-4">AI 의견</p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <div>
-                <p className="text-[11px] text-stone-600">수집된 의견</p>
-                <p className="text-xl font-semibold text-stone-200">{formatNumber(totalOpinions)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-stone-600">최고 정확도</p>
-                <p className="text-xl font-semibold text-stone-200">{accuracyLabel ?? '-'}</p>
-              </div>
-            </div>
-            <p className="mt-4 text-[11px] text-stone-600 leading-relaxed">
-              AI 의견을 더 요청할수록 내 판단 패턴과 비교가 선명해집니다.
-            </p>
-            <Link
-              href="/review"
-              className="mt-3 inline-block rounded-lg border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-stone-400 transition hover:text-stone-200 hover:border-white/[0.1]"
-            >
-              복기 대시보드에서 상세 보기
-            </Link>
-            {isLoadingAccuracy && <p className="mt-3 text-[11px] text-stone-600">불러오는 중...</p>}
-          </div>
-        </section>
-
-        {/* Monthly report + trend */}
-        {!guestMode && <HomeMonthlyReportCard />}
-        {!guestMode && <MonthlyTrendChart />}
-
-        {/* Similar patterns alert */}
-        {!guestMode && <HomeSimilarPatterns />}
-
-        {/* Onboarding nudge */}
-        {showOnboardingNudge && (
-          <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.3em] text-amber-400/60">Onboarding</p>
-                {onboardingProfile ? (
-                  <>
-                    <p className="mt-1 text-sm font-semibold text-amber-200">{onboardingProfile.tendency}</p>
-                    <p className="mt-1 text-[11px] text-amber-300/60">
-                      LONG {onboardingProfile.long_count} · SHORT {onboardingProfile.short_count} · HOLD {onboardingProfile.hold_count}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="mt-1 text-sm font-semibold text-amber-200">첫 기록 전 안내</p>
-                    <p className="mt-1 text-[11px] text-amber-300/60">
-                      거래를 아직 가져오지 않았더라도 바로 시작할 수 있습니다.
-                    </p>
-                  </>
-                )}
-                <p className="mt-2 text-[11px] text-amber-200/70">{onboardingHint}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href={onboardingPrimaryHref} className="rounded-lg border border-amber-400/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-500/10 transition">
-                  {onboardingPrimaryLabel}
-                </Link>
-                <Link href={onboardingSecondaryHref} className="rounded-lg border border-amber-400/20 px-3 py-1.5 text-[11px] font-semibold text-amber-200/80 hover:bg-amber-500/5 transition">
-                  {onboardingSecondaryLabel}
-                </Link>
-                <button
-                  type="button"
-                  onClick={dismissOnboardingForToday}
-                  className="rounded-lg border border-transparent px-3 py-1.5 text-[11px] font-medium text-amber-300/70 transition hover:border-amber-400/10 hover:bg-amber-500/5 hover:text-amber-200"
-                >
-                  오늘은 숨기기
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* External components */}
-        <PositionManager />
-        <HomeSafetyCheckCard />
-        {shouldShowGuidedReviewCard && <HomeGuidedReviewCard autoLoad={false} />}
-
-        {/* Recent bubbles */}
-        <section className="rounded-2xl border border-white/[0.06] bg-white/[0.05] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] uppercase tracking-[0.3em] text-stone-600">최근 버블</p>
-            <Link href="/bubbles" className="text-[11px] text-stone-500 hover:text-stone-300 transition">
-              전체 보기
-            </Link>
-          </div>
-          {bubblesLoading && <p className="text-[11px] text-stone-600">불러오는 중...</p>}
-          {bubblesError && <p className="text-[11px] text-rose-400">{bubblesError}</p>}
-          {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
-            <p className="text-[11px] text-stone-600">아직 기록된 버블이 없습니다.</p>
-          )}
-          {!bubblesLoading && !bubblesError && recentBubbles.length > 0 && (
-            <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-              {recentBubbles.map((bubble) => (
-                <div
-                  key={bubble.id}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.04] px-4 py-3"
-                >
+          <aside className="kifu-panel p-5 md:p-6">
+            <div className="flex h-full flex-col gap-5">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-stone-200">{bubble.symbol}</p>
-                    <p className="text-[11px] text-stone-600">
-                      {bubble.timeframe} · {formatDateTime(bubble.candle_time)}
-                    </p>
+                    <p className="kifu-eyebrow">Next Step</p>
+                    <h2 className="mt-2 text-2xl font-semibold text-neutral-100">지금 해야 할 일</h2>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-stone-300">{bubble.price}</p>
-                    <p className="text-[11px] text-stone-600 max-w-[120px] truncate">
-                      {bubble.memo || bubble.tags?.slice(0, 2).join(', ') || ''}
-                    </p>
+                  <StatusGauge mode={resolvedMode} />
+                </div>
+                <p className={`text-sm leading-6 ${heroAccent}`}>{heroText}</p>
+              </div>
+
+              <div className="grid gap-3">
+                {hubActions.map((action) => (
+                  <Link
+                    key={action.key}
+                    href={action.href}
+                    className="kifu-panel-muted flex items-center justify-between gap-3 p-4 transition hover:border-white/20 hover:bg-white/10"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-neutral-100">{action.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-neutral-400">{action.hint}</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-neutral-200">
+                      {action.badge}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+
+              {showOnboardingNudge && (
+                <div className="rounded-2xl border border-amber-500/25 bg-amber-500/8 p-4">
+                  <p className="kifu-eyebrow text-amber-300/80">First Setup</p>
+                  <p className="mt-2 text-sm font-semibold text-amber-100">
+                    {onboardingProfile ? onboardingProfile.tendency : '처음 기록 전 안내'}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-amber-100/75">{onboardingHint}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link href={onboardingPrimaryHref} className="kifu-btn-secondary border-amber-300/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20">
+                      {onboardingPrimaryLabel}
+                    </Link>
+                    <Link href={onboardingSecondaryHref} className="kifu-btn-ghost px-3 py-2 text-amber-100/80 hover:bg-amber-500/10 hover:text-amber-100">
+                      {onboardingSecondaryLabel}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={dismissOnboardingForToday}
+                      className="kifu-btn-ghost px-3 py-2 text-amber-200/70 hover:bg-amber-500/10 hover:text-amber-100"
+                    >
+                      오늘은 숨기기
+                    </button>
                   </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
+          <div className="kifu-panel p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="kifu-eyebrow">Recent Notes</p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">최근 말풍선</h2>
+              </div>
+              <Link href="/bubbles" className="kifu-btn-ghost px-0 py-0 text-sm">
+                전체 보기
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {bubblesLoading && <p className="text-sm text-zinc-400">최근 기록을 불러오는 중입니다...</p>}
+              {bubblesError && <p className="text-sm text-rose-300">{bubblesError}</p>}
+              {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
+                <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-5 text-sm text-zinc-400">
+                  아직 기록된 말풍선이 없습니다. 차트에서 첫 판단을 남겨보세요.
+                </div>
+              )}
+              {!bubblesLoading && !bubblesError && recentBubbles.length > 0 && recentBubbles.map((bubble) => (
+                <Link
+                  key={bubble.id}
+                  href={`/chart/${encodeURIComponent(bubble.symbol)}`}
+                  className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 transition hover:border-white/20 hover:bg-white/10"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-stone-100">{bubble.symbol}</p>
+                      <p className="mt-1 text-sm text-stone-400">
+                        {bubble.timeframe.toUpperCase()} · {formatDateTime(bubble.candle_time)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-base font-semibold text-stone-200">{bubble.price}</p>
+                      <p className="mt-1 text-xs text-stone-500">{bubble.venue_name || bubble.bubble_type}</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-400">
+                    {bubble.memo || bubble.tags?.slice(0, 3).join(', ') || '메모 없음'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="kifu-panel p-5 md:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="kifu-eyebrow">Review Snapshot</p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">복기 스냅샷</h2>
+              </div>
+              <p className="text-sm text-zinc-400">{snapshotPeriod} 기준</p>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {focusMetrics.map((metric) => (
+                <div key={metric.key} className="kifu-stat-card">
+                  <p className="kifu-eyebrow">{metric.label}</p>
+                  <p className={`mt-2 text-2xl font-semibold ${metric.tone}`}>{metric.value}</p>
                 </div>
               ))}
             </div>
-          )}
-        </section>
-      </div>
 
+            <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p className="text-sm font-semibold text-neutral-100">현재 흐름</p>
+              <p className="mt-2 text-sm leading-6 text-neutral-400">{reviewStatusText}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {reviewSnapshotItems.map((item) => (
+                  <div key={item.key} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{item.label}</p>
+                    <p className="mt-2 text-sm font-semibold text-neutral-100">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href="/review" className="kifu-btn-primary">
+                  복기 센터 열기
+                </Link>
+                <Link href="/portfolio" className="kifu-btn-secondary">
+                  포지션 점검
+                </Link>
+                <Link href={chartStartHref} className="kifu-btn-secondary">
+                  차트로 이동
+                </Link>
+              </div>
+            </div>
+
+            {isLoading && <p className="mt-4 text-sm text-zinc-400">통계를 불러오는 중입니다...</p>}
+            {isLoadingAccuracy && <p className="mt-2 text-sm text-zinc-400">AI 정확도 데이터를 불러오는 중입니다...</p>}
+          </div>
+        </section>
+
+        {!guestMode && (
+          <section className="space-y-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="kifu-eyebrow">Patterns & Reports</p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">포지션 · 패턴 · 리포트</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                  오늘 복기를 마친 뒤에는 열린 포지션과 반복 패턴, 월간 흐름을 한 번에 점검하세요.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                <span className="kifu-chip">BUY {bySide.buyCount}</span>
+                <span className="kifu-chip">SELL {bySide.sellCount}</span>
+                <span className="kifu-chip">결과 있음 {formatNumber(stats?.bubbles_with_outcome ?? 0)}</span>
+              </div>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+              <HomeMonthlyReportCard />
+              <MonthlyTrendChart />
+              <HomeSimilarPatterns />
+              <PositionManager />
+              <HomeSafetyCheckCard />
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   )
 }

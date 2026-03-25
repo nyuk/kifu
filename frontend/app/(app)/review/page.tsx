@@ -405,10 +405,52 @@ export default function ReviewPage() {
     />
   )
 
+  const reviewTabs = [
+    { key: 'overview', label: '오늘 복기', hint: '거래 요약과 대응 기록' },
+    { key: 'ai', label: 'AI 의견', hint: '버블별 AI 복기 비교' },
+    { key: 'analytics', label: '패턴 분석', hint: '지표, 캘린더, 추세' },
+    { key: 'journal', label: '노트 · 공유', hint: '노트와 내보내기' },
+  ] as const
+  const reviewFlowPills = ['오늘 거래 되짚기', 'AI 의견 비교', '패턴 확인', '노트 정리']
+  const reviewSnapshotCards = [
+    {
+      key: 'pnl',
+      label: '실현손익',
+      value: `${tradePnl >= 0 ? '+' : ''}${tradePnl.toLocaleString()}`,
+      tone: tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300',
+    },
+    {
+      key: 'trades',
+      label: '실거래',
+      value: `${tradeCount.toLocaleString()}건`,
+      tone: 'text-neutral-100',
+    },
+    {
+      key: 'ai',
+      label: 'AI 요약',
+      value: `${filteredAiNotes.length}건`,
+      tone: 'text-neutral-100',
+    },
+    {
+      key: 'alerts',
+      label: '긴급 대응',
+      value: `${alertActions.length}건`,
+      tone: alertActions.length > 0 ? 'text-amber-200' : 'text-neutral-100',
+    },
+  ] as const
+  const reviewLeadText = tradeCount === 0
+    ? '오늘 거래가 아직 없습니다. 먼저 guided review에서 흐름을 시작하거나 차트에서 기록을 남겨보세요.'
+    : tradePnl >= 0
+      ? '이번 기간은 수익 구간입니다. 무엇이 잘 작동했는지 복기 흐름에서 이유와 패턴까지 남겨두세요.'
+      : '이번 기간은 손실 구간입니다. 거래 이유와 감정, 대응 기록을 차례로 정리해 패턴을 분리해 보세요.'
+
   const aiNotesSection = (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+    <div className="kifu-panel p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-medium text-neutral-200">AI 복기 요약</h3>
+        <div>
+          <p className="kifu-eyebrow">AI Review</p>
+          <h3 className="mt-2 text-2xl font-semibold text-neutral-100">AI 의견 비교</h3>
+        </div>
         <span className="text-sm text-zinc-300">최근 요청 기준</span>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -520,9 +562,12 @@ export default function ReviewPage() {
 
   const summarySection = (
     <div className="space-y-6">
-      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <div className="kifu-panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-neutral-200">거래내역 반영 요약</h3>
+          <div>
+            <p className="kifu-eyebrow">Trade Summary</p>
+            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">거래 흐름 요약</h3>
+          </div>
           <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
             실현손익 {tradePnl >= 0 ? '+' : ''}{tradePnl.toLocaleString()}
           </div>
@@ -562,9 +607,12 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <div className="kifu-panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-neutral-200">긴급 대응 기록</h3>
+          <div>
+            <p className="kifu-eyebrow">Action Log</p>
+            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">긴급 대응 기록</h3>
+          </div>
           <Link href="/alert" className="text-sm text-neutral-300 hover:text-neutral-200 transition-colors">
             긴급 모드로 이동
           </Link>
@@ -591,7 +639,7 @@ export default function ReviewPage() {
 
   const analyticsSection = (
     <div className="space-y-4">
-      <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
+      <div className="kifu-panel p-5">
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1">
           <button
             type="button"
@@ -709,76 +757,98 @@ export default function ReviewPage() {
   )
 
   return (
-    <div className="min-h-screen text-sm text-neutral-100 p-4 md:p-8">
-      <div className="w-full">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">복기 대시보드</h1>
-            <p className="text-sm text-zinc-400 mt-1">
-              트레이딩 판단과 결과를 분석합니다
-            </p>
-          </div>
-          <PeriodFilter filters={filters} onFilterChange={setFilters} />
-        </div>
+    <div className="min-h-screen p-4 text-sm text-neutral-100 md:p-8">
+      <div className="flex w-full flex-col gap-6">
+        <section className="kifu-panel p-5 md:p-6">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <p className="kifu-eyebrow">Review Center</p>
+              <h1 className="kifu-section-title">거래 복기 센터</h1>
+              <p className="kifu-section-copy">
+                오늘 거래를 하나씩 되짚고, AI 의견과 실제 결과를 같은 흐름에서 정리합니다.
+                복기 자체가 중심이고, 지표와 리포트는 그 다음 단계로 배치했습니다.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {reviewFlowPills.map((pill) => (
+                  <span key={pill} className="kifu-chip">
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            </div>
 
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6 text-red-400">
-            {error}
+            <div className="flex flex-col gap-3 xl:items-end">
+              <PeriodFilter filters={filters} onFilterChange={setFilters} />
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setReviewTab('ai')} className="kifu-btn-secondary">
+                  AI 의견 보기
+                </button>
+                <button type="button" onClick={() => setReviewTab('journal')} className="kifu-btn-secondary">
+                  노트 정리
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-5 rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
+            <div>
+              <HomeGuidedReviewCard />
+            </div>
+
+            <aside className="kifu-panel-muted p-5">
+              <p className="kifu-eyebrow">Current Snapshot</p>
+              <h2 className="mt-2 text-2xl font-semibold text-neutral-100">이번 기간 한눈에</h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-400">{reviewLeadText}</p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {reviewSnapshotCards.map((card) => (
+                  <div key={card.key} className="kifu-stat-card">
+                    <p className="kifu-eyebrow">{card.label}</p>
+                    <p className={`mt-2 text-2xl font-semibold ${card.tone}`}>{card.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-neutral-100">오늘의 관찰 포인트</p>
+                <div className="mt-3 space-y-2 text-sm text-neutral-400">
+                  <p>TOP 심볼: {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()}건)` : '아직 없음'}</p>
+                  <p>TOP 거래소: {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()}건)` : '아직 없음'}</p>
+                  <p>AI 요약 링크: 현재 {filteredAiNotes.length}건이 필터에 잡혀 있습니다.</p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section className="kifu-panel p-3">
+          <div className="grid gap-3 lg:grid-cols-4">
+            {reviewTabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setReviewTab(tab.key)}
+                className={`kifu-tab ${reviewTab === tab.key ? 'kifu-tab-active' : ''}`}
+              >
+                <span className="block text-base font-semibold">{tab.label}</span>
+                <span className="mt-1 block text-xs font-medium text-zinc-400">{tab.hint}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {reviewTab === 'overview' && (
+          <div className="space-y-6">
+            <StatsOverview stats={stats} isLoading={isLoading} />
+            {summarySection}
           </div>
         )}
-
-        <div className="mb-6">
-          <HomeGuidedReviewCard />
-        </div>
-
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1">
-          <button
-            type="button"
-            onClick={() => setReviewTab('overview')}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'overview'
-              ? 'bg-white/15 text-white'
-              : 'text-zinc-300 hover:text-white'
-            }`}
-          >
-            개요
-          </button>
-          <button
-            type="button"
-            onClick={() => setReviewTab('ai')}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'ai'
-              ? 'bg-white/15 text-white'
-              : 'text-zinc-300 hover:text-white'
-            }`}
-          >
-            AI 복기
-          </button>
-          <button
-            type="button"
-            onClick={() => setReviewTab('analytics')}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'analytics'
-              ? 'bg-white/15 text-white'
-              : 'text-zinc-300 hover:text-white'
-            }`}
-          >
-            성과 분석
-          </button>
-          <button
-            type="button"
-            onClick={() => setReviewTab('journal')}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${reviewTab === 'journal'
-              ? 'bg-white/15 text-white'
-              : 'text-zinc-300 hover:text-white'
-            }`}
-          >
-            노트/내보내기
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <StatsOverview stats={stats} isLoading={isLoading} />
-        </div>
-
-        {reviewTab === 'overview' && summarySection}
         {reviewTab === 'ai' && aiNotesSection}
         {reviewTab === 'analytics' && analyticsSection}
         {reviewTab === 'journal' && journalSection}

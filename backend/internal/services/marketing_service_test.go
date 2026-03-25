@@ -831,6 +831,52 @@ func TestBuildMarketingAIMessagesForFragmentedPromotionalXAddsRewriteBrief(t *te
 	}
 }
 
+func TestBuildMarketingAIMessagesWithAttachmentsAddsImageParts(t *testing.T) {
+	t.Parallel()
+
+	note := "Today 15m USD/KRW chart with a sharp flush and rebound."
+	idea := &entities.MarketingIdea{
+		ID:             uuid.New(),
+		UserID:         uuid.New(),
+		ProductKey:     entities.MarketingProductKifu,
+		Title:          "USD/KRW 15m",
+		RawNote:        "USD/KRW moved violently on the 15m chart today.",
+		AngleType:      entities.MarketingAngleProblem,
+		MessagePillar:  "Kifu keeps the why behind each trading decision connected to the record.",
+		Channels:       []string{entities.MarketingChannelX},
+		ContentIntent:  entities.MarketingContentIntentSoft,
+		EvidenceSource: entities.MarketingEvidenceScreenshot,
+		FormatStyle:    entities.MarketingFormatReflection,
+		Attachments: []entities.MarketingIdeaAttachment{
+			{
+				ID:       "chart-1",
+				Name:     "usdkrw-15m.png",
+				MimeType: "image/png",
+				DataURL:  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9s1N1XQAAAAASUVORK5CYII=",
+				Note:     &note,
+			},
+		},
+	}
+
+	messages := buildMarketingAIMessages(idea, entities.MarketingChannelX, "build_in_public", nil)
+	userMessage := messages[len(messages)-1]
+	if len(userMessage.Parts) < 3 {
+		t.Fatalf("expected text + note + image parts, got %#v", userMessage.Parts)
+	}
+	if userMessage.Parts[0].Type != "text" {
+		t.Fatalf("expected first part to be text, got %#v", userMessage.Parts[0])
+	}
+	if userMessage.Parts[1].Type != "text" || !strings.Contains(userMessage.Parts[1].Text, note) {
+		t.Fatalf("expected image note part, got %#v", userMessage.Parts[1])
+	}
+	if userMessage.Parts[2].Type != "image" || userMessage.Parts[2].DataURL == "" {
+		t.Fatalf("expected image part, got %#v", userMessage.Parts[2])
+	}
+	if !strings.Contains(userMessage.Content, "Image attachments:") {
+		t.Fatalf("expected attachment prompt in user content, got %q", userMessage.Content)
+	}
+}
+
 func TestMarketingFallbackFragmentedNewsOpeningIncludesSourceAndMarketCue(t *testing.T) {
 	t.Parallel()
 
