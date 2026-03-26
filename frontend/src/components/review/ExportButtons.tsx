@@ -65,11 +65,11 @@ export function ExportButtons({ period = '30d', outcomePeriod = '1h' }: ExportBu
     <div className="rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm p-5 shadow-sm">
       <h3 className="text-sm font-medium text-neutral-200">데이터 내보내기</h3>
       <p className="text-sm text-zinc-300 mb-4">
-        복기 데이터를 CSV 파일로 내보내 외부에서 분석할 수 있습니다.
+        복기 데이터를 CSV로 정리해 외부에서 다시 보거나 다른 분석 흐름으로 넘길 수 있습니다.
       </p>
       {guestMode && (
         <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
-          {guestFeatureMessage('데이터 내보내기')}
+          {guestFeatureMessage('데이터 내보내기')} 회원가입 후 현재 복기 흐름 그대로 내려받을 수 있습니다.
         </div>
       )}
 

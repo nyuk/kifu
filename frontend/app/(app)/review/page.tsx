@@ -150,21 +150,15 @@ export default function ReviewPage() {
   }
 
   useEffect(() => {
-    fetchStats()
-    fetchAccuracy()
-
-    // Fetch calendar for current month
-    const { from, to } = getCurrentMonthRange()
-    fetchCalendar(from, to)
-  }, [fetchStats, fetchAccuracy, fetchCalendar])
-
-  // Refetch when filters change
-  useEffect(() => {
+    if (!guestModeReady) return
+    if (guestMode && filters.period !== 'all') return
     fetchStats()
     fetchAccuracy()
     const { from, to } = getCurrentMonthRange()
     fetchCalendar(from, to)
   }, [
+    guestMode,
+    guestModeReady,
     filters.period,
     filters.outcomePeriod,
     filters.assetClass,
@@ -182,6 +176,11 @@ export default function ReviewPage() {
   }, [guestMode, guestModeReady, filters.period, setFilters])
 
   useEffect(() => {
+    if (!guestModeReady) return
+    if (guestMode && filters.period !== 'all') {
+      setTradeSummary(null)
+      return
+    }
     let isActive = true
     const loadTradeSummary = async () => {
       try {
@@ -203,7 +202,7 @@ export default function ReviewPage() {
     return () => {
       isActive = false
     }
-  }, [filters.period, filters.symbol, filters.venue, refreshTick])
+  }, [guestMode, guestModeReady, filters.period, filters.symbol, filters.venue, refreshTick])
 
   useEffect(() => {
     const handleRefresh = () => {
@@ -765,9 +764,50 @@ export default function ReviewPage() {
   )
 
   const journalSection = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-      <NoteList />
-      <ExportButtons period={filters.period} outcomePeriod={filters.outcomePeriod} />
+    <div className="space-y-6 mt-6">
+      <div className="kifu-panel p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="kifu-eyebrow">Journal Workspace</p>
+            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">노트와 내보내기 정리</h3>
+            <p className="mt-2 text-sm leading-6 text-neutral-400">
+              거래 이유, 감정, 다음에 반복할 것과 피할 것을 한 화면에서 정리합니다.
+              노트는 복기 흔적을 남기는 공간이고, 내보내기는 외부 분석용 정리 단계입니다.
+            </p>
+          </div>
+
+          <div className="kifu-panel-muted max-w-md p-4">
+            <p className="text-sm font-semibold text-neutral-100">
+              {guestMode ? '게스트 둘러보기 안내' : '이 탭에서 먼저 하면 좋은 것'}
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-neutral-400">
+              {guestMode ? (
+                <>
+                  <p>샘플 노트와 내보내기 화면은 둘러볼 수 있지만, 실제 저장과 다운로드는 회원 전용입니다.</p>
+                  <p>계정을 만들면 복기 노트 저장, 태그 정리, CSV 내보내기를 바로 이어서 사용할 수 있습니다.</p>
+                </>
+              ) : (
+                <>
+                  <p>거래 이유 한 줄, 감정 한 줄, 다음에 유지할 행동 한 줄부터 남기면 충분합니다.</p>
+                  <p>이번 기간 복기가 끝나면 통계나 AI 의견을 CSV로 내보내 외부에서 다시 볼 수 있습니다.</p>
+                </>
+              )}
+            </div>
+            {guestMode && (
+              <div className="mt-4">
+                <Link href="/register?next=%2Freview" className="kifu-btn-primary">
+                  회원가입 후 저장 기능 열기
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <NoteList />
+        <ExportButtons period={filters.period} outcomePeriod={filters.outcomePeriod} />
+      </div>
     </div>
   )
 

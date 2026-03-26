@@ -145,8 +145,12 @@ export function NoteList({ bubbleId }: NoteListProps) {
           <svg className="mx-auto mb-3 h-10 w-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-            <p className="text-sm">아직 작성된 노트가 없습니다</p>
-          <p className="mt-1 text-sm opacity-70">매매 복기를 기록해보세요</p>
+          <p className="text-sm">아직 작성된 노트가 없습니다</p>
+          <p className="mt-1 text-sm opacity-70">
+            {guestMode
+              ? '게스트 둘러보기에서는 저장된 샘플 노트만 확인할 수 있습니다.'
+              : '거래 이유, 감정, 배운 점을 짧게라도 남겨두면 다음 복기가 쉬워집니다.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
