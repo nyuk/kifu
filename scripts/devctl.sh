@@ -68,6 +68,67 @@ listener_pid() {
   lsof -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null | head -n 1 || true
 }
 
+wait_for_port_listener() {
+  local port="${1:-}"
+  local name="${2:-service}"
+  local pid_file="${3:-}"
+  local log_file="${4:-}"
+  local timeout_seconds="${5:-15}"
+  local waited=0
+  local launch_pid=""
+
+  [[ -n "${port}" ]] || die "wait_for_port_listener requires a port"
+  [[ -n "${pid_file}" ]] || die "wait_for_port_listener requires a pid file"
+
+  if [[ -f "${pid_file}" ]]; then
+    launch_pid="$(cat "${pid_file}" 2>/dev/null || true)"
+  fi
+
+  while (( waited < timeout_seconds * 10 )); do
+    local lp
+    lp="$(listener_pid "${port}")"
+    if [[ -n "${lp}" ]]; then
+      echo "${lp}" >"${pid_file}"
+      log "${name} ready on port ${port} (listener pid=${lp})"
+      return 0
+    fi
+
+    if [[ -n "${launch_pid}" ]] && ! pid_alive "${launch_pid}"; then
+      break
+    fi
+
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+
+  rm -f "${pid_file}"
+  if [[ -f "${log_file}" ]]; then
+    log "last ${name} log lines:"
+    tail -n 40 "${log_file}" || true
+  fi
+  die "${name} failed to start on port ${port}"
+}
+
+wait_for_http_health() {
+  local url="${1:-}"
+  local name="${2:-service}"
+  local timeout_seconds="${3:-15}"
+  local waited=0
+
+  [[ -n "${url}" ]] || die "wait_for_http_health requires a URL"
+
+  while (( waited < timeout_seconds * 10 )); do
+    if curl -fsS "${url}" >/dev/null 2>&1; then
+      log "${name} health ready (${url})"
+      return 0
+    fi
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+
+  die "${name} health check failed: ${url}"
+}
+
 stop_local_pid() {
   local pid_file="${1:-}"
   local name="${2:-process}"
@@ -113,11 +174,14 @@ start_backend_local() {
   stop_local_pid "${BACKEND_PID_FILE}" "backend"
   stop_process_on_port 8080 "backend"
   log "start backend in local mode (go run)"
+  : >"${BACKEND_LOG_FILE}"
   (
     cd "${PROJECT_ROOT}/backend"
     nohup go run ./cmd/main.go >"${BACKEND_LOG_FILE}" 2>&1 &
     echo $! >"${BACKEND_PID_FILE}"
   )
+  wait_for_port_listener 8080 "backend" "${BACKEND_PID_FILE}" "${BACKEND_LOG_FILE}" 20
+  wait_for_http_health "http://127.0.0.1:8080/health" "backend" 20
   log "backend local pid=$(cat "${BACKEND_PID_FILE}") log=${BACKEND_LOG_FILE}"
 }
 
@@ -125,11 +189,13 @@ start_frontend_local() {
   stop_local_pid "${FRONTEND_PID_FILE}" "frontend"
   stop_process_on_port 5173 "frontend"
   log "start frontend in local mode (npm run dev)"
+  : >"${FRONTEND_LOG_FILE}"
   (
     cd "${PROJECT_ROOT}/frontend"
     nohup npm run dev -- --hostname 127.0.0.1 --port 5173 >"${FRONTEND_LOG_FILE}" 2>&1 &
     echo $! >"${FRONTEND_PID_FILE}"
   )
+  wait_for_port_listener 5173 "frontend" "${FRONTEND_PID_FILE}" "${FRONTEND_LOG_FILE}" 30
   log "frontend local pid=$(cat "${FRONTEND_PID_FILE}") log=${FRONTEND_LOG_FILE}"
 }
 

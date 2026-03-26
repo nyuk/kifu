@@ -526,7 +526,16 @@ export function MarketingWorkspace() {
   const ideaFormPrepStatus = useMemo(() => getIdeaDraftPrepStatus(ideaForm), [ideaForm])
 
   const ideaPrepById = useMemo(() => {
-    const entries = (workspace?.ideas ?? []).map((idea) => [idea.id, getIdeaDraftPrepStatus(idea)] as const)
+    const entries = (workspace?.ideas ?? []).map(
+      (idea) =>
+        [
+          idea.id,
+          getIdeaDraftPrepStatus({
+            ...idea,
+            source_link: idea.source_link ?? undefined,
+          }),
+        ] as const
+    )
     return new Map<string, IdeaDraftPrepStatus>(entries)
   }, [workspace])
 
@@ -764,7 +773,12 @@ export function MarketingWorkspace() {
 
   const handleGenerateDraft = async (ideaId: string, channel: MarketingChannel) => {
     const idea = workspace?.ideas.find((item) => item.id === ideaId) ?? null
-    const prepStatus = idea ? getIdeaDraftPrepStatus(idea) : null
+    const prepStatus = idea
+      ? getIdeaDraftPrepStatus({
+          ...idea,
+          source_link: idea.source_link ?? undefined,
+        })
+      : null
     if (prepStatus && prepStatus.blocking.length > 0) {
       setSelectedIdeaId(ideaId)
       focusWorkspaceTab('capture')

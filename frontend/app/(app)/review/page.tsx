@@ -18,6 +18,7 @@ import { ExportButtons } from '../../../src/components/review/ExportButtons'
 import { PerformanceTrendChart } from '../../../src/components/review/PerformanceTrendChart'
 import { PageJumpPager } from '../../../src/components/ui/PageJumpPager'
 import { HomeGuidedReviewCard } from '../../../src/components/home/HomeGuidedReviewCard'
+import { isGuestSession } from '../../../src/lib/guestSession'
 import type { TradeSummaryResponse } from '../../../src/types/trade'
 import type { SymbolStats, ReviewNote, NotesListResponse } from '../../../src/types/review'
 
@@ -120,6 +121,8 @@ export default function ReviewPage() {
   const [aiNotesPageInput, setAiNotesPageInput] = useState('1')
   const [copiedShare, setCopiedShare] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
+  const [guestMode, setGuestMode] = useState(false)
+  const [guestModeReady, setGuestModeReady] = useState(false)
   const {
     stats,
     accuracy,
@@ -133,6 +136,11 @@ export default function ReviewPage() {
     fetchAccuracy,
     fetchCalendar,
   } = useReviewStore()
+
+  useEffect(() => {
+    setGuestMode(isGuestSession())
+    setGuestModeReady(true)
+  }, [])
 
   const getCurrentMonthRange = () => {
     const now = new Date()
@@ -165,6 +173,13 @@ export default function ReviewPage() {
     fetchAccuracy,
     fetchCalendar,
   ])
+
+  useEffect(() => {
+    if (!guestModeReady) return
+    if (!guestMode) return
+    if (filters.period === 'all') return
+    setFilters({ period: 'all' })
+  }, [guestMode, guestModeReady, filters.period, setFilters])
 
   useEffect(() => {
     let isActive = true
