@@ -96,7 +96,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
     <section className="kifu-panel p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="kifu-eyebrow">Guided Review</p>
+          <p className="kifu-eyebrow">오늘의 복기</p>
           <h2 className="mt-2 text-2xl font-semibold text-neutral-100">
             오늘의 복기
           </h2>
@@ -137,15 +137,15 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
       <div className="mt-4 grid gap-3 lg:grid-cols-[0.92fr_1.08fr]">
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
           <div className="kifu-stat-card">
-            <p className="kifu-eyebrow">Items</p>
+            <p className="kifu-eyebrow">오늘 항목</p>
             <p className="mt-2 text-2xl font-semibold text-neutral-100">{totalCount}</p>
           </div>
           <div className="kifu-stat-card">
-            <p className="kifu-eyebrow">Answered</p>
+            <p className="kifu-eyebrow">작성 완료</p>
             <p className="mt-2 text-2xl font-semibold text-emerald-200">{answeredCount}</p>
           </div>
           <div className="kifu-stat-card">
-            <p className="kifu-eyebrow">Status</p>
+            <p className="kifu-eyebrow">남은 단계</p>
             <p className={`mt-2 text-2xl font-semibold ${isCompleted ? 'text-emerald-200' : 'text-amber-200'}`}>
               {isCompleted ? '완료' : `${Math.max(totalCount - answeredCount, 0)}건 남음`}
             </p>
@@ -268,12 +268,12 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
               </Link>
             </div>
           ) : (
-            <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-400">
-              오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.
-              <span className="ml-1 text-neutral-200">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-400">
+              <p>오늘(선택 시간대 기준) 거래가 없어 복기 항목이 없습니다.</p>
+              <p className="mt-1 text-neutral-200">
                 {guestMode ? '게스트 모드에서는 복기 저장이 비활성화됩니다.' : '비거래일도 기록 흐름은 계속 저장할 수 있습니다.'}
-              </span>
-            </p>
+              </p>
+            </div>
           )}
         </div>
       )}

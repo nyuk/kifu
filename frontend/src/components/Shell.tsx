@@ -83,11 +83,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { icon: Home, label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
     { icon: PieChart, label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
     { icon: LineChart, label: t.navChart, href: '/chart', color: 'text-sky-400', activeColor: 'bg-sky-400/10 text-sky-300' },
-    { icon: Bell, label: t.navAlert, href: '/alert', color: 'text-orange-400', activeColor: 'bg-orange-400/10 text-orange-300' },
-    { icon: Boxes, label: 'Bubbles', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
+    { icon: Bell, label: '긴급 대응', href: '/alert', color: 'text-orange-400', activeColor: 'bg-orange-400/10 text-orange-300' },
+    { icon: Boxes, label: '말풍선', href: '/bubbles', color: 'text-amber-400', activeColor: 'bg-amber-400/10 text-amber-300' },
     { icon: Zap, label: t.navTrades, href: '/trades', color: 'text-rose-400', activeColor: 'bg-rose-400/10 text-rose-300' },
-    { icon: FileText, label: 'Review', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
-    { icon: Settings, label: 'Settings', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
+    { icon: FileText, label: '복기 센터', href: '/review', color: 'text-emerald-400', activeColor: 'bg-emerald-400/10 text-emerald-300' },
+    { icon: Settings, label: '설정', href: '/settings', color: 'text-neutral-400', activeColor: 'bg-white/5 text-white' },
   ]
 
   const effectiveBaseNavItems = isGuestSessionActive
@@ -102,7 +102,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     ? [
         ...effectiveBaseNavItems,
         { icon: Megaphone, label: '마케팅', href: '/marketing', color: 'text-amber-300', activeColor: 'bg-amber-300/10 text-amber-200' },
-        { icon: ShieldCheck, label: 'Admin', href: '/admin', color: 'text-cyan-400', activeColor: 'bg-cyan-400/10 text-cyan-300' },
+        { icon: ShieldCheck, label: '관리자', href: '/admin', color: 'text-cyan-400', activeColor: 'bg-cyan-400/10 text-cyan-300' },
       ]
     : effectiveBaseNavItems
 
@@ -121,14 +121,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-5 lg:w-64 flex-shrink-0 backdrop-blur-xl">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
-              <h1 className="mt-3 text-2xl font-semibold text-neutral-100">Trading Journal</h1>
+              <h1 className="mt-3 text-2xl font-semibold text-neutral-100">거래 복기</h1>
             </div>
             <nav className="flex flex-col gap-2">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-4 py-2 text-sm font-medium transition text-neutral-300 hover:bg-neutral-800/80"
+                  className="group kifu-nav-link"
                 >
                   {item.label}
                 </Link>
@@ -140,7 +140,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 disabled
-                className="mt-3 w-full rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-200 transition hover:border-neutral-500 disabled:opacity-50"
+                className="kifu-btn-secondary mt-3 w-full"
               >
                 Log out
               </button>
@@ -157,11 +157,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className={`app-shell theme-${shellTheme} h-screen overflow-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white`}>
       <div className="pointer-events-none absolute right-6 top-4 z-30 hidden md:block">
-        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/[0.12] bg-black/35 p-1 backdrop-blur-md">
+        <div className="pointer-events-auto kifu-segmented gap-1 rounded-full bg-black/35 backdrop-blur-md">
           {([
-            { key: 'neutral', label: 'Neutral' },
-            { key: 'forest', label: 'Forest' },
-            { key: 'warm', label: 'Warm' },
+            { key: 'neutral', label: '기본' },
+            { key: 'forest', label: '숲' },
+            { key: 'warm', label: '웜' },
           ] as const).map((item) => (
             <button
               key={item.key}
@@ -182,7 +182,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <aside className="relative flex flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.06] backdrop-blur-xl p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
-            <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">{t.appTagline}</h1>
+            <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">거래 복기</h1>
           </div>
           <nav className="flex flex-col gap-1">
             {navItems.map((item) => {
@@ -205,15 +205,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative flex items-center gap-3 rounded-lg h-9 px-3 text-sm font-medium transition-all duration-200 ${isActive
-                  ? item.activeColor || 'bg-white/[0.1] text-white'
-                  : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200'
-                  } ${item.color || ''}`}
+                  className={`group kifu-nav-link ${isActive ? `kifu-nav-link-active ${item.activeColor || ''}` : ''}`}
                 >
                   {isActive && (
                     <div className={`absolute left-0 h-full w-[3px] rounded-r-full ${accentClass} shadow-[0_0_12px_rgba(255,255,255,0.3)]`} />
                   )}
-                  <item.icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                  <item.icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : `group-hover:scale-110 ${item.color}`}`} />
                   <span className={isActive ? 'translate-x-1 transition-transform' : 'transition-transform group-hover:translate-x-1'}>
                     {item.label}
                   </span>
@@ -233,11 +230,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </span>
               ) : isAdmin ? (
                 <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-medium text-cyan-200">
-                  Admin
+                  관리자
                 </span>
               ) : (
                 <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200">
-                  Member
+                  멤버
                 </span>
               )}
               <span className="text-[10px] text-neutral-600 truncate max-w-[120px]">
@@ -247,7 +244,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-4 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/10 hover:text-white"
+              className="kifu-btn-secondary mt-4 w-full"
             >
               {t.logout}
             </button>
@@ -261,14 +258,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">Guest Mode</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200">둘러보기 모드</p>
                     <p className="mt-1 text-sm text-amber-100">
                       게스트에서는 화면 흐름만 먼저 둘러볼 수 있습니다. 알림 설정, 버블 저장, 복기 작성, 포지션 수정 같은 저장 기능은 회원 전용입니다.
                     </p>
                   </div>
                   <Link
                     href="/register?next=%2Fonboarding%2Fimport"
-                    className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-200 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-amber-100"
+                    className="kifu-btn-primary bg-amber-200 hover:bg-amber-100"
                   >
                     회원가입 후 저장 기능 사용하기
                   </Link>

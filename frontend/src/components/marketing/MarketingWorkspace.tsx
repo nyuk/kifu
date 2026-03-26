@@ -230,6 +230,18 @@ const summarizeChannelSetting = (setting: MarketingChannelSetting | null) =>
     .filter(Boolean)
     .join(' · ')
 
+const publicationPlaceholderByChannel: Record<MarketingChannel, string> = {
+  x: 'https://x.com/your_handle/status/...',
+  naver_blog: 'https://blog.naver.com/your_blog/...',
+  youtube: 'https://www.youtube.com/watch?v=...',
+}
+
+const publicationGuideByChannel: Record<MarketingChannel, string> = {
+  x: 'X에 직접 올린 뒤 URL을 남기면 이 초안을 발행 완료로 추적할 수 있습니다.',
+  naver_blog: '네이버 블로그에 발행한 뒤 URL을 남기면 이 초안을 발행 완료로 추적할 수 있습니다.',
+  youtube: '유튜브에 게시한 뒤 URL을 남기면 이 초안을 발행 완료로 추적할 수 있습니다.',
+}
+
 const parseBlogDraftPreview = (content: string): BlogDraftPreview => {
   const normalized = content
     .replace(/\r\n/g, '\n')
@@ -858,7 +870,7 @@ export function MarketingWorkspace() {
         external_url: publicationUrl,
       })
       await loadWorkspace()
-      setSuccessMessage('발행 URL을 저장했습니다.')
+      setSuccessMessage(`${marketingChannelLabels[selectedDraft.channel]} 발행 URL을 저장했습니다.`)
     } catch (publicationError) {
       if (isAuthError(publicationError)) {
         handleAuthFailure('세션이 만료되었습니다. 다시 로그인해 주세요.')
@@ -1875,58 +1887,61 @@ export function MarketingWorkspace() {
                   />
                 </label>
 
-                {selectedDraft.channel === 'x' && (
-                  <div className="grid gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">발행 기록</p>
-                        <p className="mt-1 text-xs text-neutral-400">
-                          X에 직접 올린 뒤 URL을 남기면 이 초안을 발행 완료로 추적할 수 있습니다.
-                        </p>
-                      </div>
+                <div className="grid gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-500/5 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">발행 기록</p>
+                      <p className="mt-1 text-xs text-neutral-400">
+                        {publicationGuideByChannel[selectedDraft.channel]}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-white/[0.08] bg-black/20 px-2.5 py-1 text-[11px] text-neutral-300">
+                        채널 · {marketingChannelLabels[selectedDraft.channel]}
+                      </span>
                       {selectedPublication?.publish_status === 'published' && (
                         <span className="rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] text-cyan-100">
                           발행 완료
                         </span>
                       )}
                     </div>
-
-                    <label className="grid gap-2">
-                      <span className="text-sm text-neutral-300">발행 URL</span>
-                      <input
-                        value={publicationUrl}
-                        onChange={(event) => setPublicationUrl(event.target.value)}
-                        className="rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-300/50"
-                        placeholder="https://x.com/your_handle/status/..."
-                      />
-                    </label>
-
-                    {selectedPublication?.external_url && (
-                      <a
-                        href={selectedPublication.external_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-cyan-200 underline underline-offset-4"
-                      >
-                        저장된 발행 글 열기
-                      </a>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={savePublicationRecord}
-                        disabled={savingPublication || draftEditor.status !== 'approved'}
-                        className="rounded-2xl border border-cyan-300/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {savingPublication ? '저장 중...' : '발행 완료로 기록'}
-                      </button>
-                      {draftEditor.status !== 'approved' && (
-                        <p className="text-xs text-neutral-500">승인된 초안만 발행 완료로 기록할 수 있습니다.</p>
-                      )}
-                    </div>
                   </div>
-                )}
+
+                  <label className="grid gap-2">
+                    <span className="text-sm text-neutral-300">발행 URL</span>
+                    <input
+                      value={publicationUrl}
+                      onChange={(event) => setPublicationUrl(event.target.value)}
+                      className="rounded-2xl border border-white/[0.08] bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-300/50"
+                      placeholder={publicationPlaceholderByChannel[selectedDraft.channel]}
+                    />
+                  </label>
+
+                  {selectedPublication?.external_url && (
+                    <a
+                      href={selectedPublication.external_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-cyan-200 underline underline-offset-4"
+                    >
+                      저장된 발행 글 열기
+                    </a>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={savePublicationRecord}
+                      disabled={savingPublication || draftEditor.status !== 'approved'}
+                      className="rounded-2xl border border-cyan-300/30 bg-cyan-500/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {savingPublication ? '저장 중...' : '발행 완료로 기록'}
+                    </button>
+                    {draftEditor.status !== 'approved' && (
+                      <p className="text-xs text-neutral-500">승인된 초안만 발행 완료로 기록할 수 있습니다.</p>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button

@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '../../../src/lib/api'
+import { isGuestSession } from '../../../src/lib/guestSession'
 import { normalizeTradeSummary } from '../../../src/lib/tradeAdapters'
+import { useGuidedReviewStore } from '../../../src/stores/guidedReviewStore'
 import { useReviewStore } from '../../../src/stores/reviewStore'
 import { StatsOverview } from '../../../src/components/review/StatsOverview'
 import { AccuracyChart } from '../../../src/components/review/AccuracyChart'
@@ -100,6 +102,7 @@ const normalizeVenueLabel = (value?: string) => {
 export default function ReviewPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const guestMode = isGuestSession()
   const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [alertActions, setAlertActions] = useState<Array<{
     id: string
@@ -136,6 +139,11 @@ export default function ReviewPage() {
     fetchAccuracy,
     fetchCalendar,
   } = useReviewStore()
+  const guidedReview = useGuidedReviewStore((state) => state.review)
+  const guidedItems = useGuidedReviewStore((state) => state.items)
+  const guidedLoading = useGuidedReviewStore((state) => state.isLoading)
+  const fetchGuidedToday = useGuidedReviewStore((state) => state.fetchToday)
+  const fetchGuidedStreak = useGuidedReviewStore((state) => state.fetchStreak)
 
   useEffect(() => {
     setGuestMode(isGuestSession())
@@ -167,6 +175,13 @@ export default function ReviewPage() {
     fetchAccuracy,
     fetchCalendar,
   ])
+
+  useEffect(() => {
+    if (!guestModeReady) return
+    if (guestMode) return
+    fetchGuidedToday()
+    fetchGuidedStreak()
+  }, [guestMode, guestModeReady, fetchGuidedToday, fetchGuidedStreak])
 
   useEffect(() => {
     if (!guestModeReady) return
@@ -368,6 +383,52 @@ export default function ReviewPage() {
 
   const tradePnl = useMemo(() => Number(tradeSummary?.totals?.realized_pnl_total || 0), [tradeSummary])
   const tradeCount = tradeSummary?.totals?.total_trades || 0
+  const guidedAnsweredCount = guidedItems.filter((item) => item.intent).length
+  const guidedTotalCount = guidedItems.length
+  const guidedPendingCount = Math.max(guidedTotalCount - guidedAnsweredCount, 0)
+  const guidedCompleted = guidedReview?.status === 'completed' && guidedPendingCount === 0 && guidedTotalCount > 0
+  const routineSteps = [
+    {
+      key: 'review',
+      title: guidedPendingCount > 0 ? '오늘 복기 이어가기' : guidedCompleted ? '오늘 복기 완료' : '오늘 복기 시작',
+      detail: guestMode
+        ? '게스트 모드에서는 흐름만 둘러볼 수 있습니다.'
+        : guidedLoading
+          ? '오늘 복기 항목을 준비하는 중입니다.'
+          : guidedTotalCount > 0
+            ? `${guidedAnsweredCount}/${guidedTotalCount}개 항목 정리됨`
+            : '오늘 거래가 들어오면 오늘의 복기 항목이 바로 생성됩니다.',
+      state: guidedCompleted ? 'done' : guidedPendingCount > 0 ? 'active' : 'idle',
+    },
+    {
+      key: 'ai',
+      title: 'AI 의견 비교',
+      detail: filteredAiNotes.length > 0 ? `${filteredAiNotes.length}건의 AI 복기 요약이 있습니다.` : '복기 후 AI 의견을 비교해 기록을 다듬으세요.',
+      state: filteredAiNotes.length > 0 ? 'ready' : 'idle',
+    },
+    {
+      key: 'journal',
+      title: '노트와 패턴 정리',
+      detail: alertActions.length > 0 ? `긴급 대응 ${alertActions.length}건과 함께 복기 노트를 남길 수 있습니다.` : '노트와 패턴은 마지막에 한 번 더 정리하는 흐름이 좋습니다.',
+      state: reviewTab === 'journal' ? 'active' : 'idle',
+    },
+  ] as const
+  const primaryRoutineAction = guestMode
+    ? { kind: 'link' as const, href: '/login', label: '로그인하고 복기 시작' }
+    : guidedLoading
+      ? null
+      : guidedPendingCount > 0 || (guidedTotalCount > 0 && !guidedCompleted)
+        ? { kind: 'scroll' as const, label: '오늘 복기 이어하기' }
+        : filteredAiNotes.length > 0
+          ? { kind: 'tab' as const, tab: 'ai' as const, label: 'AI 의견 비교 열기' }
+          : { kind: 'tab' as const, tab: 'journal' as const, label: '노트 정리로 이동' }
+  const secondaryRoutineAction = guestMode
+    ? { kind: 'link' as const, href: '/chart/BTCUSDT', label: '차트 둘러보기' }
+    : { kind: 'link' as const, href: '/chart/BTCUSDT', label: '차트에서 기록 보기' }
+  const openGuidedReview = () => {
+    const section = document.getElementById('guided-review-section')
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const topTradeSymbol = useMemo(() => {
     const rows = tradeSummary?.by_symbol || []
     if (rows.length === 0) return null
@@ -426,6 +487,14 @@ export default function ReviewPage() {
     { key: 'journal', label: '노트 · 공유', hint: '노트와 내보내기' },
   ] as const
   const reviewFlowPills = ['오늘 거래 되짚기', 'AI 의견 비교', '패턴 확인', '노트 정리']
+  const reviewTabCopy = {
+    overview: { label: '오늘 복기', hint: '거래 요약과 대응 기록' },
+    ai: { label: 'AI 의견', hint: '말풍선별 AI 의견 비교' },
+    analytics: { label: '패턴 분석', hint: '지표, 캘린더, 추세' },
+    journal: { label: '노트 · 공유', hint: '노트와 내보내기' },
+  } as const
+  const cleanReviewFlowPills = ['오늘 거래 되짚기', 'AI 의견 비교', '패턴 확인', '노트 정리']
+
   const reviewSnapshotCards = [
     {
       key: 'pnl',
@@ -453,7 +522,7 @@ export default function ReviewPage() {
     },
   ] as const
   const reviewLeadText = tradeCount === 0
-    ? '오늘 거래가 아직 없습니다. 먼저 guided review에서 흐름을 시작하거나 차트에서 기록을 남겨보세요.'
+    ? '오늘 거래가 아직 없습니다. 먼저 오늘의 복기 흐름을 확인하거나 차트에서 기록을 남겨보세요.'
     : tradePnl >= 0
       ? '이번 기간은 수익 구간입니다. 무엇이 잘 작동했는지 복기 흐름에서 이유와 패턴까지 남겨두세요.'
       : '이번 기간은 손실 구간입니다. 거래 이유와 감정, 대응 기록을 차례로 정리해 패턴을 분리해 보세요.'
@@ -462,7 +531,7 @@ export default function ReviewPage() {
     <div className="kifu-panel p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="kifu-eyebrow">AI Review</p>
+          <p className="kifu-eyebrow">AI 의견</p>
           <h3 className="mt-2 text-2xl font-semibold text-neutral-100">AI 의견 비교</h3>
         </div>
         <span className="text-sm text-zinc-300">최근 요청 기준</span>
@@ -471,7 +540,7 @@ export default function ReviewPage() {
         <select
           value={aiSymbolFilter}
           onChange={(event) => setAiSymbolFilter(event.target.value)}
-          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-white/20"
+          className="kifu-field min-w-[140px] py-2 text-sm"
         >
           {aiSymbolOptions.map((option) => (
             <option key={option} value={option}>
@@ -482,7 +551,7 @@ export default function ReviewPage() {
         <select
           value={aiTimeframeFilter}
           onChange={(event) => setAiTimeframeFilter(event.target.value)}
-          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:border-white/20"
+          className="kifu-field min-w-[148px] py-2 text-sm"
         >
           {aiTimeframeOptions.map((option) => (
             <option key={option} value={option}>
@@ -494,7 +563,7 @@ export default function ReviewPage() {
         <button
           type="button"
           onClick={copyAiFilterLink}
-          className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-sm text-neutral-300 hover:bg-white/[0.12] hover:text-white"
+          className="kifu-btn-secondary"
         >
           {copiedShare ? '링크 공유 완료' : 'AI 요약 필터 링크 복사'}
         </button>
@@ -579,7 +648,7 @@ export default function ReviewPage() {
       <div className="kifu-panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="kifu-eyebrow">Trade Summary</p>
+            <p className="kifu-eyebrow">거래 요약</p>
             <h3 className="mt-2 text-2xl font-semibold text-neutral-100">거래 흐름 요약</h3>
           </div>
           <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
@@ -602,17 +671,17 @@ export default function ReviewPage() {
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+          <div className="kifu-stat-card transition-colors hover:bg-white/10">
             <p className="text-sm uppercase tracking-wider text-zinc-300">실거래 건수</p>
             <p className="mt-1 text-base font-semibold text-sky-300">{tradeCount.toLocaleString()}건</p>
           </div>
-          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+          <div className="kifu-stat-card transition-colors hover:bg-white/10">
             <p className="text-sm uppercase tracking-wider text-zinc-300">TOP 심볼</p>
             <p className="mt-1 text-base font-semibold text-emerald-300">
               {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()})` : '-'}
             </p>
           </div>
-          <div className="rounded-lg border border-white/5 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors">
+          <div className="kifu-stat-card transition-colors hover:bg-white/10">
             <p className="text-sm uppercase tracking-wider text-zinc-300">TOP 거래소</p>
             <p className="mt-1 text-base font-semibold text-amber-300">
               {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()})` : '-'}
@@ -624,7 +693,7 @@ export default function ReviewPage() {
       <div className="kifu-panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="kifu-eyebrow">Action Log</p>
+            <p className="kifu-eyebrow">긴급 대응</p>
             <h3 className="mt-2 text-2xl font-semibold text-neutral-100">긴급 대응 기록</h3>
           </div>
           <Link href="/alert" className="text-sm text-neutral-300 hover:text-neutral-200 transition-colors">
@@ -654,13 +723,13 @@ export default function ReviewPage() {
   const analyticsSection = (
     <div className="space-y-4">
       <div className="kifu-panel p-5">
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] p-1">
+        <div className="kifu-segmented mb-4">
           <button
             type="button"
             onClick={() => setAnalyticsTab('calendar')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'calendar'
-              ? 'bg-zinc-700 text-white'
-              : 'text-zinc-300 hover:text-white'
+            className={`kifu-segment text-xs ${analyticsTab === 'calendar'
+              ? 'kifu-segment-active'
+              : ''
             }`}
           >
             성과 캘린더
@@ -668,9 +737,9 @@ export default function ReviewPage() {
           <button
             type="button"
             onClick={() => setAnalyticsTab('metrics')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'metrics'
-              ? 'bg-zinc-700 text-white'
-              : 'text-zinc-300 hover:text-white'
+            className={`kifu-segment text-xs ${analyticsTab === 'metrics'
+              ? 'kifu-segment-active'
+              : ''
             }`}
           >
             지표
@@ -678,9 +747,9 @@ export default function ReviewPage() {
           <button
             type="button"
             onClick={() => setAnalyticsTab('trend')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${analyticsTab === 'trend'
-              ? 'bg-zinc-700 text-white'
-              : 'text-zinc-300 hover:text-white'
+            className={`kifu-segment text-xs ${analyticsTab === 'trend'
+              ? 'kifu-segment-active'
+              : ''
             }`}
           >
             추세 분석
@@ -708,14 +777,14 @@ export default function ReviewPage() {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h3 className="text-sm font-medium text-zinc-300">구간 성과</h3>
-              <div className="flex p-1 space-x-1 bg-black/20 rounded-lg border border-white/[0.05]">
+              <div className="kifu-segmented gap-1">
                 {(['1h', '4h', '1d'] as const).map((period) => (
                   <button
                     key={period}
                     onClick={() => setSelectedPeriod(period)}
-                    className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${selectedPeriod === period
-                      ? 'bg-zinc-700 text-white shadow-sm'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                    className={`kifu-segment ${selectedPeriod === period
+                      ? 'kifu-segment-active'
+                      : ''
                       }`}
                   >
                     {period.toUpperCase()}
@@ -817,16 +886,16 @@ export default function ReviewPage() {
         <section className="kifu-panel p-5 md:p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl space-y-3">
-              <p className="kifu-eyebrow">Review Center</p>
+              <p className="kifu-eyebrow">오늘의 복기</p>
               <h1 className="kifu-section-title">거래 복기 센터</h1>
               <p className="kifu-section-copy">
                 오늘 거래를 하나씩 되짚고, AI 의견과 실제 결과를 같은 흐름에서 정리합니다.
                 복기 자체가 중심이고, 지표와 리포트는 그 다음 단계로 배치했습니다.
               </p>
               <div className="flex flex-wrap gap-2">
-                {reviewFlowPills.map((pill) => (
-                  <span key={pill} className="kifu-chip">
-                    {pill}
+                {reviewFlowPills.map((pill, index) => (
+                  <span key={`${pill}-${index}`} className="kifu-chip">
+                    {cleanReviewFlowPills[index] ?? pill}
                   </span>
                 ))}
               </div>
@@ -853,12 +922,14 @@ export default function ReviewPage() {
 
           <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
             <div>
-              <HomeGuidedReviewCard />
+              <div id="guided-review-section">
+                <HomeGuidedReviewCard />
+              </div>
             </div>
 
             <aside className="kifu-panel-muted p-5">
-              <p className="kifu-eyebrow">Current Snapshot</p>
-              <h2 className="mt-2 text-2xl font-semibold text-neutral-100">이번 기간 한눈에</h2>
+              <p className="kifu-eyebrow">오늘의 루틴</p>
+              <h2 className="mt-2 text-2xl font-semibold text-neutral-100">이번 복기에서 할 일</h2>
               <p className="mt-2 text-sm leading-6 text-neutral-400">{reviewLeadText}</p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -871,11 +942,58 @@ export default function ReviewPage() {
               </div>
 
               <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <p className="text-sm font-semibold text-neutral-100">추천 루틴</p>
+                <div className="mt-3 space-y-2">
+                  {routineSteps.map((step, index) => (
+                    <div key={step.key} className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-neutral-100">
+                          {index + 1}. {step.title}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-neutral-400">{step.detail}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        step.state === 'done'
+                          ? 'border border-emerald-300/40 bg-emerald-500/10 text-emerald-200'
+                          : step.state === 'active'
+                            ? 'border border-sky-300/40 bg-sky-500/10 text-sky-200'
+                            : step.state === 'ready'
+                              ? 'border border-violet-300/40 bg-violet-500/10 text-violet-200'
+                              : 'border border-white/10 bg-white/5 text-neutral-400'
+                      }`}>
+                        {step.state === 'done' ? '완료' : step.state === 'active' ? '지금' : step.state === 'ready' ? '준비됨' : '대기'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {primaryRoutineAction?.kind === 'link' && (
+                    <Link href={primaryRoutineAction.href} className="kifu-btn-primary">
+                      {primaryRoutineAction.label}
+                    </Link>
+                  )}
+                  {primaryRoutineAction?.kind === 'scroll' && (
+                    <button type="button" onClick={openGuidedReview} className="kifu-btn-primary">
+                      {primaryRoutineAction.label}
+                    </button>
+                  )}
+                  {primaryRoutineAction?.kind === 'tab' && (
+                    <button type="button" onClick={() => setReviewTab(primaryRoutineAction.tab)} className="kifu-btn-primary">
+                      {primaryRoutineAction.label}
+                    </button>
+                  )}
+                  <Link href={secondaryRoutineAction.href} className="kifu-btn-secondary">
+                    {secondaryRoutineAction.label}
+                  </Link>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                 <p className="text-sm font-semibold text-neutral-100">오늘의 관찰 포인트</p>
                 <div className="mt-3 space-y-2 text-sm text-neutral-400">
                   <p>TOP 심볼: {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()}건)` : '아직 없음'}</p>
                   <p>TOP 거래소: {topTradeExchange ? `${topTradeExchange.exchange} (${(topTradeExchange.total_trades || topTradeExchange.trade_count || 0).toLocaleString()}건)` : '아직 없음'}</p>
-                  <p>AI 요약 링크: 현재 {filteredAiNotes.length}건이 필터에 잡혀 있습니다.</p>
+                  <p>AI 요약: 현재 {filteredAiNotes.length}건이 필터에 잡혀 있습니다.</p>
                 </div>
               </div>
             </aside>
@@ -884,17 +1002,20 @@ export default function ReviewPage() {
 
         <section className="kifu-panel p-3">
           <div className="grid gap-3 lg:grid-cols-4">
-            {reviewTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setReviewTab(tab.key)}
-                className={`kifu-tab ${reviewTab === tab.key ? 'kifu-tab-active' : ''}`}
-              >
-                <span className="block text-base font-semibold">{tab.label}</span>
-                <span className="mt-1 block text-xs font-medium text-zinc-400">{tab.hint}</span>
-              </button>
-            ))}
+            {reviewTabs.map((tab) => {
+              const cleanCopy = reviewTabCopy[tab.key]
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setReviewTab(tab.key)}
+                  className={`kifu-tab ${reviewTab === tab.key ? 'kifu-tab-active' : ''}`}
+                >
+                  <span className="block text-base font-semibold">{cleanCopy?.label ?? tab.label}</span>
+                  <span className="mt-1 block text-xs font-medium text-zinc-400">{cleanCopy?.hint ?? tab.hint}</span>
+                </button>
+              )
+            })}
           </div>
         </section>
 

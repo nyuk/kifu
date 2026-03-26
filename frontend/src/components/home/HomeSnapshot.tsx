@@ -431,26 +431,26 @@ export function HomeSnapshot() {
   const hubActions = [
     {
       key: 'review',
-      title: reviewTotalCount > 0 ? (reviewAnsweredCount > 0 ? '오늘 복기 이어하기' : '오늘 복기 시작') : '복기 센터 열기',
+      title: reviewTotalCount > 0 ? (reviewAnsweredCount > 0 ? '1. 오늘 복기 이어하기' : '1. 오늘 복기 시작') : '1. 복기 센터 열기',
       hint: reviewStatusText,
       href: '/review',
-      badge: reviewTotalCount > 0 ? `${reviewAnsweredCount}/${reviewTotalCount}` : guestMode ? 'Guide' : 'Ready',
+      badge: reviewTotalCount > 0 ? `${reviewAnsweredCount}/${reviewTotalCount}` : guestMode ? '가이드' : '준비됨',
     },
     {
       key: 'chart',
-      title: latestBubble ? `${latestBubble.symbol} 차트 열기` : '차트에서 첫 기록 남기기',
+      title: latestBubble ? `2. ${latestBubble.symbol} 차트 열기` : '2. 차트에서 첫 기록 남기기',
       hint: latestBubble ? `${latestBubble.timeframe.toUpperCase()} · ${formatDateTime(latestBubble.candle_time)}` : '차트와 말풍선을 한 화면에서 복기합니다.',
       href: chartStartHref,
-      badge: latestBubble ? latestBubble.timeframe.toUpperCase() : 'Chart',
+      badge: latestBubble ? latestBubble.timeframe.toUpperCase() : '차트',
     },
     {
       key: 'report',
-      title: '성과와 패턴 보기',
+      title: '3. 성과와 패턴 보기',
       hint: accuracyLabel
         ? `AI ${accuracyLabel} · 복기 노트와 성과를 함께 확인하세요.`
         : '복기 기록이 쌓이면 패턴과 리포트가 선명해집니다.',
       href: '/review',
-      badge: totalOpinions > 0 ? `${totalOpinions} AI` : 'Report',
+      badge: totalOpinions > 0 ? `${totalOpinions} AI` : '리포트',
     },
   ] as const
   const focusMetrics = [
@@ -518,7 +518,7 @@ export function HomeSnapshot() {
       <div className="flex w-full flex-col gap-6">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
-            <p className="kifu-eyebrow">Trade Review Hub</p>
+            <p className="kifu-eyebrow">오늘의 거래복기</p>
             <h1 className="kifu-section-title">거래 복기 홈</h1>
             <p className="kifu-section-copy max-w-3xl">
               {snapshotPeriod} 동안의 거래, 차트 기록, AI 의견을 한 흐름으로 다시 봅니다.
@@ -576,7 +576,7 @@ export function HomeSnapshot() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="kifu-eyebrow">Next Step</p>
+                    <p className="kifu-eyebrow">오늘의 루틴</p>
                     <h2 className="mt-2 text-2xl font-semibold text-neutral-100">지금 해야 할 일</h2>
                   </div>
                   <StatusGauge mode={resolvedMode} />
@@ -634,7 +634,7 @@ export function HomeSnapshot() {
           <div className="kifu-panel p-5 md:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="kifu-eyebrow">Recent Notes</p>
+                <p className="kifu-eyebrow">최근 기록</p>
                 <h2 className="mt-2 text-2xl font-semibold text-neutral-100">최근 말풍선</h2>
               </div>
               <Link href="/bubbles" className="kifu-btn-ghost px-0 py-0 text-sm">
@@ -678,7 +678,7 @@ export function HomeSnapshot() {
           <div className="kifu-panel p-5 md:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="kifu-eyebrow">Review Snapshot</p>
+                <p className="kifu-eyebrow">복기 현황</p>
                 <h2 className="mt-2 text-2xl font-semibold text-neutral-100">복기 스냅샷</h2>
               </div>
               <p className="text-sm text-zinc-400">{snapshotPeriod} 기준</p>
@@ -726,7 +726,7 @@ export function HomeSnapshot() {
           <section className="space-y-4">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="kifu-eyebrow">Patterns & Reports</p>
+                <p className="kifu-eyebrow">패턴과 리포트</p>
                 <h2 className="mt-2 text-2xl font-semibold text-neutral-100">포지션 · 패턴 · 리포트</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
                   오늘 복기를 마친 뒤에는 열린 포지션과 반복 패턴, 월간 흐름을 한 번에 점검하세요.

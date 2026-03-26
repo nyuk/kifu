@@ -921,39 +921,7 @@ export function Chart() {
       const step = Math.ceil(filtered.length / maxMarkers)
       filtered = filtered.filter((_, index) => index % step === 0)
     }
-    // Additional pixel-based clustering to reduce overlap while preserving counts.
-    const minSpacing = mode === 'all' ? 10 : mode === 'recent' ? 12 : 14
-    const byX = [...filtered].sort((a, b) => a.x - b.x)
-    const buckets = new Map<number, typeof filtered[number] & { _count: number }>()
-
-    for (const item of byX) {
-      const bucketKey = Math.floor(item.x / minSpacing)
-      const existing = buckets.get(bucketKey)
-      if (!existing) {
-        buckets.set(bucketKey, { ...item, _count: 1 })
-        continue
-      }
-
-      const nextCount = existing._count + 1
-      const merged = {
-        ...existing,
-        // Keep the latest candle as bucket representative for click/focus.
-        candleTime: Math.max(existing.candleTime, item.candleTime),
-        // Smooth out marker position within the same bucket.
-        x: (existing.x * existing._count + item.x) / nextCount,
-        y: (existing.y * existing._count + item.y) / nextCount,
-        // Preserve all aggregated data so marker tooltip/count stays accurate.
-        bubbles: [...existing.bubbles, ...item.bubbles],
-        trades: [...existing.trades, ...item.trades],
-        avgPrice: item.avgPrice,
-        _count: nextCount,
-      }
-      buckets.set(bucketKey, merged)
-    }
-
-    return Array.from(buckets.values())
-      .map(({ _count: _ignored, ...rest }) => rest)
-      .sort((a, b) => a.candleTime - b.candleTime)
+    return filtered.sort((a, b) => a.candleTime - b.candleTime)
   }, [overlayPositions, densityMode, visibleRange])
 
   const filteredBubbles = useMemo(() => {
@@ -961,9 +929,13 @@ export function Chart() {
     return activeBubbles.filter((bubble) => {
       if (actionFilter !== 'ALL' && bubble.action !== actionFilter) return false
       if (!query) return true
-      return bubble.note.toLowerCase().includes(query) || (bubble.tags || []).some((tag) => tag.toLowerCase().includes(query))
+      return (bubble.note || '').toLowerCase().includes(query) || (bubble.tags || []).some((tag) => tag.toLowerCase().includes(query))
     }).sort((a, b) => b.ts - a.ts)
   }, [activeBubbles, bubbleSearch, actionFilter])
+
+  const filteredBubbleIds = useMemo(() => {
+    return new Set(filteredBubbles.map((bubble) => bubble.id))
+  }, [filteredBubbles])
 
   const summaryTotalPages = Math.max(1, Math.ceil(filteredBubbles.length / CHART_PANEL_PAGE_SIZE))
   const pagedSummaryBubbles = filteredBubbles.slice(
@@ -1858,7 +1830,7 @@ export function Chart() {
                 {showPositions && positionStackMode && (
                   <div className="absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-white/[0.06] bg-black/30 p-3 shadow-xl backdrop-blur pointer-events-auto">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Positions</span>
+                      <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">포지션</span>
                       <button
                         type="button"
                         onClick={() => setShowPositions(false)}
@@ -1892,139 +1864,199 @@ export function Chart() {
                               <span className="text-[10px] text-neutral-400">{position.symbol}</span>
                             </div>
                             <div className="mt-1 text-[11px] text-neutral-200">
-                              Entry {position.entry_price || '-'}
+                              진입가 {position.entry_price || '-'}
                             </div>
                             <div className="mt-1 text-[10px] text-neutral-400">
                               SL {position.stop_loss || '-'} · TP {position.take_profit || '-'}
                             </div>
                             <div className="mt-1 text-[10px] text-neutral-500">
-                              Opened {openedText}
+                              시작 {openedText}
                             </div>
                           </button>
                         )
                       })}
                       {activeManualPositions.length === 0 && (
                         <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[11px] text-neutral-400">
-                          No open positions
+                          열린 포지션 없음
                         </div>
                       )}
                     </div>
                   </div>
                 )}
                 {densityAdjustedPositions.map((group) => {
-            // 토글에 따라 필터링
-            const visibleBubbles = showBubbles ? group.bubbles : []
-            const visibleTrades = showTrades ? group.trades : []
+                  const visibleBubbles = showBubbles
+                    ? group.bubbles.filter((bubble) => filteredBubbleIds.has(bubble.id))
+                    : []
+                  const visibleTrades = showTrades ? group.trades : []
 
-            // 표시할 항목이 없으면 렌더링하지 않음
-            if (visibleBubbles.length === 0 && visibleTrades.length === 0) return null
+                  if (visibleBubbles.length === 0 && visibleTrades.length === 0) return null
+                  if (group.x < -40 || group.x > (containerRef.current?.clientWidth || 0) + 40) return null
+                  if (group.y < 0 || group.y > (containerRef.current?.clientHeight || 0)) return null
 
-            // 차트 영역 밖이면 렌더링하지 않음 (여유 40px)
-            if (group.x < -40 || group.x > (containerRef.current?.clientWidth || 0) + 40) return null
-            if (group.y < 0 || group.y > (containerRef.current?.clientHeight || 0)) return null
+                  const bubbleCount = visibleBubbles.length
+                  const tradeCount = visibleTrades.length
+                  const buyTradeCount = visibleTrades.filter((trade) => trade.side === 'buy').length
+                  const sellTradeCount = visibleTrades.filter((trade) => trade.side === 'sell').length
+                  const hasBubbles = bubbleCount > 0
+                  const hasTrades = tradeCount > 0
+                  const tooltipBelow = group.y < 140
+                  const isSelected = selectedGroup?.candleTime === group.candleTime
+                  const bubbleTone = visibleBubbles.some((bubble) => bubble.action === 'SELL' || bubble.tags?.some((tag) => tag.toLowerCase() === 'sell'))
+                    ? 'border-rose-300/35 bg-rose-300/12 text-rose-100'
+                    : 'border-cyan-300/35 bg-cyan-300/12 text-cyan-100'
+                  const tradeTone = buyTradeCount >= sellTradeCount
+                    ? 'border-emerald-300/35 bg-emerald-300/12 text-emerald-100'
+                    : 'border-amber-300/35 bg-amber-300/12 text-amber-100'
+                  const markerShellClass = hasBubbles && hasTrades
+                    ? 'border-violet-300/35 bg-slate-950/92'
+                    : hasBubbles
+                      ? 'border-cyan-300/30 bg-slate-950/90'
+                      : 'border-emerald-300/30 bg-slate-950/90'
 
-            const hasBubbles = visibleBubbles.length > 0
-            const hasTrades = visibleTrades.length > 0
-            const bubbleCount = visibleBubbles.length
-            const tradeCount = visibleTrades.length
-            const buyTradeCount = visibleTrades.filter((t) => t.side === 'buy').length
-            const sellTradeCount = visibleTrades.filter((t) => t.side === 'sell').length
-            const tooltipBelow = group.y < 120
+                  return (
+                    <div
+                      key={group.candleTime}
+                      className="absolute group cursor-pointer hover:z-50"
+                      style={{ left: group.x, top: Math.max(48, group.y) - 44, transform: 'translateX(-50%)', pointerEvents: 'auto' }}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        const nextGroup = isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades }
+                        setSelectedGroup(nextGroup)
+                        setSelectedPosition(null)
+                        if (nextGroup) setPanelTab('detail')
+                      }}
+                    >
+                      <div
+                        className={`absolute left-1/2 -bottom-11 h-11 w-px -translate-x-1/2 border-l border-dashed opacity-80 ${isSelected ? 'border-violet-300' : 'border-neutral-500/80'}`}
+                      />
 
-            // Determine Marker Style
-            let bgColor = 'bg-neutral-700'
+                      <div
+                        className={`relative flex items-center gap-1.5 rounded-2xl border px-2 py-1.5 text-[11px] font-semibold shadow-[0_18px_40px_rgba(0,0,0,0.35)] transition duration-150 group-hover:-translate-y-0.5 ${markerShellClass} ${isSelected ? 'ring-2 ring-violet-300/80 ring-offset-2 ring-offset-neutral-950' : ''}`}
+                      >
+                        {hasBubbles && (
+                          <span className={`rounded-full border px-2 py-0.5 leading-none ${bubbleTone}`}>
+                            말 {bubbleCount}
+                          </span>
+                        )}
+                        {hasTrades && (
+                          <span className={`rounded-full border px-2 py-0.5 leading-none ${tradeTone}`}>
+                            체 {tradeCount}
+                          </span>
+                        )}
+                      </div>
 
-            if (hasBubbles && hasTrades) {
-              bgColor = 'bg-neutral-800'
-            } else if (hasBubbles) {
-              const isBuy = visibleBubbles.some(b => b.tags?.includes('buy') || b.action === 'BUY')
-              const isSell = visibleBubbles.some(b => b.tags?.includes('sell') || b.action === 'SELL')
-              if (isBuy && isSell) bgColor = 'bg-yellow-600'
-              else if (isBuy) bgColor = 'bg-green-600'
-              else if (isSell) bgColor = 'bg-red-600'
-              else bgColor = 'bg-neutral-600'
-            } else if (hasTrades) {
-              if (buyTradeCount > sellTradeCount) bgColor = 'bg-green-900/80 text-green-200'
-              else if (sellTradeCount > buyTradeCount) bgColor = 'bg-red-900/80 text-red-200'
-              else bgColor = 'bg-blue-900/80 text-blue-200'
-            }
-
-            const isSelected = selectedGroup?.candleTime === group.candleTime
-
-            return (
-              <div
-                key={group.candleTime}
-                className="absolute group cursor-pointer hover:z-50"
-                style={{ left: group.x, top: Math.max(40, group.y) - 40, transform: 'translateX(-50%)', pointerEvents: 'auto' }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const nextGroup = isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades }
-                  setSelectedGroup(nextGroup)
-                  setSelectedPosition(null)
-                  if (nextGroup) setPanelTab('detail')
-                }}
-              >
-                {/* Visual Connector Line */}
-                <div className={`absolute left-1/2 -bottom-10 w-px h-10 -translate-x-1/2 border-l border-dashed pointer-events-none ${isSelected ? 'border-yellow-400' : 'border-neutral-400'} opacity-80`} />
-
-                <div className={`relative rounded px-2 py-1 text-xs font-semibold shadow-md transition-transform hover:scale-110 ${bgColor} ${isSelected ? 'ring-2 ring-yellow-400' : ''} ${hasBubbles && hasTrades ? 'border border-yellow-500' : ''}`}>
-                  <div className="flex items-center gap-1">
-                    {hasBubbles && (
-                      <span className="text-white">{bubbleCount > 1 ? `💬${bubbleCount}` : '💬'}</span>
-                    )}
-                    {hasTrades && (
-                      <span className="text-xs">
-                        {tradeCount > 1
-                          ? `${buyTradeCount > 0 ? `↑${buyTradeCount}` : ''}${buyTradeCount > 0 && sellTradeCount > 0 ? '/' : ''}${sellTradeCount > 0 ? `↓${sellTradeCount}` : ''}`
-                          : (
-                            <>
-                              {buyTradeCount > 0 && '↑'}
-                              {sellTradeCount > 0 && '↓'}
-                            </>
-                          )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tooltip */}
-                <div className={`absolute left-1/2 hidden -translate-x-1/2 rounded-lg bg-white/[0.06] border border-white/[0.08] p-3 text-xs text-neutral-200 shadow-xl group-hover:block min-w-[220px] max-h-[260px] overflow-y-auto z-50 ${tooltipBelow ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
-                  <div className="font-bold border-b border-neutral-700 pb-1 mb-2 text-center">
-                    {formatChartDateTime(group.candleTime, useSeoulTime)}
-                  </div>
-                  {/* Bubbles List */}
-                  {hasBubbles && (
-                    <div className="mb-2">
-                      <div className="text-[10px] uppercase text-neutral-500 mb-1">Bubbles</div>
-                      {visibleBubbles.map(b => (
-                        <div key={b.id} className="mb-1 last:mb-0 p-1 bg-white/[0.08] rounded">
-                          <div className="flex justify-between">
-                            <span className={b.action === 'BUY' ? 'text-green-400' : b.action === 'SELL' ? 'text-red-400' : ''}>{b.action || 'NOTE'}</span>
-                            <span className="text-xs text-emerald-200/80">{getBubbleSourceBadge(b)}</span>
-                            <span>${b.price}</span>
+                      <div
+                        className={`absolute left-1/2 z-50 hidden w-[320px] -translate-x-1/2 rounded-[22px] border border-slate-700/80 bg-slate-950/96 p-4 text-xs text-neutral-200 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl group-hover:block ${tooltipBelow ? 'top-full mt-3' : 'bottom-full mb-3'}`}
+                      >
+                        <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">선택 장면</p>
+                            <p className="mt-2 text-sm font-semibold text-neutral-50">
+                              {formatChartDateTime(group.candleTime, useSeoulTime)}
+                            </p>
                           </div>
-                          <div className="text-neutral-400 max-w-[240px] break-words line-clamp-2" title={getBubbleDisplayNote(b)}>
-                            {getBubbleDisplayNote(b)}
+                          <div className="flex flex-wrap justify-end gap-2 text-[10px]">
+                            {hasBubbles && (
+                              <span className="rounded-full border border-cyan-300/35 bg-cyan-300/12 px-2 py-1 font-semibold text-cyan-100">
+                                말풍선 {bubbleCount}
+                              </span>
+                            )}
+                            {hasTrades && (
+                              <span className="rounded-full border border-emerald-300/35 bg-emerald-300/12 px-2 py-1 font-semibold text-emerald-100">
+                                체결 {tradeCount}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      ))}
+
+                        {hasBubbles && (
+                          <div className="mt-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">말풍선</p>
+                              <span className="text-[10px] text-cyan-100/75">기록 {bubbleCount}</span>
+                            </div>
+                            <div className="max-h-[190px] space-y-2 overflow-y-auto pr-1">
+                              {visibleBubbles.map((bubble) => (
+                                <div key={bubble.id} className="rounded-2xl border border-white/8 bg-slate-900/88 p-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span
+                                        className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                          bubble.action === 'BUY'
+                                            ? 'bg-emerald-300/15 text-emerald-100'
+                                            : bubble.action === 'SELL'
+                                              ? 'bg-rose-300/15 text-rose-100'
+                                              : bubble.action === 'TP'
+                                                ? 'bg-cyan-300/15 text-cyan-100'
+                                                : bubble.action === 'SL'
+                                                  ? 'bg-amber-300/15 text-amber-100'
+                                                  : 'bg-neutral-700/70 text-neutral-100'
+                                        }`}
+                                      >
+                                        {bubble.action || 'NOTE'}
+                                      </span>
+                                      <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-neutral-300">
+                                        {getBubbleSourceBadge(bubble)}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] font-semibold text-neutral-100">
+                                      ${bubble.price.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-[12px] leading-5 text-neutral-100">
+                                    {getBubbleDisplayNote(bubble)}
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-neutral-400">
+                                    <span>{bubble.symbol}</span>
+                                    <span>{bubble.timeframe}</span>
+                                    {bubble.tags?.slice(0, 3).map((tag) => (
+                                      <span key={`${bubble.id}-${tag}`} className="rounded-full border border-white/10 px-2 py-0.5 text-neutral-300">
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {hasTrades && (
+                          <div className="mt-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">체결 오버레이</p>
+                              <span className="text-[10px] text-neutral-400">
+                                매수 {buyTradeCount} · 매도 {sellTradeCount}
+                              </span>
+                            </div>
+                            <div className="max-h-[180px] space-y-2 overflow-y-auto pr-1">
+                              {visibleTrades.map((trade) => (
+                                <div key={trade.id} className="rounded-2xl border border-white/8 bg-slate-900/84 p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`rounded-full px-2 py-1 text-[10px] font-semibold ${trade.side === 'buy' ? 'bg-emerald-300/15 text-emerald-100' : 'bg-rose-300/15 text-rose-100'}`}
+                                      >
+                                        {trade.side === 'buy' ? 'BUY' : 'SELL'}
+                                      </span>
+                                      <span className="text-[10px] text-neutral-400">{trade.exchange}</span>
+                                    </div>
+                                    <span className="text-[11px] font-semibold text-neutral-100">
+                                      ${trade.price.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-300">
+                                    <span>수량 {trade.qty ?? '-'}</span>
+                                    <span>{formatChartDateTime(Math.floor(trade.ts / 1000), useSeoulTime)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {/* Trades List */}
-                  {hasTrades && (
-                    <div>
-                      <div className="text-[10px] uppercase text-neutral-500 mb-1">Trades</div>
-                      {visibleTrades.map(t => (
-                        <div key={t.id} className="mb-1 last:mb-0 p-1 bg-white/[0.04] rounded flex justify-between">
-                          <span className={t.side === 'buy' ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>{t.side.toUpperCase()}</span>
-                          <span>{t.qty} @ {t.price}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
+                  )
                 })}
               </div>
             )}
@@ -2054,7 +2086,7 @@ export function Chart() {
                 <div className="kifu-panel-muted p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="kifu-eyebrow">Selected Scene</p>
+                      <p className="kifu-eyebrow">선택 장면</p>
                       <h4 className="mt-2 text-lg font-semibold text-neutral-100">
                         {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
                       </h4>
@@ -2083,7 +2115,7 @@ export function Chart() {
                 <div className="kifu-panel-muted p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="kifu-eyebrow">Selected Position</p>
+                      <p className="kifu-eyebrow">선택 포지션</p>
                       <h4 className="mt-2 text-lg font-semibold text-neutral-100">
                         {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
                       </h4>
@@ -2095,11 +2127,11 @@ export function Chart() {
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Entry</p>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">진입가</p>
                       <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.entry_price || '-'}</p>
                     </div>
                     <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">Size</p>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">수량</p>
                       <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.size || '-'}</p>
                     </div>
                     <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
@@ -2125,7 +2157,7 @@ export function Chart() {
 
         <aside className="kifu-panel flex flex-col gap-4 p-5">
           <div>
-            <p className="kifu-eyebrow">Review Panel</p>
+            <p className="kifu-eyebrow">복기 패널</p>
             <h3 className="mt-2 text-2xl font-semibold text-neutral-100">말풍선과 체결</h3>
             <p className="mt-2 text-sm text-neutral-400">
               {filteredBubbles.length}개 기록 · {activeTrades.length}개 체결
@@ -2212,7 +2244,7 @@ export function Chart() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-neutral-500">
                   <span>최근 기록</span>
-                  <span>{filteredBubbles.length} items</span>
+                  <span>{filteredBubbles.length}개 기록</span>
                 </div>
                 <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2">
                   {filteredBubbles.length === 0 && (
@@ -2269,14 +2301,14 @@ export function Chart() {
             <div className="space-y-3">
               {!selectedGroup && !selectedPosition && (
                 <div className="rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500">
-                  차트에서 말풍선을 선택하면 상세가 표시됩니다.
+                  차트에서 마커를 선택하면 상세가 표시됩니다.
                 </div>
               )}
               {selectedPosition && (
                 <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/20 p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Position</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">포지션</p>
                       <h3 className="mt-1 text-sm font-semibold text-neutral-100">
                         {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
                       </h3>
@@ -2294,7 +2326,7 @@ export function Chart() {
                   </div>
                   <div className="grid gap-2 text-xs text-neutral-300">
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-500">Entry</span>
+                      <span className="text-neutral-500">진입가</span>
                       <span>{selectedPosition.entry_price || '-'}</span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -2306,11 +2338,11 @@ export function Chart() {
                       <span>{selectedPosition.take_profit || '-'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-500">Size</span>
+                      <span className="text-neutral-500">수량</span>
                       <span>{selectedPosition.size || '-'}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-500">Leverage</span>
+                      <span className="text-neutral-500">레버리지</span>
                       <span>{selectedPosition.leverage || '-'}</span>
                     </div>
                     {selectedPosition.strategy && (
@@ -2330,7 +2362,7 @@ export function Chart() {
                 <>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Selected</p>
+                      <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">선택 장면</p>
                       <h3 className="mt-1 text-sm font-semibold text-neutral-100">
                         {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
                       </h3>
@@ -2347,7 +2379,7 @@ export function Chart() {
                   {selectedGroup.bubbles.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                        Bubbles ({selectedGroup.bubbles.length})
+                        말풍선 ({selectedGroup.bubbles.length})
                       </p>
                       <div className="max-h-[220px] overflow-y-auto space-y-2 pr-2">
                         {pagedDetailBubbles.map((bubble) => (
@@ -2395,7 +2427,7 @@ export function Chart() {
                   {selectedGroup.trades.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                        Trades ({selectedGroup.trades.length})
+                        체결 ({selectedGroup.trades.length})
                       </p>
                       <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
                         {pagedDetailTrades.map((trade) => (
@@ -2407,7 +2439,7 @@ export function Chart() {
                               <span>{trade.exchange}</span>
                             </div>
                             <div className="mt-1 flex items-center justify-between text-xs text-neutral-300">
-                              <span>{trade.qty ?? '-'} qty</span>
+                              <span>수량 {trade.qty ?? '-'}</span>
                               <span>@ ${trade.price.toLocaleString()}</span>
                             </div>
                           </div>

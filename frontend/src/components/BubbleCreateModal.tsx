@@ -142,10 +142,10 @@ function formatBubbleSaveError(err: any) {
     return `태그 형식이 올바르지 않습니다. (${detail || '영문/숫자/_/-만 사용, 최대 5개'})`
   }
   if (status === 400 && detail) {
-    return `버블 저장 형식 오류입니다. (${detail})`
+    return `말풍선 저장 형식 오류입니다. (${detail})`
   }
-  if (detail) return `버블 저장에 실패했습니다. (${detail})`
-  return '버블 저장에 실패했습니다.'
+  if (detail) return `말풍선 저장에 실패했습니다. (${detail})`
+  return '말풍선 저장에 실패했습니다.'
 }
 
 export function BubbleCreateModal({
@@ -330,7 +330,7 @@ export function BubbleCreateModal({
     if (includePositions) parts.push('포지션')
     if (includeEvidence && includeRecentTrades) parts.push('체결')
     if (includeEvidence && includeSummary) parts.push('요약')
-    if (includeEvidence && includeBubbles) parts.push(`버블 ${bubbleLimit}개`)
+    if (includeEvidence && includeBubbles) parts.push(`말풍선 ${bubbleLimit}개`)
     return parts.join(' · ')
   }, [packetPreset, evidenceScope, evidenceSymbolScope, includePositions, includeEvidence, includeRecentTrades, includeSummary, includeBubbles, bubbleLimit])
 
@@ -604,7 +604,7 @@ export function BubbleCreateModal({
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0 space-y-4">
                 <div>
-                  <p className="kifu-eyebrow">Review Workspace</p>
+                  <p className="kifu-eyebrow">말풍선 복기 작업 화면</p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <h3 className="text-[32px] font-semibold tracking-[-0.03em] text-neutral-50">말풍선 복기 작성</h3>
                     <span className="kifu-chip">{symbol || '종목 미선택'}</span>
@@ -641,10 +641,10 @@ export function BubbleCreateModal({
               </div>
             </div>
           </div>
-          <div className="grid min-h-0 flex-1 gap-4 overflow-hidden px-5 py-4 md:px-6 md:py-5 xl:grid-cols-[minmax(340px,0.82fr)_minmax(380px,0.94fr)_minmax(480px,1.2fr)]">
+          <div className="grid min-h-0 flex-1 gap-4 overflow-hidden px-5 py-4 md:px-6 md:py-5 xl:grid-cols-[minmax(340px,0.82fr)_minmax(520px,1.24fr)_minmax(320px,0.7fr)]">
             <section className="kifu-panel-muted order-1 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(39,46,56,0.88),rgba(29,35,43,0.88))]">
               <div className="border-b border-white/[0.08] px-5 py-4">
-                <p className="kifu-eyebrow">Scene Record</p>
+                  <p className="kifu-eyebrow">장면 기록</p>
                 <h4 className="mt-2 text-2xl font-semibold text-neutral-50">장면 기록</h4>
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
                   어떤 캔들이었는지, 왜 들어갔는지, 당시 감정과 판단을 먼저 정리합니다.
@@ -744,8 +744,8 @@ export function BubbleCreateModal({
                       disabled={guestMode}
                       className="kifu-field w-full"
                     >
-                      <option value="crypto">Crypto</option>
-                      <option value="stock">Stock</option>
+                      <option value="crypto">코인</option>
+                      <option value="stock">주식</option>
                     </select>
                   </label>
                   <label className="space-y-2">
@@ -762,21 +762,21 @@ export function BubbleCreateModal({
                 </div>
 
                 <div className="rounded-2xl border border-emerald-300/18 bg-[linear-gradient(180deg,rgba(42,74,65,0.34),rgba(29,48,43,0.28))] px-4 py-4">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Quick Note</p>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">기록 가이드</p>
                   <p className="mt-2 text-sm leading-6 text-emerald-50/90">
                     장면 기록은 길게 쓰기보다, 진입 이유와 흔들린 지점, 다음에 다시 볼 기준이 드러나게 적는 편이 더 유용합니다.
                   </p>
                 </div>
               </div>
             </section>
-            <section className="kifu-panel order-3 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(37,43,53,0.9),rgba(28,33,41,0.92))]">
+            <section className="kifu-panel order-2 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(37,43,53,0.9),rgba(28,33,41,0.92))]">
               <div className="border-b border-white/[0.08] px-5 py-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <p className="kifu-eyebrow">AI Review</p>
-                    <h4 className="mt-2 text-2xl font-semibold text-neutral-50">AI 의견</h4>
+                    <p className="kifu-eyebrow">AI 의견</p>
+                    <h4 className="mt-2 text-2xl font-semibold text-neutral-50">AI 의견 비교</h4>
                     <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      직접 쓴 메모와 증거 패킷을 함께 읽고, 판단 근거와 놓친 포인트를 빠르게 점검합니다.
+                      먼저 장면 기록을 읽고, 필요할 때만 증거 패킷을 붙여 판단 근거와 놓친 포인트를 점검합니다.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -853,7 +853,7 @@ export function BubbleCreateModal({
                 )}
                 {!aiReady && !aiError && (
                   <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[rgba(28,34,42,0.72)] px-5 py-5">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">No Opinion Yet</p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">아직 AI 의견 없음</p>
                     <h5 className="mt-3 text-xl font-semibold text-neutral-50">기록과 증거를 준비한 뒤 AI 의견을 받아보세요.</h5>
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                       <div className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.04)] px-4 py-3">
@@ -916,14 +916,14 @@ export function BubbleCreateModal({
                 )}
               </div>
             </section>
-            <section className="kifu-panel-muted order-2 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(38,45,55,0.88),rgba(29,35,43,0.88))]">
+            <section className="kifu-panel-muted order-3 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(38,45,55,0.88),rgba(29,35,43,0.88))]">
               <div className="border-b border-white/[0.08] px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="kifu-eyebrow">Evidence Packet</p>
                     <h4 className="mt-2 text-2xl font-semibold text-neutral-50">증거 패킷</h4>
                     <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      이번 장면을 읽는 데 필요한 포지션, 최근 체결, 기간 요약, 버블만 묶어서 AI에게 전달합니다.
+                      메인 기록만으로 부족할 때, 포지션과 최근 체결·요약·버블을 묶어 AI에게 추가 맥락으로 전달합니다.
                     </p>
                   </div>
                   <button
@@ -956,8 +956,8 @@ export function BubbleCreateModal({
               </div>
               <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5">
                 <div className="rounded-2xl border border-white/[0.08] bg-[rgba(28,34,42,0.72)] px-4 py-4">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">프리셋</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">패킷 프리셋</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
                     {[
                       { value: 'lite', label: '라이트' },
                       { value: 'balanced', label: '균형' },
@@ -974,6 +974,7 @@ export function BubbleCreateModal({
                     ))}
                   </div>
                   <p className="mt-3 text-sm leading-6 text-neutral-400">{packetSummaryText}</p>
+                  <p className="mt-2 text-xs leading-5 text-neutral-500">기본은 균형 프리셋으로 두고, 정말 필요할 때만 세부 설정을 여는 흐름을 권장합니다.</p>
                 </div>
 
                 <div className="rounded-2xl border border-white/[0.08] bg-[rgba(28,34,42,0.72)] px-4 py-4">
@@ -1017,7 +1018,7 @@ export function BubbleCreateModal({
                         disabled={guestMode || !includeEvidence}
                         className="h-4 w-4 rounded border-neutral-700 bg-neutral-900 text-emerald-400"
                       />
-                      최근 버블
+                      최근 말풍선
                     </label>
                   </div>
                 </div>
@@ -1026,7 +1027,7 @@ export function BubbleCreateModal({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">세부 설정</p>
-                      <p className="mt-1 text-sm text-neutral-400">범위와 종목 범위를 조금 더 정밀하게 조절합니다.</p>
+                      <p className="mt-1 text-sm text-neutral-400">기본 프리셋으로 부족할 때만 범위와 종목 범위를 조금 더 정밀하게 조절합니다.</p>
                     </div>
                     <button
                       type="button"
@@ -1114,7 +1115,7 @@ export function BubbleCreateModal({
 
                 {includeEvidence && includeBubbles && (
                   <div className="rounded-2xl border border-white/[0.08] bg-[rgba(28,34,42,0.72)] px-4 py-4">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">버블 필터</p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">말풍선 필터</p>
                     <div className="mt-3 grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
                       <label className="space-y-2">
                         <span className="text-sm font-semibold text-neutral-200">태그</span>
@@ -1152,7 +1153,7 @@ export function BubbleCreateModal({
                 <div className="rounded-2xl border border-cyan-300/18 bg-[linear-gradient(180deg,rgba(39,70,74,0.28),rgba(28,47,52,0.26))] px-4 py-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-100/70">Packet Preview</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-100/70">패킷 미리보기</p>
                       <p className="mt-2 text-sm leading-6 text-neutral-300">
                         일회성 분석용 패킷이며 서버에 저장되지 않습니다. 필요할 때만 미리보기로 확인하면 됩니다.
                       </p>

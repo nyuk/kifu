@@ -49,8 +49,8 @@ export default function AlertRulesPage() {
         </h2>
         <p className="mt-2 text-sm text-neutral-400">
           {activeTab === 'rules'
-            ? t.alertRulesSubtitle
-            : 'KIFU가 검증한 전략을 확인하고, 마음에 들면 알림으로 연결하세요.'}
+            ? '알림은 진입 신호보다 복기 후보를 놓치지 않게 도와주는 보조 장치입니다. 신호가 오면 차트와 말풍선으로 바로 이어가세요.'
+            : 'KIFU가 검증한 전략을 먼저 읽고, 내 루틴에 맞으면 알림으로 연결하세요.'}
         </p>
       </header>
 
@@ -65,7 +65,7 @@ export default function AlertRulesPage() {
               : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06]'
           }`}
         >
-          {t.alertRulesTitle}
+          내 알림
         </button>
         <button
           type="button"
@@ -76,7 +76,7 @@ export default function AlertRulesPage() {
               : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06]'
           }`}
         >
-          프리셋 전략
+          검증된 전략
         </button>
       </div>
 
@@ -90,6 +90,29 @@ export default function AlertRulesPage() {
               게스트 모드에서는 알림 규칙을 읽기만 할 수 있습니다. 생성, 수정, 삭제, 토글은 웹 계정에서 사용할 수 있습니다.
             </div>
           )}
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-xs uppercase tracking-[0.28em] text-neutral-500">복기 루틴 안에서 쓰는 방법</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
+                <p className="text-sm font-semibold text-neutral-100">1. 먼저 알림을 받습니다</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-400">
+                  가격 변화나 변동성 신호를 놓치지 않도록, 내 루틴에 맞는 종목과 기준만 걸어둡니다.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
+                <p className="text-sm font-semibold text-neutral-100">2. 차트에서 장면을 확인합니다</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-400">
+                  알림이 오면 바로 차트로 가서 말풍선과 체결 오버레이로 그 순간의 장면을 먼저 봅니다.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-black/20 p-4">
+                <p className="text-sm font-semibold text-neutral-100">3. 복기로 판단을 남깁니다</p>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-400">
+                  단순히 알림을 받는 데서 끝내지 않고, 왜 봤는지와 어떤 판단을 했는지 복기로 이어갑니다.
+                </p>
+              </div>
+            </div>
+          </div>
           <div className="flex justify-end">
             <button
               type="button"
@@ -97,7 +120,7 @@ export default function AlertRulesPage() {
               disabled={guestMode}
               className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-white"
             >
-              + {t.createRule}
+              + 새 알림 만들기
             </button>
           </div>
 
@@ -115,14 +138,17 @@ export default function AlertRulesPage() {
             </div>
           ) : rules.length === 0 ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-10 text-center">
-              <p className="text-sm text-neutral-500">{t.noRules}</p>
+              <p className="text-sm text-neutral-400">아직 만든 알림이 없습니다.</p>
+              <p className="mt-2 text-sm text-neutral-500">
+                직접 규칙을 만들거나, 검증된 전략 탭에서 프리셋으로 시작해도 됩니다.
+              </p>
               <button
                 type="button"
                 onClick={handleCreate}
                 disabled={guestMode}
                 className="mt-4 rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                + {t.createRule}
+                + 새 알림 만들기
               </button>
             </div>
           ) : (
