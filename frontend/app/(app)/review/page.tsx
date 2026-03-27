@@ -20,7 +20,6 @@ import { ExportButtons } from '../../../src/components/review/ExportButtons'
 import { PerformanceTrendChart } from '../../../src/components/review/PerformanceTrendChart'
 import { PageJumpPager } from '../../../src/components/ui/PageJumpPager'
 import { HomeGuidedReviewCard } from '../../../src/components/home/HomeGuidedReviewCard'
-import { isGuestSession } from '../../../src/lib/guestSession'
 import type { TradeSummaryResponse } from '../../../src/types/trade'
 import type { SymbolStats, ReviewNote, NotesListResponse } from '../../../src/types/review'
 
@@ -102,7 +101,6 @@ const normalizeVenueLabel = (value?: string) => {
 export default function ReviewPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const guestMode = isGuestSession()
   const [tradeSummary, setTradeSummary] = useState<TradeSummaryResponse | null>(null)
   const [alertActions, setAlertActions] = useState<Array<{
     id: string
