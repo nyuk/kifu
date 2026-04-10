@@ -93,12 +93,21 @@ const CHART_PANEL_PAGE_SIZE = 12
 
 const normalizeUpbitSymbol = (value: string) => {
   const symbol = value.toUpperCase()
-  if (symbol.includes('-')) return symbol
+  if (symbol.includes('-')) {
+    const [first, second] = symbol.split('-')
+    if (!first || !second) return symbol
+    if (first === 'KRW' || first === 'BTC' || first === 'USDT') return symbol
+    if (second === 'KRW' || second === 'BTC' || second === 'USDT') return `${second}-${first}`
+    return symbol
+  }
   if (symbol.endsWith('KRW') && symbol.length > 3) {
     return `KRW-${symbol.slice(0, -3)}`
   }
   if (symbol.endsWith('BTC') && symbol.length > 3) {
     return `BTC-${symbol.slice(0, -3)}`
+  }
+  if (symbol.endsWith('USDT') && symbol.length > 4) {
+    return `USDT-${symbol.slice(0, -4)}`
   }
   if (symbol.startsWith('KRW') && symbol.length > 3) {
     return `KRW-${symbol.slice(3)}`
@@ -123,6 +132,10 @@ const resolveExchange = (value: string) => {
   if (symbol.includes('-') || symbol.endsWith('KRW') || symbol.endsWith('BTC') || symbol.startsWith('KRW')) return 'upbit'
   return 'binance'
 }
+
+const detectDataSource = (value: string): 'crypto' | 'stock' => (
+  isMarketSupported(value) ? 'crypto' : 'stock'
+)
 
 const getWeekKey = (value: Date) => {
   const date = new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()))
@@ -320,6 +333,18 @@ export function Chart() {
   // Refs for stable access in effects/callbacks
   const overlayPositionsRef = useRef(overlayPositions)
   const updatePositionsRef = useRef<() => void>(() => { })
+  const fallbackSymbols = useMemo(
+    () => DEFAULT_SYMBOLS.filter((item) => detectDataSource(item.symbol) === dataSource),
+    [dataSource],
+  )
+  const visibleSymbols = useMemo(() => {
+    const filtered = symbols.filter((item) => detectDataSource(item.symbol) === dataSource)
+    return filtered.length > 0 ? filtered : fallbackSymbols
+  }, [symbols, dataSource, fallbackSymbols])
+  const visibleQuickPicks = useMemo(
+    () => quickPicks.filter((item) => detectDataSource(item.value) === dataSource),
+    [dataSource],
+  )
 
   // Update refs
   useEffect(() => {
@@ -626,11 +651,22 @@ export function Chart() {
     const selected = match?.symbol || normalizedParam || symbols[0].symbol
 
     setSelectedSymbol(selected)
+    setDataSource(detectDataSource(selected))
     setTimeframe('1d')
     if (!normalizedParam) {
       router.replace(`/chart/${selected}`)
     }
   }, [router, symbolParam, symbols])
+
+  useEffect(() => {
+    if (!selectedSymbol) return
+    if (detectDataSource(selectedSymbol) === dataSource) return
+    const nextSymbol = visibleSymbols[0]?.symbol || fallbackSymbols[0]?.symbol
+    if (!nextSymbol || nextSymbol === selectedSymbol) return
+    setSelectedSymbol(nextSymbol)
+    setTimeframe('1d')
+    router.replace(`/chart/${nextSymbol}`)
+  }, [dataSource, fallbackSymbols, router, selectedSymbol, visibleSymbols])
 
   // Load Klines
   useEffect(() => {
@@ -1446,6 +1482,7 @@ export function Chart() {
 
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
+    setDataSource(detectDataSource(next))
     setSelectedSymbol(next)
     router.push(`/chart/${next}`)
   }
@@ -1528,7 +1565,7 @@ export function Chart() {
                   onChange={(e) => handleSymbolChange(e.target.value)}
                   className="kifu-field min-w-[140px] py-2 text-sm font-semibold"
                 >
-                  {symbols.map((item) => (
+                  {visibleSymbols.map((item) => (
                     <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
                   ))}
                 </select>
@@ -1571,7 +1608,7 @@ export function Chart() {
             <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Quick</span>
-                {quickPicks.map((item) => (
+                {visibleQuickPicks.map((item) => (
                   <button
                     key={item.value}
                     onClick={() => handleSymbolChange(item.value)}

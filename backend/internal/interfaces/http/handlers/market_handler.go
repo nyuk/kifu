@@ -27,9 +27,9 @@ const (
 )
 
 var (
-	symbolPattern    = regexp.MustCompile(`^[A-Z0-9-]{3,20}$`)
+	symbolPattern      = regexp.MustCompile(`^[A-Z0-9-]{3,20}$`)
 	upbitSymbolPattern = regexp.MustCompile(`^[A-Z]{3,5}-[A-Z0-9]{1,12}$`)
-	allowedIntervals = map[string]struct{}{
+	allowedIntervals   = map[string]struct{}{
 		"1m":  {},
 		"15m": {},
 		"1h":  {},
@@ -37,6 +37,39 @@ var (
 		"1d":  {},
 	}
 )
+
+func normalizeUpbitMarketSymbol(value string) string {
+	symbol := strings.ToUpper(strings.TrimSpace(value))
+	if symbol == "" {
+		return symbol
+	}
+
+	if strings.Contains(symbol, "-") {
+		parts := strings.Split(symbol, "-")
+		if len(parts) == 2 {
+			first := parts[0]
+			second := parts[1]
+			switch {
+			case first == "KRW" || first == "BTC" || first == "USDT":
+				return symbol
+			case second == "KRW" || second == "BTC" || second == "USDT":
+				return second + "-" + first
+			}
+		}
+		return symbol
+	}
+
+	switch {
+	case strings.HasSuffix(symbol, "KRW") && len(symbol) > 3:
+		return "KRW-" + strings.TrimSuffix(symbol, "KRW")
+	case strings.HasSuffix(symbol, "BTC") && len(symbol) > 3:
+		return "BTC-" + strings.TrimSuffix(symbol, "BTC")
+	case strings.HasSuffix(symbol, "USDT") && len(symbol) > 4:
+		return "USDT-" + strings.TrimSuffix(symbol, "USDT")
+	}
+
+	return symbol
+}
 
 type MarketHandler struct {
 	userSymbolRepo repositories.UserSymbolRepository
@@ -156,6 +189,7 @@ func (h *MarketHandler) UpdateUserSymbols(c *fiber.Ctx) error {
 		if timeframe == "" {
 			timeframe = defaultTimeframe
 		}
+		symbol = normalizeUpbitMarketSymbol(symbol)
 		if _, ok := allowedIntervals[timeframe]; !ok {
 			return c.Status(400).JSON(fiber.Map{"code": "INVALID_TIMEFRAME", "message": "timeframe is invalid"})
 		}
@@ -214,6 +248,10 @@ func (h *MarketHandler) GetKlines(c *fiber.Ctx) error {
 		if err == nil {
 			endTime = parsed
 		}
+	}
+
+	if exchange == "upbit" {
+		symbol = normalizeUpbitMarketSymbol(symbol)
 	}
 
 	cacheKey := fmt.Sprintf("%s|%s|%s|%d|%d", exchange, symbol, interval, limit, endTime)
