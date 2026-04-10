@@ -2394,7 +2394,7 @@ export function Chart() {
             </div>
           </div>
 
-          <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.014),rgba(255,255,255,0.004)_100%)]'}>
+          <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.08] bg-[#0d0d12]'}>
             <div className={isCompactLayout ? 'py-3' : 'py-4'}>
               <div
                 ref={eventLaneRef}
@@ -2413,45 +2413,32 @@ export function Chart() {
                   />
                 )}
 
-                {!isLightWorkspace && (
-                  <div
-                    className="absolute inset-x-0 rounded-[22px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.028),rgba(255,255,255,0.014)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-                    style={{ top: eventLaneBubbleTrackTop, height: eventLaneBubbleTrackHeight }}
-                  />
-                )}
-                <div className="absolute left-4 z-10" style={{ top: eventLaneBubbleTrackTop + 10 }}>
-                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/35 px-3 py-1 text-[11px] font-semibold text-neutral-100'}>
+                <div className="absolute left-4 z-10" style={{ top: eventLaneBubbleRailCenter - 8 }}>
+                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500'}>
                     말풍선
                   </span>
                 </div>
-                {isLightWorkspace && (
+                {isLightWorkspace ? (
                   <div
                     className="absolute rounded-full bg-[#d8d2c6]"
                     style={{ left: 84, right: 12, top: eventLaneBubbleRailCenter - 3, height: 6 }}
                   />
-                )}
-                {!isLightWorkspace && (
+                ) : (
                   <div
-                    className="absolute inset-x-6 border-t border-white/[0.08]"
-                    style={{ top: eventLaneBubbleTrackTop + 34 }}
+                    className="absolute rounded-full bg-white/[0.13]"
+                    style={{ left: 84, right: 12, top: eventLaneBubbleRailCenter - 2, height: 4 }}
                   />
                 )}
 
-                {!isLightWorkspace && (
-                  <div
-                    className="absolute inset-x-0 rounded-[22px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.012)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-                    style={{ top: eventLaneTradeTrackTop, height: eventLaneTradeTrackHeight }}
-                  />
-                )}
-                <div className="absolute left-4 z-10" style={{ top: eventLaneTradeTrackTop + 10 }}>
-                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/35 px-3 py-1 text-[11px] font-semibold text-neutral-100'}>
+                <div className="absolute left-4 z-10" style={{ top: eventLaneTradeRailCenter - 8 }}>
+                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500'}>
                     체결
                   </span>
                 </div>
                 {isLightWorkspace && (
                   <div
                     className="absolute right-4 z-10 flex items-center gap-3 text-[10px] font-medium text-[#7c7468]"
-                    style={{ top: eventLaneTradeTrackTop + 10 }}
+                    style={{ top: eventLaneTradeRailCenter - 8 }}
                   >
                     <span className="inline-flex items-center gap-1.5">
                       <span className="inline-flex h-[10px] w-[10px] rotate-45 rounded-[2px] border border-[#567d59] bg-[#6f9b73]" />
@@ -2463,16 +2450,15 @@ export function Chart() {
                     </span>
                   </div>
                 )}
-                {isLightWorkspace && (
+                {isLightWorkspace ? (
                   <div
                     className="absolute rounded-full bg-[#d8d2c6]"
                     style={{ left: 84, right: 12, top: eventLaneTradeRailCenter - 3, height: 6 }}
                   />
-                )}
-                {!isLightWorkspace && (
+                ) : (
                   <div
-                    className="absolute inset-x-6 border-t border-white/[0.08]"
-                    style={{ top: eventLaneTradeTrackTop + 34 }}
+                    className="absolute rounded-full bg-white/[0.13]"
+                    style={{ left: 84, right: 12, top: eventLaneTradeRailCenter - 2, height: 4 }}
                   />
                 )}
 
@@ -2482,13 +2468,15 @@ export function Chart() {
                   const chartWidth = containerRef.current?.clientWidth || 0
                   if (!chartWidth || cluster.x < 88 || cluster.x > chartWidth - 14) return null
                   const bubbleIsSellBias = cluster.bubbles.some((b) => b.action === 'SELL' || b.tags?.some((t) => t.toLowerCase() === 'sell'))
-                  const bubbleAccentDotClass = bubbleIsSellBias ? 'bg-[#b36d79]' : 'bg-[#5f95a0]'
+                  const bubbleAccentDotClass = bubbleIsSellBias
+                    ? isLightWorkspace ? 'bg-[#b36d79]' : 'bg-rose-400'
+                    : isLightWorkspace ? 'bg-[#5f95a0]' : 'bg-cyan-400'
                   const bubbleSingleClass = bubbleIsSellBias
-                    ? 'border-[#9f6871] bg-[#b36d79]'
-                    : 'border-[#4f7d86] bg-[#5f95a0]'
+                    ? isLightWorkspace ? 'border-[#9f6871] bg-[#b36d79]' : 'border-rose-300 bg-rose-500'
+                    : isLightWorkspace ? 'border-[#4f7d86] bg-[#5f95a0]' : 'border-cyan-300 bg-cyan-500'
                   const bubbleTone = bubbleIsSellBias
-                    ? isLightWorkspace ? 'border-rose-200 bg-rose-50 text-[#1f2937]' : 'border-rose-300/55 bg-rose-300/16 text-rose-50'
-                    : isLightWorkspace ? 'border-cyan-200 bg-cyan-50 text-[#1f2937]' : 'border-cyan-300/55 bg-cyan-300/16 text-cyan-50'
+                    ? isLightWorkspace ? 'border-rose-200 bg-rose-50 text-[#1f2937]' : 'border-rose-400/70 bg-rose-500/25 text-rose-200'
+                    : isLightWorkspace ? 'border-cyan-200 bg-cyan-50 text-[#1f2937]' : 'border-cyan-400/70 bg-cyan-500/25 text-cyan-200'
                   const isSelected = cluster.candleTimes.some((ct) => ct === selectedGroup?.candleTime)
                   return (
                     <button
@@ -2510,7 +2498,7 @@ export function Chart() {
                               ? `rounded-full border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${bubbleIsSellBias ? 'border-[#dec1c7] bg-[#fff7f8]' : 'border-[#bfd2d5] bg-[#f6fbfc]'}`
                               : 'rounded-full text-[#675f54]')
                             : ''
-                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
+                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-sky-400/80 ring-offset-2 ring-offset-[#0d0d12]' : ''}`}
                       >
                         {isLightWorkspace ? (
                           <span className={showCount ? 'inline-flex items-center gap-1.5 rounded-full tabular-nums' : 'inline-flex items-center justify-center'}>
@@ -2518,12 +2506,12 @@ export function Chart() {
                             {showCount && <span>{bubbleCount}</span>}
                           </span>
                         ) : showCount ? (
-                          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-[2px] tabular-nums ${bubbleTone}`}>
-                            <span className={`h-[8px] w-[8px] rounded-full ${bubbleAccentDotClass}`} />
+                          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-[4px] text-[12px] tabular-nums font-semibold ${bubbleTone}`}>
+                            <span className={`h-[12px] w-[12px] rounded-full ${bubbleAccentDotClass}`} />
                             <span>{bubbleCount}</span>
                           </span>
                         ) : (
-                          <span className={`inline-flex items-center justify-center h-[18px] w-[18px] rounded-full border-2 ${bubbleSingleClass}`} />
+                          <span className={`inline-flex items-center justify-center h-[28px] w-[28px] rounded-full border-2 shadow-[0_0_8px_rgba(0,0,0,0.6)] ${bubbleSingleClass}`} />
                         )}
                       </div>
                     </button>
@@ -2563,7 +2551,7 @@ export function Chart() {
                               ? `rounded-[8px] border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${tradeIsBuyBias ? 'border-[#c8d5c5] bg-[#f8fbf6]' : 'border-[#d9ccb8] bg-[#fdf9f2]'}`
                               : 'rounded-[8px] text-[#675f54]')
                             : ''
-                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
+                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-sky-400/80 ring-offset-2 ring-offset-[#0d0d12]' : ''}`}
                       >
                         {isLightWorkspace ? (
                           !showCount ? (
@@ -2579,12 +2567,12 @@ export function Chart() {
                             </span>
                           )
                         ) : !showCount ? (
-                          <span className={`text-[16px] font-bold leading-none ${tradeIsBuyBias ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          <span className={`text-[26px] font-black leading-none drop-shadow-[0_0_6px_rgba(0,0,0,0.8)] ${tradeIsBuyBias ? 'text-emerald-300' : 'text-amber-300'}`}>
                             {tradeIsBuyBias ? '▲' : '▼'}
                           </span>
                         ) : (
-                          <span className={`inline-flex items-center gap-1 rounded-[6px] border px-1.5 py-[2px] tabular-nums ${tradeIsBuyBias ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/50 bg-amber-400/10 text-amber-300'}`}>
-                            <span className={`h-[8px] w-[8px] rounded-[2px] ${tradeAccentDotClass}`} />
+                          <span className={`inline-flex items-center gap-1.5 rounded-[6px] border px-2.5 py-[4px] text-[12px] tabular-nums font-semibold ${tradeIsBuyBias ? 'border-emerald-400/70 bg-emerald-500/25 text-emerald-200' : 'border-amber-400/70 bg-amber-500/25 text-amber-200'}`}>
+                            <span className={`h-[12px] w-[12px] rounded-[2px] ${tradeAccentDotClass}`} />
                             <span>{tradeCount}</span>
                           </span>
                         )}
