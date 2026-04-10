@@ -79,6 +79,8 @@ const chartThemes = {
   },
 } as const
 
+const CLUSTER_PX = 28 // cluster event lane markers within this pixel distance
+
 const densityOptions = [
   { value: 'smart', label: 'Auto' },
   { value: 'recent', label: '최근' },
@@ -91,13 +93,38 @@ const densityOptions = [
 const actionOptions = ['ALL', 'BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'] as const
 const CHART_PANEL_PAGE_SIZE = 12
 
+const initialHistoryTargets: Record<string, number> = {
+  '1m': 1500,
+  '15m': 1800,
+  '1h': 2200,
+  '4h': 2200,
+  '1d': 2200,
+}
+
+const initialVisibleCandlesByTimeframe: Record<string, number> = {
+  '1m': 240,
+  '15m': 320,
+  '1h': 336,
+  '4h': 240,
+  '1d': 365,
+}
+
+const dedupeAndSortKlines = (items: KlineItem[]) => {
+  const unique = new Map<number, KlineItem>()
+  items.forEach((item) => unique.set(item.time, item))
+  return Array.from(unique.values()).sort((a, b) => a.time - b.time)
+}
+
 const normalizeUpbitSymbol = (value: string) => {
   const symbol = value.toUpperCase()
   if (symbol.includes('-')) {
-    const [first, second] = symbol.split('-')
-    if (!first || !second) return symbol
-    if (first === 'KRW' || first === 'BTC' || first === 'USDT') return symbol
-    if (second === 'KRW' || second === 'BTC' || second === 'USDT') return `${second}-${first}`
+    const parts = symbol.split('-')
+    if (parts.length === 2) {
+      const [first, second] = parts
+      const quoteCurrencies = new Set(['KRW', 'BTC', 'USDT'])
+      if (quoteCurrencies.has(first)) return symbol
+      if (quoteCurrencies.has(second)) return `${second}-${first}`
+    }
     return symbol
   }
   if (symbol.endsWith('KRW') && symbol.length > 3) {
@@ -133,9 +160,9 @@ const resolveExchange = (value: string) => {
   return 'binance'
 }
 
-const detectDataSource = (value: string): 'crypto' | 'stock' => (
-  isMarketSupported(value) ? 'crypto' : 'stock'
-)
+const detectDataSource = (value: string): 'crypto' | 'stock' => {
+  return isMarketSupported(value) ? 'crypto' : 'stock'
+}
 
 const getWeekKey = (value: Date) => {
   const date = new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()))
@@ -240,6 +267,7 @@ export function Chart() {
   const searchParams = useSearchParams()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const eventLaneRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
   const overlayRafRef = useRef<number | null>(null)
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
@@ -255,7 +283,8 @@ export function Chart() {
   const [autoBubbleFromTrades, setAutoBubbleFromTrades] = useState(true)
   const [densityMode, setDensityMode] = useState<typeof densityOptions[number]['value']>('smart')
   const [visibleRange, setVisibleRange] = useState<{ from: number; to: number } | null>(null)
-  const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('noir')
+  const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('ledger')
+  const isLightWorkspace = themeMode === 'ledger'
   const [dataSource, setDataSource] = useState<'crypto' | 'stock'>('crypto')
   const [bubbleSearch, setBubbleSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<typeof actionOptions[number]>('ALL')
@@ -330,21 +359,31 @@ export function Chart() {
   const [detailBubblePageInput, setDetailBubblePageInput] = useState('1')
   const [detailTradePageInput, setDetailTradePageInput] = useState('1')
 
-  // Refs for stable access in effects/callbacks
-  const overlayPositionsRef = useRef(overlayPositions)
-  const updatePositionsRef = useRef<() => void>(() => { })
-  const fallbackSymbols = useMemo(
-    () => DEFAULT_SYMBOLS.filter((item) => detectDataSource(item.symbol) === dataSource),
-    [dataSource],
-  )
+  const fallbackSymbols = useMemo<UserSymbolItem[]>(() => {
+    const sourceItems = quickPicks
+      .filter((item) => detectDataSource(item.value) === dataSource)
+      .map((item) => ({
+        symbol: item.value.toUpperCase(),
+        timeframe_default: '1d',
+      }))
+    if (sourceItems.length > 0) return sourceItems
+    return DEFAULT_SYMBOLS.filter((item) => detectDataSource(item.symbol) === dataSource)
+  }, [dataSource])
+
   const visibleSymbols = useMemo(() => {
     const filtered = symbols.filter((item) => detectDataSource(item.symbol) === dataSource)
     return filtered.length > 0 ? filtered : fallbackSymbols
-  }, [symbols, dataSource, fallbackSymbols])
+  }, [dataSource, fallbackSymbols, symbols])
+
   const visibleQuickPicks = useMemo(
     () => quickPicks.filter((item) => detectDataSource(item.value) === dataSource),
-    [dataSource],
+    [dataSource]
   )
+
+  // Refs for stable access in effects/callbacks
+  const overlayPositionsRef = useRef(overlayPositions)
+  const updatePositionsRef = useRef<() => void>(() => { })
+  const loadMoreHistoryRef = useRef<() => Promise<void>>(async () => { })
 
   // Update refs
   useEffect(() => {
@@ -649,9 +688,10 @@ export function Chart() {
     // Keep explicit URL symbols as-is (even if currently unsupported),
     // so we can show a clear unsupported message instead of silently falling back.
     const selected = match?.symbol || normalizedParam || symbols[0].symbol
+    const inferredSource = detectDataSource(selected)
 
     setSelectedSymbol(selected)
-    setDataSource(detectDataSource(selected))
+    setDataSource(inferredSource)
     setTimeframe('1d')
     if (!normalizedParam) {
       router.replace(`/chart/${selected}`)
@@ -659,14 +699,14 @@ export function Chart() {
   }, [router, symbolParam, symbols])
 
   useEffect(() => {
-    if (!selectedSymbol) return
+    if (!selectedSymbol || visibleSymbols.length === 0) return
     if (detectDataSource(selectedSymbol) === dataSource) return
-    const nextSymbol = visibleSymbols[0]?.symbol || fallbackSymbols[0]?.symbol
-    if (!nextSymbol || nextSymbol === selectedSymbol) return
-    setSelectedSymbol(nextSymbol)
+
+    const next = visibleSymbols[0]
+    setSelectedSymbol(next.symbol)
     setTimeframe('1d')
-    router.replace(`/chart/${nextSymbol}`)
-  }, [dataSource, fallbackSymbols, router, selectedSymbol, visibleSymbols])
+    router.replace(`/chart/${next.symbol}`)
+  }, [dataSource, router, selectedSymbol, visibleSymbols])
 
   // Load Klines
   useEffect(() => {
@@ -687,6 +727,8 @@ export function Chart() {
     const loadKlines = async () => {
       setLoading(true)
       setError('')
+      noMoreHistoryRef.current = false
+      lastHistoryLoadRef.current = 0
       try {
         const exchange = resolveExchange(selectedSymbol)
         const symbol = exchange === 'upbit' ? normalizeUpbitSymbol(selectedSymbol) : selectedSymbol
@@ -694,7 +736,31 @@ export function Chart() {
           params: { symbol, interval: timeframe, limit: 500, exchange },
         })
         if (!active) return
-        setKlines(response.data || [])
+        let merged = dedupeAndSortKlines(response.data || [])
+        const targetCount = initialHistoryTargets[timeframe] || 1800
+        let oldestLoadedTime = merged[0]?.time ?? null
+        let attempts = 0
+
+        while (active && oldestLoadedTime != null && merged.length < targetCount && attempts < 6) {
+          const olderResponse = await api.get('/v1/market/klines', {
+            params: { symbol, interval: timeframe, limit: 500, endTime: oldestLoadedTime * 1000 - 1, exchange },
+          })
+          const olderKlines = olderResponse.data || []
+          if (olderKlines.length === 0) {
+            noMoreHistoryRef.current = true
+            break
+          }
+
+          const nextMerged = dedupeAndSortKlines([...olderKlines, ...merged])
+          const nextOldestTime = nextMerged[0]?.time ?? null
+          if (nextOldestTime === oldestLoadedTime) break
+
+          merged = nextMerged
+          oldestLoadedTime = nextOldestTime
+          attempts += 1
+        }
+
+        setKlines(merged)
       } catch (err: any) {
         if (!active) return
         setError(err?.response?.data?.message || '차트 데이터를 불러오지 못했습니다.')
@@ -952,13 +1018,13 @@ export function Chart() {
     if (visibleRange) {
       filtered = filtered.filter((item) => item.candleTime >= visibleRange.from && item.candleTime <= visibleRange.to)
     }
-    const maxMarkers = 60
+    const maxMarkers = isLightWorkspace ? 44 : 60
     if (filtered.length > maxMarkers) {
       const step = Math.ceil(filtered.length / maxMarkers)
       filtered = filtered.filter((_, index) => index % step === 0)
     }
     return filtered.sort((a, b) => a.candleTime - b.candleTime)
-  }, [overlayPositions, densityMode, visibleRange])
+  }, [overlayPositions, densityMode, visibleRange, isLightWorkspace])
 
   const filteredBubbles = useMemo(() => {
     const query = bubbleSearch.trim().toLowerCase()
@@ -972,6 +1038,206 @@ export function Chart() {
   const filteredBubbleIds = useMemo(() => {
     return new Set(filteredBubbles.map((bubble) => bubble.id))
   }, [filteredBubbles])
+
+  const visibleMarkerGroups = useMemo(() => {
+    return densityAdjustedPositions
+      .map((group) => ({
+        ...group,
+        bubbles: showBubbles ? group.bubbles.filter((bubble) => filteredBubbleIds.has(bubble.id)) : [],
+        trades: showTrades ? group.trades : [],
+      }))
+      .filter((group) => group.bubbles.length > 0 || group.trades.length > 0)
+      .sort((a, b) => a.x - b.x || a.candleTime - b.candleTime)
+  }, [densityAdjustedPositions, showBubbles, showTrades, filteredBubbleIds])
+
+  const buildTrackLayout = useCallback((groups: typeof visibleMarkerGroups) => {
+    const layout = new Map<number, { lane: number }>()
+    const active: Array<{ x: number; lane: number }> = []
+    const maxTrackLane = isLightWorkspace ? 0 : 2
+    const expireDistance = isLightWorkspace ? 86 : 92
+    const overlapDistance = isLightWorkspace ? 58 : 56
+
+    groups.forEach((group) => {
+      for (let index = active.length - 1; index >= 0; index -= 1) {
+      if (group.x - active[index].x > expireDistance) {
+          active.splice(index, 1)
+        }
+      }
+
+      let lane = 0
+      while (active.some((item) => Math.abs(item.x - group.x) < overlapDistance && item.lane === lane) && lane < maxTrackLane) {
+        lane += 1
+      }
+      lane = Math.min(lane, maxTrackLane)
+
+      layout.set(group.candleTime, { lane })
+      active.push({ x: group.x, lane })
+    })
+
+    const lanes = Array.from(layout.values()).map((item) => item.lane)
+    return {
+      layout,
+      maxLane: lanes.length ? Math.max(...lanes) : 0,
+    }
+  }, [isLightWorkspace])
+
+  const bubbleTrackLayout = useMemo(() => {
+    return buildTrackLayout(visibleMarkerGroups.filter((group) => group.bubbles.length > 0))
+  }, [visibleMarkerGroups, buildTrackLayout])
+
+  const tradeTrackLayout = useMemo(() => {
+    return buildTrackLayout(visibleMarkerGroups.filter((group) => group.trades.length > 0))
+  }, [visibleMarkerGroups, buildTrackLayout])
+
+  const clusteredBubbleMarkers = useMemo(() => {
+    const groups = visibleMarkerGroups.filter((g) => g.bubbles.length > 0)
+    const result: Array<{ x: number; primaryCandleTime: number; candleTimes: number[]; bubbles: Bubble[]; trades: OverlayTrade[] }> = []
+    const rightmostX: number[] = [] // tracks rightmost merged x per cluster for comparison
+    for (const g of groups) {
+      const last = result[result.length - 1]
+      const lastRight = rightmostX[rightmostX.length - 1] ?? -Infinity
+      if (last && g.x - lastRight < CLUSTER_PX) {
+        rightmostX[rightmostX.length - 1] = g.x
+        last.candleTimes.push(g.candleTime)
+        last.bubbles = [...last.bubbles, ...g.bubbles]
+      } else {
+        result.push({ x: g.x, primaryCandleTime: g.candleTime, candleTimes: [g.candleTime], bubbles: [...g.bubbles], trades: [] })
+        rightmostX.push(g.x)
+      }
+    }
+    return result
+  }, [visibleMarkerGroups])
+
+  const clusteredTradeMarkers = useMemo(() => {
+    const groups = visibleMarkerGroups.filter((g) => g.trades.length > 0)
+    const result: Array<{ x: number; primaryCandleTime: number; candleTimes: number[]; bubbles: Bubble[]; trades: OverlayTrade[] }> = []
+    const rightmostX: number[] = []
+    for (const g of groups) {
+      const last = result[result.length - 1]
+      const lastRight = rightmostX[rightmostX.length - 1] ?? -Infinity
+      if (last && g.x - lastRight < CLUSTER_PX) {
+        rightmostX[rightmostX.length - 1] = g.x
+        last.candleTimes.push(g.candleTime)
+        last.trades = [...last.trades, ...g.trades]
+      } else {
+        result.push({ x: g.x, primaryCandleTime: g.candleTime, candleTimes: [g.candleTime], bubbles: [], trades: [...g.trades] })
+        rightmostX.push(g.x)
+      }
+    }
+    return result
+  }, [visibleMarkerGroups])
+
+  const selectedVisibleGroup = useMemo(() => {
+    if (!selectedGroup) return null
+    return visibleMarkerGroups.find((group) => group.candleTime === selectedGroup.candleTime) ?? null
+  }, [visibleMarkerGroups, selectedGroup])
+  const selectionDockGroup = selectedGroup
+
+  const eventLaneTrackRows = isLightWorkspace ? 1 : 3
+  const eventLaneTrackGap = isLightWorkspace ? 12 : 22
+  const eventLaneRowHeight = isLightWorkspace ? 0 : 18
+  const eventLaneMarkerOffsetTop = isLightWorkspace ? 24 : 36
+  const eventLaneBubbleTrackTop = isLightWorkspace ? 10 : 18
+  const eventLaneBubbleTrackHeight = (isLightWorkspace ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
+  const eventLaneTradeTrackTop = eventLaneBubbleTrackTop + eventLaneBubbleTrackHeight + eventLaneTrackGap
+  const eventLaneTradeTrackHeight = (isLightWorkspace ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
+  const eventLaneBubbleRailCenter = eventLaneBubbleTrackTop + 32
+  const eventLaneTradeRailCenter = eventLaneTradeTrackTop + 32
+  const eventLaneAxisTop = eventLaneTradeTrackTop + eventLaneTradeTrackHeight + (isLightWorkspace ? 8 : 10)
+  const eventLaneAxisHeight = isLightWorkspace ? 24 : 26
+  const eventLaneHeight = eventLaneAxisTop + eventLaneAxisHeight + (isLightWorkspace ? 8 : 12)
+  const fallbackWorkspaceHeight = 560 + (isLightWorkspace ? 64 : 92) + eventLaneHeight + (isLightWorkspace ? 56 : 72)
+  const measuredWorkspaceHeight = wrapperRef.current?.clientHeight ?? fallbackWorkspaceHeight
+  const viewportPanelBudget = typeof window !== 'undefined' && wrapperRef.current
+    ? Math.max(420, Math.floor(window.innerHeight - wrapperRef.current.getBoundingClientRect().top - 20))
+    : measuredWorkspaceHeight
+  const rightPanelTargetHeight = Math.min(measuredWorkspaceHeight, viewportPanelBudget)
+
+  const eventLaneTicks = useMemo(() => {
+    const chart = chartRef.current
+    const chartWidth = containerRef.current?.clientWidth || 0
+    if (!chart || chartWidth <= 0 || chartData.length === 0) return []
+
+    const visibleItems = chartData.filter((item) => {
+      const time = Number(item.time)
+      if (!visibleRange) return true
+      return time >= visibleRange.from && time <= visibleRange.to
+    })
+    if (visibleItems.length === 0) return []
+
+    const targetCount = Math.min(isLightWorkspace ? 8 : 7, Math.max(4, Math.floor(chartWidth / 150)))
+    const candidateIndexes = new Set<number>([0, visibleItems.length - 1])
+    if (visibleItems.length > 2) {
+      for (let step = 1; step < targetCount - 1; step += 1) {
+        candidateIndexes.add(Math.round((step * (visibleItems.length - 1)) / (targetCount - 1)))
+      }
+    }
+
+    const tickType = timeframe === '1m' || timeframe === '15m' || timeframe === '1h'
+      ? TickMarkType.Time
+      : TickMarkType.DayOfMonth
+
+    return Array.from(candidateIndexes)
+      .sort((a, b) => a - b)
+      .map((index) => {
+        const item = visibleItems[index]
+        const x = chart.timeScale().timeToCoordinate(item.time)
+        const label = formatChartTickMark(item.time, tickType, useSeoulTime)
+        return x == null || !label ? null : { x, label }
+      })
+      .filter((tick): tick is NonNullable<typeof tick> => tick !== null)
+      .filter((tick, index, ticks) => {
+        if (tick.x < 18 || tick.x > chartWidth - 18) return false
+        if (index === 0) return true
+        return Math.abs(tick.x - ticks[index - 1].x) >= 54
+      })
+  }, [chartData, visibleRange, timeframe, useSeoulTime, isLightWorkspace])
+
+  const adjustEventLaneLogicalRange = useCallback((deltaX: number, deltaY: number, clientX: number) => {
+    if (!isLightWorkspace || !chartRef.current || !containerRef.current) return false
+    const timeScale = chartRef.current.timeScale() as {
+      getVisibleLogicalRange?: () => { from: number; to: number } | null
+      setVisibleLogicalRange?: (range: { from: number; to: number }) => void
+      coordinateToLogical?: (x: number) => number | null
+    }
+
+    const logicalRange = timeScale.getVisibleLogicalRange?.()
+    if (!logicalRange) return false
+
+    const chartRect = containerRef.current.getBoundingClientRect()
+    const relativeX = Math.min(Math.max(clientX - chartRect.left, 0), chartRect.width)
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      const shift = deltaX * 0.02
+      timeScale.setVisibleLogicalRange?.({
+        from: logicalRange.from + shift,
+        to: logicalRange.to + shift,
+      })
+      return true
+    }
+
+    const anchor = timeScale.coordinateToLogical?.(relativeX) ?? ((logicalRange.from + logicalRange.to) / 2)
+    const zoomFactor = deltaY > 0 ? 1.08 : 0.92
+    timeScale.setVisibleLogicalRange?.({
+      from: anchor - ((anchor - logicalRange.from) * zoomFactor),
+      to: anchor + ((logicalRange.to - anchor) * zoomFactor),
+    })
+    return true
+  }, [isLightWorkspace])
+
+  useEffect(() => {
+    if (!isLightWorkspace || !eventLaneRef.current) return
+    const node = eventLaneRef.current
+    const onWheel = (event: WheelEvent) => {
+      if (!adjustEventLaneLogicalRange(event.deltaX, event.deltaY, event.clientX)) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      node.removeEventListener('wheel', onWheel)
+    }
+  }, [adjustEventLaneLogicalRange, isLightWorkspace])
 
   const summaryTotalPages = Math.max(1, Math.ceil(filteredBubbles.length / CHART_PANEL_PAGE_SIZE))
   const pagedSummaryBubbles = filteredBubbles.slice(
@@ -1093,6 +1359,7 @@ export function Chart() {
     if (!containerRef.current) return
 
     const initialTheme = chartThemes[themeMode]
+    const initialRect = containerRef.current.getBoundingClientRect()
     const chart = createChart(containerRef.current, {
       layout: initialTheme.layout,
       grid: initialTheme.grid,
@@ -1104,9 +1371,11 @@ export function Chart() {
       },
       timeScale: {
         borderColor: 'rgba(255,255,255,0.08)',
+        rightOffset: 5,
         tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatChartTickMark(time, tickMarkType, useSeoulTime),
       },
-      height: 480,
+      height: Math.round(initialRect.height) || 560,
+      width: Math.round(initialRect.width) || undefined,
     })
 
     const series = chart.addCandlestickSeries({
@@ -1119,11 +1388,6 @@ export function Chart() {
 
     chartRef.current = chart
     seriesRef.current = series
-
-    if (chartData.length > 0) {
-      series.setData(chartData)
-      chart.timeScale().fitContent()
-    }
 
     const clickHandler = (param: any) => {
       if (!param.point || !param.time) return
@@ -1155,12 +1419,8 @@ export function Chart() {
       // If user is scrolling near the start (left side) and not currently loading
       // 'from' is the logical index. 0 is the oldest LOADED candle. Negative means scrolling into empty space before data.
       // We trigger load if they are close to 0 (e.g. < 10)
-      if (logicalRange.from < 10 && !loading && klines.length > 0) {
-        // Debouncing logic could be added here, but for now direct call
-        // We need a ref to access current 'loading' state inside this callback if it closes over stale state
-        // But here we rely on the effect dependency or ref
-        // Let's use a specialized function that checks a ref to prevent spam
-        loadMoreHistory()
+      if (logicalRange.from < 10 && !loadingRef.current && klinesRef.current.length > 0) {
+        loadMoreHistoryRef.current()
       }
     }
 
@@ -1168,8 +1428,11 @@ export function Chart() {
 
     const resizeObserver = new ResizeObserver((entries) => {
       if (!entries.length) return
-      const { width } = entries[0].contentRect
-      chart.applyOptions({ width })
+      const { width, height } = entries[0].contentRect
+      chart.applyOptions({
+        width: Math.round(width),
+        height: Math.round(height),
+      })
     })
     resizeObserver.observe(containerRef.current)
 
@@ -1180,8 +1443,48 @@ export function Chart() {
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
+      prevFirstTimeRef.current = 0
+      prevDataLengthRef.current = 0
+      noMoreHistoryRef.current = false
     }
-  }, [timeframe, chartData, updateOverlayPosition, useSeoulTime]) // Add dependencies if needed, but be careful of loops using 'loading' or 'klines' directly here causes re-mount
+  }, [timeframe, updateOverlayPosition, useSeoulTime])
+
+  // Separate data-update effect — fitContent on history prepend, preserve range on append
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current || chartData.length === 0) return
+    const chart = chartRef.current
+    const prevFirstTime = prevFirstTimeRef.current
+    const prevDataLength = prevDataLengthRef.current
+    const newFirstTime = chartData[0].time as number
+    const nextDataLength = chartData.length
+    const prependedCount = Math.max(0, nextDataLength - prevDataLength)
+    prevFirstTimeRef.current = newFirstTime
+    prevDataLengthRef.current = nextDataLength
+    const logicalRange = chart.timeScale().getVisibleLogicalRange()
+    seriesRef.current.setData(chartData)
+    if (!logicalRange || prevDataLength === 0 || prevFirstTime === 0) {
+      // First load or history prepended — expand to show all data
+      const initialVisibleCount = Math.min(
+        initialVisibleCandlesByTimeframe[timeframe] || 240,
+        nextDataLength
+      )
+      const from = Math.max(0, nextDataLength - initialVisibleCount)
+      const to = nextDataLength - 1
+      if (from < to) {
+        chart.timeScale().setVisibleLogicalRange({ from, to })
+      }
+    } else {
+      // Future candles appended — preserve the user's current zoom position
+      if (newFirstTime < prevFirstTime && prependedCount > 0) {
+        chart.timeScale().setVisibleLogicalRange({
+          from: logicalRange.from + prependedCount,
+          to: logicalRange.to + prependedCount,
+        })
+      } else {
+        chart.timeScale().setVisibleLogicalRange(logicalRange)
+      }
+    }
+  }, [chartData, timeframe])
 
   // Ref for loading state to use inside the chart event listener without re-binding
   const loadingRef = useRef(loading)
@@ -1193,8 +1496,12 @@ export function Chart() {
   // 히스토리 로드 디바운싱을 위한 ref
   const lastHistoryLoadRef = useRef<number>(0)
   const historyLoadCooldown = 3000 // 3초 쿨다운
+  const prevFirstTimeRef = useRef<number>(0)
+  const prevDataLengthRef = useRef<number>(0)
+  const noMoreHistoryRef = useRef(false)
 
   const loadMoreHistory = useCallback(async () => {
+    if (noMoreHistoryRef.current) return
     const now = Date.now()
     // 쿨다운 체크 - 너무 자주 호출되지 않도록
     if (now - lastHistoryLoadRef.current < historyLoadCooldown) return
@@ -1216,26 +1523,41 @@ export function Chart() {
 
       const newKlines = response.data || []
       if (newKlines.length === 0) {
+        noMoreHistoryRef.current = true
         return
       }
 
-      const merged = [...newKlines, ...klinesRef.current]
-      const uniqueDetails = new Map()
-      merged.forEach(k => uniqueDetails.set(k.time, k))
-      const deduplicated = Array.from(uniqueDetails.values()).sort((a, b) => a.time - b.time)
-
-      setKlines(deduplicated)
+      setKlines(dedupeAndSortKlines([...newKlines, ...klinesRef.current]))
       // 토스트 제거 - 너무 자주 뜸
 
     } catch (err: any) {
-      // 401 에러는 조용히 무시 (인증 필요)
-      if (err?.response?.status !== 401) {
+      const status = err?.response?.status
+      if (status === 400) {
+        // Exchange has no data before this point — stop trying
+        noMoreHistoryRef.current = true
+      } else if (![401, 502, 503, 504].includes(status)) {
         console.error('Failed to load history', err)
       }
     } finally {
       setLoading(false)
     }
   }, [selectedSymbol, timeframe])
+
+  useEffect(() => {
+    loadMoreHistoryRef.current = loadMoreHistory
+  }, [loadMoreHistory])
+
+  useEffect(() => {
+    if (!chartRef.current || loading || klines.length === 0 || noMoreHistoryRef.current) return
+    const logicalRange = chartRef.current.timeScale().getVisibleLogicalRange()
+    if (!logicalRange || logicalRange.from >= 10) return
+
+    const timeoutId = window.setTimeout(() => {
+      loadMoreHistoryRef.current()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [klines.length, loading, selectedSymbol, timeframe])
 
   const loadMoreFuture = useCallback(async () => {
     if (loadingRef.current || klinesRef.current.length === 0) return
@@ -1257,11 +1579,7 @@ export function Chart() {
         return
       }
 
-      const merged = [...klinesRef.current, ...newKlines]
-      const uniqueDetails = new Map()
-      merged.forEach(k => uniqueDetails.set(k.time, k))
-      const deduplicated = Array.from(uniqueDetails.values()).sort((a, b) => a.time - b.time)
-      setKlines(deduplicated)
+      setKlines(dedupeAndSortKlines([...klinesRef.current, ...newKlines]))
     } catch (err: any) {
       if (err?.response?.status !== 401) {
         console.error('Failed to load future', err)
@@ -1323,8 +1641,7 @@ export function Chart() {
 
   // Update Data Effect
   useEffect(() => {
-    if (!seriesRef.current || !chartRef.current) return
-    seriesRef.current.setData(chartData)
+    if (!chartRef.current) return
 
     // 타임프레임에 따라 표시할 캔들 수 제한
     const maxVisibleCandles: Record<string, number> = {
@@ -1334,17 +1651,23 @@ export function Chart() {
       '4h': 180,   // 약 1달
       '1d': 365,   // 1년
     }
-    const visibleCount = maxVisibleCandles[timeframe] || 200
+    const visibleCount = chartData.length
+    void maxVisibleCandles
+    void visibleCount
 
-    if (chartData.length > visibleCount) {
+    const logicalRange = chartRef.current.timeScale().getVisibleLogicalRange()
+    if (!logicalRange) {
       // 최근 N개 캔들만 보이도록 설정
-      const fromIndex = chartData.length - visibleCount
-      chartRef.current.timeScale().setVisibleLogicalRange({
-        from: fromIndex,
-        to: chartData.length - 1,
-      })
-    } else {
-      chartRef.current.timeScale().fitContent()
+      const initialVisibleCount = Math.min(
+        initialVisibleCandlesByTimeframe[timeframe] || 240,
+        chartData.length
+      )
+      if (chartData.length > 1) {
+        chartRef.current.timeScale().setVisibleLogicalRange({
+          from: Math.max(0, chartData.length - initialVisibleCount),
+          to: chartData.length - 1,
+        })
+      }
     }
 
     // 데이터 로드 후 버블 위치 업데이트
@@ -1482,8 +1805,11 @@ export function Chart() {
 
   const handleSymbolChange = (value: string) => {
     const next = value.toUpperCase()
-    setDataSource(detectDataSource(next))
+    const matched = visibleSymbols.find((item) => item.symbol === next) || symbols.find((item) => item.symbol === next)
+    const inferredSource = detectDataSource(next)
+    setDataSource(inferredSource)
     setSelectedSymbol(next)
+    setTimeframe('1d')
     router.push(`/chart/${next}`)
   }
 
@@ -1522,31 +1848,46 @@ export function Chart() {
       })
     }
   }
-  const densityLabel = densityOptions.find((option) => option.value === densityMode)?.label ?? 'Auto'
 
+  const workspaceRootClass = isLightWorkspace ? 'flex flex-col gap-4 text-[#1f2937]' : 'flex flex-col gap-5'
+  const topShellClass = isLightWorkspace
+    ? 'rounded-[24px] border border-[#dedbd3] bg-[#f8f5ee] p-3 shadow-[0_1px_0_rgba(255,255,255,0.84)]'
+    : 'kifu-panel p-3 md:p-4'
+  const topInnerClass = isLightWorkspace
+    ? 'rounded-[20px] border border-[#d8d2c6] bg-[#fcfaf6] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.76)]'
+    : 'kifu-panel-muted p-3'
+  const chartShellClass = isLightWorkspace
+    ? 'relative overflow-hidden rounded-[24px] border border-[#dedbd3] bg-[#f9f8f6] p-3 shadow-[0_1px_0_rgba(255,255,255,0.75)]'
+    : 'kifu-panel relative overflow-hidden p-4'
+  const sideShellClass = isLightWorkspace
+    ? 'flex h-full min-h-0 self-start overflow-hidden flex-col gap-4 rounded-[24px] border border-[#dedbd3] bg-[#f9f8f6] p-5 shadow-[0_1px_0_rgba(255,255,255,0.75)]'
+    : 'kifu-panel flex h-full min-h-0 self-start overflow-hidden flex-col gap-4 p-5'
+  const fieldClass = isLightWorkspace
+    ? 'min-w-[140px] rounded-xl border border-[#d8d2c6] bg-[#fcfaf6] px-3 py-2 text-sm font-semibold text-[#1f2937] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
+    : 'kifu-field min-w-[140px] py-2 text-sm font-semibold'
+  const panelCardClass = isLightWorkspace
+    ? 'rounded-xl border border-[#dedbd3] bg-[#fcfaf6] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
+    : 'rounded-xl border border-white/[0.06] bg-black/20 p-3'
+  const panelCardLargeClass = isLightWorkspace
+    ? 'rounded-2xl border border-[#dedbd3] bg-[#fcfaf6] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
+    : 'rounded-2xl border border-white/10 bg-black/20 p-4'
+  const emptyPanelClass = isLightWorkspace
+    ? 'rounded-lg border border-[#dedbd3] bg-[#fcfaf6] p-4 text-sm text-[#6f675b]'
+    : 'rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500'
+  const sideTabActiveClass = isLightWorkspace
+    ? 'border-[#1f2937] bg-[#1f2937] text-[#f9f8f6]'
+    : 'border-neutral-100 bg-neutral-100 text-neutral-950'
+  const sideTabInactiveClass = isLightWorkspace
+    ? 'border-[#dedbd3] bg-[#f9f8f6] text-[#5d574f] hover:border-[#c5beaf] hover:text-[#1f2937]'
+    : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+  const filterVariant = isLightWorkspace ? 'paper' : 'default'
   return (
-    <div className="flex flex-col gap-6">
-      <header className="kifu-panel p-5 md:p-6">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-5">
-            <div className="max-w-3xl space-y-3">
-              <p className="kifu-eyebrow">Chart Review</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-[2rem] font-semibold tracking-tight text-neutral-100">차트 복기</h2>
-                {selectedSymbol && <span className="kifu-chip">{selectedSymbol}</span>}
-                <span className="kifu-chip">{timeframe.toUpperCase()}</span>
-                <span className="kifu-chip">{densityLabel} 밀도</span>
-              </div>
-              <p className="kifu-section-copy max-w-3xl">
-                차트, 말풍선, 체결 오버레이만 남겨두고 판단을 복기하는 화면입니다.
-                필요한 보기 옵션만 빠르게 바꾸고, 실험용 도구는 접어서 분리했습니다.
-              </p>
-            </div>
-          </div>
-
-          <div className="kifu-panel-muted p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <FilterGroup label="시장" tone="emerald">
+    <div className={workspaceRootClass}>
+      <header className={topShellClass}>
+        <div className="flex flex-col gap-3">
+          <div className={topInnerClass}>
+            <div className="flex flex-wrap items-end gap-2.5">
+              <FilterGroup label="시장" tone="emerald" variant={filterVariant}>
                 <FilterPills
                   options={[
                     { value: 'crypto', label: 'Crypto' },
@@ -1555,15 +1896,16 @@ export function Chart() {
                   value={dataSource}
                   onChange={(value) => setDataSource(value as 'crypto' | 'stock')}
                   tone="emerald"
+                  variant={filterVariant}
                   ariaLabel="Market source"
                 />
               </FilterGroup>
 
-              <FilterGroup label="심볼" tone="sky">
+              <FilterGroup label="심볼" tone="sky" variant={filterVariant}>
                 <select
                   value={selectedSymbol}
                   onChange={(e) => handleSymbolChange(e.target.value)}
-                  className="kifu-field min-w-[140px] py-2 text-sm font-semibold"
+                  className={fieldClass}
                 >
                   {visibleSymbols.map((item) => (
                     <option key={item.symbol} value={item.symbol}>{item.symbol}</option>
@@ -1571,41 +1913,20 @@ export function Chart() {
                 </select>
               </FilterGroup>
 
-              <FilterGroup label="타임프레임" tone="amber">
+              <FilterGroup label="타임프레임" tone="amber" variant={filterVariant}>
                 <FilterPills
                   options={intervals.map((interval) => ({ value: interval, label: interval }))}
                   value={timeframe}
                   onChange={(value) => setTimeframe(value)}
                   tone="amber"
+                  variant={filterVariant}
                   ariaLabel="Timeframe filter"
                 />
               </FilterGroup>
 
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  disabled={!selectedSymbol}
-                  className="kifu-btn-primary"
-                >
-                  말풍선 기록
-                </button>
-                <button
-                  onClick={() => setShowReplay((prev) => !prev)}
-                  className={showReplay ? 'kifu-btn-secondary border-sky-300/40 bg-sky-300/15 text-sky-100' : 'kifu-btn-secondary'}
-                >
-                  {showReplay ? '리플레이 닫기' : '리플레이'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedControls((prev) => !prev)}
-                  className={showAdvancedControls ? 'kifu-btn-secondary border-fuchsia-300/40 bg-fuchsia-300/15 text-fuchsia-100' : 'kifu-btn-secondary'}
-                >
-                  {showAdvancedControls ? '실험 도구 닫기' : '실험 도구'}
-                </button>
-              </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Quick</span>
                 {visibleQuickPicks.map((item) => (
@@ -1614,8 +1935,12 @@ export function Chart() {
                     onClick={() => handleSymbolChange(item.value)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
                       selectedSymbol === item.value
-                        ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                        : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                        ? isLightWorkspace
+                          ? 'border-[#7c7568] bg-[#7c7568] text-[#f9f8f6] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                          : 'border-neutral-100 bg-neutral-100 text-neutral-950'
+                        : isLightWorkspace
+                          ? 'border-[#d8d2c6] bg-[#fcfaf6] text-[#615b51] hover:border-[#c5beaf] hover:text-[#1f2937]'
+                          : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
                     }`}
                   >
                     {item.label}
@@ -1623,16 +1948,20 @@ export function Chart() {
                 ))}
               </div>
 
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-                <FilterGroup label="레이어" tone="emerald">
+              <div className="hidden flex-col gap-3 xl:flex-row xl:items-center">
+                <FilterGroup label="레이어" tone="emerald" variant={filterVariant}>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowBubbles((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showBubbles
-                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
-                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                          ? isLightWorkspace
+                            ? 'border-[#bfd2d5] bg-[#f1f8f9] text-[#3e666d]'
+                            : 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                          : isLightWorkspace
+                            ? 'border-[#dedbd3] bg-white/70 text-[#6b655c] hover:border-[#bfd2d5] hover:text-[#3e666d]'
+                            : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
                       }`}
                     >
                       말풍선
@@ -1640,10 +1969,14 @@ export function Chart() {
                     <button
                       type="button"
                       onClick={() => setShowTrades((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showTrades
-                          ? 'border-sky-300 bg-sky-300/20 text-sky-200'
-                          : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
+                          ? isLightWorkspace
+                            ? 'border-[#d8c6a5] bg-[#fbf5ea] text-[#775c2b]'
+                            : 'border-sky-300 bg-sky-300/20 text-sky-200'
+                          : isLightWorkspace
+                            ? 'border-[#dedbd3] bg-white/70 text-[#6b655c] hover:border-[#d8c6a5] hover:text-[#775c2b]'
+                            : 'border-neutral-700 text-neutral-400 hover:border-sky-300/40 hover:text-sky-200'
                       }`}
                     >
                       체결
@@ -1651,10 +1984,14 @@ export function Chart() {
                     <button
                       type="button"
                       onClick={() => setShowPositions((prev) => !prev)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showPositions
-                          ? 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
-                          : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
+                          ? isLightWorkspace
+                            ? 'border-[#ccd8c4] bg-[#f3f8ef] text-[#566a4c]'
+                            : 'border-emerald-300 bg-emerald-300/20 text-emerald-200'
+                          : isLightWorkspace
+                            ? 'border-[#dedbd3] bg-white/70 text-[#6b655c] hover:border-[#ccd8c4] hover:text-[#566a4c]'
+                            : 'border-neutral-700 text-neutral-400 hover:border-emerald-300/40 hover:text-emerald-200'
                       }`}
                     >
                       포지션
@@ -1665,27 +2002,30 @@ export function Chart() {
                         setShowTrades(true)
                         setShowBubbles(false)
                       }}
-                      className="rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-300/20"
+                      className={isLightWorkspace
+                        ? 'rounded-full border border-[#d8cdb6] bg-[#f8f1e3] px-3.5 py-1.5 text-sm font-semibold text-[#6e5e35] transition hover:border-[#cdbf9c] hover:bg-[#f3ead6]'
+                        : 'rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-300/20'}
                     >
                       체결 집중
                     </button>
                   </div>
                 </FilterGroup>
 
-                <FilterGroup label="밀도" tone="amber">
+                <FilterGroup label="밀도" tone="amber" variant={filterVariant}>
                   <FilterPills
                     options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
                     value={densityMode}
                     onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
                     tone="amber"
+                    variant={filterVariant}
                     ariaLabel="Density filter"
                   />
                 </FilterGroup>
               </div>
             </div>
 
-            {showAdvancedControls && (
-              <div className="mt-4 grid gap-4 border-t border-white/10 pt-4 lg:grid-cols-[0.82fr_1.18fr]">
+            {showAdvancedControls && !isLightWorkspace && (
+              <div className="mt-3 grid gap-3 border-t border-white/10 pt-3 lg:grid-cols-[0.82fr_1.18fr]">
                 <div>
                   <p className="kifu-eyebrow">Lab</p>
                   <p className="mt-2 text-sm leading-6 text-neutral-400">
@@ -1782,8 +2122,8 @@ export function Chart() {
         </div>
       </header>
 
-      {showReplay && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+      {showReplay && !isLightWorkspace && (
+        <div className={isLightWorkspace ? 'rounded-[24px] border border-[#dedbd3] bg-[#fcfaf6] p-4 shadow-[0_1px_0_rgba(255,255,255,0.72)]' : 'rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4'}>
           <ChartReplay
             klines={klines}
             onFilteredKlines={handleReplayFilteredKlines}
@@ -1793,7 +2133,7 @@ export function Chart() {
       )}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(340px,0.95fr)]">
-        <div className="kifu-panel relative p-4 xl:pr-20" ref={wrapperRef}>
+        <div className={chartShellClass} ref={wrapperRef}>
           <div className="relative h-[560px] w-full" ref={containerRef}>
             {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
             {mounted && (
@@ -1865,15 +2205,15 @@ export function Chart() {
                   </div>
                 )}
                 {showPositions && positionStackMode && (
-                  <div className="absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-white/[0.06] bg-black/30 p-3 shadow-xl backdrop-blur pointer-events-auto">
+                  <div className={isLightWorkspace ? 'absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-[#dedbd3] bg-[#fcfaf6]/95 p-3 shadow-[0_8px_24px_rgba(120,112,98,0.12)] backdrop-blur pointer-events-auto' : 'absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-white/[0.06] bg-black/30 p-3 shadow-xl backdrop-blur pointer-events-auto'}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">포지션</span>
                       <button
                         type="button"
                         onClick={() => setShowPositions(false)}
-                        className="text-[10px] text-neutral-500 hover:text-neutral-200"
+                        className={isLightWorkspace ? 'text-[10px] text-[#8a8377] hover:text-[#1f2937]' : 'text-[10px] text-neutral-500 hover:text-neutral-200'}
                       >
-                        hide
+                        숨김
                       </button>
                     </div>
                     <div className="mt-2 space-y-2">
@@ -1898,305 +2238,356 @@ export function Chart() {
                           >
                             <div className="flex items-center justify-between">
                               <span className="font-semibold uppercase tracking-[0.2em]">{side}</span>
-                              <span className="text-[10px] text-neutral-400">{position.symbol}</span>
+                              <span className={isLightWorkspace ? 'text-[10px] text-[#8a8377]' : 'text-[10px] text-neutral-400'}>{position.symbol}</span>
                             </div>
-                            <div className="mt-1 text-[11px] text-neutral-200">
+                            <div className={isLightWorkspace ? 'mt-1 text-[11px] text-[#4a453d]' : 'mt-1 text-[11px] text-neutral-200'}>
                               진입가 {position.entry_price || '-'}
                             </div>
-                            <div className="mt-1 text-[10px] text-neutral-400">
+                            <div className={isLightWorkspace ? 'mt-1 text-[10px] text-[#7b7468]' : 'mt-1 text-[10px] text-neutral-400'}>
                               SL {position.stop_loss || '-'} · TP {position.take_profit || '-'}
                             </div>
-                            <div className="mt-1 text-[10px] text-neutral-500">
+                            <div className={isLightWorkspace ? 'mt-1 text-[10px] text-[#8a8377]' : 'mt-1 text-[10px] text-neutral-500'}>
                               시작 {openedText}
                             </div>
                           </button>
                         )
                       })}
                       {activeManualPositions.length === 0 && (
-                        <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[11px] text-neutral-400">
+                        <div className={isLightWorkspace ? 'rounded-lg border border-[#dedbd3] bg-[#fcfaf6] px-3 py-2 text-[11px] text-[#7b7468]' : 'rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[11px] text-neutral-400'}>
                           열린 포지션 없음
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-                {densityAdjustedPositions.map((group) => {
-                  const visibleBubbles = showBubbles
-                    ? group.bubbles.filter((bubble) => filteredBubbleIds.has(bubble.id))
-                    : []
-                  const visibleTrades = showTrades ? group.trades : []
+                {visibleMarkerGroups.map((group) => {
+                  const visibleBubbles = group.bubbles
+                  const visibleTrades = group.trades
 
+                  const chartWidth = containerRef.current?.clientWidth || 0
                   if (visibleBubbles.length === 0 && visibleTrades.length === 0) return null
-                  if (group.x < -40 || group.x > (containerRef.current?.clientWidth || 0) + 40) return null
+                  if (group.x < -40 || group.x > chartWidth + 40) return null
                   if (group.y < 0 || group.y > (containerRef.current?.clientHeight || 0)) return null
 
-                  const bubbleCount = visibleBubbles.length
-                  const tradeCount = visibleTrades.length
-                  const buyTradeCount = visibleTrades.filter((trade) => trade.side === 'buy').length
-                  const sellTradeCount = visibleTrades.filter((trade) => trade.side === 'sell').length
-                  const hasBubbles = bubbleCount > 0
-                  const hasTrades = tradeCount > 0
-                  const tooltipBelow = group.y < 140
                   const isSelected = selectedGroup?.candleTime === group.candleTime
-                  const bubbleTone = visibleBubbles.some((bubble) => bubble.action === 'SELL' || bubble.tags?.some((tag) => tag.toLowerCase() === 'sell'))
-                    ? 'border-rose-300/35 bg-rose-300/12 text-rose-100'
-                    : 'border-cyan-300/35 bg-cyan-300/12 text-cyan-100'
-                  const tradeTone = buyTradeCount >= sellTradeCount
-                    ? 'border-emerald-300/35 bg-emerald-300/12 text-emerald-100'
-                    : 'border-amber-300/35 bg-amber-300/12 text-amber-100'
-                  const markerShellClass = hasBubbles && hasTrades
-                    ? 'border-violet-300/35 bg-slate-950/92'
-                    : hasBubbles
-                      ? 'border-cyan-300/30 bg-slate-950/90'
-                      : 'border-emerald-300/30 bg-slate-950/90'
+                  if (!isSelected) return null
+                  const chartHeight = containerRef.current?.clientHeight || 0
+                  const connectorHeight = Math.max(chartHeight - group.y + 1, 24)
 
                   return (
                     <div
                       key={group.candleTime}
-                      className="absolute group cursor-pointer hover:z-50"
-                      style={{ left: group.x, top: Math.max(48, group.y) - 44, transform: 'translateX(-50%)', pointerEvents: 'auto' }}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        const nextGroup = isSelected ? null : { candleTime: group.candleTime, bubbles: visibleBubbles, trades: visibleTrades }
-                        setSelectedGroup(nextGroup)
-                        setSelectedPosition(null)
-                        if (nextGroup) setPanelTab('detail')
+                      className="absolute z-40 top-0 pointer-events-none -translate-x-1/2"
+                      style={{
+                        left: group.x,
+                        height: chartHeight,
+                        width: isLightWorkspace ? 28 : 1,
+                        borderRadius: isLightWorkspace ? 999 : 0,
+                        background: isLightWorkspace
+                          ? 'rgba(128, 116, 95, 0.16)'
+                          : 'rgba(167,139,250,0.50)',
                       }}
-                    >
-                      <div
-                        className={`absolute left-1/2 -bottom-11 h-11 w-px -translate-x-1/2 border-l border-dashed opacity-80 ${isSelected ? 'border-violet-300' : 'border-neutral-500/80'}`}
-                      />
-
-                      <div
-                        className={`relative flex items-center gap-1.5 rounded-2xl border px-2 py-1.5 text-[11px] font-semibold shadow-[0_18px_40px_rgba(0,0,0,0.35)] transition duration-150 group-hover:-translate-y-0.5 ${markerShellClass} ${isSelected ? 'ring-2 ring-violet-300/80 ring-offset-2 ring-offset-neutral-950' : ''}`}
-                      >
-                        {hasBubbles && (
-                          <span className={`rounded-full border px-2 py-0.5 leading-none ${bubbleTone}`}>
-                            말 {bubbleCount}
-                          </span>
-                        )}
-                        {hasTrades && (
-                          <span className={`rounded-full border px-2 py-0.5 leading-none ${tradeTone}`}>
-                            체 {tradeCount}
-                          </span>
-                        )}
-                      </div>
-
-                      <div
-                        className={`absolute left-1/2 z-50 hidden w-[320px] -translate-x-1/2 rounded-[22px] border border-slate-700/80 bg-slate-950/96 p-4 text-xs text-neutral-200 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl group-hover:block ${tooltipBelow ? 'top-full mt-3' : 'bottom-full mb-3'}`}
-                      >
-                        <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">선택 장면</p>
-                            <p className="mt-2 text-sm font-semibold text-neutral-50">
-                              {formatChartDateTime(group.candleTime, useSeoulTime)}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap justify-end gap-2 text-[10px]">
-                            {hasBubbles && (
-                              <span className="rounded-full border border-cyan-300/35 bg-cyan-300/12 px-2 py-1 font-semibold text-cyan-100">
-                                말풍선 {bubbleCount}
-                              </span>
-                            )}
-                            {hasTrades && (
-                              <span className="rounded-full border border-emerald-300/35 bg-emerald-300/12 px-2 py-1 font-semibold text-emerald-100">
-                                체결 {tradeCount}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {hasBubbles && (
-                          <div className="mt-3">
-                            <div className="mb-2 flex items-center justify-between">
-                              <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">말풍선</p>
-                              <span className="text-[10px] text-cyan-100/75">기록 {bubbleCount}</span>
-                            </div>
-                            <div className="max-h-[190px] space-y-2 overflow-y-auto pr-1">
-                              {visibleBubbles.map((bubble) => (
-                                <div key={bubble.id} className="rounded-2xl border border-white/8 bg-slate-900/88 p-3">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span
-                                        className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
-                                          bubble.action === 'BUY'
-                                            ? 'bg-emerald-300/15 text-emerald-100'
-                                            : bubble.action === 'SELL'
-                                              ? 'bg-rose-300/15 text-rose-100'
-                                              : bubble.action === 'TP'
-                                                ? 'bg-cyan-300/15 text-cyan-100'
-                                                : bubble.action === 'SL'
-                                                  ? 'bg-amber-300/15 text-amber-100'
-                                                  : 'bg-neutral-700/70 text-neutral-100'
-                                        }`}
-                                      >
-                                        {bubble.action || 'NOTE'}
-                                      </span>
-                                      <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-neutral-300">
-                                        {getBubbleSourceBadge(bubble)}
-                                      </span>
-                                    </div>
-                                    <span className="text-[11px] font-semibold text-neutral-100">
-                                      ${bubble.price.toLocaleString()}
-                                    </span>
-                                  </div>
-                                  <p className="mt-2 text-[12px] leading-5 text-neutral-100">
-                                    {getBubbleDisplayNote(bubble)}
-                                  </p>
-                                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-neutral-400">
-                                    <span>{bubble.symbol}</span>
-                                    <span>{bubble.timeframe}</span>
-                                    {bubble.tags?.slice(0, 3).map((tag) => (
-                                      <span key={`${bubble.id}-${tag}`} className="rounded-full border border-white/10 px-2 py-0.5 text-neutral-300">
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {hasTrades && (
-                          <div className="mt-3">
-                            <div className="mb-2 flex items-center justify-between">
-                              <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">체결 오버레이</p>
-                              <span className="text-[10px] text-neutral-400">
-                                매수 {buyTradeCount} · 매도 {sellTradeCount}
-                              </span>
-                            </div>
-                            <div className="max-h-[180px] space-y-2 overflow-y-auto pr-1">
-                              {visibleTrades.map((trade) => (
-                                <div key={trade.id} className="rounded-2xl border border-white/8 bg-slate-900/84 p-3">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className={`rounded-full px-2 py-1 text-[10px] font-semibold ${trade.side === 'buy' ? 'bg-emerald-300/15 text-emerald-100' : 'bg-rose-300/15 text-rose-100'}`}
-                                      >
-                                        {trade.side === 'buy' ? 'BUY' : 'SELL'}
-                                      </span>
-                                      <span className="text-[10px] text-neutral-400">{trade.exchange}</span>
-                                    </div>
-                                    <span className="text-[11px] font-semibold text-neutral-100">
-                                      ${trade.price.toLocaleString()}
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-300">
-                                    <span>수량 {trade.qty ?? '-'}</span>
-                                    <span>{formatChartDateTime(Math.floor(trade.ts / 1000), useSeoulTime)}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    />
                   )
                 })}
               </div>
             )}
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="kifu-stat-card">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">말풍선</p>
-              <p className="mt-2 text-3xl font-semibold text-neutral-50">{filteredBubbles.length}</p>
-              <p className="mt-2 text-xs text-neutral-500">필터 적용 기준</p>
-            </div>
-            <div className="kifu-stat-card">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">체결</p>
-              <p className="mt-2 text-3xl font-semibold text-neutral-50">{activeTrades.length}</p>
-              <p className="mt-2 text-xs text-neutral-500">현재 차트 오버레이</p>
-            </div>
-            <div className="kifu-stat-card">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">마커</p>
-              <p className="mt-2 text-3xl font-semibold text-neutral-50">{densitySummary.markers}</p>
-              <p className="mt-2 text-xs text-neutral-500">현재 밀도 {currentDensityLabel}</p>
+          <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f9f8f6]' : 'border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.012)_42%,rgba(255,255,255,0.02)_100%)]'}>
+            <div className={isLightWorkspace ? 'relative flex h-[64px] items-center overflow-hidden px-4 py-2.5' : 'relative flex min-h-[92px] items-center px-4 py-3'}>
+              <div className={isLightWorkspace ? 'absolute inset-x-0 top-0 h-px bg-[#ebe6dd]' : 'absolute inset-x-0 top-0 h-px bg-white/[0.04]'} />
+              <div className={isLightWorkspace ? 'absolute inset-x-0 bottom-0 h-px bg-[#d8d2c6]' : 'absolute inset-x-0 bottom-0 h-px bg-black/20'} />
+
+              {selectionDockGroup && (() => {
+                const bubbleCount = selectionDockGroup.bubbles.length
+                const tradeCount = selectionDockGroup.trades.length
+                const hasBubbles = bubbleCount > 0
+                const hasTrades = tradeCount > 0
+                const buyTradeCount = selectionDockGroup.trades.filter((trade) => trade.side === 'buy').length
+                const sellTradeCount = selectionDockGroup.trades.filter((trade) => trade.side === 'sell').length
+                const positionSnapshot = activeManualPositions.find((position) => {
+                  const openedAt = position.opened_at || position.created_at
+                  if (!openedAt) return false
+                  return Math.floor(new Date(openedAt).getTime() / 1000) <= selectionDockGroup.candleTime
+                }) ?? null
+                const bubbleAccentDotClass = selectionDockGroup.bubbles.some((bubble) => bubble.action === 'SELL' || bubble.tags?.some((tag) => tag.toLowerCase() === 'sell'))
+                  ? 'bg-rose-400'
+                  : 'bg-cyan-500'
+                const tradeAccentDotClass = buyTradeCount >= sellTradeCount
+                  ? 'bg-emerald-500'
+                  : 'bg-amber-500'
+                const selectionDetail = positionSnapshot
+                  ? `${positionSnapshot.position_side.toUpperCase()} 포지션 · 진입 ${positionSnapshot.entry_price || '-'}`
+                  : ''
+
+                return (
+                  <div className={isLightWorkspace ? 'flex h-full w-full items-center gap-3 overflow-hidden rounded-[16px] border border-[#d8d2c6] bg-[#f7f4ee] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]' : 'flex w-full items-center gap-3 rounded-[22px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.86))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'}>
+                    <div className={isLightWorkspace ? 'min-w-[164px]' : 'min-w-[190px]'}>
+                      <p className={isLightWorkspace ? 'text-sm font-semibold text-[#1f2937]' : 'text-sm font-semibold text-neutral-50'}>
+                        {formatChartDateTime(selectionDockGroup.candleTime, useSeoulTime)}
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className={isLightWorkspace ? 'flex items-center gap-2 overflow-hidden' : 'grid gap-2 md:grid-cols-2'}>
+                        {hasBubbles && (
+                          <span className={isLightWorkspace ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#c9d9da] bg-[#fffdfa] px-2.5 py-1 text-[11px] font-medium text-[#415f62]' : 'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs'}>
+                            <span className={`h-2 w-2 rounded-full ${bubbleAccentDotClass}`} />
+                            {bubbleCount > 1 ? `말풍선 ${bubbleCount}` : '말풍선'}
+                          </span>
+                        )}
+
+                        {hasTrades && (
+                          <span className={isLightWorkspace ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#ddd4bc] bg-[#fffdfa] px-2.5 py-1 text-[11px] font-medium text-[#685b36]' : 'inline-flex items-center gap-1 rounded-[8px] border px-2 py-1 text-xs'}>
+                            <span className={`h-2 w-2 rounded-[3px] ${tradeAccentDotClass}`} />
+                            {tradeCount > 1 ? `체결 ${tradeCount}` : '체결'}
+                          </span>
+                        )}
+
+                        {selectionDetail && (
+                          <p className={isLightWorkspace ? 'truncate text-[11px] text-[#6f675b]' : 'truncate text-sm text-neutral-300'}>
+                            {selectionDetail}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGroup(null)}
+                        className={isLightWorkspace ? 'rounded-full border border-[#d1cbc0] bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-[#5d574f] transition hover:border-[#bdb5a8]' : 'rounded-full border border-neutral-700/90 bg-white/[0.02] px-2 py-1 text-[10px] font-semibold text-neutral-300 transition hover:border-neutral-500'}
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {!selectionDockGroup && (
+                <div className={isLightWorkspace ? 'h-full w-full rounded-[16px] border border-dashed border-[#ddd7cb] bg-[#faf7f1]' : 'w-full rounded-[22px] border border-white/[0.04] bg-black/20 px-4 py-3 text-sm text-neutral-500'} />
+              )}
             </div>
           </div>
 
-          {(selectedPosition || selectedGroup) && (
-            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              {selectedGroup && (
-                <div className="kifu-panel-muted p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="kifu-eyebrow">선택 장면</p>
-                      <h4 className="mt-2 text-lg font-semibold text-neutral-100">
-                        {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
-                      </h4>
-                      <p className="mt-2 text-sm leading-6 text-neutral-400">
-                        선택한 장면의 말풍선과 체결이 어떤 조합으로 묶여 있는지 빠르게 확인하는 보조 영역입니다.
-                      </p>
-                    </div>
-                    <span className="kifu-chip">{selectedGroup.bubbles.length}개 말풍선 · {selectedGroup.trades.length}개 체결</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">말풍선 메모</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedGroup.bubbles.length}개</p>
-                      <p className="mt-2 text-xs text-neutral-500">상세 목록은 오른쪽 패널에서 그대로 확인</p>
-                    </div>
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">체결 오버레이</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedGroup.trades.length}개</p>
-                      <p className="mt-2 text-xs text-neutral-500">선택 시점에 겹친 체결 수</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+          <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.014),rgba(255,255,255,0.004)_100%)]'}>
+            <div className={isLightWorkspace ? 'py-3' : 'py-4'}>
+              <div
+                ref={eventLaneRef}
+                className="relative w-full overscroll-none"
+                style={{ height: `${eventLaneHeight}px`, overscrollBehavior: 'contain' }}
+              >
+                {selectedVisibleGroup && (
+                  <div
+                    className="absolute top-0 bottom-0 pointer-events-none -translate-x-1/2"
+                    style={{
+                      left: selectedVisibleGroup.x,
+                      width: isLightWorkspace ? 28 : 1,
+                      borderRadius: isLightWorkspace ? 999 : 0,
+                      background: isLightWorkspace ? 'rgba(128, 116, 95, 0.16)' : 'rgba(167,139,250,0.55)',
+                    }}
+                  />
+                )}
 
-              {selectedPosition && (
-                <div className="kifu-panel-muted p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="kifu-eyebrow">선택 포지션</p>
-                      <h4 className="mt-2 text-lg font-semibold text-neutral-100">
-                        {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
-                      </h4>
-                      <p className="mt-2 text-sm text-neutral-400">
-                        {selectedPosition.opened_at ? new Date(selectedPosition.opened_at).toLocaleString() : '시간 정보 없음'}
-                      </p>
-                    </div>
-                    <span className="kifu-chip">포지션 요약</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">진입가</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.entry_price || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">수량</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.size || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">SL</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.stop_loss || '-'}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">TP</p>
-                      <p className="mt-2 text-sm font-semibold text-neutral-100">{selectedPosition.take_profit || '-'}</p>
-                    </div>
-                  </div>
-                  {(selectedPosition.strategy || selectedPosition.memo) && (
-                    <div className="mt-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 text-sm leading-6 text-neutral-300">
-                      {selectedPosition.strategy && <p>전략: {selectedPosition.strategy}</p>}
-                      {selectedPosition.memo && <p className={selectedPosition.strategy ? 'mt-2' : ''}>메모: {selectedPosition.memo}</p>}
-                    </div>
-                  )}
+                {!isLightWorkspace && (
+                  <div
+                    className="absolute inset-x-0 rounded-[22px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.028),rgba(255,255,255,0.014)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+                    style={{ top: eventLaneBubbleTrackTop, height: eventLaneBubbleTrackHeight }}
+                  />
+                )}
+                <div className="absolute left-4 z-10" style={{ top: eventLaneBubbleTrackTop + 10 }}>
+                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/35 px-3 py-1 text-[11px] font-semibold text-neutral-100'}>
+                    말풍선
+                  </span>
                 </div>
-              )}
+                {isLightWorkspace && (
+                  <div
+                    className="absolute rounded-full bg-[#d8d2c6]"
+                    style={{ left: 84, right: 12, top: eventLaneBubbleRailCenter - 3, height: 6 }}
+                  />
+                )}
+                {!isLightWorkspace && (
+                  <div
+                    className="absolute inset-x-6 border-t border-white/[0.08]"
+                    style={{ top: eventLaneBubbleTrackTop + 34 }}
+                  />
+                )}
+
+                {!isLightWorkspace && (
+                  <div
+                    className="absolute inset-x-0 rounded-[22px] border border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.022),rgba(255,255,255,0.012)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+                    style={{ top: eventLaneTradeTrackTop, height: eventLaneTradeTrackHeight }}
+                  />
+                )}
+                <div className="absolute left-4 z-10" style={{ top: eventLaneTradeTrackTop + 10 }}>
+                  <span className={isLightWorkspace ? 'text-[11px] font-medium text-[#7c7468]' : 'inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/35 px-3 py-1 text-[11px] font-semibold text-neutral-100'}>
+                    체결
+                  </span>
+                </div>
+                {isLightWorkspace && (
+                  <div
+                    className="absolute right-4 z-10 flex items-center gap-3 text-[10px] font-medium text-[#7c7468]"
+                    style={{ top: eventLaneTradeTrackTop + 10 }}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex h-[10px] w-[10px] rotate-45 rounded-[2px] border border-[#567d59] bg-[#6f9b73]" />
+                      BUY
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex h-[10px] w-[10px] rounded-[3px] border border-[#91673d] bg-[#b68852]" />
+                      SELL
+                    </span>
+                  </div>
+                )}
+                {isLightWorkspace && (
+                  <div
+                    className="absolute rounded-full bg-[#d8d2c6]"
+                    style={{ left: 84, right: 12, top: eventLaneTradeRailCenter - 3, height: 6 }}
+                  />
+                )}
+                {!isLightWorkspace && (
+                  <div
+                    className="absolute inset-x-6 border-t border-white/[0.08]"
+                    style={{ top: eventLaneTradeTrackTop + 34 }}
+                  />
+                )}
+
+                {clusteredBubbleMarkers.map((cluster) => {
+                  const bubbleCount = cluster.bubbles.length
+                  const showCount = bubbleCount > 1
+                  const chartWidth = containerRef.current?.clientWidth || 0
+                  if (!chartWidth || cluster.x < 88 || cluster.x > chartWidth - 14) return null
+                  const bubbleIsSellBias = cluster.bubbles.some((b) => b.action === 'SELL' || b.tags?.some((t) => t.toLowerCase() === 'sell'))
+                  const bubbleAccentDotClass = bubbleIsSellBias ? 'bg-[#b36d79]' : 'bg-[#5f95a0]'
+                  const bubbleSingleClass = bubbleIsSellBias
+                    ? 'border-[#9f6871] bg-[#b36d79]'
+                    : 'border-[#4f7d86] bg-[#5f95a0]'
+                  const bubbleTone = bubbleIsSellBias
+                    ? isLightWorkspace ? 'border-rose-200 bg-rose-50 text-[#1f2937]' : 'border-rose-300/55 bg-rose-300/16 text-rose-50'
+                    : isLightWorkspace ? 'border-cyan-200 bg-cyan-50 text-[#1f2937]' : 'border-cyan-300/55 bg-cyan-300/16 text-cyan-50'
+                  const isSelected = cluster.candleTimes.some((ct) => ct === selectedGroup?.candleTime)
+                  return (
+                    <button
+                      key={`bubble-cluster-${cluster.primaryCandleTime}`}
+                      type="button"
+                      onClick={() => {
+                        const nextGroup = isSelected ? null : { candleTime: cluster.primaryCandleTime, bubbles: cluster.bubbles, trades: cluster.trades }
+                        setSelectedGroup(nextGroup)
+                        setSelectedPosition(null)
+                        if (nextGroup) setPanelTab('detail')
+                      }}
+                      className="absolute cursor-pointer"
+                      style={{ left: cluster.x, top: eventLaneBubbleRailCenter, transform: 'translate(-50%, -50%)' }}
+                    >
+                      <div
+                        className={`relative flex items-center gap-1 text-[10px] font-semibold leading-none transition duration-150 ${
+                          isLightWorkspace
+                            ? (showCount
+                              ? `rounded-full border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${bubbleIsSellBias ? 'border-[#dec1c7] bg-[#fff7f8]' : 'border-[#bfd2d5] bg-[#f6fbfc]'}`
+                              : 'rounded-full text-[#675f54]')
+                            : 'border-cyan-200/70 bg-slate-950 text-cyan-50 shadow-[0_18px_28px_rgba(0,0,0,0.26)] hover:-translate-y-0.5'
+                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
+                      >
+                        <span className={`${isLightWorkspace ? (showCount ? 'inline-flex items-center gap-1.5 rounded-full tabular-nums' : 'inline-flex items-center justify-center') : `inline-flex items-center gap-1 rounded-full border px-1.5 py-[3px] tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.02)] ${bubbleTone}`}`}>
+                          <span className={`${isLightWorkspace ? (showCount ? `h-[12px] w-[12px] ${bubbleAccentDotClass}` : `h-[18px] w-[18px] border-2 shadow-[0_0_0_3px_rgba(244,241,234,0.92)] ${bubbleSingleClass}`) : 'h-1.5 w-1.5'} rounded-full ${showCount || !isLightWorkspace ? bubbleAccentDotClass : ''}`} />
+                          {showCount && <span>{bubbleCount}</span>}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+
+                {clusteredTradeMarkers.map((cluster) => {
+                  const tradeCount = cluster.trades.length
+                  const showCount = tradeCount > 1
+                  const chartWidth = containerRef.current?.clientWidth || 0
+                  if (!chartWidth || cluster.x < 88 || cluster.x > chartWidth - 14) return null
+                  const buyCount = cluster.trades.filter((t) => t.side === 'buy').length
+                  const sellCount = cluster.trades.filter((t) => t.side === 'sell').length
+                  const tradeIsBuyBias = buyCount >= sellCount
+                  const tradeAccentDotClass = tradeIsBuyBias ? 'bg-[#6f9b73]' : 'bg-[#b68852]'
+                  const tradeSingleClass = tradeIsBuyBias
+                    ? 'rotate-45 rounded-[3px] border-[#567d59] bg-[#6f9b73]'
+                    : 'rounded-[4px] border-[#91673d] bg-[#b68852]'
+                  const isSelected = cluster.candleTimes.some((ct) => ct === selectedGroup?.candleTime)
+                  return (
+                    <button
+                      key={`trade-cluster-${cluster.primaryCandleTime}`}
+                      type="button"
+                      onClick={() => {
+                        const nextGroup = isSelected ? null : { candleTime: cluster.primaryCandleTime, bubbles: cluster.bubbles, trades: cluster.trades }
+                        setSelectedGroup(nextGroup)
+                        setSelectedPosition(null)
+                        if (nextGroup) setPanelTab('detail')
+                      }}
+                      className="absolute cursor-pointer"
+                      style={{ left: cluster.x, top: eventLaneTradeRailCenter, transform: 'translate(-50%, -50%)' }}
+                    >
+                      <div
+                        className={`relative flex items-center gap-1 text-[10px] font-semibold leading-none transition duration-150 ${
+                          isLightWorkspace
+                            ? (showCount
+                              ? `rounded-[8px] border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${tradeIsBuyBias ? 'border-[#c8d5c5] bg-[#f8fbf6]' : 'border-[#d9ccb8] bg-[#fdf9f2]'}`
+                              : 'rounded-[8px] text-[#675f54]')
+                            : 'border-emerald-200/70 bg-slate-950 text-emerald-50 shadow-[0_18px_28px_rgba(0,0,0,0.26)] hover:-translate-y-0.5'
+                        } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
+                      >
+                        {isLightWorkspace && !showCount && tradeCount < 0 ? (
+                          <span className="inline-flex items-center justify-center">
+                            <span className={`text-[20px] font-extrabold leading-none ${tradeIsBuyBias ? 'text-[#4f8855]' : 'text-[#9e5420]'}`}>
+                              {tradeIsBuyBias ? '▲' : '▼'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className={`${isLightWorkspace ? 'inline-flex items-center gap-1.5 rounded-[8px] tabular-nums' : 'inline-flex items-center gap-1 rounded-[8px] border px-1.5 py-[3px] tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.02)]'}`}>
+                            <span className={`${isLightWorkspace ? `h-[14px] w-[14px] border ${tradeSingleClass}` : 'h-1.5 w-1.5'} ${showCount || !isLightWorkspace ? tradeAccentDotClass : ''}`} />
+                            {showCount && <span>{tradeCount}</span>}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+
+                {clusteredBubbleMarkers.length === 0 && clusteredTradeMarkers.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center text-sm text-neutral-500">
+                    현재 구간에 표시할 이벤트가 없습니다.
+                  </div>
+                )}
+                {isLightWorkspace && (
+                  <>
+                    <div
+                      className="absolute inset-x-0 border-t border-[#dfd8cc]"
+                      style={{ top: eventLaneAxisTop }}
+                    />
+                    {eventLaneTicks.map((tick) => (
+                      <div
+                        key={`event-lane-tick-${tick.x}-${tick.label}`}
+                        className="absolute text-[11px] text-[#857d71]"
+                        style={{
+                          left: tick.x,
+                          top: eventLaneAxisTop + 8,
+                          transform: 'translateX(-50%)',
+                        }}
+                      >
+                        {tick.label}
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
-          )}
+          </div>
+
         </div>
 
-        <aside className="kifu-panel flex flex-col gap-4 p-5">
+        <aside className={sideShellClass} style={isLightWorkspace ? { height: `${rightPanelTargetHeight}px` } : undefined}>
           <div>
             <p className="kifu-eyebrow">복기 패널</p>
-            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">말풍선과 체결</h3>
-            <p className="mt-2 text-sm text-neutral-400">
+            <h3 className={isLightWorkspace ? 'mt-2 text-2xl font-semibold text-[#1f2937]' : 'mt-2 text-2xl font-semibold text-neutral-100'}>말풍선과 체결</h3>
+            <p className={isLightWorkspace ? 'mt-2 text-sm text-[#7b7468]' : 'mt-2 text-sm text-neutral-400'}>
               {filteredBubbles.length}개 기록 · {activeTrades.length}개 체결
             </p>
           </div>
@@ -2205,10 +2596,10 @@ export function Chart() {
             <button
               type="button"
               onClick={() => setPanelTab('summary')}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                 panelTab === 'summary'
-                  ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                  ? sideTabActiveClass
+                  : sideTabInactiveClass
               }`}
             >
               기록 요약
@@ -2216,37 +2607,38 @@ export function Chart() {
             <button
               type="button"
               onClick={() => setPanelTab('detail')}
-              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
                 panelTab === 'detail'
-                  ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                  : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                  ? sideTabActiveClass
+                  : sideTabInactiveClass
               }`}
             >
               선택 상세
             </button>
           </div>
 
+          <div className="min-h-0 flex-1 overflow-hidden">
           {panelTab === 'summary' && (
-            <>
+            <div className="flex h-full min-h-0 flex-col gap-4">
               <div className="space-y-3">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                <div className={panelCardLargeClass}>
+                  <div className={`flex items-center justify-between text-sm ${isLightWorkspace ? 'text-[#6b6458]' : 'text-neutral-500'}`}>
                     <span>말풍선 요약</span>
                     <span>{bubbleSummary.total.toLocaleString()}개</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
-                    <span className="rounded-full border border-emerald-500/40 px-2 py-0.5 text-emerald-300">BUY {bubbleSummary.buy}</span>
-                    <span className="rounded-full border border-rose-500/40 px-2 py-0.5 text-rose-300">SELL {bubbleSummary.sell}</span>
-                    <span className="rounded-full border border-sky-500/40 px-2 py-0.5 text-sky-300">HOLD {bubbleSummary.hold}</span>
-                    <span className="rounded-full border border-emerald-400/40 px-2 py-0.5 text-emerald-200">TP {bubbleSummary.tp}</span>
-                    <span className="rounded-full border border-rose-400/40 px-2 py-0.5 text-rose-200">SL {bubbleSummary.sl}</span>
-                    <span className="rounded-full border border-neutral-600/60 px-2 py-0.5 text-neutral-300">NOTE {bubbleSummary.note}</span>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                    <span className={isLightWorkspace ? 'rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-800' : 'rounded-full border border-emerald-500/40 px-2 py-0.5 text-emerald-300'}>BUY {bubbleSummary.buy}</span>
+                    <span className={isLightWorkspace ? 'rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-rose-800' : 'rounded-full border border-rose-500/40 px-2 py-0.5 text-rose-300'}>SELL {bubbleSummary.sell}</span>
+                    <span className={isLightWorkspace ? 'rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-800' : 'rounded-full border border-sky-500/40 px-2 py-0.5 text-sky-300'}>HOLD {bubbleSummary.hold}</span>
+                    <span className={isLightWorkspace ? 'rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700' : 'rounded-full border border-emerald-400/40 px-2 py-0.5 text-emerald-200'}>TP {bubbleSummary.tp}</span>
+                    <span className={isLightWorkspace ? 'rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-rose-700' : 'rounded-full border border-rose-400/40 px-2 py-0.5 text-rose-200'}>SL {bubbleSummary.sl}</span>
+                    <span className={isLightWorkspace ? 'rounded-full border border-[#d5cfc3] bg-[#f7f3ec] px-2 py-0.5 text-[#6b655c]' : 'rounded-full border border-neutral-600/60 px-2 py-0.5 text-neutral-300'}>NOTE {bubbleSummary.note}</span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-[10px] text-neutral-500">
+                  <div className={`mt-3 flex items-center justify-between text-[11px] ${isLightWorkspace ? 'text-[#6f675b]' : 'text-neutral-500'}`}>
                     <span>현재 밀도: {currentDensityLabel}</span>
                     <span>표시 {densitySummary.markers.toLocaleString()} / {densitySummary.totalMarkers.toLocaleString()}</span>
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-600">
+                  <div className={`mt-1 flex items-center justify-between text-[11px] ${isLightWorkspace ? 'text-[#7a7266]' : 'text-neutral-600'}`}>
                     <span>집계</span>
                     <span>
                       💬 {densitySummary.bubbles.toLocaleString()} · ↕ {densitySummary.trades.toLocaleString()}
@@ -2258,7 +2650,7 @@ export function Chart() {
                   value={bubbleSearch}
                   onChange={(e) => setBubbleSearch(e.target.value)}
                   placeholder="메모/태그 검색"
-                  className="kifu-field w-full py-2 text-sm"
+                  className={isLightWorkspace ? 'w-full rounded-xl border border-[#dedbd3] bg-white/80 px-3 py-2 text-sm text-[#1f2937] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]' : 'kifu-field w-full py-2 text-sm'}
                 />
                 <div className="flex flex-wrap gap-2">
                   {actionOptions.map((action) => (
@@ -2268,8 +2660,8 @@ export function Chart() {
                       onClick={() => setActionFilter(action)}
                       className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                         actionFilter === action
-                          ? 'border-neutral-100 bg-neutral-100 text-neutral-950'
-                          : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+                          ? sideTabActiveClass
+                          : sideTabInactiveClass
                       }`}
                     >
                       {action}
@@ -2278,37 +2670,37 @@ export function Chart() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-neutral-500">
+              <div className="min-h-0 flex flex-1 flex-col gap-2">
+                <div className={`flex items-center justify-between text-sm ${isLightWorkspace ? 'text-[#6b6458]' : 'text-neutral-500'}`}>
                   <span>최근 기록</span>
                   <span>{filteredBubbles.length}개 기록</span>
                 </div>
-                <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2">
+                <div className="min-h-0 flex-1 overflow-y-auto space-y-2 pr-2">
                   {filteredBubbles.length === 0 && (
-                    <div className="rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500">
+                    <div className={emptyPanelClass}>
                       표시할 버블이 없습니다.
                     </div>
                   )}
                   {pagedSummaryBubbles.map((bubble) => (
-                    <div key={bubble.id} className="rounded-lg border border-white/[0.06] bg-black/20 p-3">
-                      <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <div key={bubble.id} className={panelCardClass}>
+                      <div className={`flex items-center justify-between text-sm ${isLightWorkspace ? 'text-[#6b6458]' : 'text-neutral-500'}`}>
                         <span>{formatChartDateTime(Math.floor(bubble.ts / 1000), useSeoulTime)}</span>
-                        <span className="text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</span>
-                        <span className={bubble.action === 'BUY' ? 'text-green-400' : bubble.action === 'SELL' ? 'text-red-400' : 'text-neutral-400'}>
+                        <span className={isLightWorkspace ? 'text-[11px] text-emerald-700/80' : 'text-[10px] text-emerald-200/80'}>{getBubbleSourceBadge(bubble)}</span>
+                        <span className={bubble.action === 'BUY' ? (isLightWorkspace ? 'text-emerald-700' : 'text-green-400') : bubble.action === 'SELL' ? (isLightWorkspace ? 'text-rose-700' : 'text-red-400') : isLightWorkspace ? 'text-[#7b7468]' : 'text-neutral-400'}>
                           {bubble.action || 'NOTE'}
                         </span>
                       </div>
-                      <div className="mt-1 text-[10px] text-neutral-500">
+                      <div className={isLightWorkspace ? 'mt-1 text-[11px] text-[#7a7266]' : 'mt-1 text-[10px] text-neutral-500'}>
                         생성 {formatChartDateTime(Math.floor(new Date(bubble.created_at).getTime() / 1000), useSeoulTime)}
                       </div>
-                      <p className="mt-1 text-sm text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-500">
-                        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.symbol}</span>
-                        <span className="rounded-full border border-neutral-700 px-2 py-0.5">{bubble.timeframe}</span>
+                      <p className={isLightWorkspace ? 'mt-1 text-sm text-[#4a453d] line-clamp-2' : 'mt-1 text-sm text-neutral-200 line-clamp-2'}>{getBubbleDisplayNote(bubble)}</p>
+                      <div className={isLightWorkspace ? 'mt-2 flex flex-wrap items-center gap-2 text-[11px] text-[#7a7266]' : 'mt-2 flex flex-wrap items-center gap-2 text-[10px] text-neutral-500'}>
+                        <span className={isLightWorkspace ? 'rounded-full border border-[#d5cfc3] px-2 py-0.5' : 'rounded-full border border-neutral-700 px-2 py-0.5'}>{bubble.symbol}</span>
+                        <span className={isLightWorkspace ? 'rounded-full border border-[#d5cfc3] px-2 py-0.5' : 'rounded-full border border-neutral-700 px-2 py-0.5'}>{bubble.timeframe}</span>
                         <button
                           type="button"
                           onClick={() => focusOnTimestamp(bubble.ts, bubble.timeframe)}
-                          className="rounded-full border border-cyan-400/40 px-2 py-0.5 text-cyan-200 hover:bg-cyan-400/10"
+                          className={isLightWorkspace ? 'rounded-full border border-cyan-300 px-2 py-0.5 text-cyan-900 hover:bg-cyan-50' : 'rounded-full border border-cyan-400/40 px-2 py-0.5 text-cyan-200 hover:bg-cyan-400/10'}
                         >
                           차트로 이동
                         </button>
@@ -2331,37 +2723,37 @@ export function Chart() {
                   itemLabel="개"
                 />
               </div>
-            </>
+            </div>
           )}
 
           {panelTab === 'detail' && (
-            <div className="space-y-3">
+            <div className="h-full overflow-y-auto space-y-3 pr-1">
               {!selectedGroup && !selectedPosition && (
-                <div className="rounded-lg border border-white/[0.08] bg-black/20 p-4 text-xs text-neutral-500">
+                <div className={emptyPanelClass}>
                   차트에서 마커를 선택하면 상세가 표시됩니다.
                 </div>
               )}
               {selectedPosition && (
-                <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/20 p-4">
+                <div className={`space-y-3 ${panelCardLargeClass}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">포지션</p>
-                      <h3 className="mt-1 text-sm font-semibold text-neutral-100">
+                      <h3 className={isLightWorkspace ? 'mt-1 text-base font-semibold text-[#1f2937]' : 'mt-1 text-sm font-semibold text-neutral-100'}>
                         {selectedPosition.symbol} · {selectedPosition.position_side.toUpperCase()}
                       </h3>
-                      <p className="mt-1 text-xs text-neutral-400">
+                      <p className={isLightWorkspace ? 'mt-1 text-sm text-[#6f675b]' : 'mt-1 text-xs text-neutral-400'}>
                         {selectedPosition.opened_at ? new Date(selectedPosition.opened_at).toLocaleString() : '시간 정보 없음'}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedPosition(null)}
-                      className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                      className={isLightWorkspace ? 'rounded-lg border border-[#d1cbc0] px-2 py-1 text-[10px] text-[#7b7468] hover:bg-white' : 'rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800'}
                     >
                       닫기
                     </button>
                   </div>
-                  <div className="grid gap-2 text-xs text-neutral-300">
+                  <div className={isLightWorkspace ? 'grid gap-2 text-sm text-[#3f3931]' : 'grid gap-2 text-xs text-neutral-300'}>
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-500">진입가</span>
                       <span>{selectedPosition.entry_price || '-'}</span>
@@ -2383,12 +2775,12 @@ export function Chart() {
                       <span>{selectedPosition.leverage || '-'}</span>
                     </div>
                     {selectedPosition.strategy && (
-                      <div className="rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300">
+                      <div className={isLightWorkspace ? 'rounded-lg border border-[#dedbd3] bg-[#fcfaf6] p-2 text-sm text-[#3f3931]' : 'rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300'}>
                         전략: {selectedPosition.strategy}
                       </div>
                     )}
                     {selectedPosition.memo && (
-                      <div className="rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300">
+                      <div className={isLightWorkspace ? 'rounded-lg border border-[#dedbd3] bg-[#fcfaf6] p-2 text-sm text-[#3f3931]' : 'rounded-lg border border-white/[0.06] bg-black/25 p-2 text-[11px] text-neutral-300'}>
                         메모: {selectedPosition.memo}
                       </div>
                     )}
@@ -2400,14 +2792,14 @@ export function Chart() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">선택 장면</p>
-                      <h3 className="mt-1 text-sm font-semibold text-neutral-100">
+                      <h3 className={isLightWorkspace ? 'mt-1 text-sm font-semibold text-[#1f2937]' : 'mt-1 text-sm font-semibold text-neutral-100'}>
                         {formatChartDateTime(selectedGroup.candleTime, useSeoulTime)}
                       </h3>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedGroup(null)}
-                      className="rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800"
+                      className={isLightWorkspace ? 'rounded-lg border border-[#d1cbc0] px-2 py-1 text-[10px] text-[#7b7468] hover:bg-white' : 'rounded-lg border border-neutral-700 px-2 py-1 text-[10px] text-neutral-400 hover:bg-neutral-800'}
                     >
                       닫기
                     </button>
@@ -2418,29 +2810,29 @@ export function Chart() {
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
                         말풍선 ({selectedGroup.bubbles.length})
                       </p>
-                      <div className="max-h-[220px] overflow-y-auto space-y-2 pr-2">
+                      <div className="space-y-2 pr-2">
                         {pagedDetailBubbles.map((bubble) => (
-                          <div key={bubble.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
+                          <div key={bubble.id} className={panelCardClass}>
                             <div className="flex items-center justify-between">
-                              <span className={`text-xs font-bold ${
-                                bubble.action === 'BUY' ? 'text-green-400'
-                                  : bubble.action === 'SELL' ? 'text-red-400'
-                                    : bubble.action === 'TP' ? 'text-emerald-300'
-                                      : bubble.action === 'SL' ? 'text-rose-300'
-                                        : 'text-neutral-300'
+                              <span className={`text-sm font-bold ${
+                                bubble.action === 'BUY' ? (isLightWorkspace ? 'text-emerald-700' : 'text-green-400')
+                                  : bubble.action === 'SELL' ? (isLightWorkspace ? 'text-rose-700' : 'text-red-400')
+                                    : bubble.action === 'TP' ? (isLightWorkspace ? 'text-emerald-700' : 'text-emerald-300')
+                                      : bubble.action === 'SL' ? (isLightWorkspace ? 'text-rose-700' : 'text-rose-300')
+                                        : isLightWorkspace ? 'text-[#6b655c]' : 'text-neutral-300'
                               }`}>
                                 {bubble.action || 'NOTE'}
                               </span>
-                              <span className="text-xs text-neutral-400">${bubble.price.toLocaleString()}</span>
+                              <span className={isLightWorkspace ? 'text-sm text-[#6b6458]' : 'text-xs text-neutral-400'}>${bubble.price.toLocaleString()}</span>
                             </div>
-                            <div className="mt-0.5 text-[10px] text-emerald-200/80">{getBubbleSourceBadge(bubble)}</div>
-                            <div className="mt-1 text-[10px] text-neutral-500">
+                            <div className={isLightWorkspace ? 'mt-0.5 text-[11px] text-emerald-700/80' : 'mt-0.5 text-[10px] text-emerald-200/80'}>{getBubbleSourceBadge(bubble)}</div>
+                            <div className={isLightWorkspace ? 'mt-1 text-[11px] text-[#7a7266]' : 'mt-1 text-[10px] text-neutral-500'}>
                               캔들 {formatChartDateTime(Math.floor(bubble.ts / 1000), useSeoulTime)}
                             </div>
-                            <div className="mt-0.5 text-[10px] text-neutral-500">
+                            <div className={isLightWorkspace ? 'mt-0.5 text-[11px] text-[#7a7266]' : 'mt-0.5 text-[10px] text-neutral-500'}>
                               생성 {formatChartDateTime(Math.floor(new Date(bubble.created_at).getTime() / 1000), useSeoulTime)}
                             </div>
-                            <p className="mt-1 text-xs text-neutral-200 line-clamp-2">{getBubbleDisplayNote(bubble)}</p>
+                            <p className={isLightWorkspace ? 'mt-1 text-sm text-[#3f3931] line-clamp-2' : 'mt-1 text-xs text-neutral-200 line-clamp-2'}>{getBubbleDisplayNote(bubble)}</p>
                           </div>
                         ))}
                       </div>
@@ -2466,16 +2858,16 @@ export function Chart() {
                       <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
                         체결 ({selectedGroup.trades.length})
                       </p>
-                      <div className="max-h-[200px] overflow-y-auto space-y-2 pr-2">
+                      <div className="space-y-2 pr-2">
                         {pagedDetailTrades.map((trade) => (
-                          <div key={trade.id} className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
-                            <div className="flex items-center justify-between text-xs text-neutral-500">
-                              <span className={trade.side === 'buy' ? 'text-green-400' : 'text-red-400'}>
+                          <div key={trade.id} className={panelCardClass}>
+                            <div className={isLightWorkspace ? 'flex items-center justify-between text-sm text-[#6b6458]' : 'flex items-center justify-between text-xs text-neutral-500'}>
+                              <span className={trade.side === 'buy' ? (isLightWorkspace ? 'text-emerald-700' : 'text-green-400') : isLightWorkspace ? 'text-rose-700' : 'text-red-400'}>
                                 {trade.side.toUpperCase()}
                               </span>
                               <span>{trade.exchange}</span>
                             </div>
-                            <div className="mt-1 flex items-center justify-between text-xs text-neutral-300">
+                            <div className={isLightWorkspace ? 'mt-1 flex items-center justify-between text-sm text-[#3f3931]' : 'mt-1 flex items-center justify-between text-xs text-neutral-300'}>
                               <span>수량 {trade.qty ?? '-'}</span>
                               <span>@ ${trade.price.toLocaleString()}</span>
                             </div>
@@ -2502,6 +2894,7 @@ export function Chart() {
               )}
             </div>
           )}
+          </div>
         </aside>
       </section>
 
