@@ -283,8 +283,9 @@ export function Chart() {
   const [autoBubbleFromTrades, setAutoBubbleFromTrades] = useState(true)
   const [densityMode, setDensityMode] = useState<typeof densityOptions[number]['value']>('smart')
   const [visibleRange, setVisibleRange] = useState<{ from: number; to: number } | null>(null)
-  const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('ledger')
+  const [themeMode, setThemeMode] = useState<keyof typeof chartThemes>('noir')
   const isLightWorkspace = themeMode === 'ledger'
+  const isCompactLayout = true // keep compact single-row event lane geometry regardless of theme
   const [dataSource, setDataSource] = useState<'crypto' | 'stock'>('crypto')
   const [bubbleSearch, setBubbleSearch] = useState('')
   const [actionFilter, setActionFilter] = useState<typeof actionOptions[number]>('ALL')
@@ -1018,13 +1019,13 @@ export function Chart() {
     if (visibleRange) {
       filtered = filtered.filter((item) => item.candleTime >= visibleRange.from && item.candleTime <= visibleRange.to)
     }
-    const maxMarkers = isLightWorkspace ? 44 : 60
+    const maxMarkers = isCompactLayout ? 44 : 60
     if (filtered.length > maxMarkers) {
       const step = Math.ceil(filtered.length / maxMarkers)
       filtered = filtered.filter((_, index) => index % step === 0)
     }
     return filtered.sort((a, b) => a.candleTime - b.candleTime)
-  }, [overlayPositions, densityMode, visibleRange, isLightWorkspace])
+  }, [overlayPositions, densityMode, visibleRange, isCompactLayout])
 
   const filteredBubbles = useMemo(() => {
     const query = bubbleSearch.trim().toLowerCase()
@@ -1053,9 +1054,9 @@ export function Chart() {
   const buildTrackLayout = useCallback((groups: typeof visibleMarkerGroups) => {
     const layout = new Map<number, { lane: number }>()
     const active: Array<{ x: number; lane: number }> = []
-    const maxTrackLane = isLightWorkspace ? 0 : 2
-    const expireDistance = isLightWorkspace ? 86 : 92
-    const overlapDistance = isLightWorkspace ? 58 : 56
+    const maxTrackLane = isCompactLayout ? 0 : 2
+    const expireDistance = isCompactLayout ? 86 : 92
+    const overlapDistance = isCompactLayout ? 58 : 56
 
     groups.forEach((group) => {
       for (let index = active.length - 1; index >= 0; index -= 1) {
@@ -1079,7 +1080,7 @@ export function Chart() {
       layout,
       maxLane: lanes.length ? Math.max(...lanes) : 0,
     }
-  }, [isLightWorkspace])
+  }, [isCompactLayout])
 
   const bubbleTrackLayout = useMemo(() => {
     return buildTrackLayout(visibleMarkerGroups.filter((group) => group.bubbles.length > 0))
@@ -1133,20 +1134,20 @@ export function Chart() {
   }, [visibleMarkerGroups, selectedGroup])
   const selectionDockGroup = selectedGroup
 
-  const eventLaneTrackRows = isLightWorkspace ? 1 : 3
-  const eventLaneTrackGap = isLightWorkspace ? 12 : 22
-  const eventLaneRowHeight = isLightWorkspace ? 0 : 18
-  const eventLaneMarkerOffsetTop = isLightWorkspace ? 24 : 36
-  const eventLaneBubbleTrackTop = isLightWorkspace ? 10 : 18
-  const eventLaneBubbleTrackHeight = (isLightWorkspace ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
+  const eventLaneTrackRows = isCompactLayout ? 1 : 3
+  const eventLaneTrackGap = isCompactLayout ? 12 : 22
+  const eventLaneRowHeight = isCompactLayout ? 0 : 18
+  const eventLaneMarkerOffsetTop = isCompactLayout ? 24 : 36
+  const eventLaneBubbleTrackTop = isCompactLayout ? 10 : 18
+  const eventLaneBubbleTrackHeight = (isCompactLayout ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
   const eventLaneTradeTrackTop = eventLaneBubbleTrackTop + eventLaneBubbleTrackHeight + eventLaneTrackGap
-  const eventLaneTradeTrackHeight = (isLightWorkspace ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
+  const eventLaneTradeTrackHeight = (isCompactLayout ? 42 : 56) + (eventLaneTrackRows * eventLaneRowHeight)
   const eventLaneBubbleRailCenter = eventLaneBubbleTrackTop + 32
   const eventLaneTradeRailCenter = eventLaneTradeTrackTop + 32
-  const eventLaneAxisTop = eventLaneTradeTrackTop + eventLaneTradeTrackHeight + (isLightWorkspace ? 8 : 10)
-  const eventLaneAxisHeight = isLightWorkspace ? 24 : 26
-  const eventLaneHeight = eventLaneAxisTop + eventLaneAxisHeight + (isLightWorkspace ? 8 : 12)
-  const fallbackWorkspaceHeight = 560 + (isLightWorkspace ? 64 : 92) + eventLaneHeight + (isLightWorkspace ? 56 : 72)
+  const eventLaneAxisTop = eventLaneTradeTrackTop + eventLaneTradeTrackHeight + (isCompactLayout ? 8 : 10)
+  const eventLaneAxisHeight = isCompactLayout ? 24 : 26
+  const eventLaneHeight = eventLaneAxisTop + eventLaneAxisHeight + (isCompactLayout ? 8 : 12)
+  const fallbackWorkspaceHeight = 560 + (isCompactLayout ? 64 : 92) + eventLaneHeight + (isCompactLayout ? 56 : 72)
   const measuredWorkspaceHeight = wrapperRef.current?.clientHeight ?? fallbackWorkspaceHeight
   const viewportPanelBudget = typeof window !== 'undefined' && wrapperRef.current
     ? Math.max(420, Math.floor(window.innerHeight - wrapperRef.current.getBoundingClientRect().top - 20))
@@ -1165,7 +1166,7 @@ export function Chart() {
     })
     if (visibleItems.length === 0) return []
 
-    const targetCount = Math.min(isLightWorkspace ? 8 : 7, Math.max(4, Math.floor(chartWidth / 150)))
+    const targetCount = Math.min(isCompactLayout ? 8 : 7, Math.max(4, Math.floor(chartWidth / 150)))
     const candidateIndexes = new Set<number>([0, visibleItems.length - 1])
     if (visibleItems.length > 2) {
       for (let step = 1; step < targetCount - 1; step += 1) {
@@ -1191,10 +1192,10 @@ export function Chart() {
         if (index === 0) return true
         return Math.abs(tick.x - ticks[index - 1].x) >= 54
       })
-  }, [chartData, visibleRange, timeframe, useSeoulTime, isLightWorkspace])
+  }, [chartData, visibleRange, timeframe, useSeoulTime, isCompactLayout])
 
   const adjustEventLaneLogicalRange = useCallback((deltaX: number, deltaY: number, clientX: number) => {
-    if (!isLightWorkspace || !chartRef.current || !containerRef.current) return false
+    if (!isCompactLayout || !chartRef.current || !containerRef.current) return false
     const timeScale = chartRef.current.timeScale() as {
       getVisibleLogicalRange?: () => { from: number; to: number } | null
       setVisibleLogicalRange?: (range: { from: number; to: number }) => void
@@ -1223,10 +1224,10 @@ export function Chart() {
       to: anchor + ((logicalRange.to - anchor) * zoomFactor),
     })
     return true
-  }, [isLightWorkspace])
+  }, [isCompactLayout])
 
   useEffect(() => {
-    if (!isLightWorkspace || !eventLaneRef.current) return
+    if (!isCompactLayout || !eventLaneRef.current) return
     const node = eventLaneRef.current
     const onWheel = (event: WheelEvent) => {
       if (!adjustEventLaneLogicalRange(event.deltaX, event.deltaY, event.clientX)) return
@@ -2281,11 +2282,11 @@ export function Chart() {
                       style={{
                         left: group.x,
                         height: chartHeight,
-                        width: isLightWorkspace ? 28 : 1,
-                        borderRadius: isLightWorkspace ? 999 : 0,
+                        width: isLightWorkspace ? 28 : 2,
+                        borderRadius: isLightWorkspace ? 999 : 2,
                         background: isLightWorkspace
                           ? 'rgba(128, 116, 95, 0.16)'
-                          : 'rgba(167,139,250,0.50)',
+                          : 'rgba(56,189,248,0.35)',
                       }}
                     />
                   )
@@ -2295,7 +2296,7 @@ export function Chart() {
           </div>
 
           <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f9f8f6]' : 'border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.012)_42%,rgba(255,255,255,0.02)_100%)]'}>
-            <div className={isLightWorkspace ? 'relative flex h-[64px] items-center overflow-hidden px-4 py-2.5' : 'relative flex min-h-[92px] items-center px-4 py-3'}>
+            <div className={isCompactLayout ? 'relative flex h-[64px] items-center overflow-hidden px-4 py-2.5' : 'relative flex min-h-[92px] items-center px-4 py-3'}>
               <div className={isLightWorkspace ? 'absolute inset-x-0 top-0 h-px bg-[#ebe6dd]' : 'absolute inset-x-0 top-0 h-px bg-white/[0.04]'} />
               <div className={isLightWorkspace ? 'absolute inset-x-0 bottom-0 h-px bg-[#d8d2c6]' : 'absolute inset-x-0 bottom-0 h-px bg-black/20'} />
 
@@ -2321,32 +2322,53 @@ export function Chart() {
                   ? `${positionSnapshot.position_side.toUpperCase()} 포지션 · 진입 ${positionSnapshot.entry_price || '-'}`
                   : ''
 
+                const selectedCandle = chartData.find((c) => (c.time as number) === selectionDockGroup.candleTime)
+                const fmtPrice = (v: number) => {
+                  if (v >= 10000) return v.toLocaleString(undefined, { maximumFractionDigits: 0 })
+                  if (v >= 1) return v.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                  return v.toFixed(4)
+                }
+                const candleIsUp = selectedCandle ? selectedCandle.close >= selectedCandle.open : true
+
                 return (
                   <div className={isLightWorkspace ? 'flex h-full w-full items-center gap-3 overflow-hidden rounded-[16px] border border-[#d8d2c6] bg-[#f7f4ee] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]' : 'flex w-full items-center gap-3 rounded-[22px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.86))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'}>
-                    <div className={isLightWorkspace ? 'min-w-[164px]' : 'min-w-[190px]'}>
+                    <div className={isLightWorkspace ? 'min-w-[164px]' : 'min-w-[164px] shrink-0'}>
                       <p className={isLightWorkspace ? 'text-sm font-semibold text-[#1f2937]' : 'text-sm font-semibold text-neutral-50'}>
                         {formatChartDateTime(selectionDockGroup.candleTime, useSeoulTime)}
                       </p>
                     </div>
 
+                    {selectedCandle && (
+                      <div className="flex shrink-0 items-center gap-3">
+                        <div className="flex items-center gap-2.5 text-[11px] tabular-nums">
+                          <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>O</span>
+                          <span className={isLightWorkspace ? 'font-medium text-[#3f3931]' : 'font-medium text-neutral-200'}>{fmtPrice(selectedCandle.open)}</span>
+                          <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>H</span>
+                          <span className={isLightWorkspace ? 'font-medium text-[#3f3931]' : 'font-medium text-neutral-200'}>{fmtPrice(selectedCandle.high)}</span>
+                          <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>L</span>
+                          <span className={isLightWorkspace ? 'font-medium text-[#3f3931]' : 'font-medium text-neutral-200'}>{fmtPrice(selectedCandle.low)}</span>
+                          <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>C</span>
+                          <span className={candleIsUp ? (isLightWorkspace ? 'font-semibold text-emerald-700' : 'font-semibold text-emerald-400') : (isLightWorkspace ? 'font-semibold text-rose-700' : 'font-semibold text-rose-400')}>{fmtPrice(selectedCandle.close)}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="min-w-0 flex-1">
-                      <div className={isLightWorkspace ? 'flex items-center gap-2 overflow-hidden' : 'grid gap-2 md:grid-cols-2'}>
+                      <div className="flex items-center gap-2 overflow-hidden">
                         {hasBubbles && (
                           <span className={isLightWorkspace ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#c9d9da] bg-[#fffdfa] px-2.5 py-1 text-[11px] font-medium text-[#415f62]' : 'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs'}>
                             <span className={`h-2 w-2 rounded-full ${bubbleAccentDotClass}`} />
                             {bubbleCount > 1 ? `말풍선 ${bubbleCount}` : '말풍선'}
                           </span>
                         )}
-
                         {hasTrades && (
                           <span className={isLightWorkspace ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#ddd4bc] bg-[#fffdfa] px-2.5 py-1 text-[11px] font-medium text-[#685b36]' : 'inline-flex items-center gap-1 rounded-[8px] border px-2 py-1 text-xs'}>
                             <span className={`h-2 w-2 rounded-[3px] ${tradeAccentDotClass}`} />
                             {tradeCount > 1 ? `체결 ${tradeCount}` : '체결'}
                           </span>
                         )}
-
                         {selectionDetail && (
-                          <p className={isLightWorkspace ? 'truncate text-[11px] text-[#6f675b]' : 'truncate text-sm text-neutral-300'}>
+                          <p className={isLightWorkspace ? 'truncate text-[11px] text-[#6f675b]' : 'truncate text-xs text-neutral-400'}>
                             {selectionDetail}
                           </p>
                         )}
@@ -2373,7 +2395,7 @@ export function Chart() {
           </div>
 
           <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.06] bg-[linear-gradient(180deg,rgba(255,255,255,0.014),rgba(255,255,255,0.004)_100%)]'}>
-            <div className={isLightWorkspace ? 'py-3' : 'py-4'}>
+            <div className={isCompactLayout ? 'py-3' : 'py-4'}>
               <div
                 ref={eventLaneRef}
                 className="relative w-full overscroll-none"
@@ -2384,9 +2406,9 @@ export function Chart() {
                     className="absolute top-0 bottom-0 pointer-events-none -translate-x-1/2"
                     style={{
                       left: selectedVisibleGroup.x,
-                      width: isLightWorkspace ? 28 : 1,
-                      borderRadius: isLightWorkspace ? 999 : 0,
-                      background: isLightWorkspace ? 'rgba(128, 116, 95, 0.16)' : 'rgba(167,139,250,0.55)',
+                      width: isLightWorkspace ? 28 : 2,
+                      borderRadius: isLightWorkspace ? 999 : 2,
+                      background: isLightWorkspace ? 'rgba(128, 116, 95, 0.16)' : 'rgba(56,189,248,0.35)',
                     }}
                   />
                 )}
@@ -2487,13 +2509,22 @@ export function Chart() {
                             ? (showCount
                               ? `rounded-full border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${bubbleIsSellBias ? 'border-[#dec1c7] bg-[#fff7f8]' : 'border-[#bfd2d5] bg-[#f6fbfc]'}`
                               : 'rounded-full text-[#675f54]')
-                            : 'border-cyan-200/70 bg-slate-950 text-cyan-50 shadow-[0_18px_28px_rgba(0,0,0,0.26)] hover:-translate-y-0.5'
+                            : ''
                         } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
                       >
-                        <span className={`${isLightWorkspace ? (showCount ? 'inline-flex items-center gap-1.5 rounded-full tabular-nums' : 'inline-flex items-center justify-center') : `inline-flex items-center gap-1 rounded-full border px-1.5 py-[3px] tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.02)] ${bubbleTone}`}`}>
-                          <span className={`${isLightWorkspace ? (showCount ? `h-[12px] w-[12px] ${bubbleAccentDotClass}` : `h-[18px] w-[18px] border-2 shadow-[0_0_0_3px_rgba(244,241,234,0.92)] ${bubbleSingleClass}`) : 'h-1.5 w-1.5'} rounded-full ${showCount || !isLightWorkspace ? bubbleAccentDotClass : ''}`} />
-                          {showCount && <span>{bubbleCount}</span>}
-                        </span>
+                        {isLightWorkspace ? (
+                          <span className={showCount ? 'inline-flex items-center gap-1.5 rounded-full tabular-nums' : 'inline-flex items-center justify-center'}>
+                            <span className={`${showCount ? `h-[12px] w-[12px] ${bubbleAccentDotClass}` : `h-[18px] w-[18px] border-2 shadow-[0_0_0_3px_rgba(244,241,234,0.92)] ${bubbleSingleClass}`} rounded-full`} />
+                            {showCount && <span>{bubbleCount}</span>}
+                          </span>
+                        ) : showCount ? (
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-[2px] tabular-nums ${bubbleTone}`}>
+                            <span className={`h-[8px] w-[8px] rounded-full ${bubbleAccentDotClass}`} />
+                            <span>{bubbleCount}</span>
+                          </span>
+                        ) : (
+                          <span className={`inline-flex items-center justify-center h-[18px] w-[18px] rounded-full border-2 ${bubbleSingleClass}`} />
+                        )}
                       </div>
                     </button>
                   )
@@ -2531,19 +2562,30 @@ export function Chart() {
                             ? (showCount
                               ? `rounded-[8px] border px-1.5 py-[1px] text-[#675f54] shadow-[0_1px_0_rgba(255,255,255,0.72)] ${tradeIsBuyBias ? 'border-[#c8d5c5] bg-[#f8fbf6]' : 'border-[#d9ccb8] bg-[#fdf9f2]'}`
                               : 'rounded-[8px] text-[#675f54]')
-                            : 'border-emerald-200/70 bg-slate-950 text-emerald-50 shadow-[0_18px_28px_rgba(0,0,0,0.26)] hover:-translate-y-0.5'
+                            : ''
                         } ${isSelected ? isLightWorkspace ? 'ring-2 ring-[#b4ab97]/70 ring-offset-2 ring-offset-[#f2efe9]' : 'ring-2 ring-violet-300/70 ring-offset-2 ring-offset-neutral-950' : ''}`}
                       >
-                        {isLightWorkspace && !showCount && tradeCount < 0 ? (
-                          <span className="inline-flex items-center justify-center">
-                            <span className={`text-[20px] font-extrabold leading-none ${tradeIsBuyBias ? 'text-[#4f8855]' : 'text-[#9e5420]'}`}>
-                              {tradeIsBuyBias ? '▲' : '▼'}
+                        {isLightWorkspace ? (
+                          !showCount ? (
+                            <span className="inline-flex items-center justify-center">
+                              <span className={`text-[20px] font-extrabold leading-none ${tradeIsBuyBias ? 'text-[#4f8855]' : 'text-[#9e5420]'}`}>
+                                {tradeIsBuyBias ? '▲' : '▼'}
+                              </span>
                             </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-[8px] tabular-nums">
+                              <span className={`h-[14px] w-[14px] border ${tradeSingleClass}`} />
+                              <span>{tradeCount}</span>
+                            </span>
+                          )
+                        ) : !showCount ? (
+                          <span className={`text-[16px] font-bold leading-none ${tradeIsBuyBias ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {tradeIsBuyBias ? '▲' : '▼'}
                           </span>
                         ) : (
-                          <span className={`${isLightWorkspace ? 'inline-flex items-center gap-1.5 rounded-[8px] tabular-nums' : 'inline-flex items-center gap-1 rounded-[8px] border px-1.5 py-[3px] tabular-nums shadow-[0_0_0_1px_rgba(255,255,255,0.02)]'}`}>
-                            <span className={`${isLightWorkspace ? `h-[14px] w-[14px] border ${tradeSingleClass}` : 'h-1.5 w-1.5'} ${showCount || !isLightWorkspace ? tradeAccentDotClass : ''}`} />
-                            {showCount && <span>{tradeCount}</span>}
+                          <span className={`inline-flex items-center gap-1 rounded-[6px] border px-1.5 py-[2px] tabular-nums ${tradeIsBuyBias ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/50 bg-amber-400/10 text-amber-300'}`}>
+                            <span className={`h-[8px] w-[8px] rounded-[2px] ${tradeAccentDotClass}`} />
+                            <span>{tradeCount}</span>
                           </span>
                         )}
                       </div>
@@ -2583,7 +2625,7 @@ export function Chart() {
 
         </div>
 
-        <aside className={sideShellClass} style={isLightWorkspace ? { height: `${rightPanelTargetHeight}px` } : undefined}>
+        <aside className={sideShellClass} style={isCompactLayout ? { height: `${rightPanelTargetHeight}px` } : undefined}>
           <div>
             <p className="kifu-eyebrow">복기 패널</p>
             <h3 className={isLightWorkspace ? 'mt-2 text-2xl font-semibold text-[#1f2937]' : 'mt-2 text-2xl font-semibold text-neutral-100'}>말풍선과 체결</h3>
