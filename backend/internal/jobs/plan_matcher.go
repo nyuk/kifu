@@ -14,8 +14,8 @@ import (
 )
 
 type PlanMatcher struct {
-	planRepo            repositories.TradePlanRepository
-	tgSender            *notification.TelegramSender
+	planRepo             repositories.TradePlanRepository
+	tgSender             *notification.TelegramSender
 	disabledMissingTable bool
 }
 

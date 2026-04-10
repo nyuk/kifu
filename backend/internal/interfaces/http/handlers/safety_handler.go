@@ -24,22 +24,22 @@ func NewSafetyHandler(reviewRepo repositories.TradeSafetyReviewRepository) *Safe
 }
 
 type SafetyTodayItem struct {
-	TargetType string  `json:"target_type"`
-	TargetID   string  `json:"target_id"`
-	ExecutedAt string  `json:"executed_at"`
-	AssetClass string  `json:"asset_class"`
-	Venue      string  `json:"venue"`
-	VenueName  string  `json:"venue_name"`
-	Symbol     string  `json:"symbol"`
-	Side       *string `json:"side,omitempty"`
-	Qty        *string `json:"qty,omitempty"`
-	Price      *string `json:"price,omitempty"`
-	Source     string  `json:"source"`
-	Reviewed   bool    `json:"reviewed"`
-	Verdict    *string `json:"verdict,omitempty"`
-	Note       *string `json:"note,omitempty"`
-	ReviewedAt *string `json:"reviewed_at,omitempty"`
-	GroupSize  int     `json:"group_size,omitempty"`
+	TargetType string               `json:"target_type"`
+	TargetID   string               `json:"target_id"`
+	ExecutedAt string               `json:"executed_at"`
+	AssetClass string               `json:"asset_class"`
+	Venue      string               `json:"venue"`
+	VenueName  string               `json:"venue_name"`
+	Symbol     string               `json:"symbol"`
+	Side       *string              `json:"side,omitempty"`
+	Qty        *string              `json:"qty,omitempty"`
+	Price      *string              `json:"price,omitempty"`
+	Source     string               `json:"source"`
+	Reviewed   bool                 `json:"reviewed"`
+	Verdict    *string              `json:"verdict,omitempty"`
+	Note       *string              `json:"note,omitempty"`
+	ReviewedAt *string              `json:"reviewed_at,omitempty"`
+	GroupSize  int                  `json:"group_size,omitempty"`
 	Members    []SafetyTargetMember `json:"member_targets,omitempty"`
 }
 

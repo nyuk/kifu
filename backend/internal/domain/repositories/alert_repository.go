@@ -34,9 +34,9 @@ type AlertOutcomeRepository interface {
 }
 
 type PendingAlertDecision struct {
-	AlertID        uuid.UUID
-	DecisionID     uuid.UUID
-	Symbol         string
-	TriggerPrice   string
-	DecisionTime   time.Time
+	AlertID      uuid.UUID
+	DecisionID   uuid.UUID
+	Symbol       string
+	TriggerPrice string
+	DecisionTime time.Time
 }

@@ -32,7 +32,7 @@ func NewAlertNotificationHandler(
 }
 
 type AlertDetailResponse struct {
-	Alert     *entities.Alert          `json:"alert"`
+	Alert     *entities.Alert           `json:"alert"`
 	Briefings []*entities.AlertBriefing `json:"briefings"`
 	Decision  *entities.AlertDecision   `json:"decision,omitempty"`
 	Outcomes  []*entities.AlertOutcome  `json:"outcomes,omitempty"`

@@ -19,12 +19,12 @@ import (
 )
 
 type AlertMonitor struct {
-	ruleRepo     repositories.AlertRuleRepository
-	alertRepo    repositories.AlertRepository
-	onTrigger    func(ctx context.Context, alert *entities.Alert, rule *entities.AlertRule)
-	client       *http.Client
-	priceCache   map[string]*priceSnapshot
-	priceMu      sync.RWMutex
+	ruleRepo   repositories.AlertRuleRepository
+	alertRepo  repositories.AlertRepository
+	onTrigger  func(ctx context.Context, alert *entities.Alert, rule *entities.AlertRule)
+	client     *http.Client
+	priceCache map[string]*priceSnapshot
+	priceMu    sync.RWMutex
 }
 
 type priceSnapshot struct {

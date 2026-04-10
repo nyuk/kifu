@@ -11,3 +11,13 @@ backend/backups/
 .claude/settings.local.json
 backend/cmd.exe
 nul
+
+# bkit plugin residue (plugin disabled, do not track)
+.bkit/
+docs/.bkit-memory.json
+docs/.pdca-status.json
+docs/.pdca-snapshots/
+
+# backend dev logs
+backend/backend-dev.log
+backend/marketing-restored-3080.log

@@ -6,6 +6,7 @@
 # CODEX.md - AI Assistant Working Context
 
 This document summarizes the project for handoff to AI coding assistants.
+Read `OPERATIONS.md` first for shared runtime facts, deploy flow, debugging order, and hard rules.
 **Read `docs/runbook/` for resolved issues before attempting fixes.**
 
 ## Project Summary
@@ -237,3 +238,62 @@ This project uses a dual-AI workflow:
 - **Claude Code** is called in for debugging and complex problem-solving.
 - Resolved issues are documented in `docs/runbook/` so both AIs share knowledge.
 - When you fix a non-trivial issue, **always create a runbook entry** for future reference.
+
+---
+
+## Handoff: Chart Design (2026-04-10)
+
+### Current State
+All non-chart frontend files were restored to deployed (HEAD) state. Only 2 files have local changes:
+
+- `frontend/src/components-old/Chart.tsx` — chart redesign with ledger (light) theme
+- `frontend/src/components/ui/FilterPills.tsx` — added `variant` prop (`'paper'` | `'default'`) for chart filters
+
+### What was done
+1. **Default timeframe forced to `1d`** — all `setTimeframe(match?.timeframe_default || '1d')` replaced with `setTimeframe('1d')`. Symbols' stored `timeframe_default` is ignored.
+2. **Right margin fixed** — `timeScale.rightOffset: 5` added to chart creation. `rangePadding` logic removed, `from < to` guard added to prevent assertion errors when data is empty.
+3. **Chart box inner padding** — removed `xl:pr-16` / `xl:pr-20` from chart container to eliminate excessive right padding.
+4. **FilterPills `variant` prop** — `'paper'` variant gives light styling (neutral borders/text), `'default'` preserves original dark styling. Only used by Chart.tsx.
+
+### Pending: Design Unification
+Chart tab uses `ledger` theme (light background `#f4f1ea`) while the rest of the app is dark. Two options:
+- **Option A**: Convert entire app to light theme (requires Shell.tsx + index.css changes, affects all tabs)
+- **Option B**: Convert chart back to dark theme to match current app (simpler, only Chart.tsx)
+
+User deferred this decision. Do NOT change theme direction without explicit instruction.
+
+### Key Chart.tsx patterns
+- Theme: `chartThemes` object with `noir`/`studio`/`paper`/`ledger` variants. Default is `ledger`.
+- `isLightWorkspace = themeMode === 'ledger'` controls all conditional styling throughout the component.
+- Chart creation at line ~1363 with `createChart()`.
+- Visible range set via `setVisibleLogicalRange({ from, to })` — guard with `from < to` to avoid assertion errors.
+
+### bkit Plugin Cleanup (2026-04-10)
+The bkit Claude Code plugin was disabled and project-side residue removed. Do NOT reinstall.
+
+**What was done:**
+- `bkit@bkit-marketplace` plugin disabled in `.claude/settings.local.json` (`enabledPlugins.bkit@bkit-marketplace: false`)
+- `bkit-starter@bkit-marketplace` plugin uninstalled entirely
+- `.bkit/` directory deleted from disk
+- 11 tracked files removed from git index (staged as `D`):
+  - `.bkit/agent-state.json`
+  - `docs/.bkit-memory.json`
+  - `docs/.pdca-status.json`
+  - `docs/.pdca-snapshots/snapshot-*.json` (8 files)
+- `.gitignore` updated with bkit patterns + dev log patterns:
+  ```
+  .bkit/
+  docs/.bkit-memory.json
+  docs/.pdca-status.json
+  docs/.pdca-snapshots/
+  backend/backend-dev.log
+  backend/marketing-restored-3080.log
+  ```
+
+**Must include in deploy commit:**
+- All 11 staged deletions (or git history will keep stale bkit state)
+- `.gitignore` changes
+
+**Do NOT:**
+- Reinstall bkit plugin (the PDCA workflow was never actually used in this project)
+- Re-add `.bkit/` or `docs/.pdca-*` files to git

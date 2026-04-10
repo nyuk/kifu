@@ -23,27 +23,27 @@ const (
 )
 
 type Alert struct {
-	ID           uuid.UUID     `json:"id"`
-	UserID       uuid.UUID     `json:"user_id"`
-	RuleID       uuid.UUID     `json:"rule_id"`
-	Symbol       string        `json:"symbol"`
-	TriggerPrice string        `json:"trigger_price"`
-	TriggerReason string       `json:"trigger_reason"`
-	Severity     AlertSeverity `json:"severity"`
-	Status       AlertStatus   `json:"status"`
-	NotifiedAt   *time.Time    `json:"notified_at,omitempty"`
-	CreatedAt    time.Time     `json:"created_at"`
+	ID            uuid.UUID     `json:"id"`
+	UserID        uuid.UUID     `json:"user_id"`
+	RuleID        uuid.UUID     `json:"rule_id"`
+	Symbol        string        `json:"symbol"`
+	TriggerPrice  string        `json:"trigger_price"`
+	TriggerReason string        `json:"trigger_reason"`
+	Severity      AlertSeverity `json:"severity"`
+	Status        AlertStatus   `json:"status"`
+	NotifiedAt    *time.Time    `json:"notified_at,omitempty"`
+	CreatedAt     time.Time     `json:"created_at"`
 }
 
 type AlertBriefing struct {
-	ID        uuid.UUID `json:"id"`
-	AlertID   uuid.UUID `json:"alert_id"`
-	Provider  string    `json:"provider"`
-	Model     string    `json:"model"`
-	Prompt    string    `json:"prompt"`
-	Response  string    `json:"response"`
-	TokensUsed *int     `json:"tokens_used,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         uuid.UUID `json:"id"`
+	AlertID    uuid.UUID `json:"alert_id"`
+	Provider   string    `json:"provider"`
+	Model      string    `json:"model"`
+	Prompt     string    `json:"prompt"`
+	Response   string    `json:"response"`
+	TokensUsed *int      `json:"tokens_used,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type DecisionAction string

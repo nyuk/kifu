@@ -82,16 +82,16 @@ type alchemyTransferResult struct {
 }
 
 type alchemyTransfer struct {
-	BlockNum        string            `json:"blockNum"`
-	Hash            string            `json:"hash"`
-	From            string            `json:"from"`
-	To              string            `json:"to"`
-	Value           float64           `json:"value"`
-	RawContract     alchemyRawContract `json:"rawContract"`
-	Metadata        alchemyMetadata   `json:"metadata"`
-	Category        string            `json:"category"`
-	Asset           string            `json:"asset"`
-	UniqueID        string            `json:"uniqueId"`
+	BlockNum    string             `json:"blockNum"`
+	Hash        string             `json:"hash"`
+	From        string             `json:"from"`
+	To          string             `json:"to"`
+	Value       float64            `json:"value"`
+	RawContract alchemyRawContract `json:"rawContract"`
+	Metadata    alchemyMetadata    `json:"metadata"`
+	Category    string             `json:"category"`
+	Asset       string             `json:"asset"`
+	UniqueID    string             `json:"uniqueId"`
 }
 
 type alchemyRawContract struct {
@@ -114,10 +114,10 @@ func (c *BaseRPCClient) fetchAssetTransfers(ctx context.Context, fromAddr, toAdd
 		}
 
 		params := map[string]interface{}{
-			"category":       []string{"erc20"},
-			"withMetadata":   true,
-			"order":          "asc",
-			"maxCount":       "0x3e8", // 1000 per page
+			"category":     []string{"erc20"},
+			"withMetadata": true,
+			"order":        "asc",
+			"maxCount":     "0x3e8", // 1000 per page
 		}
 		if fromAddr != "" {
 			params["fromAddress"] = fromAddr

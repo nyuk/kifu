@@ -35,9 +35,9 @@ const (
 )
 
 type OutcomeCalculator struct {
-	outcomeRepo repositories.OutcomeRepository
-	client      *http.Client
-	intervals   []outcomeInterval
+	outcomeRepo        repositories.OutcomeRepository
+	client             *http.Client
+	intervals          []outcomeInterval
 	mu                 sync.Mutex
 	upbitCooldownUntil time.Time
 }

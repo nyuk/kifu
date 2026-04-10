@@ -7,6 +7,7 @@
 
 > Shared context for coding assistants (Claude, Codex, ChatGPT, etc.).
 > If recurring behavior issues happen, record fixes here first.
+> Read `OPERATIONS.md` first for shared runtime facts, deploy flow, debugging order, and hard rules.
 > **Read `docs/runbook/` for resolved issues before attempting similar fixes.**
 
 ## Project Overview

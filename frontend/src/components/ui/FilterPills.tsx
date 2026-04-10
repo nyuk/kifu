@@ -34,16 +34,22 @@ const toneHover: Record<Tone, string> = {
   emerald: 'hover:text-emerald-200',
 }
 
+type Variant = 'default' | 'paper'
+
 type FilterGroupProps = {
   label: string
   tone?: Tone
+  variant?: Variant
   children: ReactNode
 }
 
-export function FilterGroup({ label, tone = 'amber', children }: FilterGroupProps) {
+export function FilterGroup({ label, tone = 'amber', variant = 'default', children }: FilterGroupProps) {
+  const labelClass = variant === 'paper'
+    ? 'text-neutral-500'
+    : toneText[tone]
   return (
     <div className="flex items-center gap-2">
-      <span className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${toneText[tone]}`}>
+      <span className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${labelClass}`}>
         {label}
       </span>
       {children}
@@ -61,6 +67,7 @@ type FilterPillsProps = {
   value: string
   onChange: (value: string) => void
   tone?: Tone
+  variant?: Variant
   ariaLabel?: string
 }
 
@@ -69,23 +76,29 @@ export function FilterPills({
   value,
   onChange,
   tone = 'amber',
+  variant = 'default',
   ariaLabel,
 }: FilterPillsProps) {
+  const isPaper = variant === 'paper'
+  const wrapClass = isPaper
+    ? 'flex rounded-full border border-neutral-200 bg-neutral-50 p-1'
+    : 'flex rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-sm'
   return (
-    <div
-      className="flex rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-sm"
-      role="group"
-      aria-label={ariaLabel}
-    >
+    <div className={wrapClass} role="group" aria-label={ariaLabel}>
       {options.map((option) => {
         const isActive = value === option.value
+        const activeClass = isPaper
+          ? 'bg-neutral-800 text-white shadow-sm'
+          : toneActive[tone]
+        const inactiveClass = isPaper
+          ? 'text-neutral-500 hover:text-neutral-700'
+          : `text-neutral-300 ${toneHover[tone]}`
         return (
           <button
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`px-3 py-1 text-xs font-semibold rounded-full transition ${isActive ? toneActive[tone] : `text-neutral-300 ${toneHover[tone]}`
-              }`}
+            className={`px-3 py-1 text-xs font-semibold rounded-full transition ${isActive ? activeClass : inactiveClass}`}
           >
             {option.label}
           </button>

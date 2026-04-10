@@ -2,8 +2,8 @@ package jobs
 
 import (
 	"fmt"
-	"net/http/httptest"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )

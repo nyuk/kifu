@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	aiReviewNoteTitle     = "AI 복기 요약"
-	defaultAINoteKeepMax  = 200
-	aiReviewNoteKeepEnv   = "AI_REVIEW_NOTES_KEEP"
+	aiReviewNoteTitle    = "AI 복기 요약"
+	defaultAINoteKeepMax = 200
+	aiReviewNoteKeepEnv  = "AI_REVIEW_NOTES_KEEP"
 )
 
 type NoteHandler struct {
