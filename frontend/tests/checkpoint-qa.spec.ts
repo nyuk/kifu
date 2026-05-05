@@ -1,4 +1,5 @@
 import { expect, request, test } from '@playwright/test'
+import type { Page } from 'playwright-core'
 
 const authStorageKey = 'kifu-auth-storage'
 
@@ -43,7 +44,7 @@ async function createAuthedUser() {
   }
 }
 
-async function injectAuth(page: any, accessToken: string, refreshToken: string) {
+async function injectAuth(page: Page, accessToken: string, refreshToken: string) {
   await page.addInitScript(
     (payload: { storageKey: string; accessToken: string; refreshToken: string }) => {
       window.localStorage.setItem(
@@ -62,7 +63,7 @@ async function injectAuth(page: any, accessToken: string, refreshToken: string) 
   )
 }
 
-test('checkpoint: home readability and checklist labels', async ({ page }) => {
+test('checkpoint: home readability and checklist labels', async ({ page }: { page: Page }) => {
   const tokens = await createAuthedUser()
   await injectAuth(page, tokens.accessToken, tokens.refreshToken)
 
@@ -84,7 +85,7 @@ test('checkpoint: home readability and checklist labels', async ({ page }) => {
   await tokens.api.dispose()
 })
 
-test('checkpoint: narrow screen layout on key pages (390, 430)', async ({ page }) => {
+test('checkpoint: narrow screen layout on key pages (390, 430)', async ({ page }: { page: Page }) => {
   const tokens = await createAuthedUser()
   await injectAuth(page, tokens.accessToken, tokens.refreshToken)
 
@@ -109,7 +110,7 @@ test('checkpoint: narrow screen layout on key pages (390, 430)', async ({ page }
   await tokens.api.dispose()
 })
 
-test('checkpoint: pagination boundary behavior on portfolio', async ({ page }) => {
+test('checkpoint: pagination boundary behavior on portfolio', async ({ page }: { page: Page }) => {
   const tokens = await createAuthedUser()
   await injectAuth(page, tokens.accessToken, tokens.refreshToken)
 

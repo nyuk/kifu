@@ -1,4 +1,5 @@
 import { expect, request, test } from '@playwright/test'
+import type { Page } from 'playwright-core'
 
 const authStorageKey = 'kifu-auth-storage'
 
@@ -33,7 +34,7 @@ async function getAdminTokens() {
   }
 }
 
-async function injectAuth(page: any, accessToken: string, refreshToken: string) {
+async function injectAuth(page: Page, accessToken: string, refreshToken: string) {
   await page.addInitScript(
     (payload: { storageKey: string; accessToken: string; refreshToken: string }) => {
       window.localStorage.setItem(
@@ -53,7 +54,7 @@ async function injectAuth(page: any, accessToken: string, refreshToken: string) 
 }
 
 test.describe('admin pages', () => {
-  test('Task 12: admin/agent-services page loads and renders AI toggles', async ({ page }) => {
+  test('Task 12: admin/agent-services page loads and renders AI toggles', async ({ page }: { page: Page }) => {
     const tokens = await getAdminTokens()
     await injectAuth(page, tokens.accessToken, tokens.refreshToken)
 
@@ -71,7 +72,7 @@ test.describe('admin pages', () => {
     await tokens.api.dispose()
   })
 
-  test('Task 13: admin/policies page loads and renders marketing workflow', async ({ page }) => {
+  test('Task 13: admin/policies page loads and renders marketing workflow', async ({ page }: { page: Page }) => {
     const tokens = await getAdminTokens()
     await injectAuth(page, tokens.accessToken, tokens.refreshToken)
 
