@@ -64,6 +64,7 @@ interface BubbleState {
     asset_class?: string;
     venue_name?: string;
   }) => Promise<void>;
+  deleteBubbleRemote: (id: string) => Promise<void>;
   backfillBubblesFromServer: () => Promise<{ updated: number }>;
   backfillPortfolioBubblesFromServer: () => Promise<{ created: number }>;
   updateBubble: (id: string, updates: Partial<Bubble>) => void;
@@ -266,6 +267,17 @@ export const useBubbleStore = create<BubbleState>()(
             b.id === id ? { ...b, ...payload, updated_at: new Date().toISOString() } : b
           ),
         }));
+      },
+      deleteBubbleRemote: async (id) => {
+        ensureBubbleWritable('말풍선 삭제');
+        await api.delete(`/v1/bubbles/${id}`);
+        set((state) => {
+          const next = state.bubbles.filter((b) => b.id !== id);
+          return {
+            bubbles: next,
+            totalBubbles: Math.max(0, state.totalBubbles > 0 ? state.totalBubbles - 1 : next.length),
+          };
+        });
       },
       backfillBubblesFromServer: async () => {
         ensureBubbleWritable('말풍선 자동 생성');

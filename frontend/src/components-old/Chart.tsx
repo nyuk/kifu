@@ -195,6 +195,12 @@ const getBubbleDisplayNote = (bubble: Bubble) => {
 
 const getBubbleSourceBadge = (bubble: Bubble) => (getBubbleDisplayType(bubble) === 'auto' ? '자동' : '수동')
 
+function formatBubbleDeleteError(err: any) {
+  const detail = err?.response?.data?.message || err?.message
+  if (detail) return `말풍선 삭제에 실패했습니다. (${detail})`
+  return '말풍선 삭제에 실패했습니다.'
+}
+
 const parseFocusTimestampMs = (raw: string | null) => {
   if (!raw) return null
   const numeric = Number(raw)
@@ -312,6 +318,7 @@ export function Chart() {
   const [showPositions, setShowPositions] = useState(true)
   const [selectedPosition, setSelectedPosition] = useState<ManualPosition | null>(null)
   const [positionStackMode] = useState(true)
+  const [deletingBubbleId, setDeletingBubbleId] = useState<string | null>(null)
   const { toast } = useToast()
 
   const bubbles = useBubbleStore((state) => state.bubbles)
@@ -319,6 +326,7 @@ export function Chart() {
   const importTrades = useBubbleStore((state) => state.importTrades)
   const createBubblesFromTrades = useBubbleStore((state) => state.createBubblesFromTrades)
   const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
+  const deleteBubbleRemote = useBubbleStore((state) => state.deleteBubbleRemote)
   const resetSessionData = useBubbleStore((state) => state.resetSessionData)
   const accessToken = useAuthStore((state) => state.accessToken)
   const [serverTrades, setServerTrades] = useState<OverlayTrade[]>([])
@@ -1387,6 +1395,27 @@ export function Chart() {
     }, 100)
     return () => clearTimeout(timer)
   }, [activeBubbles, activeTrades, timeframe])
+
+  const handleDeleteBubble = useCallback(async (bubble: Bubble) => {
+    if (!window.confirm('이 말풍선을 삭제하시겠습니까?')) return
+
+    setDeletingBubbleId(bubble.id)
+    try {
+      await deleteBubbleRemote(bubble.id)
+      setSelectedGroup((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          bubbles: current.bubbles.filter((item) => item.id !== bubble.id),
+        }
+      })
+      toast('말풍선을 삭제했습니다.', 'success')
+    } catch (err) {
+      toast(formatBubbleDeleteError(err), 'error')
+    } finally {
+      setDeletingBubbleId(null)
+    }
+  }, [deleteBubbleRemote, toast])
 
   // Chart Initialization
   useEffect(() => {
@@ -2919,7 +2948,19 @@ export function Chart() {
                               }`}>
                                 {bubble.action || 'NOTE'}
                               </span>
-                              <span className={isLightWorkspace ? 'text-sm text-[#6b6458]' : 'text-xs text-neutral-400'}>${bubble.price.toLocaleString()}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={isLightWorkspace ? 'text-sm text-[#6b6458]' : 'text-xs text-neutral-400'}>${bubble.price.toLocaleString()}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteBubble(bubble)}
+                                  disabled={deletingBubbleId === bubble.id}
+                                  className={isLightWorkspace
+                                    ? 'rounded-full border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50'
+                                    : 'rounded-full border border-red-500/40 px-2 py-0.5 text-[10px] font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50'}
+                                >
+                                  {deletingBubbleId === bubble.id ? '삭제 중' : '삭제'}
+                                </button>
+                              </div>
                             </div>
                             <div className={isLightWorkspace ? 'mt-0.5 text-[11px] text-emerald-700/80' : 'mt-0.5 text-[10px] text-emerald-200/80'}>{getBubbleSourceBadge(bubble)}</div>
                             <div className={isLightWorkspace ? 'mt-1 text-[11px] text-[#7a7266]' : 'mt-1 text-[10px] text-neutral-500'}>

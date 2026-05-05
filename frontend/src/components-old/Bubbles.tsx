@@ -70,11 +70,17 @@ function formatBubbleDateTime(timestamp: number, symbol: string) {
   }).format(new Date(timestamp))
 }
 
+function formatBubbleDeleteError(err: any) {
+  const detail = err?.response?.data?.message || err?.message
+  if (detail) return `말풍선 삭제에 실패했습니다. (${detail})`
+  return '말풍선 삭제에 실패했습니다.'
+}
+
 export function Bubbles() {
   const searchParams = useSearchParams()
   const bubbles = useBubbleStore((state) => state.bubbles)
   const totalBubbles = useBubbleStore((state) => state.totalBubbles)
-  const deleteBubble = useBubbleStore((state) => state.deleteBubble)
+  const deleteBubbleRemote = useBubbleStore((state) => state.deleteBubbleRemote)
   const replaceAllBubbles = useBubbleStore((state) => state.replaceAllBubbles)
   const fetchBubblesFromServer = useBubbleStore((state) => state.fetchBubblesFromServer)
 
@@ -85,6 +91,8 @@ export function Bubbles() {
   const [searchQuery, setSearchQuery] = useState('')
   const [pageInput, setPageInput] = useState('1')
   const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const [deletingBubbleId, setDeletingBubbleId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState('')
   const listContainerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -175,6 +183,21 @@ export function Bubbles() {
     if (event.key === 'Enter') {
       event.preventDefault()
       jumpToPage()
+    }
+  }
+
+  const handleDeleteBubble = async (id: string) => {
+    if (!confirm('이 말풍선을 삭제하시겠습니까?')) return
+
+    setDeletingBubbleId(id)
+    setDeleteError('')
+    try {
+      await deleteBubbleRemote(id)
+      setSelectedId((current) => (current === id ? null : current))
+    } catch (err) {
+      setDeleteError(formatBubbleDeleteError(err))
+    } finally {
+      setDeletingBubbleId(null)
     }
   }
 
@@ -318,6 +341,11 @@ export function Bubbles() {
             Clear All
           </button>
         </div>
+        {deleteError && (
+          <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            {deleteError}
+          </div>
+        )}
 
         <div ref={listContainerRef} className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-2 overflow-x-hidden">
           {filteredBubbles.length === 0 ? (
@@ -433,14 +461,12 @@ export function Bubbles() {
                         <button
                           onClick={(event) => {
                             event.stopPropagation()
-                            if (confirm('이 버블을 삭제하시겠습니까?')) {
-                              deleteBubble(bubble.id)
-                              setSelectedId(null)
-                            }
+                            handleDeleteBubble(bubble.id)
                           }}
-                          className={`rounded-lg border border-red-500/50 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10 ${isMobileViewport ? 'hidden' : ''}`}
+                          disabled={deletingBubbleId === bubble.id}
+                          className="rounded-lg border border-red-500/50 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          삭제
+                          {deletingBubbleId === bubble.id ? '삭제 중...' : '삭제'}
                         </button>
                       </div>
                     </div>
