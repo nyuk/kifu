@@ -18,20 +18,49 @@ import (
 )
 
 type fakeRunRepo struct {
-	runMap map[uuid.UUID]*entities.Run
-	err    error
-	calls  []uuid.UUID
+	runMap  map[uuid.UUID]*entities.Run
+	err     error
+	calls   []uuid.UUID
+	creates []fakeRunCreate
+	updates []fakeRunUpdate
 }
 
-func (f *fakeRunRepo) Create(_ context.Context, _ uuid.UUID, _ string, _ string, _ time.Time, _ json.RawMessage) (*entities.Run, error) {
-	return &entities.Run{RunID: uuid.New()}, nil
+type fakeRunCreate struct {
+	userID  uuid.UUID
+	runType string
+	status  string
+	meta    map[string]interface{}
+}
+
+type fakeRunUpdate struct {
+	runID      uuid.UUID
+	status     string
+	finishedAt *time.Time
+	meta       map[string]interface{}
+}
+
+func (f *fakeRunRepo) Create(_ context.Context, userID uuid.UUID, runType string, status string, _ time.Time, meta json.RawMessage) (*entities.Run, error) {
+	run := &entities.Run{RunID: uuid.New(), UserID: userID, RunType: runType, Status: status}
+	f.creates = append(f.creates, fakeRunCreate{
+		userID:  userID,
+		runType: runType,
+		status:  status,
+		meta:    decodeMetaForTest(meta),
+	})
+	return run, nil
 }
 
 func (f *fakeRunRepo) GetByID(_ context.Context, _ uuid.UUID, _ uuid.UUID) (*entities.Run, error) {
 	return nil, nil
 }
 
-func (f *fakeRunRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ string, _ *time.Time, _ json.RawMessage) error {
+func (f *fakeRunRepo) UpdateStatus(_ context.Context, runID uuid.UUID, status string, finishedAt *time.Time, meta json.RawMessage) error {
+	f.updates = append(f.updates, fakeRunUpdate{
+		runID:      runID,
+		status:     status,
+		finishedAt: finishedAt,
+		meta:       decodeMetaForTest(meta),
+	})
 	return nil
 }
 
@@ -44,6 +73,15 @@ func (f *fakeRunRepo) GetLatestCompletedRun(ctx context.Context, userID uuid.UUI
 		return run, nil
 	}
 	return nil, pgx.ErrNoRows
+}
+
+func decodeMetaForTest(raw json.RawMessage) map[string]interface{} {
+	meta := map[string]interface{}{}
+	if len(raw) == 0 {
+		return meta
+	}
+	_ = json.Unmarshal(raw, &meta)
+	return meta
 }
 
 type fakeSummaryPackRepo struct {
@@ -133,6 +171,24 @@ func TestPackGenerateLatestSuccess(t *testing.T) {
 	if got.AnchorTs == "" {
 		t.Fatalf("anchor_ts empty")
 	}
+	if len(runRepo.creates) != 1 {
+		t.Fatalf("run creates=%d want=1", len(runRepo.creates))
+	}
+	if runRepo.creates[0].runType != "summary_ondemand" || runRepo.creates[0].status != "running" {
+		t.Fatalf("created run=%s/%s want summary_ondemand/running", runRepo.creates[0].runType, runRepo.creates[0].status)
+	}
+	if len(runRepo.updates) != 1 {
+		t.Fatalf("run updates=%d want=1", len(runRepo.updates))
+	}
+	if runRepo.updates[0].status != "completed" {
+		t.Fatalf("updated status=%s want=completed", runRepo.updates[0].status)
+	}
+	if runRepo.updates[0].meta["source_run_id"] != runID.String() {
+		t.Fatalf("source_run_id meta=%v want=%s", runRepo.updates[0].meta["source_run_id"], runID)
+	}
+	if runRepo.updates[0].meta["range"] != "30d" {
+		t.Fatalf("range meta=%v want=30d", runRepo.updates[0].meta["range"])
+	}
 }
 
 func TestPackGenerateLatestNoCompletedRun(t *testing.T) {
@@ -163,6 +219,30 @@ func TestPackGenerateLatestNoCompletedRun(t *testing.T) {
 	}
 	if got.Code != "NO_COMPLETED_RUN" {
 		t.Fatalf("code=%s want=%s", got.Code, "NO_COMPLETED_RUN")
+	}
+	if len(runRepo.creates) != 1 {
+		t.Fatalf("run creates=%d want=1", len(runRepo.creates))
+	}
+	if runRepo.creates[0].runType != "summary_ondemand" || runRepo.creates[0].status != "running" {
+		t.Fatalf("created run=%s/%s want summary_ondemand/running", runRepo.creates[0].runType, runRepo.creates[0].status)
+	}
+	if runRepo.creates[0].meta["range"] != "30d" {
+		t.Fatalf("created range meta=%v want=30d", runRepo.creates[0].meta["range"])
+	}
+	if len(runRepo.updates) != 1 {
+		t.Fatalf("run updates=%d want=1", len(runRepo.updates))
+	}
+	if runRepo.updates[0].status != "failed" {
+		t.Fatalf("updated status=%s want=failed", runRepo.updates[0].status)
+	}
+	if runRepo.updates[0].finishedAt == nil {
+		t.Fatalf("finishedAt nil")
+	}
+	if runRepo.updates[0].meta["result"] != "failed_no_completed_run" {
+		t.Fatalf("result meta=%v want=failed_no_completed_run", runRepo.updates[0].meta["result"])
+	}
+	if runRepo.updates[0].meta["error"] == "" {
+		t.Fatalf("error meta empty")
 	}
 }
 

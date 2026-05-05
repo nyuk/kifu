@@ -39,6 +39,9 @@ func (r *userPasswordTestRepo) Update(_ context.Context, user *entities.User) er
 	return nil
 }
 func (r *userPasswordTestRepo) Delete(_ context.Context, _ uuid.UUID) error { return nil }
+func (r *userPasswordTestRepo) ListActive(_ context.Context) ([]*entities.User, error) {
+	return nil, nil
+}
 
 type userPasswordTestSubRepo struct{}
 

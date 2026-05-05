@@ -42,6 +42,7 @@ func (r *authTestUserRepo) CountForAdmin(_ context.Context, _ string) (int, erro
 func (r *authTestUserRepo) SetAdmin(_ context.Context, _ uuid.UUID, _ bool) error  { return nil }
 func (r *authTestUserRepo) Update(_ context.Context, _ *entities.User) error       { return nil }
 func (r *authTestUserRepo) Delete(_ context.Context, _ uuid.UUID) error            { return nil }
+func (r *authTestUserRepo) ListActive(_ context.Context) ([]*entities.User, error) { return nil, nil }
 
 type authTestRefreshTokenRepo struct{}
 
@@ -125,6 +126,9 @@ func (r *socialCallbackUserRepo) CountForAdmin(_ context.Context, _ string) (int
 func (r *socialCallbackUserRepo) SetAdmin(_ context.Context, _ uuid.UUID, _ bool) error { return nil }
 func (r *socialCallbackUserRepo) Update(_ context.Context, _ *entities.User) error      { return nil }
 func (r *socialCallbackUserRepo) Delete(_ context.Context, _ uuid.UUID) error           { return nil }
+func (r *socialCallbackUserRepo) ListActive(_ context.Context) ([]*entities.User, error) {
+	return nil, nil
+}
 
 type socialCallbackRefreshTokenRepo struct {
 	createCount int
