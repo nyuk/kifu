@@ -68,7 +68,6 @@ interface BubbleState {
   backfillBubblesFromServer: () => Promise<{ updated: number }>;
   backfillPortfolioBubblesFromServer: () => Promise<{ created: number }>;
   updateBubble: (id: string, updates: Partial<Bubble>) => void;
-  deleteBubble: (id: string) => void;
   replaceAllBubbles: (bubbles: Bubble[]) => void;
   getBubblesForTime: (symbol: string, timeframe: string, ts: number) => Bubble[];
   createBubbleFromTrade: (trade: Trade, overrides?: Partial<Bubble>) => Promise<Bubble>;
@@ -298,14 +297,6 @@ export const useBubbleStore = create<BubbleState>()(
           ),
           totalBubbles: Math.max(state.totalBubbles, state.bubbles.length),
         })),
-      deleteBubble: (id) =>
-        set((state) => {
-          const next = state.bubbles.filter((b) => b.id !== id)
-          return {
-            bubbles: next,
-            totalBubbles: Math.max(0, state.totalBubbles > 0 ? state.totalBubbles - 1 : next.length),
-          }
-        }),
       replaceAllBubbles: (bubbles) => set({ bubbles, totalBubbles: bubbles.length }),
       getBubblesForTime: (symbol, timeframe, ts) => {
         return get().bubbles.filter(

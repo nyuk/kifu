@@ -3,6 +3,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useBubbleStore } from '../lib/bubbleStore'
+import { formatApiError } from '../lib/api'
 import { parseAiSections, toneClass } from '../lib/aiResponseFormat'
 import { FilterGroup, FilterPills } from '../components/ui/FilterPills'
 import { PageJumpPager } from '../components/ui/PageJumpPager'
@@ -68,12 +69,6 @@ function formatBubbleDateTime(timestamp: number, symbol: string) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(timestamp))
-}
-
-function formatBubbleDeleteError(err: any) {
-  const detail = err?.response?.data?.message || err?.message
-  if (detail) return `말풍선 삭제에 실패했습니다. (${detail})`
-  return '말풍선 삭제에 실패했습니다.'
 }
 
 export function Bubbles() {
@@ -195,7 +190,7 @@ export function Bubbles() {
       await deleteBubbleRemote(id)
       setSelectedId((current) => (current === id ? null : current))
     } catch (err) {
-      setDeleteError(formatBubbleDeleteError(err))
+      setDeleteError(formatApiError(err, '말풍선 삭제에 실패했습니다.'))
     } finally {
       setDeletingBubbleId(null)
     }

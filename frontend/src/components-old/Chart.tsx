@@ -3,7 +3,7 @@
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { createChart, ColorType, CrosshairMode, TickMarkType, type Time, type UTCTimestamp } from 'lightweight-charts'
-import { api, DEFAULT_SYMBOLS } from '../lib/api'
+import { api, DEFAULT_SYMBOLS, formatApiError } from '../lib/api'
 import { exportBubbles, importBubbles } from '../lib/dataHandler'
 import { parseTradeCsv } from '../lib/csvParser'
 import { isGuestSession } from '../lib/guestSession'
@@ -194,12 +194,6 @@ const getBubbleDisplayNote = (bubble: Bubble) => {
 }
 
 const getBubbleSourceBadge = (bubble: Bubble) => (getBubbleDisplayType(bubble) === 'auto' ? '자동' : '수동')
-
-function formatBubbleDeleteError(err: any) {
-  const detail = err?.response?.data?.message || err?.message
-  if (detail) return `말풍선 삭제에 실패했습니다. (${detail})`
-  return '말풍선 삭제에 실패했습니다.'
-}
 
 const parseFocusTimestampMs = (raw: string | null) => {
   if (!raw) return null
@@ -1411,7 +1405,7 @@ export function Chart() {
       })
       toast('말풍선을 삭제했습니다.', 'success')
     } catch (err) {
-      toast(formatBubbleDeleteError(err), 'error')
+      toast(formatApiError(err, '말풍선 삭제에 실패했습니다.'), 'error')
     } finally {
       setDeletingBubbleId(null)
     }

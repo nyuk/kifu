@@ -37,6 +37,33 @@ const safeApiBaseURL = (value: string | undefined): string => {
 
 const baseURL = safeApiBaseURL(configuredBaseURL || defaultLocalBaseURL)
 
+type ApiErrorLike = {
+  response?: {
+    data?: {
+      message?: unknown
+    }
+  }
+  message?: unknown
+}
+
+const isApiErrorLike = (value: unknown): value is ApiErrorLike => {
+  return typeof value === 'object' && value !== null
+}
+
+export function formatApiError(error: unknown, fallback: string) {
+  if (!isApiErrorLike(error)) return fallback
+
+  const responseMessage = error.response?.data?.message
+  const message = typeof responseMessage === 'string'
+    ? responseMessage
+    : typeof error.message === 'string'
+      ? error.message
+      : ''
+  const trimmed = message.trim()
+
+  return trimmed ? `${fallback} (${trimmed})` : fallback
+}
+
 export const api = axios.create({
   baseURL,
 })
