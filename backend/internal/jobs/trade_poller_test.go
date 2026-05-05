@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"net/http"
 	"testing"
 	"time"
 )
@@ -83,5 +84,48 @@ func TestResolveUpbitTradeTimeUsesLatestFillTime(t *testing.T) {
 	want, _ := time.Parse(time.RFC3339, "2026-02-11T07:24:14+00:00")
 	if !got.Equal(want) {
 		t.Fatalf("resolved trade time=%s want=%s", got.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
+	}
+}
+
+func TestIsBinanceInvalidSymbolResponse(t *testing.T) {
+	cases := []struct {
+		name       string
+		statusCode int
+		body       string
+		want       bool
+	}{
+		{
+			name:       "binance_code",
+			statusCode: http.StatusBadRequest,
+			body:       `{"code":-1121,"msg":"Invalid symbol."}`,
+			want:       true,
+		},
+		{
+			name:       "plain_message",
+			statusCode: http.StatusBadRequest,
+			body:       "Invalid symbol",
+			want:       true,
+		},
+		{
+			name:       "other_bad_request",
+			statusCode: http.StatusBadRequest,
+			body:       `{"code":-2015,"msg":"Invalid API-key"}`,
+			want:       false,
+		},
+		{
+			name:       "server_error_mentions_symbol",
+			statusCode: http.StatusInternalServerError,
+			body:       "Invalid symbol",
+			want:       false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isBinanceInvalidSymbolResponse(tc.statusCode, tc.body)
+			if got != tc.want {
+				t.Fatalf("isBinanceInvalidSymbolResponse(%d, %q)=%t want %t", tc.statusCode, tc.body, got, tc.want)
+			}
+		})
 	}
 }

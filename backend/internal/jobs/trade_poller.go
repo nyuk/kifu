@@ -41,6 +41,8 @@ const (
 	agentPollerPolicyKey = "agent_service_poller_enabled"
 )
 
+var errUnsupportedBinanceMarketSymbol = errors.New("unsupported binance market symbol")
+
 type TradePoller struct {
 	pool           *pgxpool.Pool
 	exchangeRepo   repositories.ExchangeCredentialRepository
@@ -424,6 +426,16 @@ func (p *TradePoller) fetchAndStoreTrades(ctx context.Context, userID uuid.UUID,
 			return ErrUnsupportedExchange
 		}
 		if err != nil {
+			if errors.Is(err, errUnsupportedBinanceMarketSymbol) {
+				log.Printf(
+					"trade poller: stage=unsupported_symbol_skip exchange=%s user_id=%s symbol=%s page=%d",
+					exchange,
+					userID.String(),
+					symbol.Symbol,
+					page,
+				)
+				return nil
+			}
 			log.Printf(
 				"trade poller: stage=sync_request_error exchange=%s user_id=%s symbol=%s page=%d use_from_id=%t from_id=%d start_time=%d err=%v",
 				exchange,
@@ -559,7 +571,11 @@ func (p *TradePoller) requestFuturesTrades(ctx context.Context, apiKey string, a
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, 0, fmt.Errorf("binance futures userTrades failed %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		bodyText := strings.TrimSpace(string(body))
+		if isBinanceInvalidSymbolResponse(resp.StatusCode, bodyText) {
+			return nil, 0, fmt.Errorf("%w: binance futures userTrades failed %d", errUnsupportedBinanceMarketSymbol, resp.StatusCode)
+		}
+		return nil, 0, fmt.Errorf("binance futures userTrades failed %d: %s", resp.StatusCode, bodyText)
 	}
 
 	var raw []binanceFuturesTrade
@@ -620,7 +636,11 @@ func (p *TradePoller) requestSpotTrades(ctx context.Context, apiKey string, apiS
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, 0, fmt.Errorf("binance spot myTrades failed %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		bodyText := strings.TrimSpace(string(body))
+		if isBinanceInvalidSymbolResponse(resp.StatusCode, bodyText) {
+			return nil, 0, fmt.Errorf("%w: binance spot myTrades failed %d", errUnsupportedBinanceMarketSymbol, resp.StatusCode)
+		}
+		return nil, 0, fmt.Errorf("binance spot myTrades failed %d: %s", resp.StatusCode, bodyText)
 	}
 
 	var raw []binanceSpotTrade
@@ -649,6 +669,15 @@ func (p *TradePoller) requestSpotTrades(ctx context.Context, apiKey string, apiS
 	}
 
 	return trades, lastID, nil
+}
+
+func isBinanceInvalidSymbolResponse(statusCode int, body string) bool {
+	if statusCode != http.StatusBadRequest {
+		return false
+	}
+
+	normalizedBody := strings.ToLower(strings.TrimSpace(body))
+	return strings.Contains(normalizedBody, "invalid symbol") || strings.Contains(normalizedBody, `"code":-1121`)
 }
 
 func (p *TradePoller) requestUpbitTrades(ctx context.Context, apiKey string, apiSecret string, symbol string, startTime int64, useFromID bool) ([]normalizedTrade, int64, error) {
