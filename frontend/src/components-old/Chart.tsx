@@ -42,6 +42,7 @@ type OverlayTrade = {
   raw?: TradeItem | Trade
 }
 
+const DEFAULT_TIMEFRAME = '1d'
 const intervals = ['1m', '15m', '1h', '4h', '1d']
 const quickPicks = [
   { label: 'BTCUSDT', value: 'BTCUSDT' },
@@ -122,8 +123,16 @@ const normalizeUpbitSymbol = (value: string) => {
     if (parts.length === 2) {
       const [first, second] = parts
       const quoteCurrencies = new Set(['KRW', 'BTC', 'USDT'])
-      if (quoteCurrencies.has(first)) return symbol
-      if (quoteCurrencies.has(second)) return `${second}-${first}`
+      const firstIsQuote = quoteCurrencies.has(first)
+      const secondIsQuote = quoteCurrencies.has(second)
+
+      if (firstIsQuote && !secondIsQuote) return symbol
+      if (!firstIsQuote && secondIsQuote) return `${second}-${first}`
+      if (firstIsQuote && secondIsQuote) {
+        if (first === 'KRW' || first === 'USDT') return symbol
+        if (second === 'KRW' || second === 'USDT') return `${second}-${first}`
+        return symbol
+      }
     }
     return symbol
   }
@@ -268,13 +277,15 @@ export function Chart() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const eventLaneRef = useRef<HTMLDivElement | null>(null)
+  const chartSectionRef = useRef<HTMLElement | null>(null)
+  const detailPanelRef = useRef<HTMLElement | null>(null)
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null)
   const overlayRafRef = useRef<number | null>(null)
   const seriesRef = useRef<ReturnType<ReturnType<typeof createChart>['addCandlestickSeries']> | null>(null)
   const [symbols, setSymbols] = useState<UserSymbolItem[]>([])
   const [selectedSymbol, setSelectedSymbol] = useState('')
   const useSeoulTime = resolveExchange(selectedSymbol) === 'upbit'
-  const [timeframe, setTimeframe] = useState('1d')
+  const [timeframe, setTimeframe] = useState(DEFAULT_TIMEFRAME)
   const [klines, setKlines] = useState<KlineItem[]>([])
   const [displayKlines, setDisplayKlines] = useState<KlineItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -296,6 +307,8 @@ export function Chart() {
   const [panelTab, setPanelTab] = useState<'summary' | 'detail'>('summary')
   const [showOnboardingGuide, setShowOnboardingGuide] = useState(false)
   const [guestMode, setGuestMode] = useState(false)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const [showEventLane, setShowEventLane] = useState(true)
   const [showPositions, setShowPositions] = useState(true)
   const [selectedPosition, setSelectedPosition] = useState<ManualPosition | null>(null)
   const [positionStackMode] = useState(true)
@@ -365,7 +378,7 @@ export function Chart() {
       .filter((item) => detectDataSource(item.value) === dataSource)
       .map((item) => ({
         symbol: item.value.toUpperCase(),
-        timeframe_default: '1d',
+        timeframe_default: DEFAULT_TIMEFRAME,
       }))
     if (sourceItems.length > 0) return sourceItems
     return DEFAULT_SYMBOLS.filter((item) => detectDataSource(item.symbol) === dataSource)
@@ -516,6 +529,26 @@ export function Chart() {
     setMounted(true)
     setGuestMode(isGuestSession())
   }, [])
+
+  useEffect(() => {
+    const syncViewport = () => {
+      const nextIsMobile = window.innerWidth < 1024
+      setIsMobileViewport(nextIsMobile)
+      setShowEventLane(true)
+    }
+    syncViewport()
+    window.addEventListener('resize', syncViewport)
+    return () => window.removeEventListener('resize', syncViewport)
+  }, [])
+
+  useEffect(() => {
+    if (!isMobileViewport) return
+    if (!selectedGroup && !selectedPosition) return
+    const id = window.setTimeout(() => {
+      detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+    return () => window.clearTimeout(id)
+  }, [isMobileViewport, selectedGroup, selectedPosition])
 
   useEffect(() => {
     if (!mounted) return
@@ -693,7 +726,7 @@ export function Chart() {
 
     setSelectedSymbol(selected)
     setDataSource(inferredSource)
-    setTimeframe('1d')
+    setTimeframe(DEFAULT_TIMEFRAME)
     if (!normalizedParam) {
       router.replace(`/chart/${selected}`)
     }
@@ -705,7 +738,7 @@ export function Chart() {
 
     const next = visibleSymbols[0]
     setSelectedSymbol(next.symbol)
-    setTimeframe('1d')
+    setTimeframe(DEFAULT_TIMEFRAME)
     router.replace(`/chart/${next.symbol}`)
   }, [dataSource, router, selectedSymbol, visibleSymbols])
 
@@ -1150,7 +1183,7 @@ export function Chart() {
   const fallbackWorkspaceHeight = 560 + (isCompactLayout ? 64 : 92) + eventLaneHeight + (isCompactLayout ? 56 : 72)
   const measuredWorkspaceHeight = wrapperRef.current?.clientHeight ?? fallbackWorkspaceHeight
   const viewportPanelBudget = typeof window !== 'undefined' && wrapperRef.current
-    ? Math.max(420, Math.floor(window.innerHeight - wrapperRef.current.getBoundingClientRect().top - 20))
+    ? Math.max(isMobileViewport ? 320 : 420, Math.floor(window.innerHeight - wrapperRef.current.getBoundingClientRect().top - (isMobileViewport ? 120 : 20)))
     : measuredWorkspaceHeight
   const rightPanelTargetHeight = Math.min(measuredWorkspaceHeight, viewportPanelBudget)
 
@@ -1810,7 +1843,7 @@ export function Chart() {
     const inferredSource = detectDataSource(next)
     setDataSource(inferredSource)
     setSelectedSymbol(next)
-    setTimeframe('1d')
+    setTimeframe(DEFAULT_TIMEFRAME)
     router.push(`/chart/${next}`)
   }
 
@@ -1850,22 +1883,22 @@ export function Chart() {
     }
   }
 
-  const workspaceRootClass = isLightWorkspace ? 'flex flex-col gap-4 text-[#1f2937]' : 'flex flex-col gap-5'
+  const workspaceRootClass = isLightWorkspace ? 'flex flex-col gap-3 text-[#1f2937] md:gap-4' : 'flex flex-col gap-3 md:gap-5'
   const topShellClass = isLightWorkspace
-    ? 'rounded-[24px] border border-[#dedbd3] bg-[#f8f5ee] p-3 shadow-[0_1px_0_rgba(255,255,255,0.84)]'
-    : 'kifu-panel p-3 md:p-4'
+    ? 'rounded-[20px] border border-[#dedbd3] bg-[#f8f5ee] p-2 shadow-[0_1px_0_rgba(255,255,255,0.84)] md:rounded-[24px] md:p-3'
+    : 'kifu-panel p-2 md:p-4'
   const topInnerClass = isLightWorkspace
-    ? 'rounded-[20px] border border-[#d8d2c6] bg-[#fcfaf6] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.76)]'
-    : 'kifu-panel-muted p-3'
+    ? 'rounded-2xl border border-[#d8d2c6] bg-[#fcfaf6] px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.76)] md:rounded-[20px] md:px-3 md:py-3'
+    : 'kifu-panel-muted p-2 md:p-3'
   const chartShellClass = isLightWorkspace
-    ? 'relative overflow-hidden rounded-[24px] border border-[#dedbd3] bg-[#f9f8f6] p-3 shadow-[0_1px_0_rgba(255,255,255,0.75)]'
-    : 'kifu-panel relative overflow-hidden p-4'
+    ? 'relative overflow-hidden rounded-[20px] border border-[#dedbd3] bg-[#f9f8f6] p-2 shadow-[0_1px_0_rgba(255,255,255,0.75)] md:rounded-[24px] md:p-3'
+    : 'kifu-panel relative overflow-hidden p-2 md:p-4'
   const sideShellClass = isLightWorkspace
-    ? 'flex h-full min-h-0 self-start overflow-hidden flex-col gap-4 rounded-[24px] border border-[#dedbd3] bg-[#f9f8f6] p-5 shadow-[0_1px_0_rgba(255,255,255,0.75)]'
-    : 'kifu-panel flex h-full min-h-0 self-start overflow-hidden flex-col gap-4 p-5'
+    ? 'flex min-h-0 flex-col gap-3 rounded-[20px] border border-[#dedbd3] bg-[#f9f8f6] p-3 shadow-[0_1px_0_rgba(255,255,255,0.75)] md:gap-4 md:rounded-[24px] md:p-5 xl:self-start xl:overflow-hidden'
+    : 'kifu-panel flex min-h-0 flex-col gap-3 p-3 md:gap-4 md:p-5 xl:self-start xl:overflow-hidden'
   const fieldClass = isLightWorkspace
-    ? 'min-w-[140px] rounded-xl border border-[#d8d2c6] bg-[#fcfaf6] px-3 py-2 text-sm font-semibold text-[#1f2937] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
-    : 'kifu-field min-w-[140px] py-2 text-sm font-semibold'
+    ? 'w-full min-w-0 sm:min-w-[140px] rounded-xl border border-[#d8d2c6] bg-[#fcfaf6] px-3 py-2 text-sm font-semibold text-[#1f2937] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
+    : 'kifu-field w-full min-w-0 sm:min-w-[140px] py-1.5 text-sm font-semibold md:py-2'
   const panelCardClass = isLightWorkspace
     ? 'rounded-xl border border-[#dedbd3] bg-[#fcfaf6] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]'
     : 'rounded-xl border border-white/[0.06] bg-black/20 p-3'
@@ -1887,7 +1920,7 @@ export function Chart() {
       <header className={topShellClass}>
         <div className="flex flex-col gap-3">
           <div className={topInnerClass}>
-            <div className="flex flex-wrap items-end gap-2.5">
+            <div className="grid gap-3 md:flex md:flex-wrap md:items-end md:gap-2.5">
               <FilterGroup label="시장" tone="emerald" variant={filterVariant}>
                 <FilterPills
                   options={[
@@ -1928,7 +1961,7 @@ export function Chart() {
             </div>
 
             <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="scrollbar-none hidden flex-nowrap items-center gap-2 overflow-x-auto pb-1 sm:flex md:flex-wrap">
                 <span className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Quick</span>
                 {visibleQuickPicks.map((item) => (
                   <button
@@ -1949,13 +1982,13 @@ export function Chart() {
                 ))}
               </div>
 
-              <div className="hidden flex-col gap-3 xl:flex-row xl:items-center">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
                 <FilterGroup label="레이어" tone="emerald" variant={filterVariant}>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 md:flex-wrap">
                     <button
                       type="button"
                       onClick={() => setShowBubbles((prev) => !prev)}
-                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
+                      className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showBubbles
                           ? isLightWorkspace
                             ? 'border-[#bfd2d5] bg-[#f1f8f9] text-[#3e666d]'
@@ -1970,7 +2003,7 @@ export function Chart() {
                     <button
                       type="button"
                       onClick={() => setShowTrades((prev) => !prev)}
-                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
+                      className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showTrades
                           ? isLightWorkspace
                             ? 'border-[#d8c6a5] bg-[#fbf5ea] text-[#775c2b]'
@@ -1985,7 +2018,7 @@ export function Chart() {
                     <button
                       type="button"
                       onClick={() => setShowPositions((prev) => !prev)}
-                      className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
+                      className={`whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
                         showPositions
                           ? isLightWorkspace
                             ? 'border-[#ccd8c4] bg-[#f3f8ef] text-[#566a4c]'
@@ -2004,8 +2037,8 @@ export function Chart() {
                         setShowBubbles(false)
                       }}
                       className={isLightWorkspace
-                        ? 'rounded-full border border-[#d8cdb6] bg-[#f8f1e3] px-3.5 py-1.5 text-sm font-semibold text-[#6e5e35] transition hover:border-[#cdbf9c] hover:bg-[#f3ead6]'
-                        : 'rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-300/20'}
+                        ? 'whitespace-nowrap rounded-full border border-[#d8cdb6] bg-[#f8f1e3] px-3.5 py-1.5 text-sm font-semibold text-[#6e5e35] transition hover:border-[#cdbf9c] hover:bg-[#f3ead6]'
+                        : 'whitespace-nowrap rounded-full border border-indigo-300/40 bg-indigo-300/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:bg-indigo-300/20'}
                     >
                       체결 집중
                     </button>
@@ -2013,14 +2046,16 @@ export function Chart() {
                 </FilterGroup>
 
                 <FilterGroup label="밀도" tone="amber" variant={filterVariant}>
-                  <FilterPills
-                    options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
-                    value={densityMode}
-                    onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
-                    tone="amber"
-                    variant={filterVariant}
-                    ariaLabel="Density filter"
-                  />
+                  <div className="scrollbar-none max-w-full overflow-x-auto pb-1">
+                    <FilterPills
+                      options={densityOptions.map((option) => ({ value: option.value, label: option.label }))}
+                      value={densityMode}
+                      onChange={(value) => setDensityMode(value as typeof densityOptions[number]['value'])}
+                      tone="amber"
+                      variant={filterVariant}
+                      ariaLabel="Density filter"
+                    />
+                  </div>
                 </FilterGroup>
               </div>
             </div>
@@ -2133,9 +2168,38 @@ export function Chart() {
         </div>
       )}
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(340px,0.95fr)]">
+      <section ref={chartSectionRef} className="grid gap-4 xl:grid-cols-[minmax(0,1.85fr)_minmax(340px,0.95fr)]">
         <div className={chartShellClass} ref={wrapperRef}>
-          <div className="relative h-[560px] w-full" ref={containerRef}>
+          {isMobileViewport && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEventLane((prev) => !prev)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  showEventLane
+                    ? 'border-sky-300/40 bg-sky-300/15 text-sky-100'
+                    : 'border-white/10 bg-white/5 text-zinc-300'
+                }`}
+              >
+                {showEventLane ? '타임라인 숨기기' : '타임라인 보기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPanelTab(selectedGroup || selectedPosition ? 'detail' : 'summary')
+                  detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:bg-white/10"
+              >
+                {selectedGroup || selectedPosition ? '선택 상세로 이동' : '요약 패널로 이동'}
+              </button>
+              <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-medium text-zinc-400">
+                버블 {filteredBubbles.length} · 체결 {activeTrades.length}
+              </span>
+            </div>
+          )}
+
+          <div className="relative h-[320px] w-full sm:h-[380px] md:h-[560px]" ref={containerRef}>
             {/* Bubble Overlay - 차트 컨테이너 내부에 absolute로 배치 */}
             {mounted && (
               <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 20, pointerEvents: 'none', overflow: 'visible' }}>
@@ -2205,7 +2269,7 @@ export function Chart() {
                     })}
                   </div>
                 )}
-                {showPositions && positionStackMode && (
+                {showPositions && positionStackMode && !isMobileViewport && (
                   <div className={isLightWorkspace ? 'absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-[#dedbd3] bg-[#fcfaf6]/95 p-3 shadow-[0_8px_24px_rgba(120,112,98,0.12)] backdrop-blur pointer-events-auto' : 'absolute left-3 top-3 z-40 w-[220px] rounded-2xl border border-white/[0.06] bg-black/30 p-3 shadow-xl backdrop-blur pointer-events-auto'}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">포지션</span>
@@ -2331,16 +2395,16 @@ export function Chart() {
                 const candleIsUp = selectedCandle ? selectedCandle.close >= selectedCandle.open : true
 
                 return (
-                  <div className={isLightWorkspace ? 'flex h-full w-full items-center gap-3 overflow-hidden rounded-[16px] border border-[#d8d2c6] bg-[#f7f4ee] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]' : 'flex w-full items-center gap-3 rounded-[22px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.86))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]'}>
-                    <div className={isLightWorkspace ? 'min-w-[164px]' : 'min-w-[164px] shrink-0'}>
+                  <div className={isLightWorkspace ? 'flex h-full w-full flex-col gap-2 overflow-hidden rounded-[16px] border border-[#d8d2c6] bg-[#f7f4ee] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] md:flex-row md:items-center md:gap-3 md:px-4' : 'flex w-full flex-col gap-2 rounded-[22px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(8,12,18,0.92),rgba(8,12,18,0.86))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] md:flex-row md:items-center md:gap-3 md:px-4'}>
+                    <div className={isLightWorkspace ? 'min-w-0 md:min-w-[164px]' : 'min-w-0 md:min-w-[164px] md:shrink-0'}>
                       <p className={isLightWorkspace ? 'text-sm font-semibold text-[#1f2937]' : 'text-sm font-semibold text-neutral-50'}>
                         {formatChartDateTime(selectionDockGroup.candleTime, useSeoulTime)}
                       </p>
                     </div>
 
                     {selectedCandle && (
-                      <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex items-center gap-2.5 text-[11px] tabular-nums">
+                      <div className="flex min-w-0 items-center gap-3 md:shrink-0">
+                        <div className="grid grid-cols-4 gap-x-3 gap-y-1 text-[11px] tabular-nums md:flex md:items-center md:gap-2.5">
                           <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>O</span>
                           <span className={isLightWorkspace ? 'font-medium text-[#3f3931]' : 'font-medium text-neutral-200'}>{fmtPrice(selectedCandle.open)}</span>
                           <span className={isLightWorkspace ? 'text-[#8a8377]' : 'text-neutral-500'}>H</span>
@@ -2354,7 +2418,7 @@ export function Chart() {
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="flex flex-wrap items-center gap-2 overflow-hidden">
                         {hasBubbles && (
                           <span className={isLightWorkspace ? 'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#c9d9da] bg-[#fffdfa] px-2.5 py-1 text-[11px] font-medium text-[#415f62]' : 'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs'}>
                             <span className={`h-2 w-2 rounded-full ${bubbleAccentDotClass}`} />
@@ -2375,7 +2439,7 @@ export function Chart() {
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 justify-end">
+                    <div className="flex justify-end md:shrink-0">
                       <button
                         type="button"
                         onClick={() => setSelectedGroup(null)}
@@ -2394,8 +2458,9 @@ export function Chart() {
             </div>
           </div>
 
-          <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.08] bg-[#0d0d12]'}>
-            <div className={isCompactLayout ? 'py-3' : 'py-4'}>
+          {showEventLane && (
+            <div className={isLightWorkspace ? 'border-t border-[#dedbd3] bg-[#f2efe9]' : 'border-t border-white/[0.08] bg-[#0d0d12]'}>
+              <div className={isCompactLayout ? 'py-3' : 'py-4'}>
               <div
                 ref={eventLaneRef}
                 className="relative w-full overscroll-none"
@@ -2609,11 +2674,12 @@ export function Chart() {
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          )}
 
         </div>
 
-        <aside className={sideShellClass} style={isCompactLayout ? { height: `${rightPanelTargetHeight}px` } : undefined}>
+        <aside ref={detailPanelRef} className={sideShellClass} style={!isMobileViewport && isCompactLayout ? { height: `${rightPanelTargetHeight}px` } : undefined}>
           <div>
             <p className="kifu-eyebrow">복기 패널</p>
             <h3 className={isLightWorkspace ? 'mt-2 text-2xl font-semibold text-[#1f2937]' : 'mt-2 text-2xl font-semibold text-neutral-100'}>말풍선과 체결</h3>
@@ -2626,7 +2692,7 @@ export function Chart() {
             <button
               type="button"
               onClick={() => setPanelTab('summary')}
-              className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition md:px-3.5 md:py-2 md:text-sm ${
                 panelTab === 'summary'
                   ? sideTabActiveClass
                   : sideTabInactiveClass
@@ -2637,7 +2703,7 @@ export function Chart() {
             <button
               type="button"
               onClick={() => setPanelTab('detail')}
-              className={`rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition md:px-3.5 md:py-2 md:text-sm ${
                 panelTab === 'detail'
                   ? sideTabActiveClass
                   : sideTabInactiveClass

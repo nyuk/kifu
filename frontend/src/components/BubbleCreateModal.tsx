@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useBubbleStore, type AgentResponse } from '../lib/bubbleStore'
 import {
   activeAiProviders,
@@ -588,38 +589,38 @@ export function BubbleCreateModal({
         ? '기술적으로'
         : '빠르게'
 
-  if (!open) return null
+  if (!open || typeof document === 'undefined') return null
 
-  return (
-    <div className="fixed inset-0 z-50 bg-[rgba(8,11,15,0.76)] px-2 py-2 backdrop-blur-[2px] lg:px-4 lg:py-4">
-      <div className="relative mx-auto flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(36,42,50,0.96),rgba(20,24,30,0.98))] text-neutral-100 shadow-2xl backdrop-blur-md">
+  return createPortal(
+    <div className="fixed inset-0 z-[120] bg-[rgba(8,11,15,0.76)] p-0 backdrop-blur-[2px] sm:px-2 sm:py-2 lg:px-4 lg:py-4">
+      <div className="relative mx-auto flex h-full w-full max-w-[1880px] flex-col overflow-hidden border border-white/[0.08] bg-[linear-gradient(145deg,rgba(36,42,50,0.96),rgba(20,24,30,0.98))] text-neutral-100 shadow-2xl backdrop-blur-md sm:rounded-[28px]">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -left-20 top-0 h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl" />
           <div className="absolute right-0 top-24 h-80 w-80 rounded-full bg-emerald-300/[0.06] blur-3xl" />
           <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-amber-300/[0.07] blur-3xl" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_22%,transparent_76%,rgba(255,255,255,0.02))]" />
         </div>
-        <form onSubmit={handleSubmit} className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="border-b border-white/[0.08] px-5 py-5 md:px-6">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0 space-y-4">
+        <form onSubmit={handleSubmit} className="relative z-10 min-h-full overflow-y-auto md:flex md:min-h-0 md:flex-1 md:flex-col md:overflow-hidden">
+          <div className="shrink-0 border-b border-white/[0.08] px-4 py-4 md:px-6 md:py-5">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 space-y-3 md:space-y-4">
                 <div>
                   <p className="kifu-eyebrow">말풍선 복기 작업 화면</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <h3 className="text-[32px] font-semibold tracking-[-0.03em] text-neutral-50">말풍선 복기 작성</h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 md:mt-3 md:gap-3">
+                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-neutral-50 md:text-[32px]">말풍선 복기 작성</h3>
                     <span className="kifu-chip">{symbol || '종목 미선택'}</span>
                     <span className="kifu-chip">{timeframe}</span>
-                    <span className="kifu-chip">{promptTypeLabel} 의견</span>
+                    <span className="kifu-chip hidden sm:inline-flex">{promptTypeLabel} 의견</span>
                   </div>
-                  <p className="mt-3 max-w-3xl text-sm leading-7 text-neutral-400 md:text-[15px]">
+                  <p className="mt-3 hidden max-w-3xl text-sm leading-7 text-neutral-400 sm:block md:text-[15px]">
                     캔들 한 장면을 기록하고, 필요한 증거를 묶고, AI 의견까지 한 화면에서 정리합니다.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-sm text-neutral-300">
                   <span className="kifu-chip">{price ? `가격 ${price}` : '가격 미입력'}</span>
-                  <span className="kifu-chip">{packetSummaryText}</span>
+                  <span className="kifu-chip hidden sm:inline-flex">{packetSummaryText}</span>
                   <span className="kifu-chip">태그 {tags.length}개</span>
-                  <span className="kifu-chip">메모 {memo.trim().length}자</span>
+                  <span className="kifu-chip hidden sm:inline-flex">메모 {memo.trim().length}자</span>
                 </div>
               </div>
               <div className="flex flex-col gap-3 xl:items-end">
@@ -630,7 +631,7 @@ export function BubbleCreateModal({
                 >
                   닫기
                 </button>
-                <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[360px]">
+                <div className="hidden gap-2 sm:grid sm:grid-cols-3 xl:min-w-[360px]">
                   {workspaceStatus.map((item) => (
                     <div key={item.key} className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-500">{item.label}</p>
@@ -641,16 +642,16 @@ export function BubbleCreateModal({
               </div>
             </div>
           </div>
-          <div className="grid min-h-0 flex-1 gap-4 overflow-hidden px-5 py-4 md:px-6 md:py-5 xl:grid-cols-[minmax(340px,0.82fr)_minmax(520px,1.24fr)_minmax(320px,0.7fr)]">
-            <section className="kifu-panel-muted order-1 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(39,46,56,0.88),rgba(29,35,43,0.88))]">
-              <div className="border-b border-white/[0.08] px-5 py-4">
+          <div className="grid min-h-0 gap-3 overflow-visible px-3 py-3 md:flex-1 md:gap-4 md:overflow-hidden md:px-6 md:py-5 xl:grid-cols-[minmax(340px,0.82fr)_minmax(520px,1.24fr)_minmax(320px,0.7fr)]">
+            <section className="kifu-panel-muted order-1 flex min-h-0 flex-col overflow-visible bg-[linear-gradient(180deg,rgba(39,46,56,0.88),rgba(29,35,43,0.88))] md:overflow-hidden">
+              <div className="border-b border-white/[0.08] px-4 py-3 md:px-5 md:py-4">
                   <p className="kifu-eyebrow">장면 기록</p>
-                <h4 className="mt-2 text-2xl font-semibold text-neutral-50">장면 기록</h4>
-                <p className="mt-2 text-sm leading-6 text-neutral-400">
+                <h4 className="mt-2 text-xl font-semibold text-neutral-50 md:text-2xl">장면 기록</h4>
+                <p className="mt-2 hidden text-sm leading-6 text-neutral-400 sm:block">
                   어떤 캔들이었는지, 왜 들어갔는지, 당시 감정과 판단을 먼저 정리합니다.
                 </p>
               </div>
-              <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
+              <div className="min-h-0 space-y-4 overflow-visible px-4 py-4 md:space-y-5 md:overflow-y-auto md:px-5 md:py-5">
                 {error && (
                   <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-base text-red-200">
                     {error}
@@ -709,7 +710,7 @@ export function BubbleCreateModal({
                     onChange={(event) => setMemo(event.target.value)}
                     rows={8}
                     disabled={guestMode}
-                    className="kifu-field min-h-[220px] w-full resize-none leading-7"
+                    className="kifu-field min-h-[150px] w-full resize-none leading-7 md:min-h-[220px]"
                     placeholder="진입 근거, 심리 상태, 놓친 신호, 다음 액션까지 함께 적어보세요."
                   />
                 </label>
@@ -769,13 +770,13 @@ export function BubbleCreateModal({
                 </div>
               </div>
             </section>
-            <section className="kifu-panel order-2 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(37,43,53,0.9),rgba(28,33,41,0.92))]">
-              <div className="border-b border-white/[0.08] px-5 py-4">
+            <section className="kifu-panel order-2 flex min-h-0 flex-col overflow-visible bg-[linear-gradient(180deg,rgba(37,43,53,0.9),rgba(28,33,41,0.92))] md:overflow-hidden">
+              <div className="border-b border-white/[0.08] px-4 py-3 md:px-5 md:py-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <p className="kifu-eyebrow">AI 의견</p>
-                    <h4 className="mt-2 text-2xl font-semibold text-neutral-50">AI 의견 비교</h4>
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
+                    <h4 className="mt-2 text-xl font-semibold text-neutral-50 md:text-2xl">AI 의견 비교</h4>
+                    <p className="mt-2 hidden text-sm leading-6 text-neutral-400 sm:block">
                       먼저 장면 기록을 읽고, 필요할 때만 증거 패킷을 붙여 판단 근거와 놓친 포인트를 점검합니다.
                     </p>
                   </div>
@@ -817,7 +818,7 @@ export function BubbleCreateModal({
                   </div>
                 </div>
               </div>
-              <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5">
+              <div className="min-h-0 space-y-3 overflow-visible px-4 py-4 md:space-y-4 md:overflow-y-auto md:px-5 md:py-5">
                 {!aiDisabled && aiResponses.length === 0 && !isDemoMode && optionalAiProviders.length > 0 && (
                   <p className="text-sm text-neutral-500">
                     Gemini는 기본 응답을 확인한 뒤 필요할 때만 추가 의견으로 덧붙이는 흐름입니다.
@@ -852,10 +853,10 @@ export function BubbleCreateModal({
                   </div>
                 )}
                 {!aiReady && !aiError && (
-                  <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[rgba(28,34,42,0.72)] px-5 py-5">
+                  <div className="rounded-2xl border border-dashed border-white/[0.12] bg-[rgba(28,34,42,0.72)] px-4 py-4 md:px-5 md:py-5">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">아직 AI 의견 없음</p>
-                    <h5 className="mt-3 text-xl font-semibold text-neutral-50">기록과 증거를 준비한 뒤 AI 의견을 받아보세요.</h5>
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <h5 className="mt-3 text-base font-semibold text-neutral-50 md:text-xl">기록과 증거를 준비한 뒤 AI 의견을 받아보세요.</h5>
+                    <div className="mt-4 hidden gap-3 md:grid md:grid-cols-3">
                       <div className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.04)] px-4 py-3">
                         <p className="text-sm font-semibold text-neutral-200">1. 장면 기록</p>
                         <p className="mt-2 text-sm leading-6 text-neutral-400">가격과 메모를 남기면 AI가 장면을 훨씬 정확하게 읽습니다.</p>
@@ -916,7 +917,7 @@ export function BubbleCreateModal({
                 )}
               </div>
             </section>
-            <section className="kifu-panel-muted order-3 flex min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(38,45,55,0.88),rgba(29,35,43,0.88))]">
+            <section className="kifu-panel-muted order-3 hidden min-h-0 flex-col overflow-hidden bg-[linear-gradient(180deg,rgba(38,45,55,0.88),rgba(29,35,43,0.88))] xl:flex">
               <div className="border-b border-white/[0.08] px-5 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -1189,14 +1190,14 @@ export function BubbleCreateModal({
               </div>
             </section>
           </div>
-          <div className="border-t border-white/[0.08] bg-[rgba(22,27,34,0.82)] px-5 py-4 backdrop-blur md:px-6">
+          <div className="shrink-0 border-t border-white/[0.08] bg-[rgba(22,27,34,0.82)] px-4 pb-6 pt-3 backdrop-blur md:px-6 md:py-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <p className="text-sm leading-6 text-neutral-400">
+              <p className="hidden text-sm leading-6 text-neutral-400 sm:block">
                 {aiReady
                   ? '저장하면 현재 메모와 함께 AI 복기 요약도 노트로 남깁니다.'
                   : 'AI 의견 없이도 말풍선을 먼저 저장할 수 있습니다. 필요하면 나중에 다시 열어 복기해도 됩니다.'}
               </p>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
                 <button type="button" onClick={onClose} className="kifu-btn-secondary px-4 py-2.5 text-sm">
                   취소
                 </button>
@@ -1212,7 +1213,8 @@ export function BubbleCreateModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

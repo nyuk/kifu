@@ -17,18 +17,18 @@ export default function OnboardingImportPage() {
   const authed = mounted && isAuthenticated
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-4 text-neutral-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center">
-        <div className="w-full space-y-6">
+    <div className="min-h-screen bg-neutral-950 px-4 py-8 text-neutral-100 md:py-12">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-4xl items-start justify-center md:items-center">
+        <div className="w-full space-y-5 md:space-y-6">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">Import Onboarding</p>
-          <h1 className="text-3xl font-semibold">내 거래 불러오기</h1>
+          <h1 className="text-2xl font-semibold md:text-3xl">내 거래 불러오기</h1>
           <p className="text-sm text-neutral-400">
             Settings에서 API 연결 또는 CSV 업로드를 하면 차트, 복기, 포트폴리오가 바로 채워집니다.
           </p>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-3 md:grid-cols-3 md:gap-4">
           <article className="rounded-2xl border border-neutral-800/60 bg-neutral-900/60 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Step 1</p>
             <h2 className="mt-2 text-lg font-semibold">거래소 연결</h2>
@@ -46,7 +46,7 @@ export default function OnboardingImportPage() {
           </article>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-5">
+        <section className="rounded-2xl border border-neutral-800/60 bg-neutral-900/50 p-4 md:p-5">
           <div className="flex flex-wrap gap-2">
             {authed ? (
               <Link href="/settings" className="rounded-lg bg-neutral-100 px-4 py-2 text-sm font-semibold text-neutral-950">

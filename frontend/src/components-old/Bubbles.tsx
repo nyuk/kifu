@@ -84,7 +84,15 @@ export function Bubbles() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [searchQuery, setSearchQuery] = useState('')
   const [pageInput, setPageInput] = useState('1')
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
   const listContainerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const syncViewport = () => setIsMobileViewport(window.innerWidth < 1024)
+    syncViewport()
+    window.addEventListener('resize', syncViewport)
+    return () => window.removeEventListener('resize', syncViewport)
+  }, [])
 
   useEffect(() => {
     fetchBubblesFromServer(200, true).catch(() => null)
@@ -246,42 +254,42 @@ export function Bubbles() {
   }
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 flex-shrink-0">
+    <div className="flex h-full flex-col gap-4 pb-20 md:gap-5 md:pb-0">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 md:p-6 flex-shrink-0">
         <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Journal</p>
-        <h2 className="mt-3 text-2xl font-semibold text-neutral-100">Bubble Library</h2>
-        <p className="mt-2 text-sm text-neutral-400">
+        <h2 className="mt-1 text-xl font-semibold text-neutral-100 md:mt-3 md:text-2xl">Bubble Library</h2>
+        <p className="mt-1 text-xs text-neutral-400 md:mt-2 md:text-sm">
             저장된 분석 버블 ({totalBubbles.toLocaleString()}개) · AI 조언 포함: {stats.withAgents}개
         </p>
       </header>
 
-      <section className="grid gap-4 lg:grid-cols-6 flex-shrink-0">
+      <section className="scrollbar-none flex flex-nowrap gap-2 overflow-x-auto md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-6 flex-shrink-0">
         {['BUY', 'SELL', 'HOLD', 'TP', 'SL', 'NONE'].map((action) => (
           <button
             key={action}
             onClick={() => setActionFilter(actionFilter === action ? 'all' : action as ActionType)}
-            className={`rounded-2xl border p-4 text-center transition ${actionFilter === action
+            className={`min-w-[84px] rounded-2xl border p-2 text-center transition md:min-w-0 md:p-4 ${actionFilter === action
               ? 'border-neutral-100 bg-neutral-100/10'
               : 'border-white/[0.08] bg-white/[0.04] hover:border-neutral-700'}
             `}
           >
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{action}</p>
-            <p className={`mt-2 text-2xl font-semibold ${actionColors[action]}`}>
+            <p className={`mt-0.5 text-lg font-semibold md:mt-2 md:text-2xl ${actionColors[action]}`}>
               {stats.byAction[action] || 0}
             </p>
           </button>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 flex flex-col min-h-0">
-        <div className="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
+      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 pb-6 md:p-5 flex flex-col min-h-0">
+        <div className="scrollbar-none mb-3 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 md:mb-4 md:flex-wrap md:gap-3 flex-shrink-0">
           <FilterGroup label="SEARCH" tone="cyan">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search notes, tags..."
-              className="flex-1 min-w-[220px] rounded-lg border border-cyan-400/40 bg-neutral-950/70 px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/70"
+              className="min-w-[220px] rounded-lg border border-cyan-400/40 bg-neutral-950/70 px-3 py-2 text-sm text-cyan-100 placeholder:text-cyan-300/70 md:flex-1"
             />
           </FilterGroup>
           <FilterGroup label="SORT" tone="amber">
@@ -298,14 +306,14 @@ export function Bubbles() {
           </FilterGroup>
         </div>
 
-        <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        <div className="mb-3 flex items-center justify-between gap-3 flex-shrink-0">
           <span className="text-xs text-neutral-400">{filteredBubbles.length} results</span>
           <button
             onClick={() => {
               if (confirm('모든 버블을 삭제하시겠습니까?')) replaceAllBubbles([])
               setSelectedId(null)
             }}
-            className="text-xs text-red-400 hover:text-red-300"
+            className={`text-xs text-red-400 hover:text-red-300 ${isMobileViewport ? 'hidden' : ''}`}
           >
             Clear All
           </button>
@@ -322,7 +330,7 @@ export function Bubbles() {
                   key={bubble.id}
                   data-bubble-id={bubble.id}
                   onClick={() => setSelectedId(isSelected ? null : bubble.id)}
-                  className={`w-full rounded-xl border p-4 text-left text-sm transition ${isSelected
+                  className={`w-full rounded-xl border p-3 text-left text-sm transition md:p-4 ${isSelected
                     ? 'border-neutral-100 bg-neutral-100/10'
                     : 'border-white/[0.08] bg-black/20 hover:border-neutral-600'
                   }`}
@@ -402,7 +410,7 @@ export function Bubbles() {
                       {selectedBubble?.id === bubble.id && similarAnalysis && (
                         <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
                           <p className="text-xs uppercase tracking-[0.2em] text-zinc-400 mb-2">유사 패턴 분석</p>
-                          <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
                             <div className="rounded-md border border-white/10 p-2">
                               <p className="text-xs text-zinc-400">승률</p>
                               <p className={`text-lg font-bold ${similarAnalysis.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
@@ -430,7 +438,7 @@ export function Bubbles() {
                               setSelectedId(null)
                             }
                           }}
-                          className="rounded-lg border border-red-500/50 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                          className={`rounded-lg border border-red-500/50 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10 ${isMobileViewport ? 'hidden' : ''}`}
                         >
                           삭제
                         </button>

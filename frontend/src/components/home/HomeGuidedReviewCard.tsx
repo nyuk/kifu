@@ -93,14 +93,14 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         : '오늘의 복기 시작'
 
   return (
-    <section className="kifu-panel p-5 md:p-6">
+    <section className="kifu-panel p-3 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="kifu-eyebrow">오늘의 복기</p>
-          <h2 className="mt-2 text-2xl font-semibold text-neutral-100">
+          <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">
             오늘의 복기
           </h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-400">
+          <p className="mt-2 hidden text-sm leading-6 text-neutral-400 sm:block">
             체결을 하나씩 되짚고, 이유와 감정과 패턴을 남기는 Kifu의 중심 루틴입니다.
           </p>
         </div>
@@ -126,7 +126,7 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs">
+      <div className="mt-3 hidden flex-wrap gap-2 text-xs sm:flex md:mt-4">
         {['거래 선택', '이유 기록', '패턴 남기기'].map((step, index) => (
           <span key={step} className="kifu-chip">
             {index + 1}. {step}
@@ -134,27 +134,27 @@ export function HomeGuidedReviewCard({ forceOpen = false, autoLoad = true }: Hom
         ))}
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[0.92fr_1.08fr]">
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+      <div className="mt-3 grid gap-3 md:mt-4 lg:grid-cols-[0.92fr_1.08fr]">
+        <div className="grid grid-cols-3 gap-2 md:gap-3 lg:grid-cols-1 xl:grid-cols-3">
           <div className="kifu-stat-card">
             <p className="kifu-eyebrow">오늘 항목</p>
-            <p className="mt-2 text-2xl font-semibold text-neutral-100">{totalCount}</p>
+            <p className="mt-1 text-xl font-semibold text-neutral-100 md:mt-2 md:text-2xl">{totalCount}</p>
           </div>
           <div className="kifu-stat-card">
             <p className="kifu-eyebrow">작성 완료</p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-200">{answeredCount}</p>
+            <p className="mt-1 text-xl font-semibold text-emerald-200 md:mt-2 md:text-2xl">{answeredCount}</p>
           </div>
           <div className="kifu-stat-card">
             <p className="kifu-eyebrow">남은 단계</p>
-            <p className={`mt-2 text-2xl font-semibold ${isCompleted ? 'text-emerald-200' : 'text-amber-200'}`}>
+            <p className={`mt-1 text-xl font-semibold md:mt-2 md:text-2xl ${isCompleted ? 'text-emerald-200' : 'text-amber-200'}`}>
               {isCompleted ? '완료' : `${Math.max(totalCount - answeredCount, 0)}건 남음`}
             </p>
           </div>
         </div>
 
-        <div className="kifu-panel-muted p-4">
+        <div className="kifu-panel-muted p-3 md:p-4">
           <p className="text-sm font-semibold text-neutral-100">오늘 흐름</p>
-          <p className="mt-2 text-sm leading-6 text-neutral-400">{progressCopy}</p>
+          <p className="mt-2 hidden text-sm leading-6 text-neutral-400 sm:block">{progressCopy}</p>
           {!guestMode && (supplementPending > 0 || rolloverPending > 0) && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {supplementPending > 0 && (

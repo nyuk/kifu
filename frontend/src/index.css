@@ -187,6 +187,46 @@ body {
     @apply rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-base text-neutral-100 placeholder:text-neutral-600 focus:border-white/20 focus:outline-none;
   }
 
+  @media (max-width: 767px) {
+    .kifu-panel {
+      @apply rounded-[18px] border-white/[0.08] bg-white/[0.04] shadow-none;
+    }
+
+    .kifu-panel-muted {
+      @apply rounded-2xl;
+    }
+
+    .kifu-section-title {
+      @apply text-2xl leading-tight;
+    }
+
+    .kifu-eyebrow {
+      @apply text-[10px] tracking-[0.22em];
+    }
+
+    .kifu-section-copy {
+      @apply text-xs leading-5;
+    }
+
+    .kifu-chip {
+      @apply px-2 py-0.5 text-[11px];
+    }
+
+    .kifu-stat-card {
+      @apply rounded-xl px-3 py-2.5;
+    }
+
+    .kifu-btn-primary,
+    .kifu-btn-secondary,
+    .kifu-btn-ghost {
+      @apply rounded-lg px-3 py-2 text-xs;
+    }
+
+    .kifu-field {
+      @apply rounded-lg px-3 py-2 text-sm;
+    }
+  }
+
   .kifu-nav-link {
     @apply relative flex h-10 items-center gap-3 rounded-xl px-3 text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-white/[0.05] hover:text-zinc-100;
   }

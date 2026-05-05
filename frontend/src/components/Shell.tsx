@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { clearGuestSession, readGuestSession } from '../lib/guestSession'
 import { api } from '../lib/api'
 import { useBubbleStore } from '../lib/bubbleStore'
-import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck, Megaphone } from 'lucide-react'
+import { Home, PieChart, LineChart, Bell, Zap, FileText, Settings, TrendingUp, Boxes, ShieldCheck, Megaphone, Menu, X } from 'lucide-react'
 import { LegalFooter } from './legal/LegalFooter'
 
 type ShellTheme = 'neutral' | 'forest' | 'warm'
@@ -26,7 +26,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [profileEmail, setProfileEmail] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [shellTheme, setShellTheme] = useState<ShellTheme>('neutral')
-  const contentClass = 'relative z-10 h-full overflow-y-auto px-4 py-6 md:px-6 lg:px-8'
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const contentClass = 'relative z-10 px-0 py-3 pb-24 md:px-2 lg:h-full lg:overflow-y-auto lg:px-8 lg:py-6 lg:pb-6'
 
   const isGuestSessionActive = Boolean(guestSessionId)
 
@@ -79,6 +80,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
     }
   }, [accessToken])
 
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [pathname])
+
   const baseNavItems = [
     { icon: Home, label: t.navHome, href: '/home', color: 'text-fuchsia-400', activeColor: 'bg-fuchsia-400/10 text-fuchsia-300' },
     { icon: PieChart, label: t.navPortfolio, href: '/portfolio', color: 'text-violet-400', activeColor: 'bg-violet-400/10 text-violet-300' },
@@ -106,6 +111,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       ]
     : effectiveBaseNavItems
 
+  const mobilePrimaryNavItems = navItems.slice(0, 5)
+
   const handleLogout = () => {
     clearGuestSession()
     resetSessionData()
@@ -118,7 +125,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return (
       <div className="app-shell theme-neutral h-screen overflow-hidden">
         <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-          <aside className="flex flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-5 lg:w-64 flex-shrink-0 backdrop-blur-xl">
+          <aside className="hidden flex-col gap-6 rounded-2xl border border-white/[0.08] bg-white/[0.06] p-5 lg:flex lg:w-64 lg:flex-shrink-0 backdrop-blur-xl">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-neutral-500">KIFU</p>
               <h1 className="mt-3 text-2xl font-semibold text-neutral-100">거래 복기</h1>
@@ -155,7 +162,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={`app-shell theme-${shellTheme} h-screen overflow-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white`}>
+    <div className={`app-shell theme-${shellTheme} min-h-screen overflow-x-hidden font-sans text-stone-200 selection:bg-stone-700 selection:text-white lg:h-screen lg:overflow-hidden`}>
       <div className="pointer-events-none absolute right-6 top-4 z-30 hidden md:block">
         <div className="pointer-events-auto kifu-segmented gap-1 rounded-full bg-black/35 backdrop-blur-md">
           {([
@@ -178,8 +185,71 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="relative z-10 flex h-full flex-col gap-6 px-4 py-6 lg:flex-row">
-        <aside className="relative flex flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.06] backdrop-blur-xl p-5 lg:w-64 flex-shrink-0 overflow-y-auto shadow-2xl shadow-black/40">
+      <div className="relative z-10 flex min-h-screen flex-col gap-3 px-3 py-3 pb-24 lg:h-full lg:min-h-0 lg:flex-row lg:gap-6 lg:px-4 lg:py-6 lg:pb-6">
+        <div className="sticky top-3 z-20 flex items-center justify-between gap-3 rounded-2xl border border-white/[0.08] bg-[#101419]/90 px-4 py-3 shadow-xl shadow-black/20 backdrop-blur-xl lg:hidden">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500">KIFU</p>
+            <p className="mt-1 truncate text-sm font-semibold text-zinc-100">
+              {navItems.find((item) => pathname === item.href || pathname?.startsWith(item.href + '/'))?.label || 'Dashboard'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((prev) => !prev)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-100"
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileNavOpen}
+          >
+            {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {mobileNavOpen && (
+          <div className="lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              className="fixed inset-0 z-20 bg-black/60"
+              aria-label="Close navigation overlay"
+            />
+            <aside className="fixed inset-x-4 top-20 z-30 flex max-h-[calc(100vh-7rem)] flex-col gap-5 overflow-y-auto rounded-3xl border border-white/10 bg-[#0e1117]/95 p-5 shadow-2xl shadow-black/50 backdrop-blur-xl">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
+                <h1 className="mt-3 text-xl font-bold text-zinc-100 tracking-tight">거래 복기</h1>
+              </div>
+              <nav className="flex flex-col gap-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`group kifu-nav-link ${isActive ? `kifu-nav-link-active ${item.activeColor || ''}` : ''}`}
+                    >
+                      <item.icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : `group-hover:scale-110 ${item.color}`}`} />
+                      <span className={isActive ? 'translate-x-1 transition-transform' : 'transition-transform group-hover:translate-x-1'}>
+                        {item.label}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </nav>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.06] p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{t.sessionLabel}</p>
+                <p className="mt-2 text-sm text-zinc-300">{t.sessionText}</p>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="kifu-btn-secondary mt-4 w-full"
+                >
+                  {t.logout}
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        <aside className="relative hidden flex-col gap-6 rounded-2xl border border-amber-900/20 bg-white/[0.06] backdrop-blur-xl p-5 shadow-2xl shadow-black/40 lg:flex lg:w-64 lg:flex-shrink-0 lg:overflow-y-auto">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-zinc-500 font-bold">KIFU</p>
             <h1 className="mt-3 text-2xl font-bold text-zinc-100 tracking-tight">거래 복기</h1>
@@ -250,9 +320,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </aside>
-        <main className="relative min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.06] shadow-inner backdrop-blur-sm">
+        <main className="relative flex-1 lg:min-h-0 lg:overflow-y-auto lg:rounded-2xl lg:border lg:border-white/[0.06] lg:bg-white/[0.06] lg:shadow-inner lg:backdrop-blur-sm">
           {/* Top Gradient Fade moved to individual pages or could be here globally */}
-          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          <div className="pointer-events-none absolute left-0 right-0 top-0 hidden h-32 bg-gradient-to-b from-white/5 to-transparent lg:block" />
           <div className={contentClass}>
             {isGuestSessionActive && (
               <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
@@ -273,12 +343,30 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </div>
             )}
             {children}
-            <div className="mt-10 rounded-2xl border border-white/[0.06] bg-black/10">
+            <div className="mt-10 hidden rounded-2xl border border-white/[0.06] bg-black/10 md:block">
               <LegalFooter variant="app" />
             </div>
           </div>
         </main>
       </div>
+
+      <nav className="fixed inset-x-3 bottom-3 z-20 grid grid-cols-5 gap-2 rounded-3xl border border-white/10 bg-[#0e1117]/92 p-2 shadow-2xl shadow-black/50 backdrop-blur-xl lg:hidden">
+        {mobilePrimaryNavItems.map((item) => {
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-semibold transition ${
+                isActive ? 'bg-white text-black' : 'text-zinc-300 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }

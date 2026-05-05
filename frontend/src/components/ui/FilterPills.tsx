@@ -49,7 +49,7 @@ export function FilterGroup({ label, tone = 'amber', variant = 'default', childr
     : toneText[tone]
   return (
     <div className="flex items-center gap-2">
-      <span className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${labelClass}`}>
+      <span className={`shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.24em] ${labelClass}`}>
         {label}
       </span>
       {children}

@@ -79,7 +79,7 @@ function TelegramConnect({ guestMode }: { guestMode: boolean }) {
           {guestFeatureMessage('텔레그램 연결')}
         </div>
       )}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-zinc-200">{t.telegramTitle}</span>
@@ -134,7 +134,7 @@ function TelegramConnect({ guestMode }: { guestMode: boolean }) {
           ) : (
             <>
               <p className="text-sm text-zinc-300">{t.telegramCodeMsg}</p>
-              <div className="mt-2 flex items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
                 <code className="rounded bg-zinc-900 px-4 py-2 text-2xl font-mono font-bold tracking-widest text-zinc-100">
                   {connectData.code}
                 </code>
@@ -163,6 +163,7 @@ export function Settings() {
   const [passwordMessage, setPasswordMessage] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [guestMode, setGuestMode] = useState(false)
+  const [showMobileAdvancedSettings, setShowMobileAdvancedSettings] = useState(false)
 
   useEffect(() => {
     setGuestMode(isGuestSession())
@@ -225,8 +226,8 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+    <div className="flex flex-col gap-5">
+      <header className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-6">
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-400">Profile</p>
         <h2 className="mt-3 text-2xl font-semibold text-zinc-100">{t.settingsTitle}</h2>
         <p className="mt-2 text-sm text-zinc-400">
@@ -235,7 +236,7 @@ export function Settings() {
       </header>
       <section className="grid gap-4 lg:grid-cols-2">
         {guestMode && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 lg:col-span-2">
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 md:p-5 lg:col-span-2">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-200">Guest Mode</p>
             <p className="mt-3 text-lg font-semibold text-zinc-100">읽기 전용 미리보기</p>
             <p className="mt-2 text-sm text-amber-100/90">
@@ -243,14 +244,14 @@ export function Settings() {
             </p>
           </div>
         )}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className="order-1 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Language / 언어</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">Interface Language</p>
           <div className="mt-4">
             <LanguageSelector />
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+        <div className="order-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Account</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">Email + Tier</p>
           <p className="mt-2 text-sm text-zinc-500">
@@ -263,7 +264,18 @@ export function Settings() {
             비밀번호 상태: {passwordSet === null ? '확인 중...' : passwordSet ? '설정됨' : '미설정(소셜 전용)'}
           </p>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+        <div className="order-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:hidden">
+          <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Advanced</p>
+          <p className="mt-2 text-sm text-zinc-400">비밀번호, 거래소 API, AI 사용량은 필요할 때만 열어봅니다.</p>
+          <button
+            type="button"
+            onClick={() => setShowMobileAdvancedSettings((prev) => !prev)}
+            className="mt-3 inline-flex h-9 items-center rounded-lg border border-white/10 bg-white/5 px-3 text-xs font-semibold text-zinc-100"
+          >
+            {showMobileAdvancedSettings ? '고급 설정 닫기' : '고급 설정 열기'}
+          </button>
+        </div>
+        <div className={`order-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5 lg:col-span-2 ${showMobileAdvancedSettings ? '' : 'hidden md:block'}`}>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Password</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">비밀번호 설정/변경</p>
           <p className="mt-2 text-sm text-zinc-500">
@@ -290,7 +302,7 @@ export function Settings() {
               className="h-10 rounded-lg border border-white/[0.12] bg-white/[0.04] px-3 text-sm text-zinc-100 outline-none focus:border-emerald-400/60"
               required
             />
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="submit"
                 disabled={guestMode || passwordSaving}
@@ -303,21 +315,21 @@ export function Settings() {
             {passwordMessage && <p className="text-sm text-emerald-300">{passwordMessage}</p>}
           </form>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+        <div className={`order-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5 lg:col-span-2 ${showMobileAdvancedSettings ? '' : 'hidden md:block'}`}>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Exchanges</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">API Trade Sync</p>
           <div className="mt-4">
             <ExchangeConnectionManager />
           </div>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+        <div className={`order-7 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5 lg:col-span-2 ${showMobileAdvancedSettings ? '' : 'hidden md:block'}`}>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">AI Usage</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">AI 분석은 서버에서 처리됩니다</p>
           <p className="mt-2 text-sm text-zinc-500">
             개인 API 키 등록 없이 바로 사용할 수 있도록 설계했습니다. 사용량은 구독 플랜에 따라 관리됩니다.
           </p>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 lg:col-span-2">
+        <div className="order-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 md:p-5 lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-400">Notifications</p>
           <p className="mt-3 text-lg font-semibold text-zinc-200">{t.telegramTitle}</p>
           <div className="mt-4">

@@ -9,7 +9,7 @@ import { normalizeExchangeFilter } from '../../lib/exchangeFilters'
 import { PageJumpPager } from '../ui/PageJumpPager'
 import { FilterGroup, FilterPills } from '../ui/FilterPills'
 import type { PositionItem, PositionsResponse, TimelineItem, TimelineResponse } from '../../types/portfolio'
-import type { TradeItem, TradeListResponse, TradeSummaryResponse } from '../../types/trade'
+import type { TradeListResponse, TradeSummaryResponse } from '../../types/trade'
 
 type Filters = {
   assetClass: 'all' | 'crypto' | 'stock'
@@ -139,7 +139,7 @@ export function PortfolioDashboard() {
       const params = buildParams(filters)
       const response = await api.get<PositionsResponse>(`/v1/portfolio/positions?${params}`)
       setPositions(response.data.positions)
-    } catch (err) {
+    } catch {
       setError('포지션 데이터를 불러오지 못했습니다.')
     } finally {
       setLoadingPositions(false)
@@ -154,7 +154,7 @@ export function PortfolioDashboard() {
       const response = await api.get<TimelineResponse>(`/v1/portfolio/timeline?${params}`)
       setTimeline(response.data.items)
       setNextCursor(response.data.next_cursor ?? null)
-    } catch (err) {
+    } catch {
       setError('타임라인 데이터를 불러오지 못했습니다.')
     } finally {
       setLoadingTimeline(false)
@@ -318,7 +318,7 @@ export function PortfolioDashboard() {
       const response = await api.get<TimelineResponse>(`/v1/portfolio/timeline?${params}`)
       setTimeline((prev) => [...prev, ...response.data.items])
       setNextCursor(response.data.next_cursor ?? null)
-    } catch (err) {
+    } catch {
       setError('추가 타임라인을 불러오지 못했습니다.')
     } finally {
       setLoadingTimeline(false)
@@ -350,7 +350,7 @@ export function PortfolioDashboard() {
       setTimeline(timelineResponse.data.items)
       setNextCursor(timelineResponse.data.next_cursor ?? null)
       setUsingTradeFallback(false)
-    } catch (err) {
+    } catch {
       setBackfillError('포트폴리오 이벤트 생성에 실패했습니다.')
     } finally {
       setBackfillLoading(false)
@@ -378,15 +378,15 @@ export function PortfolioDashboard() {
   }, [positionPage])
 
   return (
-    <div className="min-h-screen text-neutral-100 p-4 md:p-8">
-      <div className="w-full space-y-6">
+    <div className="min-h-screen p-0 text-neutral-100 md:p-8">
+      <div className="w-full space-y-4 md:space-y-6">
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Portfolio</p>
-          <h1 className="text-3xl font-semibold">통합 포트폴리오</h1>
+          <h1 className="text-2xl font-semibold leading-tight md:text-3xl">통합 포트폴리오</h1>
           <p className="text-sm text-neutral-400">실거래(API) 타임라인을 기본으로 코인/주식/DEX 흐름을 묶습니다.</p>
         </header>
 
-        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+        <section className="scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:flex-wrap md:gap-3 md:p-6">
           <FilterGroup label="자산군" tone="amber">
             <FilterPills
               options={assetOptions}
@@ -402,7 +402,7 @@ export function PortfolioDashboard() {
               value={filters.venue}
               onChange={(event) => setFilters((prev) => ({ ...prev, venue: event.target.value }))}
               placeholder="binance, upbit"
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 placeholder:text-zinc-400 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50 transition-all"
+              className="min-w-[180px] rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-neutral-200 transition-all placeholder:text-zinc-400 focus:border-sky-500/50 focus:outline-none focus:ring-1 focus:ring-sky-500/50"
             />
           </FilterGroup>
 
@@ -433,25 +433,25 @@ export function PortfolioDashboard() {
           </div>
         )}
 
-        <section className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-6">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Timeline</p>
-            <p className="mt-2 text-2xl font-semibold text-neutral-100">{timeline.length}</p>
+            <p className="mt-1 text-xl font-semibold text-neutral-100 md:mt-2 md:text-2xl">{timeline.length}</p>
             <p className="text-xs text-zinc-400">이벤트 수</p>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Open Positions</p>
-            <p className="mt-2 text-2xl font-semibold text-lime-300">{stats.openPositions}</p>
+            <p className="mt-1 text-xl font-semibold text-lime-300 md:mt-2 md:text-2xl">{stats.openPositions}</p>
             <p className="text-xs text-zinc-400">보유 포지션</p>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+          <div className="col-span-2 rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:col-span-1 md:p-6">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Coverage</p>
-            <p className="mt-2 text-2xl font-semibold text-sky-300">{stats.venueCount}</p>
+            <p className="mt-1 text-xl font-semibold text-sky-300 md:mt-2 md:text-2xl">{stats.venueCount}</p>
             <p className="text-xs text-zinc-400">거래소 · 자산군 {stats.assetCount}</p>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+        <section className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">Trade Sync Summary</p>
             <p className="text-sm font-semibold text-emerald-300">
@@ -501,13 +501,13 @@ export function PortfolioDashboard() {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+        <section className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:p-6 lg:col-span-2">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Timeline</p>
               <span className="text-xs text-zinc-400">{timeline.length} events</span>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 space-y-2 md:mt-4 md:space-y-3">
               {loadingTimeline && timeline.length === 0 && <p className="text-xs text-zinc-400">불러오는 중...</p>}
               {!loadingTimeline && timeline.length === 0 && (
                 <p className="text-xs text-zinc-400">아직 타임라인 데이터가 없습니다.</p>
@@ -525,8 +525,8 @@ export function PortfolioDashboard() {
 
                 const timelineKey = `${item.id || 'evt'}-${item.executed_at || 'time'}-${index}`
                 return (
-                  <div key={timelineKey} className="rounded-xl border border-white/5 bg-white/[0.03] p-5 hover:bg-white/[0.04] transition-colors">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div key={timelineKey} className="rounded-xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.04] md:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold text-neutral-100">{item.instrument}</p>
@@ -544,7 +544,7 @@ export function PortfolioDashboard() {
                           <span className="text-neutral-300">{item.event_type}</span> · {formatDateTime(item.executed_at)}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         <p className={`text-sm font-semibold ${sideTone}`}>
                           {item.side ? item.side.toUpperCase() : '-'} {item.qty ?? '-'}
                         </p>
@@ -569,25 +569,25 @@ export function PortfolioDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-white/[0.04] backdrop-blur-md p-6">
+          <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 backdrop-blur-md md:p-6">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Positions</p>
               <span className="text-xs text-zinc-400">
                 {positions.length} items · {positionPage} / {positionTotalPages} 페이지
               </span>
             </div>
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 space-y-2 md:mt-4 md:space-y-3">
               {loadingPositions && positions.length === 0 && <p className="text-xs text-zinc-400">불러오는 중...</p>}
               {!loadingPositions && positions.length === 0 && (
                 <p className="text-xs text-zinc-400">포지션 요약이 없습니다.</p>
               )}
               {pagedPositions.map((position) => (
-                <div key={position.key} className="rounded-xl border border-white/5 bg-white/[0.03] p-5 hover:bg-white/[0.04] transition-colors">
+                <div key={position.key} className="rounded-xl border border-white/5 bg-white/[0.03] p-4 transition-colors hover:bg-white/[0.04] md:p-5">
                   <p className="text-sm font-semibold">{position.instrument}</p>
                   <p className="text-xs text-zinc-400">
                     {position.venue_name} · {position.status.toUpperCase()} · {formatDateTime(position.last_executed_at)}
                   </p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-neutral-300">
+                  <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-neutral-300 sm:grid-cols-2">
                     <div>
                       <span className="text-zinc-400">Net</span> {position.net_qty}
                     </div>

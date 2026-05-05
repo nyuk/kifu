@@ -526,15 +526,15 @@ export default function ReviewPage() {
       : '이번 기간은 손실 구간입니다. 거래 이유와 감정, 대응 기록을 차례로 정리해 패턴을 분리해 보세요.'
 
   const aiNotesSection = (
-    <div className="kifu-panel p-5">
+    <div className="kifu-panel p-3 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="kifu-eyebrow">AI 의견</p>
-          <h3 className="mt-2 text-2xl font-semibold text-neutral-100">AI 의견 비교</h3>
+          <h3 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">AI 의견 비교</h3>
         </div>
         <span className="text-sm text-zinc-300">최근 요청 기준</span>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="scrollbar-none mt-3 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 md:mt-4 md:flex-wrap">
         <select
           value={aiSymbolFilter}
           onChange={(event) => setAiSymbolFilter(event.target.value)}
@@ -578,12 +578,12 @@ export default function ReviewPage() {
       {!aiNotesLoading && filteredAiNotes.length === 0 && !aiNotesError && (
         <p className="mt-3 text-sm text-zinc-300">아직 AI 복기 요약이 없습니다.</p>
       )}
-      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 md:mt-4 md:gap-3 lg:grid-cols-2">
         {pagedAiNotes.map((note) => {
           const sections = parseAiSections(note.content || '')
           const header = sections.length > 0 ? sections[0].title : note.title
           return (
-            <div key={note.id} className="rounded-lg border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-white/10">
+            <div key={note.id} className="rounded-lg border border-white/5 bg-white/5 p-3 transition-all hover:bg-white/10 hover:border-white/10 md:p-4">
               <div className="flex items-center justify-between text-sm text-neutral-300">
                 <span className="font-medium text-neutral-300">{header || 'AI 요약'}</span>
                 <span>{new Date(note.created_at).toLocaleString('ko-KR')}</span>
@@ -643,17 +643,17 @@ export default function ReviewPage() {
 
   const summarySection = (
     <div className="space-y-6">
-      <div className="kifu-panel p-5">
+      <div className="kifu-panel p-3 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="kifu-eyebrow">거래 요약</p>
-            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">거래 흐름 요약</h3>
+            <h3 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">거래 흐름 요약</h3>
           </div>
           <div className={`text-sm font-semibold ${tradePnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
             실현손익 {tradePnl >= 0 ? '+' : ''}{tradePnl.toLocaleString()}
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 md:mt-4">
           {(tradeSummary?.by_exchange || []).map((item, index) => {
             const exchangeName = item.exchange || 'unknown'
             const tradeCount = Number(item.total_trades || item.trade_count || 0)
@@ -668,7 +668,7 @@ export default function ReviewPage() {
             <span className="text-sm text-zinc-300">표시할 거래 요약이 없습니다.</span>
           )}
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="mt-3 grid grid-cols-2 gap-2 md:mt-4 md:grid-cols-3 md:gap-3">
           <div className="kifu-stat-card transition-colors hover:bg-white/10">
             <p className="text-sm uppercase tracking-wider text-zinc-300">실거래 건수</p>
             <p className="mt-1 text-base font-semibold text-sky-300">{tradeCount.toLocaleString()}건</p>
@@ -688,17 +688,17 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      <div className="kifu-panel p-5">
+      <div className="kifu-panel p-3 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="kifu-eyebrow">긴급 대응</p>
-            <h3 className="mt-2 text-2xl font-semibold text-neutral-100">긴급 대응 기록</h3>
+            <h3 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">긴급 대응 기록</h3>
           </div>
           <Link href="/alert" className="text-sm text-neutral-300 hover:text-neutral-200 transition-colors">
             긴급 모드로 이동
           </Link>
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2 md:mt-4">
           {alertActions.length === 0 && (
             <p className="text-sm text-zinc-300">아직 긴급 대응 기록이 없습니다.</p>
           )}
@@ -720,8 +720,9 @@ export default function ReviewPage() {
 
   const analyticsSection = (
     <div className="space-y-4">
-      <div className="kifu-panel p-5">
-        <div className="kifu-segmented mb-4">
+      <div className="kifu-panel p-4 md:p-5">
+        <div className="scrollbar-none mb-4 overflow-x-auto pb-1">
+          <div className="kifu-segmented gap-1">
           <button
             type="button"
             onClick={() => setAnalyticsTab('calendar')}
@@ -752,6 +753,7 @@ export default function ReviewPage() {
           >
             추세 분석
           </button>
+          </div>
         </div>
 
         {analyticsTab === 'calendar' && (
@@ -764,7 +766,7 @@ export default function ReviewPage() {
         )}
 
         {analyticsTab === 'metrics' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
             <AccuracyChart accuracy={accuracy} isLoading={isLoadingAccuracy} />
             <TagPerformance byTag={stats?.by_tag} isLoading={isLoading} />
             <SymbolPerformance bySymbol={symbolStatsForView} isLoading={isLoading} />
@@ -790,14 +792,14 @@ export default function ReviewPage() {
                 ))}
               </div>
             </div>
-            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-5">
+            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-4 md:p-5">
               {stats?.by_period && Object.keys(stats.by_period).length > 0 ? (
                 (() => {
                   const data = stats.by_period[selectedPeriod]
                   if (!data) return <p className="text-sm text-zinc-500">해당 주기의 데이터가 없습니다.</p>
                   const pnl = parseFloat(data.avg_pnl)
                   return (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                       <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.05]">
                         <p className="text-sm text-zinc-500 mb-1">평균 PnL</p>
                         <p className={`text-lg font-semibold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -879,18 +881,18 @@ export default function ReviewPage() {
   )
 
   return (
-    <div className="min-h-screen p-4 text-sm text-neutral-100 md:p-8">
+    <div className="min-h-screen p-0 text-sm text-neutral-100 md:p-8">
       <div className="flex w-full flex-col gap-6">
-        <section className="kifu-panel p-5 md:p-6">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+        <section className="kifu-panel p-3 md:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="max-w-3xl space-y-3">
               <p className="kifu-eyebrow">오늘의 복기</p>
               <h1 className="kifu-section-title">거래 복기 센터</h1>
-              <p className="kifu-section-copy">
+              <p className="kifu-section-copy hidden sm:block">
                 오늘 거래를 하나씩 되짚고, AI 의견과 실제 결과를 같은 흐름에서 정리합니다.
                 복기 자체가 중심이고, 지표와 리포트는 그 다음 단계로 배치했습니다.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="hidden flex-wrap gap-2 sm:flex">
                 {reviewFlowPills.map((pill, index) => (
                   <span key={`${pill}-${index}`} className="kifu-chip">
                     {cleanReviewFlowPills[index] ?? pill}
@@ -918,37 +920,37 @@ export default function ReviewPage() {
             </div>
           )}
 
-          <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.9fr]">
+          <div className="mt-4 grid gap-3 md:gap-4 xl:grid-cols-[1.2fr_0.9fr]">
             <div>
               <div id="guided-review-section">
                 <HomeGuidedReviewCard />
               </div>
             </div>
 
-            <aside className="kifu-panel-muted p-5">
+            <aside className="hidden kifu-panel-muted p-3 md:block md:p-5">
               <p className="kifu-eyebrow">오늘의 루틴</p>
-              <h2 className="mt-2 text-2xl font-semibold text-neutral-100">이번 복기에서 할 일</h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-400">{reviewLeadText}</p>
+              <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">이번 복기에서 할 일</h2>
+              <p className="mt-2 hidden text-sm leading-6 text-neutral-400 sm:block">{reviewLeadText}</p>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 md:mt-5 md:gap-3">
                 {reviewSnapshotCards.map((card) => (
                   <div key={card.key} className="kifu-stat-card">
                     <p className="kifu-eyebrow">{card.label}</p>
-                    <p className={`mt-2 text-2xl font-semibold ${card.tone}`}>{card.value}</p>
+                    <p className={`mt-1 text-xl font-semibold md:mt-2 md:text-2xl ${card.tone}`}>{card.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3 md:mt-5 md:p-4">
                 <p className="text-sm font-semibold text-neutral-100">추천 루틴</p>
                 <div className="mt-3 space-y-2">
                   {routineSteps.map((step, index) => (
-                    <div key={step.key} className="flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+                    <div key={step.key} className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-neutral-100">
                           {index + 1}. {step.title}
                         </p>
-                        <p className="mt-1 text-sm leading-6 text-neutral-400">{step.detail}</p>
+                        <p className="mt-1 hidden text-sm leading-6 text-neutral-400 sm:block">{step.detail}</p>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                         step.state === 'done'
@@ -964,7 +966,7 @@ export default function ReviewPage() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2 md:mt-4">
                   {primaryRoutineAction?.kind === 'link' && (
                     <Link href={primaryRoutineAction.href} className="kifu-btn-primary">
                       {primaryRoutineAction.label}
@@ -986,7 +988,7 @@ export default function ReviewPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="mt-3 hidden rounded-2xl border border-white/10 bg-black/20 p-3 sm:block md:mt-4 md:p-4">
                 <p className="text-sm font-semibold text-neutral-100">오늘의 관찰 포인트</p>
                 <div className="mt-3 space-y-2 text-sm text-neutral-400">
                   <p>TOP 심볼: {topTradeSymbol ? `${topTradeSymbol.symbol} (${(topTradeSymbol.total_trades || topTradeSymbol.trade_count || 0).toLocaleString()}건)` : '아직 없음'}</p>
@@ -999,7 +1001,7 @@ export default function ReviewPage() {
         </section>
 
         <section className="kifu-panel p-3">
-          <div className="grid gap-3 lg:grid-cols-4">
+          <div className="scrollbar-none flex gap-3 overflow-x-auto pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
             {reviewTabs.map((tab) => {
               const cleanCopy = reviewTabCopy[tab.key]
               return (
@@ -1007,10 +1009,10 @@ export default function ReviewPage() {
                   key={tab.key}
                   type="button"
                   onClick={() => setReviewTab(tab.key)}
-                  className={`kifu-tab ${reviewTab === tab.key ? 'kifu-tab-active' : ''}`}
+                  className={`kifu-tab min-w-[148px] flex-shrink-0 px-3 py-2 lg:min-w-0 ${reviewTab === tab.key ? 'kifu-tab-active' : ''}`}
                 >
-                  <span className="block text-base font-semibold">{cleanCopy?.label ?? tab.label}</span>
-                  <span className="mt-1 block text-xs font-medium text-zinc-400">{cleanCopy?.hint ?? tab.hint}</span>
+                  <span className="block text-sm font-semibold md:text-base">{cleanCopy?.label ?? tab.label}</span>
+                  <span className="mt-1 hidden text-xs font-medium text-zinc-400 sm:block">{cleanCopy?.hint ?? tab.hint}</span>
                 </button>
               )
             })}

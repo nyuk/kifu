@@ -514,19 +514,19 @@ export function HomeSnapshot() {
   }
 
   return (
-    <div className="min-h-screen p-4 text-zinc-100 transition-colors duration-700 ease-out md:p-8">
-      <div className="flex w-full flex-col gap-6">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-screen p-0 text-zinc-100 transition-colors duration-700 ease-out md:p-8">
+      <div className="flex w-full flex-col gap-4 md:gap-6">
+        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">
             <p className="kifu-eyebrow">오늘의 거래복기</p>
             <h1 className="kifu-section-title">거래 복기 홈</h1>
-            <p className="kifu-section-copy max-w-3xl">
+            <p className="kifu-section-copy hidden max-w-3xl sm:block sm:text-sm sm:leading-6">
               {snapshotPeriod} 동안의 거래, 차트 기록, AI 의견을 한 흐름으로 다시 봅니다.
               먼저 오늘 복기를 시작하고, 이어서 차트와 패턴 리포트로 넘어가세요.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
+          <div className="scrollbar-none flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 md:flex-wrap">
+            <div className="flex shrink-0 rounded-xl border border-white/10 bg-white/5 p-1">
               {(['7d', '30d', 'all'] as const).map((period) => (
                 <button
                   key={period}
@@ -542,7 +542,7 @@ export function HomeSnapshot() {
                 </button>
               ))}
             </div>
-            <div className="flex rounded-xl border border-white/10 bg-white/5 p-1">
+            <div className="flex shrink-0 rounded-xl border border-white/10 bg-white/5 p-1">
               {([
                 { key: 'auto', label: '자동' },
                 { key: 'usdt', label: '$' },
@@ -569,19 +569,21 @@ export function HomeSnapshot() {
         </header>
 
         <section className="grid gap-4 xl:grid-cols-[1.35fr_0.95fr]">
-          <HomeGuidedReviewCard autoLoad={false} />
+          <div className="order-2 hidden md:block xl:order-1">
+            <HomeGuidedReviewCard autoLoad={false} />
+          </div>
 
-          <aside className="kifu-panel p-5 md:p-6">
-            <div className="flex h-full flex-col gap-5">
-              <div className="space-y-3">
+          <aside className="order-1 kifu-panel p-3 md:p-6 xl:order-2">
+            <div className="flex h-full flex-col gap-4 md:gap-5">
+              <div className="space-y-2 md:space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="kifu-eyebrow">오늘의 루틴</p>
-                    <h2 className="mt-2 text-2xl font-semibold text-neutral-100">지금 해야 할 일</h2>
+                    <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">지금 해야 할 일</h2>
                   </div>
                   <StatusGauge mode={resolvedMode} />
                 </div>
-                <p className={`text-sm leading-6 ${heroAccent}`}>{heroText}</p>
+                <p className={`text-sm leading-5 md:leading-6 ${heroAccent}`}>{heroText}</p>
               </div>
 
               <div className="grid gap-3">
@@ -589,13 +591,13 @@ export function HomeSnapshot() {
                   <Link
                     key={action.key}
                     href={action.href}
-                    className="kifu-panel-muted flex items-center justify-between gap-3 p-4 transition hover:border-white/20 hover:bg-white/10"
+                    className="kifu-panel-muted flex flex-row items-center justify-between gap-2 p-3 transition hover:border-white/20 hover:bg-white/10 md:gap-3 md:p-4"
                   >
                     <div className="min-w-0">
                       <p className="text-base font-semibold text-neutral-100">{action.title}</p>
-                      <p className="mt-1 text-sm leading-6 text-neutral-400">{action.hint}</p>
+                      <p className="mt-1 hidden text-xs leading-5 text-neutral-400 sm:block md:text-sm md:leading-6">{action.hint}</p>
                     </div>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-neutral-200">
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-neutral-200 md:px-3 md:text-xs">
                       {action.badge}
                     </span>
                   </Link>
@@ -603,12 +605,12 @@ export function HomeSnapshot() {
               </div>
 
               {showOnboardingNudge && (
-                <div className="rounded-2xl border border-amber-500/25 bg-amber-500/8 p-4">
+                <div className="hidden rounded-2xl border border-amber-500/25 bg-amber-500/8 p-3 sm:block md:p-4">
                   <p className="kifu-eyebrow text-amber-300/80">First Setup</p>
                   <p className="mt-2 text-sm font-semibold text-amber-100">
                     {onboardingProfile ? onboardingProfile.tendency : '처음 기록 전 안내'}
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-amber-100/75">{onboardingHint}</p>
+                  <p className="mt-2 hidden text-sm leading-6 text-amber-100/75 sm:block">{onboardingHint}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link href={onboardingPrimaryHref} className="kifu-btn-secondary border-amber-300/30 bg-amber-500/10 text-amber-100 hover:bg-amber-500/20">
                       {onboardingPrimaryLabel}
@@ -631,17 +633,17 @@ export function HomeSnapshot() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1.02fr_0.98fr]">
-          <div className="kifu-panel p-5 md:p-6">
+          <div className="kifu-panel p-3 md:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="kifu-eyebrow">최근 기록</p>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">최근 말풍선</h2>
+                <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">최근 말풍선</h2>
               </div>
               <Link href="/bubbles" className="kifu-btn-ghost px-0 py-0 text-sm">
                 전체 보기
               </Link>
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
+            <div className="mt-3 grid gap-2 md:mt-5 md:gap-3 md:grid-cols-2">
               {bubblesLoading && <p className="text-sm text-zinc-400">최근 기록을 불러오는 중입니다...</p>}
               {bubblesError && <p className="text-sm text-rose-300">{bubblesError}</p>}
               {!bubblesLoading && !bubblesError && recentBubbles.length === 0 && (
@@ -675,28 +677,28 @@ export function HomeSnapshot() {
             </div>
           </div>
 
-          <div className="kifu-panel p-5 md:p-6">
+          <div className="kifu-panel p-3 md:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="kifu-eyebrow">복기 현황</p>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">복기 스냅샷</h2>
+                <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">복기 스냅샷</h2>
               </div>
               <p className="text-sm text-zinc-400">{snapshotPeriod} 기준</p>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 md:mt-5 md:gap-3">
               {focusMetrics.map((metric) => (
                 <div key={metric.key} className="kifu-stat-card">
                   <p className="kifu-eyebrow">{metric.label}</p>
-                  <p className={`mt-2 text-2xl font-semibold ${metric.tone}`}>{metric.value}</p>
+                  <p className={`mt-1 text-xl font-semibold md:mt-2 md:text-2xl ${metric.tone}`}>{metric.value}</p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="mt-3 hidden rounded-2xl border border-white/10 bg-black/20 p-3 sm:block md:mt-5 md:p-4">
               <p className="text-sm font-semibold text-neutral-100">현재 흐름</p>
               <p className="mt-2 text-sm leading-6 text-neutral-400">{reviewStatusText}</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 md:mt-4 md:gap-3">
                 {reviewSnapshotItems.map((item) => (
                   <div key={item.key} className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{item.label}</p>
@@ -723,11 +725,11 @@ export function HomeSnapshot() {
         </section>
 
         {!guestMode && (
-          <section className="space-y-4">
+          <section className="hidden space-y-4 md:block">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="kifu-eyebrow">패턴과 리포트</p>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">포지션 · 패턴 · 리포트</h2>
+                <h2 className="mt-1 text-xl font-semibold leading-tight text-neutral-100 md:mt-2 md:text-2xl">포지션 · 패턴 · 리포트</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
                   오늘 복기를 마친 뒤에는 열린 포지션과 반복 패턴, 월간 흐름을 한 번에 점검하세요.
                 </p>
@@ -739,7 +741,7 @@ export function HomeSnapshot() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-3 md:gap-4 xl:grid-cols-2 2xl:grid-cols-3">
               <HomeMonthlyReportCard />
               <MonthlyTrendChart />
               <HomeSimilarPatterns />

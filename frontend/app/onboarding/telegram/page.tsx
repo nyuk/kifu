@@ -39,42 +39,42 @@ const faqs = [
 
 export default function TelegramOnboardingPage() {
   return (
-    <div className="min-h-screen bg-neutral-950 px-4 py-12 text-neutral-100">
-      <div className="mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-5xl items-center justify-center">
-        <div className="w-full space-y-8">
-          <section className="rounded-3xl border border-amber-400/30 bg-amber-400/10 p-5 text-center">
+    <div className="min-h-screen bg-neutral-950 px-4 py-6 text-neutral-100 md:py-12">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl items-start justify-center md:min-h-[calc(100vh-6rem)] md:items-center">
+        <div className="w-full space-y-5 md:space-y-8">
+          <section className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-3 text-center md:rounded-3xl md:p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">Experimental Path</p>
-            <p className="mt-2 text-sm leading-relaxed text-amber-100">
+            <p className="mt-2 hidden text-sm leading-relaxed text-amber-100 sm:block">
               이 경로는 첫 테스트 복기만 빠르게 보여주는 실험용 입구입니다. 실제 사용 중심은 웹 계정과 설정 흐름입니다.
             </p>
           </section>
 
-          <header className="space-y-4 text-center">
+          <header className="space-y-3 text-center md:space-y-4">
             <p className="text-xs uppercase tracking-[0.35em] text-[#2AABEE]/80">Telegram Quick Start</p>
-            <h1 className="text-3xl font-semibold md:text-5xl">텔레그램 데모 체험</h1>
-            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-neutral-400 md:text-base">
+            <h1 className="text-2xl font-semibold md:text-5xl">텔레그램 데모 체험</h1>
+            <p className="mx-auto hidden max-w-2xl text-sm leading-relaxed text-neutral-400 sm:block md:text-base">
               필요한 행동은 세 가지뿐입니다. 봇 열기, Start 누르기, 첫 테스트 복기 1회 완료.
-              <br />
+              <br className="hidden sm:block" />
               첫 테스트 복기를 끝내면 데모 체험은 완료입니다. 실제 사용은 웹 계정과 설정 흐름이 기준입니다.
             </p>
           </header>
 
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-3 md:grid-cols-3 md:gap-4">
             {steps.map((step) => (
-              <article key={step.label} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+              <article key={step.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 md:rounded-3xl md:p-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#2AABEE]">{step.label}</p>
-                <h2 className="mt-3 text-xl font-semibold text-white">{step.title}</h2>
-                <p className="mt-3 text-sm leading-relaxed text-neutral-400">{step.description}</p>
+                <h2 className="mt-2 text-base font-semibold text-white md:mt-3 md:text-xl">{step.title}</h2>
+                <p className="mt-3 hidden text-sm leading-relaxed text-neutral-400 sm:block">{step.description}</p>
               </article>
             ))}
           </section>
 
-          <section className="rounded-3xl border border-[#2AABEE]/30 bg-[#2AABEE]/10 p-6 md:p-8">
+          <section className="rounded-2xl border border-[#2AABEE]/30 bg-[#2AABEE]/10 p-4 md:rounded-3xl md:p-8">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#2AABEE]/90">Start Here</p>
-                <h2 className="text-2xl font-semibold text-white">텔레그램에서 바로 체험하기</h2>
-                <p className="max-w-xl text-sm leading-relaxed text-neutral-300">
+                <h2 className="text-xl font-semibold text-white md:text-2xl">텔레그램에서 바로 체험하기</h2>
+                <p className="hidden max-w-xl text-sm leading-relaxed text-neutral-300 sm:block">
                   plain bot 링크로 이동합니다. 일반 온보딩에서는 계정 연결용 start code를 붙이지 않습니다.
                 </p>
               </div>
@@ -82,15 +82,15 @@ export default function TelegramOnboardingPage() {
                 href={tgBotUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2AABEE] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#229ED9]"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2AABEE] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#229ED9] md:px-6"
               >
                 텔레그램 봇 열기
               </a>
             </div>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-            <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+          <section className="hidden gap-4 md:grid md:grid-cols-[1.2fr_0.8fr]">
+            <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">Success 기준</p>
               <h2 className="mt-3 text-xl font-semibold text-white">첫 테스트 복기 완료 = 데모 체험 완료</h2>
               <ul className="mt-4 space-y-3 text-sm leading-relaxed text-neutral-400">
@@ -100,7 +100,7 @@ export default function TelegramOnboardingPage() {
               </ul>
             </article>
 
-            <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+            <article className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">권장 다음 행동</p>
               <div className="mt-4 space-y-3">
                 <Link
@@ -128,7 +128,7 @@ export default function TelegramOnboardingPage() {
             </article>
           </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+          <section className="hidden rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:block md:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-neutral-500">FAQ</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               {faqs.map((faq) => (
